@@ -1,599 +1,1206 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Approline — Every decision, finally accounted for.</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --teal:#00C2A8;--teal-dark:#00A08D;--teal-dim:rgba(0,194,168,0.12);--teal-border:rgba(0,194,168,0.25);
-  --navy:#0B1220;--navy-2:#111C2E;--navy-3:#1E2D45;
-  --text-primary:#EDF2F7;--text-secondary:#8A99B0;--text-muted:#4A5568;
-  --border:rgba(255,255,255,0.08);--border-light:rgba(255,255,255,0.05);
-  --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;
-  --r:8px;--rl:12px;
-}
-html{scroll-behavior:smooth}
-body{background:var(--navy);color:var(--text-primary);font-family:var(--sans);line-height:1.6}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ApprovLine - Universal Approval Intelligence Platform</title>
+  <style>
+    :root {
+      --blue: #2155d9;
+      --blue-2: #2f6bff;
+      --blue-3: #dfe8ff;
+      --ink: #090b12;
+      --muted: #5c6370;
+      --line: #d9dde5;
+      --soft: #f5f7fb;
+      --white: #ffffff;
+      --dark: #030612;
+      --dark-2: #070b18;
+      --radius: 8px;
+      --shadow: 0 18px 50px rgba(14, 28, 64, .12);
+    }
 
-nav{display:flex;align-items:center;justify-content:space-between;padding:18px 48px;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:rgba(11,18,32,0.96);backdrop-filter:blur(8px);z-index:100}
-.logo{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--text-primary);text-decoration:none}
-.logo span{color:var(--teal)}
-.nav-links{display:flex;align-items:center;gap:28px}
-.nav-links a{color:var(--text-secondary);font-size:13px;text-decoration:none;transition:color .15s}
-.nav-links a:hover{color:var(--text-primary)}
-.btn-outline{background:transparent;color:var(--teal);font-size:13px;font-weight:500;padding:7px 16px;border-radius:var(--r);border:1px solid var(--teal-border);cursor:pointer;font-family:var(--sans);transition:all .15s}
-.btn-outline:hover{background:var(--teal-dim)}
-.btn-primary{background:var(--teal);color:var(--navy);font-size:13px;font-weight:600;padding:7px 16px;border-radius:var(--r);border:none;cursor:pointer;font-family:var(--sans);transition:opacity .15s}
-.btn-primary:hover{opacity:.88}
+    * { box-sizing: border-box; }
 
-.section{max-width:1080px;margin:0 auto;padding:80px 48px}
-.eyebrow{font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
-.h2{font-size:34px;font-weight:600;line-height:1.2;margin-bottom:14px}
-.sub{font-size:15px;color:var(--text-secondary);line-height:1.75;max-width:520px;margin-bottom:40px}
-.divider{height:0.5px;background:var(--border)}
+    html { scroll-behavior: smooth; }
 
-.hero{max-width:1080px;margin:0 auto;padding:80px 48px 60px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
-.hero h1{font-size:48px;font-weight:600;line-height:1.12;margin-bottom:20px}
-.hero h1 em{color:var(--teal);font-style:normal}
-.hero-sub{font-size:16px;color:var(--text-secondary);line-height:1.75;margin-bottom:32px}
-.hero-ctas{display:flex;gap:12px;margin-bottom:28px}
-.hero-ctas .btn-primary,.hero-ctas .btn-outline{font-size:14px;padding:10px 22px}
-.pills{display:flex;flex-wrap:wrap;gap:8px}
-.pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--border);background:var(--navy-3);font-size:12px;color:var(--text-secondary)}
-.dot{width:7px;height:7px;border-radius:50%}
-.pulse{animation:pulse 2.2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #fff;
+      line-height: 1.45;
+    }
 
-.capture-demo{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--border);padding:20px}
-.demo-lbl{font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px}
-.msg-card{background:var(--navy);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;border:0.5px solid var(--border-light)}
-.msg-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.msg-src{font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;font-family:var(--mono)}
-.ms-slack{background:rgba(74,21,144,0.25);color:#A78BFA}
-.ms-email{background:var(--teal-dim);color:var(--teal)}
-.msg-author{font-size:12px;color:var(--text-secondary)}
-.msg-time{font-size:11px;color:var(--text-muted);margin-left:auto;font-family:var(--mono)}
-.msg-text{font-size:13px;color:#CBD5E0;line-height:1.6;font-family:var(--mono)}
-.scan-line{height:1px;background:rgba(0,194,168,0);margin:6px 0 2px;transition:width 1.2s ease,background .3s;width:0}
-.dtag{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;margin-top:6px;opacity:0;transition:opacity .4s}
-.dtag-a{background:rgba(0,194,168,0.15);color:var(--teal);border:0.5px solid var(--teal-border)}
-.dtag-c{background:rgba(250,200,117,0.1);color:#FAC875;border:0.5px solid rgba(250,200,117,0.25)}
-.conf-l{font-size:10px;color:var(--text-muted);margin-top:4px;opacity:0;transition:opacity .4s;font-family:var(--mono)}
-.conf-l span{color:var(--teal)}
-.demo-footer{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:14px;border-top:0.5px solid var(--border-light)}
-.demo-footer span{font-family:var(--mono);font-size:11px;color:var(--text-secondary)}
+    a { color: inherit; text-decoration: none; }
 
-.stats-wrap{max-width:1080px;margin:0 auto;padding:0 48px}
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:var(--rl);overflow:hidden}
-.stat{background:var(--navy);padding:28px 24px;text-align:center}
-.stat-num{font-size:36px;font-weight:600;font-family:var(--mono)}
-.stat-num em{color:var(--teal);font-style:normal}
-.stat-lbl{font-size:12px;color:var(--text-secondary);margin-top:4px}
+    button, a.button {
+      border: 0;
+      border-radius: 5px;
+      min-height: 40px;
+      padding: 0 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+      white-space: nowrap;
+    }
 
-.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.feat{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--border);padding:24px}
-.feat-icon{width:36px;height:36px;border-radius:var(--r);background:var(--teal-dim);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--teal);font-size:18px}
-.feat h3{font-size:14px;font-weight:600;margin-bottom:8px}
-.feat p{font-size:13px;color:var(--text-secondary);line-height:1.65}
+    button:hover, a.button:hover { transform: translateY(-1px); }
 
-.tl-section{background:var(--navy-2)}
-.tl-inner{max-width:1080px;margin:0 auto;padding:80px 48px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
-.tl-entries{border-left:1px solid rgba(0,194,168,0.18);padding-left:24px}
-.tl-entry{position:relative;padding-bottom:28px}
-.tl-entry:last-child{padding-bottom:0}
-.tl-entry::before{content:'';position:absolute;left:-29px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--navy);border:1.5px solid var(--teal)}
-.tl-who{font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-bottom:3px}
-.tl-what{font-size:14px;font-weight:500;margin-bottom:6px}
-.tl-badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.tlb{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:3px}
-.tlb-a{background:rgba(0,194,168,0.15);color:var(--teal)}
-.tlb-c{background:rgba(250,200,117,0.1);color:#FAC875}
-.tlb-s{background:rgba(167,139,250,0.15);color:#A78BFA}
-.tlb-e{background:rgba(0,194,168,0.08);color:#5DCAA5}
-.tl-time{font-size:11px;color:var(--text-muted);font-family:var(--mono)}
+    .primary {
+      color: #fff;
+      background: linear-gradient(180deg, #2f68f5, #1f53d8);
+      box-shadow: 0 10px 28px rgba(33, 85, 217, .28);
+    }
 
-.clf-section{max-width:1080px;margin:0 auto;padding:80px 48px}
-.clf-box{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--border);padding:32px;margin-top:40px}
-.src-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-.src-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--navy);font-size:13px;color:var(--text-secondary);cursor:pointer;transition:all .15s;font-family:var(--sans)}
-.src-btn.active{border-color:var(--teal-border);background:var(--teal-dim);color:var(--teal)}
-.ex-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-.ex-pill{padding:5px 11px;border-radius:20px;border:0.5px solid var(--border);background:var(--navy);font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all .15s}
-.ex-pill:hover{color:var(--text-primary)}
-.clf-ta{width:100%;min-height:90px;padding:12px 14px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--navy);color:var(--text-primary);font-size:14px;font-family:var(--sans);resize:vertical;line-height:1.6;outline:none;transition:border-color .15s}
-.clf-ta:focus{border-color:var(--teal-border)}
-.clf-meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:16px}
-.clf-char{font-size:11px;color:var(--text-muted);font-family:var(--mono)}
-.clf-run{display:flex;align-items:center;gap:8px;padding:10px 22px;background:var(--teal);color:var(--navy);border:none;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:opacity .15s}
-.clf-run:disabled{opacity:.5;cursor:not-allowed}
-.clf-spinner{width:14px;height:14px;border:2px solid rgba(11,18,32,0.25);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite;display:none}
-.clf-run.loading .clf-spinner{display:block}
-@keyframes spin{to{transform:rotate(360deg)}}
-.clf-result{background:var(--navy);border-radius:var(--r);border:0.5px solid var(--border);padding:20px;margin-top:20px;display:none}
-.clf-result.show{display:block}
-.clf-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
-.vbadge{font-family:var(--mono);font-size:12px;font-weight:500;padding:4px 10px;border-radius:var(--r);display:inline-block}
-.vb-a{background:rgba(0,194,168,0.15);color:var(--teal);border:0.5px solid var(--teal-border)}
-.vb-c{background:rgba(250,200,117,0.1);color:#FAC875;border:0.5px solid rgba(250,200,117,0.25)}
-.vb-r{background:rgba(226,75,74,0.1);color:#F09595;border:0.5px solid rgba(226,75,74,0.2)}
-.vb-e{background:rgba(127,119,221,0.1);color:#AFA9EC;border:0.5px solid rgba(127,119,221,0.2)}
-.vb-n{background:rgba(255,255,255,0.05);color:var(--text-secondary);border:0.5px solid var(--border)}
-.conf-wrap{text-align:right}
-.conf-lbl{font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-bottom:4px}
-.conf-bar{height:4px;background:var(--navy-3);border-radius:2px;width:140px;overflow:hidden}
-.conf-fill{height:100%;border-radius:2px;transition:width .6s ease}
-.clf-summary{font-size:14px;font-weight:500;margin-bottom:14px;line-height:1.5}
-.clf-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.clf-field{background:var(--navy-3);border-radius:var(--r);padding:10px 12px}
-.clf-field-l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.clf-field-v{font-size:13px;font-family:var(--mono);color:var(--text-primary)}
-.clf-reason{border-top:0.5px solid var(--border);padding-top:12px;font-size:13px;color:var(--text-secondary);line-height:1.65}
-.clf-reason-l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.clf-err{background:rgba(226,75,74,0.08);color:#F09595;border:0.5px solid rgba(226,75,74,0.2);border-radius:var(--r);padding:10px 14px;font-size:13px;margin-top:14px;display:none}
-.clf-err.show{display:block}
+    .secondary {
+      color: #fff;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid rgba(255, 255, 255, .2);
+    }
 
-.db-section{background:var(--navy-2)}
-.db-inner{max-width:1080px;margin:0 auto;padding:80px 48px}
-.db-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-.db-metric{background:var(--navy-3);border-radius:var(--r);padding:16px 18px}
-.db-metric-l{font-size:11px;color:var(--text-muted);margin-bottom:4px}
-.db-metric-v{font-size:26px;font-weight:600;font-family:var(--mono)}
-.db-controls{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
-.sw{flex:1;min-width:200px;position:relative}
-.sw svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--text-muted);fill:none;stroke-width:2;pointer-events:none}
-.db-search{width:100%;padding:8px 12px 8px 32px;background:var(--navy-3);border:0.5px solid var(--border);border-radius:var(--r);color:var(--text-primary);font-size:13px;font-family:var(--sans);outline:none;transition:border-color .15s}
-.db-search:focus{border-color:var(--teal-border)}
-.db-sel{padding:8px 12px;background:var(--navy-3);border:0.5px solid var(--border);border-radius:var(--r);color:var(--text-primary);font-size:13px;font-family:var(--sans);outline:none;cursor:pointer}
-.exp-btn{display:flex;align-items:center;gap:6px;font-size:13px;padding:8px 14px;background:var(--navy-3);border:0.5px solid var(--teal-border);border-radius:var(--r);color:var(--teal);cursor:pointer;font-family:var(--sans);transition:all .15s;white-space:nowrap}
-.exp-btn:hover{background:var(--teal-dim)}
-.db-table{border:0.5px solid var(--border);border-radius:var(--rl);overflow:hidden}
-.db-thead{display:grid;grid-template-columns:110px minmax(0,1fr) 110px 130px 80px;padding:8px 16px;background:var(--navy-3);border-bottom:0.5px solid var(--border)}
-.db-thead span{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
-.db-row{display:grid;grid-template-columns:110px minmax(0,1fr) 110px 130px 80px;padding:11px 16px;border-bottom:0.5px solid var(--border-light);align-items:center;cursor:pointer;transition:background .1s}
-.db-row:last-child{border-bottom:none}
-.db-row:hover{background:rgba(255,255,255,0.02)}
-.db-subj{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.db-who{font-size:12px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.db-src{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary)}
-.db-t{font-size:11px;color:var(--text-muted);font-family:var(--mono)}
-.db-exp{grid-column:1/-1;padding:14px 16px;border-top:0.5px solid var(--border-light);background:rgba(0,0,0,.15);display:none}
-.db-exp.open{display:block}
-.db-exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.db-exp-l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.db-exp-v{font-size:12px;font-family:var(--mono);color:var(--text-primary)}
-.db-exp-msg{font-size:13px;color:var(--text-secondary);line-height:1.6;padding:10px 12px;background:var(--navy);border-radius:var(--r);border:0.5px solid var(--border-light);font-family:var(--mono)}
-.db-empty{padding:2.5rem;text-align:center;font-size:14px;color:var(--text-muted)}
-.audit-panel{margin-top:16px;border:0.5px solid var(--teal-border);border-radius:var(--rl);padding:24px;display:none}
-.audit-panel.open{display:block}
-.audit-title{font-size:14px;font-weight:500;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.audit-badge{background:var(--navy-3);border-radius:var(--r);padding:2px 8px;font-size:11px;color:var(--text-secondary);font-family:var(--mono)}
-.audit-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-.am-l{font-size:11px;color:var(--text-muted);margin-bottom:2px}
-.am-v{font-size:13px;font-weight:500}
-.audit-rows{border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
-.audit-row{display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:0.5px solid var(--border-light);font-size:12px}
-.audit-row:last-child{border-bottom:none}
-.ar-id{font-family:var(--mono);color:var(--text-muted);flex-shrink:0;width:42px}
-.ar-subj{flex:1;color:var(--text-primary)}
-.ar-who{color:var(--text-secondary);flex-shrink:0;width:120px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ar-time{color:var(--text-muted);font-family:var(--mono);flex-shrink:0;width:60px;text-align:right}
-.dl-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;background:var(--teal);color:var(--navy);border:none;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+    .light-button {
+      color: #0a101d;
+      background: #e9eef3;
+    }
 
-.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:40px}
-.plan{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--border);padding:24px 20px}
-.plan.featured{border:1.5px solid rgba(0,194,168,0.4)}
-.plan-pop{font-family:var(--mono);font-size:10px;background:var(--teal-dim);color:var(--teal);padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:12px}
-.plan-name{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.plan-price{font-size:32px;font-weight:600;font-family:var(--mono);margin-bottom:16px}
-.plan-price sup{font-size:16px;vertical-align:top;margin-top:6px;display:inline-block}
-.plan-price .mo{font-size:13px;font-weight:400;color:var(--text-secondary)}
-.plan-div{height:0.5px;background:var(--border);margin-bottom:16px}
-.plan ul{list-style:none}
-.plan ul li{font-size:12px;color:var(--text-secondary);padding:5px 0;display:flex;align-items:flex-start;gap:7px;line-height:1.5}
-.plan ul li::before{content:'✓';color:var(--teal);flex-shrink:0;font-size:12px;margin-top:1px}
+    .wrap {
+      width: min(1200px, calc(100% - 48px));
+      margin: 0 auto;
+    }
 
-.cta-band{max-width:1080px;margin:0 auto;padding:0 48px 80px}
-.cta-inner{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--teal-border);padding:56px 48px;text-align:center}
-.cta-q{font-size:40px;font-weight:600;line-height:1.2;margin-bottom:16px}
-.cta-sub{font-size:15px;color:var(--text-secondary);margin-bottom:32px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.75}
+    .hero {
+      min-height: 760px;
+      color: #fff;
+      background:
+        linear-gradient(180deg, rgba(3, 6, 18, .08), rgba(3, 6, 18, .98)),
+        radial-gradient(circle at 18% 20%, rgba(34, 88, 226, .26), transparent 34%),
+        radial-gradient(circle at 82% 36%, rgba(31, 78, 190, .18), transparent 30%),
+        #030612;
+      position: relative;
+      overflow: hidden;
+    }
 
-footer{border-top:0.5px solid var(--border);padding:28px 48px;display:flex;justify-content:space-between;align-items:center}
-.footer-logo{font-family:var(--mono);font-size:13px;color:var(--text-muted)}
-.footer-logo span{color:var(--teal)}
-.footer-copy{font-size:12px;color:var(--text-muted)}
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(55, 78, 134, .15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(55, 78, 134, .15) 1px, transparent 1px);
+      background-size: 96px 96px;
+      mask-image: linear-gradient(to bottom, #000 0%, transparent 88%);
+      opacity: .7;
+    }
 
-.powered{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-top:20px;font-family:var(--mono)}
-.powered .dot{background:var(--teal);width:6px;height:6px}
+    .hero::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 260px;
+      background: linear-gradient(180deg, transparent, #030612 80%);
+    }
 
-@media(max-width:900px){
-  nav{padding:16px 24px}
-  .nav-links a{display:none}
-  .hero,.tl-inner{grid-template-columns:1fr;gap:40px;padding:48px 24px}
-  .hero h1{font-size:36px}
-  .section{padding:60px 24px}
-  .stats-wrap{padding:0 24px}
-  .features-grid,.pricing-grid{grid-template-columns:1fr 1fr}
-  .db-inner{padding:60px 24px}
-  .db-metrics{grid-template-columns:1fr 1fr}
-  .db-thead,.db-row{grid-template-columns:90px minmax(0,1fr) 80px}
-  .db-thead span:nth-child(n+4),.db-row>*:nth-child(n+4){display:none}
-  .clf-section{padding:60px 24px}
-  .cta-band{padding:0 24px 60px}
-  .cta-inner{padding:40px 24px}
-  .cta-q{font-size:28px}
-  footer{padding:24px;flex-direction:column;gap:8px;text-align:center}
-}
-</style>
+    .nav {
+      position: relative;
+      z-index: 2;
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--blue-2);
+      font-weight: 850;
+      font-size: 20px;
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, #2d69ff, #1a49c8);
+      box-shadow: 0 10px 24px rgba(47, 107, 255, .26);
+    }
+
+    .logo svg { width: 21px; height: 21px; }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 42px;
+      color: rgba(219, 226, 247, .58);
+      font-weight: 650;
+      font-size: 15px;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-actions .secondary {
+      background: rgba(31, 82, 216, .95);
+      border-color: rgba(122, 156, 255, .32);
+    }
+
+    .hero-grid {
+      position: relative;
+      z-index: 2;
+      min-height: 610px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(430px, 560px);
+      align-items: center;
+      gap: 74px;
+      padding: 68px 0 96px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: rgba(33, 85, 217, .2);
+      color: #2f6bff;
+      border: 1px solid rgba(47, 107, 255, .34);
+      font-weight: 750;
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(48px, 5.2vw, 70px);
+      line-height: 1.08;
+      letter-spacing: 0;
+      max-width: 600px;
+    }
+
+    .accent { color: var(--blue-2); }
+
+    .hero-copy {
+      margin: 28px 0 28px;
+      max-width: 560px;
+      color: #d7ddeb;
+      font-size: 20px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .trust-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      color: rgba(215, 221, 235, .72);
+      font-weight: 650;
+    }
+
+    .trust-row span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .trust-row svg {
+      width: 15px;
+      height: 15px;
+      color: var(--blue-2);
+    }
+
+    .dashboard {
+      border: 1px solid rgba(119, 139, 190, .22);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #080b16;
+      box-shadow: 0 28px 90px rgba(0, 0, 0, .38);
+    }
+
+    .window-bar {
+      min-height: 42px;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 0 16px;
+      color: #aeb6c8;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .dots { display: flex; gap: 8px; }
+    .dot { width: 12px; height: 12px; border-radius: 999px; }
+    .dot.red { background: #ff5f57; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #28c840; }
+
+    .dash-body { padding: 14px 16px 0; }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .search {
+      min-height: 30px;
+      border-radius: 6px;
+      background: #171c27;
+      color: #778095;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      font-size: 13px;
+    }
+
+    .pill-tab {
+      min-height: 28px;
+      border-radius: 5px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      color: #8792a8;
+      font-size: 13px;
+    }
+
+    .pill-tab.active {
+      color: #2f6bff;
+      background: rgba(33, 85, 217, .14);
+    }
+
+    .decision {
+      border-top: 1px solid rgba(255, 255, 255, .08);
+      padding: 14px 0 16px;
+      display: grid;
+      grid-template-columns: 30px 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      font-weight: 850;
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .avatar.purple { background: #753076; }
+    .avatar.red { background: #ed463a; }
+    .avatar.indigo { background: #6263aa; }
+
+    .decision strong {
+      color: #fff;
+      font-size: 13px;
+      margin-right: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 18px;
+      border-radius: 999px;
+      padding: 0 7px;
+      font-size: 10px;
+      font-weight: 850;
+      color: #0d823a;
+      background: #c9f8d5;
+      vertical-align: 1px;
+    }
+
+    .tag.soft { color: #315fad; background: #dceaff; }
+
+    .decision p {
+      margin: 3px 0 8px;
+      color: #b8c1d5;
+      font-size: 13px;
+    }
+
+    .time {
+      color: #747e93;
+      font-size: 11px;
+      padding-top: 2px;
+    }
+
+    .meter {
+      height: 4px;
+      border-radius: 999px;
+      background: #111827;
+      overflow: hidden;
+    }
+
+    .meter span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: #2762ee;
+    }
+
+    .dash-foot {
+      min-height: 40px;
+      background: #10162a;
+      border-top: 1px solid rgba(60, 94, 180, .22);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #79839a;
+      padding: 0 16px;
+      font-size: 13px;
+    }
+
+    .dash-foot b { color: #245df1; }
+
+    .stats {
+      background: #2155d9;
+      color: #fff;
+    }
+
+    .stats-grid {
+      min-height: 190px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+      gap: 34px;
+      text-align: center;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: clamp(38px, 4.2vw, 56px);
+      line-height: 1;
+      margin-bottom: 12px;
+      letter-spacing: 0;
+    }
+
+    .stat span {
+      color: rgba(255, 255, 255, .84);
+      font-size: 16px;
+      display: block;
+      max-width: 260px;
+      margin: 0 auto;
+    }
+
+    .section {
+      padding: 106px 0;
+      background: #fff;
+    }
+
+    .section.soft { background: var(--soft); }
+
+    .section-head {
+      max-width: 760px;
+      margin: 0 auto 70px;
+      text-align: center;
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 0 13px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+      color: #1750bd;
+      background: #e7ecfb;
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .label.problem {
+      color: #d5152c;
+      background: #fde8ea;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(34px, 3.2vw, 44px);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      margin: 20px auto 0;
+      color: var(--muted);
+      font-size: 20px;
+      max-width: 720px;
+    }
+
+    .cards-4, .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 22px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 26px;
+      min-height: 190px;
+      box-shadow: 0 1px 0 rgba(16, 24, 40, .02);
+    }
+
+    .icon-tile {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 20px;
+      background: #edf1f5;
+      color: #2c68d8;
+    }
+
+    .icon-tile svg {
+      width: 23px;
+      height: 23px;
+      stroke-width: 2.2;
+    }
+
+    .icon-tile.purple { color: #9c47df; }
+    .icon-tile.red { color: #e33f50; }
+    .icon-tile.orange { color: #eeaa31; }
+    .icon-tile.green { color: #19bc65; background: #e7fbf0; }
+    .icon-tile.yellow { color: #e6a92d; background: #fff5dd; }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .card p {
+      margin: 0;
+      color: #555d6b;
+      font-size: 16px;
+    }
+
+    .gap-note {
+      margin-top: 48px;
+      border: 2px solid #b8c9f3;
+      border-radius: 12px;
+      background: #eef3ff;
+      text-align: center;
+      padding: 26px;
+      font-weight: 760;
+      font-size: 17px;
+    }
+
+    .gap-note b { color: #1f55ca; }
+
+    .steps {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 28px;
+    }
+
+    .step {
+      position: relative;
+      min-height: 250px;
+    }
+
+    .step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 48px;
+      right: -22px;
+      color: #d6dbe4;
+      font-size: 24px;
+    }
+
+    .step-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .number {
+      color: #d5dae2;
+      font-size: 34px;
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .features-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .feature-card {
+      min-height: 182px;
+      position: relative;
+    }
+
+    .mini-tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 20px;
+      padding: 0 7px;
+      border-radius: 999px;
+      background: #e7edff;
+      color: #2155d9;
+      font-size: 12px;
+      font-weight: 850;
+      position: absolute;
+      right: 22px;
+      top: 80px;
+    }
+
+    .mini-tag.green { color: #0f8d4a; background: #dcfae9; }
+    .mini-tag.yellow { color: #ad7700; background: #fff0c7; }
+    .mini-tag.purple { color: #863bd1; background: #f4e5ff; }
+
+    .integrations-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+    }
+
+    .integration {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      min-height: 116px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px 10px;
+    }
+
+    .app-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 19px;
+      margin-bottom: 10px;
+    }
+
+    .integration strong { font-size: 16px; line-height: 1.1; }
+    .integration span { color: #596170; font-size: 14px; margin-top: 3px; }
+
+    .outline-soon {
+      border-style: dashed;
+      background: #f0f4ff;
+      color: #2155d9;
+    }
+
+    .integration-note {
+      margin-top: 34px;
+      text-align: center;
+      color: #555d6b;
+      font-size: 16px;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .price-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 28px 26px;
+      min-height: 445px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .price-card.popular {
+      border-color: #2055d8;
+      background: #eef3ff;
+      box-shadow: var(--shadow);
+    }
+
+    .popular-badge {
+      position: absolute;
+      top: -13px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2055d8;
+      color: #fff;
+      border-radius: 999px;
+      min-height: 26px;
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      font-weight: 850;
+      font-size: 13px;
+    }
+
+    .plan-name {
+      color: #666e7b;
+      font-weight: 780;
+      margin-bottom: 6px;
+    }
+
+    .price {
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .price small {
+      color: #5e6570;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .plan-desc {
+      color: #606875;
+      min-height: 42px;
+      margin: 10px 0 8px;
+      font-size: 14px;
+    }
+
+    .users {
+      color: #1c55c6;
+      font-weight: 800;
+      font-size: 14px;
+      margin-bottom: 22px;
+    }
+
+    .checks {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 28px;
+      display: grid;
+      gap: 12px;
+      color: #565e6a;
+      font-size: 16px;
+    }
+
+    .checks li {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 10px;
+    }
+
+    .checks svg {
+      width: 17px;
+      height: 17px;
+      color: #2155d9;
+      margin-top: 3px;
+    }
+
+    .price-card .button {
+      margin-top: auto;
+      width: 100%;
+    }
+
+    .cta-wrap {
+      padding: 90px 0;
+      background: #fff;
+    }
+
+    .cta {
+      width: min(860px, calc(100% - 48px));
+      margin: 0 auto;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 50% 34%, rgba(47, 107, 255, .26), transparent 33%),
+        linear-gradient(180deg, #05091a, #03050c);
+      color: #fff;
+      padding: 66px 48px;
+      text-align: center;
+      box-shadow: 0 28px 80px rgba(13, 24, 56, .18);
+    }
+
+    .cta .logo {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 26px;
+      border-radius: 16px;
+    }
+
+    .cta .logo svg { width: 38px; height: 38px; }
+
+    .cta h2 { font-size: clamp(32px, 3vw, 42px); }
+    .cta p {
+      margin: 20px auto 30px;
+      max-width: 660px;
+      color: #d8deef;
+      font-size: 20px;
+    }
+
+    .cta-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 26px;
+    }
+
+    .fine-print {
+      color: rgba(216, 222, 239, .55);
+      font-size: 15px;
+    }
+
+    footer {
+      background: #07090d;
+      color: #fff;
+      padding: 64px 0 46px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.25fr repeat(4, 1fr);
+      gap: 70px;
+      padding-bottom: 54px;
+      border-bottom: 1px solid rgba(255, 255, 255, .12);
+    }
+
+    .footer-brand p {
+      color: rgba(255, 255, 255, .62);
+      max-width: 210px;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badges span {
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 999px;
+      min-height: 24px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      color: rgba(255, 255, 255, .7);
+      font-size: 12px;
+    }
+
+    .footer-col h4 {
+      margin: 0 0 18px;
+      font-size: 15px;
+    }
+
+    .footer-col a {
+      display: block;
+      color: rgba(255, 255, 255, .58);
+      margin: 0 0 14px;
+      font-size: 16px;
+    }
+
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      color: rgba(255, 255, 255, .55);
+      padding-top: 34px;
+      font-size: 16px;
+    }
+
+    @media (max-width: 1080px) {
+      .nav-links { display: none; }
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 42px;
+        padding-top: 42px;
+      }
+      .dashboard { max-width: 680px; }
+      .cards-4, .steps, .features-grid, .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+      .integrations-grid { grid-template-columns: repeat(3, 1fr); }
+      .step:not(:last-child)::after { display: none; }
+      .footer-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 36px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .wrap { width: min(100% - 32px, 1200px); }
+      .hero { min-height: auto; }
+      .nav { height: auto; padding: 18px 0; gap: 16px; }
+      .nav-actions .secondary { display: none; }
+      .nav-actions .primary { padding: 0 12px; font-size: 14px; }
+      .hero-grid { padding: 48px 0 72px; }
+      h1 { font-size: 46px; }
+      .hero-copy { font-size: 18px; }
+      .search-row { grid-template-columns: 1fr; }
+      .pill-tab { display: none; }
+      .decision { grid-template-columns: 30px 1fr; }
+      .time { display: none; }
+      .dash-foot { align-items: flex-start; flex-direction: column; gap: 6px; padding: 12px 16px; }
+      .stats-grid, .cards-4, .steps, .features-grid, .pricing-grid, .integrations-grid, .footer-grid {
+        grid-template-columns: 1fr;
+      }
+      .stats-grid { padding: 42px 0; }
+      .section { padding: 76px 0; }
+      .section-head { margin-bottom: 42px; }
+      .section-head p { font-size: 18px; }
+      .card, .price-card { padding: 22px; }
+      .cta { width: calc(100% - 32px); padding: 50px 22px; border-radius: 18px; }
+      .footer-bottom { flex-direction: column; }
+    }
+  </style>
 </head>
 <body>
-
-<nav>
-  <a href="#" class="logo">Appro<span>line</span></a>
-  <div class="nav-links">
-    <a href="#features">Product</a>
-    <a href="#classifier">Live demo</a>
-    <a href="#dashboard">Dashboard</a>
-    <a href="#pricing">Pricing</a>
-    <button class="btn-outline" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Talk to sales</button>
-    <button class="btn-primary" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Start free trial</button>
-  </div>
-</nav>
-
-<!-- HERO -->
-<div class="hero">
-  <div>
-    <div class="eyebrow">Approval intelligence platform</div>
-    <h1>Every decision,<br><em>finally</em><br>accounted for.</h1>
-    <p class="hero-sub">Approline captures, classifies, and stores business approvals across Slack, Gmail, Teams, and more — creating a unified, auditable decision trail. Automatically.</p>
-    <div class="hero-ctas">
-      <button class="btn-primary" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Start free trial</button>
-      <button class="btn-outline" onclick="document.getElementById('classifier').scrollIntoView({behavior:'smooth'})">See it live ↗</button>
-    </div>
-    <div class="pills">
-      <div class="pill"><div class="dot pulse" style="background:#A78BFA"></div>Slack</div>
-      <div class="pill"><div class="dot pulse" style="background:var(--teal);animation-delay:.3s"></div>Gmail</div>
-      <div class="pill"><div class="dot pulse" style="background:#85B7EB;animation-delay:.6s"></div>Teams</div>
-      <div class="pill"><div class="dot" style="background:#4A5568"></div>Zoom</div>
-      <div class="pill"><div class="dot" style="background:#4A5568"></div>Asana</div>
-      <div class="pill"><div class="dot" style="background:#4A5568"></div>+ more</div>
-    </div>
-  </div>
-  <div>
-    <div class="capture-demo">
-      <div class="demo-lbl">Live capture · decision #1,847</div>
-      <div class="msg-card">
-        <div class="msg-meta">
-          <span class="msg-src ms-slack">Slack</span>
-          <span class="msg-author">Rachel Kim · #legal-ops</span>
-          <span class="msg-time">09:42 AM</span>
-        </div>
-        <div class="msg-text">Approved — go ahead with the Stripe contract renewal at the updated terms. CC @james when done.</div>
-        <div class="scan-line" id="sl"></div>
-        <div class="dtag dtag-a" id="t1">✓ APPROVED · Stripe contract renewal</div>
-        <div class="conf-l" id="c1">Confidence: <span>97%</span> · Approver: Rachel Kim</div>
+  <header class="hero">
+    <nav class="nav wrap" aria-label="Main navigation">
+      <a class="brand" href="#top" aria-label="ApprovLine home">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z" stroke="#dbe7ff" stroke-width="1.9"/>
+            <path d="m8.8 12 2.1 2.1 4.5-5" stroke="#dbe7ff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        ApprovLine
+      </a>
+      <div class="nav-links" aria-label="Section links">
+        <a href="#features">Features</a>
+        <a href="#how">How it Works</a>
+        <a href="#integrations">Integrations</a>
+        <a href="#pricing">Pricing</a>
       </div>
-      <div class="msg-card">
-        <div class="msg-meta">
-          <span class="msg-src ms-email">Email</span>
-          <span class="msg-author">James Okafor · CFO</span>
-          <span class="msg-time">Yesterday</span>
-        </div>
-        <div class="msg-text">Looks good to me — budget increase for Q3 marketing is approved pending board sign-off.</div>
-        <div class="dtag dtag-c" style="opacity:1">⚑ CONDITIONAL · Pending board sign-off</div>
+      <div class="nav-actions">
+        <a class="button secondary" href="#signin">Sign In</a>
+        <a class="button primary" href="#pricing">Get Started Free</a>
       </div>
-      <div class="demo-footer">
-        <div class="dot pulse" style="background:var(--teal)"></div>
-        <span>Scanning 3 sources · 1,847 decisions this month</span>
-      </div>
-    </div>
-  </div>
-</div>
+    </nav>
 
-<!-- STATS -->
-<div class="stats-wrap">
-  <div class="stats-grid">
-    <div class="stat"><div class="stat-num"><em>74</em>%</div><div class="stat-lbl">of decisions leave no audit trail</div></div>
-    <div class="stat"><div class="stat-num">3–4 <em>wks</em></div><div class="stat-lbl">average compliance audit duration</div></div>
-    <div class="stat"><div class="stat-num">$<em>2.4</em>M</div><div class="stat-lbl">avg cost of a missed approval dispute</div></div>
-  </div>
-</div>
-
-<div class="divider" style="margin:80px 48px 0"></div>
-
-<!-- FEATURES -->
-<div id="features" class="section">
-  <div class="eyebrow">How it works</div>
-  <h2 class="h2">From scattered messages<br>to a searchable record.</h2>
-  <p class="sub">Approline runs invisibly in the background. No new tools for your team. No forms to fill. It reads, classifies, and stores — so you have everything when it matters.</p>
-  <div class="features-grid">
-    <div class="feat"><div class="feat-icon">⚡</div><h3>Connect in 15 minutes</h3><p>OAuth connections to Gmail, Slack, and Teams. Read-only access — Approline never writes or modifies anything in your tools.</p></div>
-    <div class="feat"><div class="feat-icon">⬡</div><h3>AI classifies every message</h3><p>Built on Claude. Detects explicit approvals, implicit sign-offs, conditional approvals, and escalations — with a confidence score on every record.</p></div>
-    <div class="feat"><div class="feat-icon">≡</div><h3>Unified decision timeline</h3><p>Every captured approval lands in a searchable, filterable dashboard. One source of truth across every tool your organization uses.</p></div>
-    <div class="feat"><div class="feat-icon">↓</div><h3>Audit-ready exports</h3><p>Export your full decision log as PDF or CSV, formatted for compliance and legal review — with timestamps, evidence links, and approver details.</p></div>
-    <div class="feat"><div class="feat-icon">⊕</div><h3>SOC 2 from day one</h3><p>Enterprise-grade security. AES-256 encryption, TLS 1.3, tenant data isolation, and a clear path to SOC 2 Type II and GDPR compliance.</p></div>
-    <div class="feat"><div class="feat-icon">◎</div><h3>Find anything in seconds</h3><p>Full-text search by keyword, person, date, source, or topic. What used to take 3 weeks now takes 3 minutes.</p></div>
-  </div>
-</div>
-
-<!-- TIMELINE -->
-<div class="tl-section">
-  <div class="tl-inner">
-    <div>
-      <div class="eyebrow">Decision timeline</div>
-      <h2 class="h2">Your audit in 3 minutes,<br>not 3 weeks.</h2>
-      <p class="sub">Approline turns what used to be a manual reconstruction project into a three-minute search.</p>
-      <button class="btn-outline" onclick="document.getElementById('dashboard').scrollIntoView({behavior:'smooth'})">Explore the dashboard ↗</button>
-    </div>
-    <div class="tl-entries">
-      <div class="tl-entry"><div class="tl-who">Rachel Kim · Head of Compliance</div><div class="tl-what">Approved Stripe contract renewal at updated terms</div><div class="tl-badges"><span class="tlb tlb-a">APPROVED</span><span class="tlb tlb-s">Slack · #legal-ops</span><span class="tl-time">Jun 9 · 09:42</span></div></div>
-      <div class="tl-entry"><div class="tl-who">James Okafor · CFO</div><div class="tl-what">Q3 marketing budget — conditional on board sign-off</div><div class="tl-badges"><span class="tlb tlb-c">CONDITIONAL</span><span class="tlb tlb-e">Email</span><span class="tl-time">Jun 8 · 17:15</span></div></div>
-      <div class="tl-entry"><div class="tl-who">Priya Nair · CTO</div><div class="tl-what">Approved infrastructure upgrade to AWS eu-west-1</div><div class="tl-badges"><span class="tlb tlb-a">APPROVED</span><span class="tlb tlb-s">Slack · #eng-infra</span><span class="tl-time">Jun 7 · 11:03</span></div></div>
-      <div class="tl-entry"><div class="tl-who">David Walsh · VP Legal</div><div class="tl-what">NDAs for Series A investor diligence — signed off</div><div class="tl-badges"><span class="tlb tlb-a">APPROVED</span><span class="tlb tlb-e">Email</span><span class="tl-time">Jun 6 · 14:22</span></div></div>
-    </div>
-  </div>
-</div>
-
-<div class="divider"></div>
-
-<!-- CLASSIFIER -->
-<div id="classifier" class="clf-section">
-  <div class="eyebrow">Live demo · powered by Claude</div>
-  <h2 class="h2">Paste any message.<br>See it classified instantly.</h2>
-  <p class="sub">Approline reads your Slack, email, or Teams messages and extracts decision intelligence — automatically.</p>
-  <div class="clf-box">
-    <div class="src-row">
-      <button class="src-btn active" data-source="Slack" onclick="setSource(this)"><div class="dot" style="background:#A78BFA"></div>Slack</button>
-      <button class="src-btn" data-source="Email" onclick="setSource(this)"><div class="dot" style="background:var(--teal)"></div>Email</button>
-      <button class="src-btn" data-source="Teams" onclick="setSource(this)"><div class="dot" style="background:#85B7EB"></div>Teams</button>
-      <button class="src-btn" data-source="Zoom transcript" onclick="setSource(this)"><div class="dot" style="background:#EF9F27"></div>Zoom</button>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Try an example:</div>
-    <div class="ex-pills">
-      <div class="ex-pill" onclick="setEx('Looks good — approved. Go ahead and sign the NDA.')">Approved NDA</div>
-      <div class="ex-pill" onclick="setEx('Fine with the budget increase, but only if legal signs off first.')">Conditional budget</div>
-      <div class="ex-pill" onclick="setEx('Can we push this to next quarter? I don\'t think we\'re ready.')">Rejected / defer</div>
-      <div class="ex-pill" onclick="setEx('This needs to go up to the board, I can\'t approve at my level.')">Escalation</div>
-      <div class="ex-pill" onclick="setEx('Hey, when is the all-hands this week?')">Not a decision</div>
-    </div>
-    <textarea class="clf-ta" id="clfInput" placeholder="Paste a Slack message, email excerpt, or meeting transcript snippet…" oninput="document.getElementById('clfChar').textContent=this.value.length"></textarea>
-    <div class="clf-meta">
-      <span class="clf-char"><span id="clfChar">0</span> characters</span>
-      <button class="clf-run" id="clfBtn" onclick="runClassify()">
-        <div class="clf-spinner" id="clfSpin"></div>
-        <span id="clfBtnTxt">Classify this message</span>
-      </button>
-    </div>
-    <div class="clf-err" id="clfErr"></div>
-    <div class="clf-result" id="clfResult">
-      <div class="clf-top">
-        <span class="vbadge" id="clfVerdict"></span>
-        <div class="conf-wrap">
-          <div class="conf-lbl">Confidence: <span id="clfConfN"></span></div>
-          <div class="conf-bar"><div class="conf-fill" id="clfConfF" style="width:0%"></div></div>
-        </div>
-      </div>
-      <div class="clf-summary" id="clfSum"></div>
-      <div class="clf-fields">
-        <div class="clf-field"><div class="clf-field-l">Approver</div><div class="clf-field-v" id="clfApp"></div></div>
-        <div class="clf-field"><div class="clf-field-l">Subject</div><div class="clf-field-v" id="clfSubj"></div></div>
-        <div class="clf-field"><div class="clf-field-l">Source</div><div class="clf-field-v" id="clfSrcV"></div></div>
-        <div class="clf-field"><div class="clf-field-l">Condition</div><div class="clf-field-v" id="clfCond"></div></div>
-      </div>
-      <div class="clf-reason"><div class="clf-reason-l">Reasoning</div><div id="clfReas"></div></div>
-    </div>
-    <div class="powered"><div class="dot"></div>Live classification via Anthropic API · Results are not stored</div>
-  </div>
-</div>
-
-<div class="divider"></div>
-
-<!-- DASHBOARD -->
-<div id="dashboard" class="db-section">
-  <div class="db-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div id="top" class="hero-grid wrap">
       <div>
-        <div class="eyebrow">Decision dashboard</div>
-        <h2 class="h2" style="margin-bottom:0">Full audit trail, live.</h2>
+        <div class="eyebrow">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z" stroke="currentColor" stroke-width="1.8"/>
+            <path d="m9 12 2 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Universal Approval Intelligence Platform
+        </div>
+        <h1>Every decision. <span class="accent">Finally accounted for.</span></h1>
+        <p class="hero-copy">ApprovLine captures, classifies, and stores every business approval across Slack, Gmail, Teams, and more, creating a unified, searchable audit trail your compliance team will love.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#pricing">Start Free Trial <span aria-hidden="true">→</span></a>
+          <a class="button secondary" href="#how">See How It Works</a>
+        </div>
+        <div class="trust-row" aria-label="Trust indicators">
+          <span><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>SOC 2 Type II</span>
+          <span><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>GDPR Ready</span>
+          <span><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Read-Only Access</span>
+          <span><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>Enterprise Grade</span>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)">
-        <div class="dot pulse" style="background:var(--teal)"></div>Scanning 3 sources
+
+      <section class="dashboard" aria-label="ApprovLine dashboard preview">
+        <div class="window-bar">
+          <div class="dots" aria-hidden="true">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+          </div>
+          <span>ApprovLine Dashboard</span>
+          <span></span>
+        </div>
+        <div class="dash-body">
+          <div class="search-row">
+            <div class="search">Search decisions...</div>
+            <div class="pill-tab active">All</div>
+            <div class="pill-tab">Pending</div>
+          </div>
+          <article class="decision">
+            <div class="avatar purple">S</div>
+            <div>
+              <strong>Sarah Chen</strong><span class="tag">Explicit</span>
+              <p>Budget increase of $250K approved for Q3 marketing</p>
+              <div class="meter"><span style="width:98%"></span></div>
+            </div>
+            <div class="time">2 min ago</div>
+          </article>
+          <article class="decision">
+            <div class="avatar red">G</div>
+            <div>
+              <strong>James Okafor</strong><span class="tag">Explicit</span>
+              <p>Contract terms with Acme Corp signed off</p>
+              <div class="meter"><span style="width:95%"></span></div>
+            </div>
+            <div class="time">14 min ago</div>
+          </article>
+          <article class="decision">
+            <div class="avatar indigo">T</div>
+            <div>
+              <strong>Priya Sharma</strong><span class="tag soft">Implicit</span>
+              <p>Product launch cleared for next sprint</p>
+              <div class="meter"><span style="width:87%"></span></div>
+            </div>
+            <div class="time">1 hr ago</div>
+          </article>
+        </div>
+        <div class="dash-foot">
+          <b>3 decisions captured today</b>
+          <span>AI confidence avg: 93%</span>
+        </div>
+      </section>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="Decision audit statistics">
+    <div class="stats-grid wrap">
+      <div class="stat"><strong>74%</strong><span>of business decisions leave no audit trail</span></div>
+      <div class="stat"><strong>3-4 wks</strong><span>average time spent reconstructing decision histories</span></div>
+      <div class="stat"><strong>$2.4M</strong><span>average cost of a missed approval dispute</span></div>
+      <div class="stat"><strong>8+</strong><span>tools where decisions get lost simultaneously</span></div>
+    </div>
+  </section>
+
+  <main>
+    <section class="section" aria-labelledby="problem-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="label problem">The Problem</div>
+          <h2 id="problem-title">Decisions happen everywhere.<br>Records exist nowhere.</h2>
+          <p>Modern teams use 8+ tools simultaneously. Every critical approval disappears into threads, inboxes, and call recordings, until something goes wrong.</p>
+        </div>
+        <div class="cards-4">
+          <article class="card">
+            <div class="icon-tile purple"><svg viewBox="0 0 24 24" fill="none"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z" stroke="currentColor"/></svg></div>
+            <h3>CFO approves in Slack</h3>
+            <p>Budget increase agreed in a thread, then buried under 500 messages.</p>
+          </article>
+          <article class="card">
+            <div class="icon-tile red"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4z" stroke="currentColor"/><path d="m4 7 8 6 8-6" stroke="currentColor"/></svg></div>
+            <h3>Legal signs off over email</h3>
+            <p>Contract terms confirmed in an email chain nobody can find six months later.</p>
+          </article>
+          <article class="card">
+            <div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M15 10.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4.5l6 4.5v-12l-6 4.5Z" stroke="currentColor"/></svg></div>
+            <h3>Product gets a thumbs-up on Zoom</h3>
+            <p>Verbal go-ahead on a call. No record. No proof. No trail.</p>
+          </article>
+          <article class="card">
+            <div class="icon-tile orange"><svg viewBox="0 0 24 24" fill="none"><path d="M10.3 4.4 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.4a2 2 0 0 0-3.4 0Z" stroke="currentColor"/><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-linecap="round"/></svg></div>
+            <h3>Auditor asks: who approved this?</h3>
+            <p>3 weeks of manual reconstruction. Fines. Disputes. Damaged trust.</p>
+          </article>
+        </div>
+        <div class="gap-note"><b>The gap ApprovLine fills:</b> No tool today captures approvals passively, across all tools, with AI classification, and presents them as a unified auditable timeline.</div>
+      </div>
+    </section>
+
+    <section id="how" class="section soft" aria-labelledby="how-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="label">How It Works</div>
+          <h2 id="how-title">Set up once. Capture everything.</h2>
+          <p>ApprovLine works invisibly in the background, no new habits, no forms to fill, no behavior change required from your team.</p>
+        </div>
+        <div class="steps">
+          <article class="card step">
+            <div class="step-top"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" stroke="currentColor"/><path d="M14 11a5 5 0 0 0-7.1 0l-2 2A5 5 0 1 0 12 20.1l1.1-1.1" stroke="currentColor"/></svg></div><span class="number">01</span></div>
+            <h3>Connect your tools</h3>
+            <p>Link Gmail, Slack, Teams, and more in under 15 minutes. Read-only OAuth, so we never write or modify your messages.</p>
+          </article>
+          <article class="card step">
+            <div class="step-top"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4a3 3 0 0 0-3 3v10a3 3 0 0 0 6 0V7a3 3 0 0 0-3-3Z" stroke="currentColor"/><path d="M7 8a3 3 0 0 0 0 6M17 8a3 3 0 0 1 0 6M8 19a4 4 0 0 0 8 0" stroke="currentColor"/></svg></div><span class="number">02</span></div>
+            <h3>AI classifies approvals</h3>
+            <p>Every message is analyzed by our AI engine. Explicit, implicit, and conditional approvals are detected with a confidence score.</p>
+          </article>
+          <article class="card step">
+            <div class="step-top"><div class="icon-tile green"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7c0-2 3.6-3.5 8-3.5S20 5 20 7s-3.6 3.5-8 3.5S4 9 4 7Z" stroke="currentColor"/><path d="M4 7v10c0 2 3.6 3.5 8 3.5s8-1.5 8-3.5V7M4 12c0 2 3.6 3.5 8 3.5s8-1.5 8-3.5" stroke="currentColor"/></svg></div><span class="number">03</span></div>
+            <h3>Decision records created</h3>
+            <p>Each approval becomes a structured record: who, what, when, where, evidence, and a link back to the original thread.</p>
+          </article>
+          <article class="card step">
+            <div class="step-top"><div class="icon-tile yellow"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" stroke="currentColor"/></svg></div><span class="number">04</span></div>
+            <h3>Search and export anytime</h3>
+            <p>Real-time unified dashboard with full-text search. Export your complete audit log as PDF or CSV in seconds.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section" aria-labelledby="features-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="label">Features</div>
+          <h2 id="features-title">Everything compliance teams need</h2>
+          <p>Built to the standards that legal and audit teams require, from day one.</p>
+        </div>
+        <div class="features-grid">
+          <article class="card feature-card"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z" stroke="currentColor"/><path d="m9 12 2 2 4-5" stroke="currentColor"/></svg></div><span class="mini-tag">Core</span><h3>AI Approval Classifier</h3><p>Detects explicit, implicit, conditional approvals, and rejections. 95%+ accuracy with confidence scoring.</p></article>
+          <article class="card feature-card"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-linecap="round"/></svg></div><span class="mini-tag">Core</span><h3>Full-Text Search</h3><p>Search by keyword, person, date range, source, or topic across your entire decision history instantly.</p></article>
+          <article class="card feature-card"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l4 4v14H7z" stroke="currentColor"/><path d="M14 3v5h5M12 12v5M9.5 14.5 12 17l2.5-2.5" stroke="currentColor"/></svg></div><span class="mini-tag green">Compliance</span><h3>Audit Export</h3><p>Export your complete decision log as PDF or CSV, formatted for compliance and legal review with timestamps.</p></article>
+          <article class="card feature-card"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor"/><path d="M12 8v5l3 2" stroke="currentColor" stroke-linecap="round"/></svg></div><span class="mini-tag">Core</span><h3>Decision Timeline</h3><p>A real-time, chronological feed of every captured approval, with expandable evidence and context.</p></article>
+          <article class="card feature-card"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M6 10V8a6 6 0 1 1 12 0v2M5 10h14v10H5z" stroke="currentColor"/></svg></div><span class="mini-tag yellow">Security</span><h3>Read-Only by Design</h3><p>ApprovLine never writes, posts, or modifies messages in any connected tool. Privacy by principle.</p></article>
+          <article class="card feature-card"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z" stroke="currentColor" stroke-linejoin="round"/></svg></div><span class="mini-tag purple">Onboarding</span><h3>15-Minute Setup</h3><p>Connect your first tool and see captured decisions in under 15 minutes. No engineers required.</p></article>
+          <article class="card feature-card"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor"/><circle cx="12" cy="12" r="2.5" stroke="currentColor"/></svg></div><span class="mini-tag">Quality</span><h3>Pending Review Queue</h3><p>Low-confidence detections are routed to a human review queue so nothing important is missed.</p></article>
+          <article class="card feature-card"><div class="icon-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M5 19V5M10 19v-7M15 19V9M20 19v-4M3 19h19" stroke="currentColor" stroke-linecap="round"/></svg></div><span class="mini-tag">Intelligence</span><h3>Approval Analytics</h3><p>Dashboards showing approval velocity, bottlenecks, and patterns across your organization.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="integrations" class="section soft" aria-labelledby="integrations-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="label">Integrations</div>
+          <h2 id="integrations-title">Works where your team already works</h2>
+          <p>Connect every tool your organization uses. ApprovLine reads passively, zero disruption to your existing workflows.</p>
+        </div>
+        <div class="integrations-grid">
+          <div class="integration"><span class="app-icon" style="background:#ef4338">G</span><strong>Gmail</strong><span>Full thread access</span></div>
+          <div class="integration"><span class="app-icon" style="background:#57165f">S</span><strong>Slack</strong><span>Channels &amp; DMs</span></div>
+          <div class="integration"><span class="app-icon" style="background:#0b82c8">O</span><strong>Outlook</strong><span>Microsoft 365</span></div>
+          <div class="integration"><span class="app-icon" style="background:#6263aa">T</span><strong>Teams</strong><span>Via Graph API</span></div>
+          <div class="integration"><span class="app-icon" style="background:#2f91f3">Z</span><strong>Zoom</strong><span>Meeting transcripts</span></div>
+          <div class="integration"><span class="app-icon" style="background:#f06467">A</span><strong>Asana</strong><span>Task approvals</span></div>
+          <div class="integration"><span class="app-icon" style="background:#0a63c9">J</span><strong>Jira</strong><span>Issue transitions</span></div>
+          <div class="integration"><span class="app-icon" style="background:#000">N</span><strong>Notion</strong><span>Page comments</span></div>
+          <div class="integration"><span class="app-icon" style="background:#ff3e62">M</span><strong>Monday</strong><span>Board approvals</span></div>
+          <div class="integration"><span class="app-icon" style="background:#26c967">W</span><strong>WhatsApp</strong><span>Business API</span></div>
+          <div class="integration"><span class="app-icon" style="background:#6e7584">+</span><strong>Manual</strong><span>Direct entry</span></div>
+          <div class="integration outline-soon"><span class="app-icon" style="background:#dfe7ff;color:#2155d9">...</span><strong>More soon</strong><span>Phase 2</span></div>
+        </div>
+        <p class="integration-note">All integrations use read-only OAuth scopes. ApprovLine never writes to your tools.</p>
+      </div>
+    </section>
+
+    <section id="pricing" class="section" aria-labelledby="pricing-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="label">Pricing</div>
+          <h2 id="pricing-title">Simple, transparent pricing</h2>
+          <p>14-day free trial on all plans. No credit card required.</p>
+        </div>
+        <div class="pricing-grid">
+          <article class="price-card">
+            <div class="plan-name">Starter</div>
+            <div class="price">$49<small>/mo</small></div>
+            <p class="plan-desc">For small teams getting started</p>
+            <div class="users">Up to 5 users</div>
+            <ul class="checks">
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Gmail + Slack connectors</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>90-day decision history</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>AI approval classifier</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Decision timeline dashboard</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Full-text search</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Manual decision entry</li>
+            </ul>
+            <a class="button light-button" href="#top">Start Free Trial <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="price-card popular">
+            <div class="popular-badge">Most Popular</div>
+            <div class="plan-name">Pro</div>
+            <div class="price">$199<small>/mo</small></div>
+            <p class="plan-desc">Most popular, for growing compliance teams</p>
+            <div class="users">Up to 25 users</div>
+            <ul class="checks">
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>All sources (Gmail, Slack, Teams, Outlook)</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Unlimited decision history</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>PDF + CSV audit export</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Pending review queue</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Approval analytics</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Priority support</li>
+            </ul>
+            <a class="button primary" href="#top">Start Free Trial <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="price-card">
+            <div class="plan-name">Business</div>
+            <div class="price">$499<small>/mo</small></div>
+            <p class="plan-desc">For regulated teams with advanced needs</p>
+            <div class="users">Up to 100 users</div>
+            <ul class="checks">
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>All Pro features</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>SSO (SAML / OIDC)</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Role-based access control</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Custom data retention</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Zoom + Asana + Jira integrations</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Dedicated onboarding</li>
+            </ul>
+            <a class="button light-button" href="#top">Start Free Trial <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="price-card">
+            <div class="plan-name">Enterprise</div>
+            <div class="price">Custom</div>
+            <p class="plan-desc">For large regulated organizations</p>
+            <div class="users">Unlimited users</div>
+            <ul class="checks">
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>All Business features</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>SSO + SCIM provisioning</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Custom integrations</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Data residency options</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>SLA + dedicated CSM</li>
+              <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Custom audit formats</li>
+            </ul>
+            <a class="button light-button" href="#top">Contact Sales <span aria-hidden="true">→</span></a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-wrap" aria-labelledby="cta-title">
+      <div class="cta">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z" stroke="#dbe7ff" stroke-width="1.7"/><path d="m8.8 12 2.1 2.1 4.5-5" stroke="#dbe7ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h2 id="cta-title">Ready to make every decision accountable?</h2>
+        <p>Start your free 14-day trial. Connect your first tool in 15 minutes. No credit card required.</p>
+        <div class="cta-actions">
+          <a class="button primary" href="#pricing">Start Free Trial <span aria-hidden="true">→</span></a>
+          <a class="button secondary" href="#top">Book a Demo</a>
+        </div>
+        <div class="fine-print">No credit card required • 14-day free trial • Cancel anytime</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="#top">
+            <span class="logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z" stroke="#dbe7ff" stroke-width="1.9"/><path d="m8.8 12 2.1 2.1 4.5-5" stroke="#dbe7ff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            ApprovLine
+          </a>
+          <p>Every decision. Finally accounted for.</p>
+          <div class="badges"><span>SOC 2</span><span>GDPR</span><span>CCPA</span></div>
+        </div>
+        <div class="footer-col"><h4>Product</h4><a href="#features">Features</a><a href="#integrations">Integrations</a><a href="#pricing">Pricing</a><a href="#top">Changelog</a></div>
+        <div class="footer-col"><h4>Company</h4><a href="#top">About</a><a href="#top">Blog</a><a href="#top">Careers</a><a href="#top">Press</a></div>
+        <div class="footer-col"><h4>Legal</h4><a href="#top">Privacy Policy</a><a href="#top">Terms of Service</a><a href="#top">GDPR</a><a href="#top">Security</a></div>
+        <div class="footer-col"><h4>Support</h4><a href="#top">Documentation</a><a href="#top">Status</a><a href="#top">Contact</a><a href="#top">Book a Demo</a></div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 ApprovLine. All rights reserved.</span>
+        <span>Built for compliance teams who demand accountability.</span>
       </div>
     </div>
-    <div class="db-metrics">
-      <div class="db-metric"><div class="db-metric-l">Total decisions</div><div class="db-metric-v" id="dbTotal" style="color:var(--text-primary)">10</div></div>
-      <div class="db-metric"><div class="db-metric-l">Approved</div><div class="db-metric-v" id="dbAppr" style="color:#00C2A8">6</div></div>
-      <div class="db-metric"><div class="db-metric-l">Conditional</div><div class="db-metric-v" id="dbCond" style="color:#FAC875">2</div></div>
-      <div class="db-metric"><div class="db-metric-l">Escalations</div><div class="db-metric-v" id="dbEsc" style="color:#AFA9EC">1</div></div>
-    </div>
-    <div class="db-controls">
-      <div class="sw">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" class="db-search" id="dbSearch" placeholder="Search decisions, people, topics…" oninput="renderDb()">
-      </div>
-      <select class="db-sel" id="dbV" onchange="renderDb()">
-        <option value="">All verdicts</option>
-        <option value="APPROVED">Approved</option>
-        <option value="CONDITIONAL">Conditional</option>
-        <option value="REJECTED">Rejected</option>
-        <option value="ESCALATION">Escalation</option>
-      </select>
-      <select class="db-sel" id="dbS" onchange="renderDb()">
-        <option value="">All sources</option>
-        <option value="Slack">Slack</option>
-        <option value="Email">Email</option>
-        <option value="Teams">Teams</option>
-      </select>
-      <button class="exp-btn" onclick="document.getElementById('auditPanel').classList.toggle('open')">↓ Export audit</button>
-    </div>
-    <div class="db-table">
-      <div class="db-thead"><span>Verdict</span><span>Subject</span><span>Approver</span><span>Source</span><span>Date</span></div>
-      <div id="dbBody"></div>
-    </div>
-    <div class="audit-panel" id="auditPanel">
-      <div class="audit-title">Audit export preview <span class="audit-badge" id="auditCt">0 records</span></div>
-      <div class="audit-meta">
-        <div><div class="am-l">Export date</div><div class="am-v" id="auditDate"></div></div>
-        <div><div class="am-l">Date range</div><div class="am-v">Last 30 days</div></div>
-        <div><div class="am-l">Organization</div><div class="am-v">Acme Corp</div></div>
-        <div><div class="am-l">Format</div><div class="am-v">PDF · CSV</div></div>
-      </div>
-      <div class="audit-rows" id="auditRows"></div>
-      <button class="dl-btn">↓ Download audit report</button>
-    </div>
-  </div>
-</div>
-
-<div class="divider"></div>
-
-<!-- PRICING -->
-<div id="pricing" class="section">
-  <div class="eyebrow">Pricing</div>
-  <h2 class="h2">Start free. Scale when you need to.</h2>
-  <p class="sub">Transparent, per-workspace pricing. No seat taxes for viewers. Cancel any time.</p>
-  <div class="pricing-grid">
-    <div class="plan"><div class="plan-name">Starter</div><div class="plan-price"><sup>$</sup>49<span class="mo">/mo</span></div><div class="plan-div"></div><ul><li>Up to 5 users</li><li>Email + Slack</li><li>90-day history</li><li>Dashboard access</li></ul></div>
-    <div class="plan featured"><div class="plan-pop">Most popular</div><div class="plan-name">Pro</div><div class="plan-price"><sup>$</sup>199<span class="mo">/mo</span></div><div class="plan-div"></div><ul><li>Up to 25 users</li><li>All integrations</li><li>Unlimited history</li><li>PDF + CSV export</li></ul></div>
-    <div class="plan"><div class="plan-name">Business</div><div class="plan-price"><sup>$</sup>499<span class="mo">/mo</span></div><div class="plan-div"></div><ul><li>Up to 100 users</li><li>All integrations</li><li>SSO included</li><li>Custom retention</li></ul></div>
-    <div class="plan"><div class="plan-name">Enterprise</div><div class="plan-price" style="font-size:24px;padding-top:4px">Custom</div><div class="plan-div"></div><ul><li>Unlimited users</li><li>SSO + SCIM</li><li>SOC 2 + GDPR</li><li>Data residency</li></ul></div>
-  </div>
-</div>
-
-<!-- CTA -->
-<div class="cta-band">
-  <div class="cta-inner">
-    <div class="eyebrow">The question every auditor asks</div>
-    <div class="cta-q">"Who approved this?"</div>
-    <p class="cta-sub">With Approline, the answer is one search away — not three weeks of archaeology.</p>
-    <button class="btn-primary" style="font-size:15px;padding:12px 28px" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Start your free trial</button>
-  </div>
-</div>
-
-<footer>
-  <div class="footer-logo">Appro<span>line</span> · Every decision, finally accounted for.</div>
-  <div class="footer-copy">© 2025 Approline · SOC 2 · GDPR · CCPA</div>
-</footer>
-
-<script>
-/* HERO */
-setTimeout(function(){
-  var s=document.getElementById('sl');
-  if(s){s.style.width='100%';s.style.background='rgba(0,194,168,0.5)';}
-  setTimeout(function(){
-    var t=document.getElementById('t1'),c=document.getElementById('c1');
-    if(t)t.style.opacity='1';if(c)c.style.opacity='1';
-  },1100);
-},900);
-
-/* CLASSIFIER */
-var _src='Slack';
-function setSource(b){document.querySelectorAll('.src-btn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');_src=b.dataset.source;}
-function setEx(t){document.getElementById('clfInput').value=t;document.getElementById('clfChar').textContent=t.length;}
-var VL2={APPROVED:'Approved',CONDITIONAL:'Conditional approval',REJECTED:'Rejected / deferred',ESCALATION:'Escalation required',NOT_A_DECISION:'Not a decision'};
-var VC2={APPROVED:'vb-a',CONDITIONAL:'vb-c',REJECTED:'vb-r',ESCALATION:'vb-e',NOT_A_DECISION:'vb-n'};
-async function runClassify(){
-  var msg=document.getElementById('clfInput').value.trim();
-  if(!msg)return;
-  var btn=document.getElementById('clfBtn'),sp=document.getElementById('clfSpin'),bt=document.getElementById('clfBtnTxt');
-  var err=document.getElementById('clfErr'),res=document.getElementById('clfResult');
-  btn.disabled=true;btn.classList.add('loading');sp.style.display='block';bt.textContent='Classifying…';
-  err.classList.remove('show');res.classList.remove('show');
-  var sys='You are Approline\'s decision classification engine. Analyze business messages and extract approval intelligence. Respond ONLY with a valid JSON object, no markdown, no preamble. Schema: {"verdict":"APPROVED"|"CONDITIONAL"|"REJECTED"|"ESCALATION"|"NOT_A_DECISION","confidence":<integer 0-100>,"summary":"<one sentence>","approver":"<name or role>","subject":"<3-6 words>","condition":"<condition or None>","reasoning":"<2-3 sentences>"}';
-  try{
-    var r=await fetch('/api/classify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,source:_src})});
-    if(!r.ok)throw new Error('API error '+r.status);
-    renderClf(await r.json());
-  }catch(e){
-    err.textContent='Classification failed. Please try again.';err.classList.add('show');
-  }finally{
-    btn.disabled=false;btn.classList.remove('loading');sp.style.display='none';bt.textContent='Classify this message';
-  }
-}
-function renderClf(r){
-  var vb=document.getElementById('clfVerdict');
-  vb.textContent=VL2[r.verdict]||r.verdict;vb.className='vbadge '+(VC2[r.verdict]||'vb-n');
-  var conf=Math.min(100,Math.max(0,r.confidence||0));
-  document.getElementById('clfConfN').textContent=conf+'%';
-  var f=document.getElementById('clfConfF');
-  f.style.width=conf+'%';f.style.background=conf>=80?'#00C2A8':conf>=60?'#EF9F27':'#E24B4A';
-  document.getElementById('clfSum').textContent=r.summary||'';
-  document.getElementById('clfApp').textContent=r.approver||'—';
-  document.getElementById('clfSubj').textContent=r.subject||'—';
-  document.getElementById('clfSrcV').textContent=_src;
-  document.getElementById('clfCond').textContent=(r.condition&&r.condition!=='None')?r.condition:'—';
-  document.getElementById('clfReas').textContent=r.reasoning||'';
-  document.getElementById('clfResult').classList.add('show');
-}
-
-/* DASHBOARD */
-var DEC=[
-  {id:'D1847',verdict:'APPROVED',subject:'Stripe contract renewal',approver:'Rachel Kim',role:'Head of Compliance',source:'Slack',channel:'#legal-ops',time:'Jun 10',confidence:97,msg:'Approved — go ahead with the Stripe contract renewal at the updated terms.',condition:null},
-  {id:'D1846',verdict:'CONDITIONAL',subject:'Q3 marketing budget increase',approver:'James Okafor',role:'CFO',source:'Email',channel:'james.okafor@',time:'Jun 9',confidence:88,msg:'Budget increase for Q3 marketing is approved pending board sign-off.',condition:'Pending board sign-off'},
-  {id:'D1845',verdict:'APPROVED',subject:'AWS eu-west-1 infra upgrade',approver:'Priya Nair',role:'CTO',source:'Slack',channel:'#eng-infra',time:'Jun 9',confidence:95,msg:'Ship it. Approved the AWS eu-west-1 migration.',condition:null},
-  {id:'D1844',verdict:'APPROVED',subject:'Series A investor NDA',approver:'David Walsh',role:'VP Legal',source:'Email',channel:'d.walsh@',time:'Jun 8',confidence:99,msg:'All NDAs for the Series A diligence package are signed off.',condition:null},
-  {id:'D1843',verdict:'ESCALATION',subject:'$500K vendor payment auth',approver:'Meera Iyer',role:'VP Finance',source:'Teams',channel:'Finance · General',time:'Jun 8',confidence:82,msg:'This is above my approval limit. Needs to go to the CFO.',condition:null},
-  {id:'D1842',verdict:'REJECTED',subject:'New office lease — Bangalore HSR',approver:'Tom Reid',role:'COO',source:'Email',channel:'t.reid@',time:'Jun 7',confidence:91,msg:"Not the right time. Let's push the HSR office to Q1.",condition:null},
-  {id:'D1841',verdict:'APPROVED',subject:'Product roadmap Q3 priorities',approver:'Priya Nair',role:'CTO',source:'Slack',channel:'#product',time:'Jun 7',confidence:78,msg:"Happy with the Q3 scope. Auth revamp + mobile push — let's lock it in.",condition:null},
-  {id:'D1840',verdict:'CONDITIONAL',subject:'New hire senior engineer L5',approver:'Rachel Kim',role:'Head of Compliance',source:'Teams',channel:'HR · Hiring',time:'Jun 6',confidence:84,msg:'Conditional approval — only after the compliance background check clears.',condition:'Background check must clear'},
-  {id:'D1839',verdict:'APPROVED',subject:'External counsel — Linklaters',approver:'David Walsh',role:'VP Legal',source:'Email',channel:'d.walsh@',time:'Jun 5',confidence:96,msg:'Yes — go ahead and engage Linklaters for the data processing agreement review.',condition:null},
-  {id:'D1838',verdict:'APPROVED',subject:'SOC 2 audit scope — Vanta',approver:'Priya Nair',role:'CTO',source:'Slack',channel:'#security',time:'Jun 4',confidence:93,msg:'Vanta scope approved. Include API gateway, Supabase, and Vercel infra.',condition:null},
-];
-var SC2={Slack:'#AFA9EC',Email:'#00C2A8',Teams:'#85B7EB'};
-var VP2={APPROVED:'vb-a',CONDITIONAL:'vb-c',REJECTED:'vb-r',ESCALATION:'vb-e'};
-var _exp=null;
-function dbF(){
-  var q=document.getElementById('dbSearch').value.toLowerCase();
-  var fv=document.getElementById('dbV').value;
-  var fs=document.getElementById('dbS').value;
-  return DEC.filter(function(d){
-    return(!q||d.subject.toLowerCase().includes(q)||d.approver.toLowerCase().includes(q)||d.msg.toLowerCase().includes(q))&&(!fv||d.verdict===fv)&&(!fs||d.source===fs);
-  });
-}
-function renderDb(){
-  var rows=dbF();
-  document.getElementById('dbTotal').textContent=DEC.length;
-  document.getElementById('dbAppr').textContent=DEC.filter(function(d){return d.verdict==='APPROVED';}).length;
-  document.getElementById('dbCond').textContent=DEC.filter(function(d){return d.verdict==='CONDITIONAL';}).length;
-  document.getElementById('dbEsc').textContent=DEC.filter(function(d){return d.verdict==='ESCALATION';}).length;
-  var body=document.getElementById('dbBody');
-  if(!rows.length){body.innerHTML='<div class="db-empty">No decisions match your search.</div>';renderAudit([]);return;}
-  body.innerHTML=rows.map(function(d){
-    var isE=_exp===d.id;
-    return '<div>'+
-      '<div class="db-row" onclick="dbTog(\''+d.id+'\')">'+
-        '<div><span class="vbadge '+VP2[d.verdict]+'" style="font-size:11px;padding:3px 8px">'+VL2[d.verdict]+'</span></div>'+
-        '<div class="db-subj">'+d.subject+'</div>'+
-        '<div class="db-who">'+d.approver+'</div>'+
-        '<div class="db-src"><div style="width:6px;height:6px;border-radius:50%;background:'+(SC2[d.source]||'#888')+';flex-shrink:0"></div>'+d.source+' '+d.channel+'</div>'+
-        '<div class="db-t">'+d.time+'</div>'+
-      '</div>'+
-      '<div class="db-exp'+(isE?' open':'')+'" id="e-'+d.id+'">'+
-        '<div class="db-exp-grid">'+
-          '<div><div class="db-exp-l">Approver</div><div class="db-exp-v">'+d.approver+' · '+d.role+'</div></div>'+
-          '<div><div class="db-exp-l">Confidence</div><div class="db-exp-v">'+d.confidence+'%</div></div>'+
-          '<div><div class="db-exp-l">Decision ID</div><div class="db-exp-v">'+d.id+'</div></div>'+
-          '<div><div class="db-exp-l">Condition</div><div class="db-exp-v">'+(d.condition||'None')+'</div></div>'+
-        '</div>'+
-        '<div class="db-exp-msg">"'+d.msg+'"</div>'+
-      '</div>'+
-    '</div>';
-  }).join('');
-  renderAudit(rows);
-}
-function dbTog(id){_exp=_exp===id?null:id;renderDb();}
-function renderAudit(rows){
-  var ap=rows.filter(function(d){return d.verdict==='APPROVED'||d.verdict==='CONDITIONAL';});
-  document.getElementById('auditCt').textContent=ap.length+' records';
-  document.getElementById('auditDate').textContent=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-  document.getElementById('auditRows').innerHTML=ap.slice(0,6).map(function(d){
-    return '<div class="audit-row"><span class="ar-id">'+d.id+'</span><span class="ar-subj">'+d.subject+'</span><span class="ar-who">'+d.approver+'</span><span class="ar-time">'+d.time+'</span></div>';
-  }).join('');
-}
-renderDb();
-</script>
+  </footer>
 </body>
 </html>
