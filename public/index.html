@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Approline — Every decision, finally accounted for.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#00C2A8;--teal-dark:#00A08D;--teal-dim:rgba(0,194,168,0.12);--teal-border:rgba(0,194,168,0.25);
+  --navy:#0B1220;--navy-2:#111C2E;--navy-3:#1E2D45;
+  --text-primary:#EDF2F7;--text-secondary:#8A99B0;--text-muted:#4A5568;
+  --border:rgba(255,255,255,0.08);--border-light:rgba(255,255,255,0.05);
+  --mono:'IBM Plex Mono',monospace;--sans:'Inter',sans-serif;
+  --r:8px;--rl:12px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--navy);color:var(--text-primary);font-family:var(--sans);line-height:1.6}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:18px 48px;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:rgba(11,18,32,0.96);backdrop-filter:blur(8px);z-index:100}
+.logo{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--text-primary);text-decoration:none}
+.logo span{color:var(--teal)}
+.nav-links{display:flex;align-items:center;gap:28px}
+.nav-links a{color:var(--text-secondary);font-size:13px;text-decoration:none;transition:color .15s}
+.nav-links a:hover{color:var(--text-primary)}
+.btn-outline{background:transparent;color:var(--teal);font-size:13px;font-weight:500;padding:7px 16px;border-radius:var(--r);border:1px solid var(--teal-border);cursor:pointer;font-family:var(--sans);transition:all .15s}
+.btn-outline:hover{background:var(--teal-dim)}
+.btn-primary{background:var(--teal);color:var(--navy);font-size:13px;font-weight:600;padding:7px 16px;border-radius:var(--r);border:none;cursor:pointer;font-family:var(--sans);transition:opacity .15s}
+.btn-primary:hover{opacity:.88}
+
+.section{max-width:1080px;margin:0 auto;padding:80px 48px}
+.eyebrow{font-family:var(--mono);font-size:10px;color:var(--teal);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.h2{font-size:34px;font-weight:600;line-height:1.2;margin-bottom:14px}
+.sub{font-size:15px;color:var(--text-secondary);line-height:1.75;max-width:520px;margin-bottom:40px}
+.divider{height:0.5px;background:var(--border)}
+
+.hero{max-width:1080px;margin:0 auto;padding:80px 48px 60px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.hero h1{font-size:48px;font-weight:600;line-height:1.12;margin-bottom:20px}
+.hero h1 em{color:var(--teal);font-style:normal}
+.hero-sub{font-size:16px;color:var(--text-secondary);line-height:1.75;margin-bottom:32px}
+.hero-ctas{display:flex;gap:12px;margin-bottom:28px}
+.hero-ctas .btn-primary,.hero-ctas .btn-outline{font-size:14px;padding:10px 22px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--border);background:var(--navy-3);font-size:12px;color:var(--text-secondary)}
+.dot{width:7px;height:7px;border-radius:50%}
+.pulse{animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.capture-demo{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--border);padding:20px}
+.demo-lbl{font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px}
+.msg-card{background:var(--navy);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;border:0.5px solid var(--border-light)}
+.msg-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.msg-src{font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;font-family:var(--mono)}
+.ms-slack{background:rgba(74,21,144,0.25);color:#A78BFA}
+.ms-email{background:var(--teal-dim);color:var(--teal)}
+.msg-author{font-size:12px;color:var(--text-secondary)}
+.msg-time{font-size:11px;color:var(--text-muted);margin-left:auto;font-family:var(--mono)}
+.msg-text{font-size:13px;color:#CBD5E0;line-height:1.6;font-family:var(--mono)}
+.scan-line{height:1px;background:rgba(0,194,168,0);margin:6px 0 2px;transition:width 1.2s ease,background .3s;width:0}
+.dtag{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;font-weight:500;padding:3px 9px;border-radius:4px;margin-top:6px;opacity:0;transition:opacity .4s}
+.dtag-a{background:rgba(0,194,168,0.15);color:var(--teal);border:0.5px solid var(--teal-border)}
+.dtag-c{background:rgba(250,200,117,0.1);color:#FAC875;border:0.5px solid rgba(250,200,117,0.25)}
+.conf-l{font-size:10px;color:var(--text-muted);margin-top:4px;opacity:0;transition:opacity .4s;font-family:var(--mono)}
+.conf-l span{color:var(--teal)}
+.demo-footer{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:14px;border-top:0.5px solid var(--border-light)}
+.demo-footer span{font-family:var(--mono);font-size:11px;color:var(--text-secondary)}
+
+.stats-wrap{max-width:1080px;margin:0 auto;padding:0 48px}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:var(--rl);overflow:hidden}
+.stat{background:var(--navy);padding:28px 24px;text-align:center}
+.stat-num{font-size:36px;font-weight:600;font-family:var(--mono)}
+.stat-num em{color:var(--teal);font-style:normal}
+.stat-lbl{font-size:12px;color:var(--text-secondary);margin-top:4px}
+
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.feat{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--border);padding:24px}
+.feat-icon{width:36px;height:36px;border-radius:var(--r);background:var(--teal-dim);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--teal);font-size:18px}
+.feat h3{font-size:14px;font-weight:600;margin-bottom:8px}
+.feat p{font-size:13px;color:var(--text-secondary);line-height:1.65}
+
+.tl-section{background:var(--navy-2)}
+.tl-inner{max-width:1080px;margin:0 auto;padding:80px 48px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+.tl-entries{border-left:1px solid rgba(0,194,168,0.18);padding-left:24px}
+.tl-entry{position:relative;padding-bottom:28px}
+.tl-entry:last-child{padding-bottom:0}
+.tl-entry::before{content:'';position:absolute;left:-29px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--navy);border:1.5px solid var(--teal)}
+.tl-who{font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-bottom:3px}
+.tl-what{font-size:14px;font-weight:500;margin-bottom:6px}
+.tl-badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tlb{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:3px}
+.tlb-a{background:rgba(0,194,168,0.15);color:var(--teal)}
+.tlb-c{background:rgba(250,200,117,0.1);color:#FAC875}
+.tlb-s{background:rgba(167,139,250,0.15);color:#A78BFA}
+.tlb-e{background:rgba(0,194,168,0.08);color:#5DCAA5}
+.tl-time{font-size:11px;color:var(--text-muted);font-family:var(--mono)}
+
+.clf-section{max-width:1080px;margin:0 auto;padding:80px 48px}
+.clf-box{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--border);padding:32px;margin-top:40px}
+.src-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.src-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--navy);font-size:13px;color:var(--text-secondary);cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.src-btn.active{border-color:var(--teal-border);background:var(--teal-dim);color:var(--teal)}
+.ex-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.ex-pill{padding:5px 11px;border-radius:20px;border:0.5px solid var(--border);background:var(--navy);font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all .15s}
+.ex-pill:hover{color:var(--text-primary)}
+.clf-ta{width:100%;min-height:90px;padding:12px 14px;border-radius:var(--r);border:0.5px solid var(--border);background:var(--navy);color:var(--text-primary);font-size:14px;font-family:var(--sans);resize:vertical;line-height:1.6;outline:none;transition:border-color .15s}
+.clf-ta:focus{border-color:var(--teal-border)}
+.clf-meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px;margin-bottom:16px}
+.clf-char{font-size:11px;color:var(--text-muted);font-family:var(--mono)}
+.clf-run{display:flex;align-items:center;gap:8px;padding:10px 22px;background:var(--teal);color:var(--navy);border:none;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:opacity .15s}
+.clf-run:disabled{opacity:.5;cursor:not-allowed}
+.clf-spinner{width:14px;height:14px;border:2px solid rgba(11,18,32,0.25);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite;display:none}
+.clf-run.loading .clf-spinner{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.clf-result{background:var(--navy);border-radius:var(--r);border:0.5px solid var(--border);padding:20px;margin-top:20px;display:none}
+.clf-result.show{display:block}
+.clf-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.vbadge{font-family:var(--mono);font-size:12px;font-weight:500;padding:4px 10px;border-radius:var(--r);display:inline-block}
+.vb-a{background:rgba(0,194,168,0.15);color:var(--teal);border:0.5px solid var(--teal-border)}
+.vb-c{background:rgba(250,200,117,0.1);color:#FAC875;border:0.5px solid rgba(250,200,117,0.25)}
+.vb-r{background:rgba(226,75,74,0.1);color:#F09595;border:0.5px solid rgba(226,75,74,0.2)}
+.vb-e{background:rgba(127,119,221,0.1);color:#AFA9EC;border:0.5px solid rgba(127,119,221,0.2)}
+.vb-n{background:rgba(255,255,255,0.05);color:var(--text-secondary);border:0.5px solid var(--border)}
+.conf-wrap{text-align:right}
+.conf-lbl{font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-bottom:4px}
+.conf-bar{height:4px;background:var(--navy-3);border-radius:2px;width:140px;overflow:hidden}
+.conf-fill{height:100%;border-radius:2px;transition:width .6s ease}
+.clf-summary{font-size:14px;font-weight:500;margin-bottom:14px;line-height:1.5}
+.clf-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.clf-field{background:var(--navy-3);border-radius:var(--r);padding:10px 12px}
+.clf-field-l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.clf-field-v{font-size:13px;font-family:var(--mono);color:var(--text-primary)}
+.clf-reason{border-top:0.5px solid var(--border);padding-top:12px;font-size:13px;color:var(--text-secondary);line-height:1.65}
+.clf-reason-l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.clf-err{background:rgba(226,75,74,0.08);color:#F09595;border:0.5px solid rgba(226,75,74,0.2);border-radius:var(--r);padding:10px 14px;font-size:13px;margin-top:14px;display:none}
+.clf-err.show{display:block}
+
+.db-section{background:var(--navy-2)}
+.db-inner{max-width:1080px;margin:0 auto;padding:80px 48px}
+.db-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.db-metric{background:var(--navy-3);border-radius:var(--r);padding:16px 18px}
+.db-metric-l{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.db-metric-v{font-size:26px;font-weight:600;font-family:var(--mono)}
+.db-controls{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.sw{flex:1;min-width:200px;position:relative}
+.sw svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--text-muted);fill:none;stroke-width:2;pointer-events:none}
+.db-search{width:100%;padding:8px 12px 8px 32px;background:var(--navy-3);border:0.5px solid var(--border);border-radius:var(--r);color:var(--text-primary);font-size:13px;font-family:var(--sans);outline:none;transition:border-color .15s}
+.db-search:focus{border-color:var(--teal-border)}
+.db-sel{padding:8px 12px;background:var(--navy-3);border:0.5px solid var(--border);border-radius:var(--r);color:var(--text-primary);font-size:13px;font-family:var(--sans);outline:none;cursor:pointer}
+.exp-btn{display:flex;align-items:center;gap:6px;font-size:13px;padding:8px 14px;background:var(--navy-3);border:0.5px solid var(--teal-border);border-radius:var(--r);color:var(--teal);cursor:pointer;font-family:var(--sans);transition:all .15s;white-space:nowrap}
+.exp-btn:hover{background:var(--teal-dim)}
+.db-table{border:0.5px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.db-thead{display:grid;grid-template-columns:110px minmax(0,1fr) 110px 130px 80px;padding:8px 16px;background:var(--navy-3);border-bottom:0.5px solid var(--border)}
+.db-thead span{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.db-row{display:grid;grid-template-columns:110px minmax(0,1fr) 110px 130px 80px;padding:11px 16px;border-bottom:0.5px solid var(--border-light);align-items:center;cursor:pointer;transition:background .1s}
+.db-row:last-child{border-bottom:none}
+.db-row:hover{background:rgba(255,255,255,0.02)}
+.db-subj{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-who{font-size:12px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-src{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary)}
+.db-t{font-size:11px;color:var(--text-muted);font-family:var(--mono)}
+.db-exp{grid-column:1/-1;padding:14px 16px;border-top:0.5px solid var(--border-light);background:rgba(0,0,0,.15);display:none}
+.db-exp.open{display:block}
+.db-exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.db-exp-l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.db-exp-v{font-size:12px;font-family:var(--mono);color:var(--text-primary)}
+.db-exp-msg{font-size:13px;color:var(--text-secondary);line-height:1.6;padding:10px 12px;background:var(--navy);border-radius:var(--r);border:0.5px solid var(--border-light);font-family:var(--mono)}
+.db-empty{padding:2.5rem;text-align:center;font-size:14px;color:var(--text-muted)}
+.audit-panel{margin-top:16px;border:0.5px solid var(--teal-border);border-radius:var(--rl);padding:24px;display:none}
+.audit-panel.open{display:block}
+.audit-title{font-size:14px;font-weight:500;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.audit-badge{background:var(--navy-3);border-radius:var(--r);padding:2px 8px;font-size:11px;color:var(--text-secondary);font-family:var(--mono)}
+.audit-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.am-l{font-size:11px;color:var(--text-muted);margin-bottom:2px}
+.am-v{font-size:13px;font-weight:500}
+.audit-rows{border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.audit-row{display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:0.5px solid var(--border-light);font-size:12px}
+.audit-row:last-child{border-bottom:none}
+.ar-id{font-family:var(--mono);color:var(--text-muted);flex-shrink:0;width:42px}
+.ar-subj{flex:1;color:var(--text-primary)}
+.ar-who{color:var(--text-secondary);flex-shrink:0;width:120px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ar-time{color:var(--text-muted);font-family:var(--mono);flex-shrink:0;width:60px;text-align:right}
+.dl-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;background:var(--teal);color:var(--navy);border:none;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+
+.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:40px}
+.plan{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--border);padding:24px 20px}
+.plan.featured{border:1.5px solid rgba(0,194,168,0.4)}
+.plan-pop{font-family:var(--mono);font-size:10px;background:var(--teal-dim);color:var(--teal);padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:12px}
+.plan-name{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.plan-price{font-size:32px;font-weight:600;font-family:var(--mono);margin-bottom:16px}
+.plan-price sup{font-size:16px;vertical-align:top;margin-top:6px;display:inline-block}
+.plan-price .mo{font-size:13px;font-weight:400;color:var(--text-secondary)}
+.plan-div{height:0.5px;background:var(--border);margin-bottom:16px}
+.plan ul{list-style:none}
+.plan ul li{font-size:12px;color:var(--text-secondary);padding:5px 0;display:flex;align-items:flex-start;gap:7px;line-height:1.5}
+.plan ul li::before{content:'✓';color:var(--teal);flex-shrink:0;font-size:12px;margin-top:1px}
+
+.cta-band{max-width:1080px;margin:0 auto;padding:0 48px 80px}
+.cta-inner{background:var(--navy-3);border-radius:var(--rl);border:0.5px solid var(--teal-border);padding:56px 48px;text-align:center}
+.cta-q{font-size:40px;font-weight:600;line-height:1.2;margin-bottom:16px}
+.cta-sub{font-size:15px;color:var(--text-secondary);margin-bottom:32px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.75}
+
+footer{border-top:0.5px solid var(--border);padding:28px 48px;display:flex;justify-content:space-between;align-items:center}
+.footer-logo{font-family:var(--mono);font-size:13px;color:var(--text-muted)}
+.footer-logo span{color:var(--teal)}
+.footer-copy{font-size:12px;color:var(--text-muted)}
+
+.powered{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);margin-top:20px;font-family:var(--mono)}
+.powered .dot{background:var(--teal);width:6px;height:6px}
+
+@media(max-width:900px){
+  nav{padding:16px 24px}
+  .nav-links a{display:none}
+  .hero,.tl-inner{grid-template-columns:1fr;gap:40px;padding:48px 24px}
+  .hero h1{font-size:36px}
+  .section{padding:60px 24px}
+  .stats-wrap{padding:0 24px}
+  .features-grid,.pricing-grid{grid-template-columns:1fr 1fr}
+  .db-inner{padding:60px 24px}
+  .db-metrics{grid-template-columns:1fr 1fr}
+  .db-thead,.db-row{grid-template-columns:90px minmax(0,1fr) 80px}
+  .db-thead span:nth-child(n+4),.db-row>*:nth-child(n+4){display:none}
+  .clf-section{padding:60px 24px}
+  .cta-band{padding:0 24px 60px}
+  .cta-inner{padding:40px 24px}
+  .cta-q{font-size:28px}
+  footer{padding:24px;flex-direction:column;gap:8px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="logo">Appro<span>line</span></a>
+  <div class="nav-links">
+    <a href="#features">Product</a>
+    <a href="#classifier">Live demo</a>
+    <a href="#dashboard">Dashboard</a>
+    <a href="#pricing">Pricing</a>
+    <button class="btn-outline" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Talk to sales</button>
+    <button class="btn-primary" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Start free trial</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <div class="eyebrow">Approval intelligence platform</div>
+    <h1>Every decision,<br><em>finally</em><br>accounted for.</h1>
+    <p class="hero-sub">Approline captures, classifies, and stores business approvals across Slack, Gmail, Teams, and more — creating a unified, auditable decision trail. Automatically.</p>
+    <div class="hero-ctas">
+      <button class="btn-primary" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Start free trial</button>
+      <button class="btn-outline" onclick="document.getElementById('classifier').scrollIntoView({behavior:'smooth'})">See it live ↗</button>
+    </div>
+    <div class="pills">
+      <div class="pill"><div class="dot pulse" style="background:#A78BFA"></div>Slack</div>
+      <div class="pill"><div class="dot pulse" style="background:var(--teal);animation-delay:.3s"></div>Gmail</div>
+      <div class="pill"><div class="dot pulse" style="background:#85B7EB;animation-delay:.6s"></div>Teams</div>
+      <div class="pill"><div class="dot" style="background:#4A5568"></div>Zoom</div>
+      <div class="pill"><div class="dot" style="background:#4A5568"></div>Asana</div>
+      <div class="pill"><div class="dot" style="background:#4A5568"></div>+ more</div>
+    </div>
+  </div>
+  <div>
+    <div class="capture-demo">
+      <div class="demo-lbl">Live capture · decision #1,847</div>
+      <div class="msg-card">
+        <div class="msg-meta">
+          <span class="msg-src ms-slack">Slack</span>
+          <span class="msg-author">Rachel Kim · #legal-ops</span>
+          <span class="msg-time">09:42 AM</span>
+        </div>
+        <div class="msg-text">Approved — go ahead with the Stripe contract renewal at the updated terms. CC @james when done.</div>
+        <div class="scan-line" id="sl"></div>
+        <div class="dtag dtag-a" id="t1">✓ APPROVED · Stripe contract renewal</div>
+        <div class="conf-l" id="c1">Confidence: <span>97%</span> · Approver: Rachel Kim</div>
+      </div>
+      <div class="msg-card">
+        <div class="msg-meta">
+          <span class="msg-src ms-email">Email</span>
+          <span class="msg-author">James Okafor · CFO</span>
+          <span class="msg-time">Yesterday</span>
+        </div>
+        <div class="msg-text">Looks good to me — budget increase for Q3 marketing is approved pending board sign-off.</div>
+        <div class="dtag dtag-c" style="opacity:1">⚑ CONDITIONAL · Pending board sign-off</div>
+      </div>
+      <div class="demo-footer">
+        <div class="dot pulse" style="background:var(--teal)"></div>
+        <span>Scanning 3 sources · 1,847 decisions this month</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-wrap">
+  <div class="stats-grid">
+    <div class="stat"><div class="stat-num"><em>74</em>%</div><div class="stat-lbl">of decisions leave no audit trail</div></div>
+    <div class="stat"><div class="stat-num">3–4 <em>wks</em></div><div class="stat-lbl">average compliance audit duration</div></div>
+    <div class="stat"><div class="stat-num">$<em>2.4</em>M</div><div class="stat-lbl">avg cost of a missed approval dispute</div></div>
+  </div>
+</div>
+
+<div class="divider" style="margin:80px 48px 0"></div>
+
+<!-- FEATURES -->
+<div id="features" class="section">
+  <div class="eyebrow">How it works</div>
+  <h2 class="h2">From scattered messages<br>to a searchable record.</h2>
+  <p class="sub">Approline runs invisibly in the background. No new tools for your team. No forms to fill. It reads, classifies, and stores — so you have everything when it matters.</p>
+  <div class="features-grid">
+    <div class="feat"><div class="feat-icon">⚡</div><h3>Connect in 15 minutes</h3><p>OAuth connections to Gmail, Slack, and Teams. Read-only access — Approline never writes or modifies anything in your tools.</p></div>
+    <div class="feat"><div class="feat-icon">⬡</div><h3>AI classifies every message</h3><p>Built on Claude. Detects explicit approvals, implicit sign-offs, conditional approvals, and escalations — with a confidence score on every record.</p></div>
+    <div class="feat"><div class="feat-icon">≡</div><h3>Unified decision timeline</h3><p>Every captured approval lands in a searchable, filterable dashboard. One source of truth across every tool your organization uses.</p></div>
+    <div class="feat"><div class="feat-icon">↓</div><h3>Audit-ready exports</h3><p>Export your full decision log as PDF or CSV, formatted for compliance and legal review — with timestamps, evidence links, and approver details.</p></div>
+    <div class="feat"><div class="feat-icon">⊕</div><h3>SOC 2 from day one</h3><p>Enterprise-grade security. AES-256 encryption, TLS 1.3, tenant data isolation, and a clear path to SOC 2 Type II and GDPR compliance.</p></div>
+    <div class="feat"><div class="feat-icon">◎</div><h3>Find anything in seconds</h3><p>Full-text search by keyword, person, date, source, or topic. What used to take 3 weeks now takes 3 minutes.</p></div>
+  </div>
+</div>
+
+<!-- TIMELINE -->
+<div class="tl-section">
+  <div class="tl-inner">
+    <div>
+      <div class="eyebrow">Decision timeline</div>
+      <h2 class="h2">Your audit in 3 minutes,<br>not 3 weeks.</h2>
+      <p class="sub">Approline turns what used to be a manual reconstruction project into a three-minute search.</p>
+      <button class="btn-outline" onclick="document.getElementById('dashboard').scrollIntoView({behavior:'smooth'})">Explore the dashboard ↗</button>
+    </div>
+    <div class="tl-entries">
+      <div class="tl-entry"><div class="tl-who">Rachel Kim · Head of Compliance</div><div class="tl-what">Approved Stripe contract renewal at updated terms</div><div class="tl-badges"><span class="tlb tlb-a">APPROVED</span><span class="tlb tlb-s">Slack · #legal-ops</span><span class="tl-time">Jun 9 · 09:42</span></div></div>
+      <div class="tl-entry"><div class="tl-who">James Okafor · CFO</div><div class="tl-what">Q3 marketing budget — conditional on board sign-off</div><div class="tl-badges"><span class="tlb tlb-c">CONDITIONAL</span><span class="tlb tlb-e">Email</span><span class="tl-time">Jun 8 · 17:15</span></div></div>
+      <div class="tl-entry"><div class="tl-who">Priya Nair · CTO</div><div class="tl-what">Approved infrastructure upgrade to AWS eu-west-1</div><div class="tl-badges"><span class="tlb tlb-a">APPROVED</span><span class="tlb tlb-s">Slack · #eng-infra</span><span class="tl-time">Jun 7 · 11:03</span></div></div>
+      <div class="tl-entry"><div class="tl-who">David Walsh · VP Legal</div><div class="tl-what">NDAs for Series A investor diligence — signed off</div><div class="tl-badges"><span class="tlb tlb-a">APPROVED</span><span class="tlb tlb-e">Email</span><span class="tl-time">Jun 6 · 14:22</span></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- CLASSIFIER -->
+<div id="classifier" class="clf-section">
+  <div class="eyebrow">Live demo · powered by Claude</div>
+  <h2 class="h2">Paste any message.<br>See it classified instantly.</h2>
+  <p class="sub">Approline reads your Slack, email, or Teams messages and extracts decision intelligence — automatically.</p>
+  <div class="clf-box">
+    <div class="src-row">
+      <button class="src-btn active" data-source="Slack" onclick="setSource(this)"><div class="dot" style="background:#A78BFA"></div>Slack</button>
+      <button class="src-btn" data-source="Email" onclick="setSource(this)"><div class="dot" style="background:var(--teal)"></div>Email</button>
+      <button class="src-btn" data-source="Teams" onclick="setSource(this)"><div class="dot" style="background:#85B7EB"></div>Teams</button>
+      <button class="src-btn" data-source="Zoom transcript" onclick="setSource(this)"><div class="dot" style="background:#EF9F27"></div>Zoom</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Try an example:</div>
+    <div class="ex-pills">
+      <div class="ex-pill" onclick="setEx('Looks good — approved. Go ahead and sign the NDA.')">Approved NDA</div>
+      <div class="ex-pill" onclick="setEx('Fine with the budget increase, but only if legal signs off first.')">Conditional budget</div>
+      <div class="ex-pill" onclick="setEx('Can we push this to next quarter? I don\'t think we\'re ready.')">Rejected / defer</div>
+      <div class="ex-pill" onclick="setEx('This needs to go up to the board, I can\'t approve at my level.')">Escalation</div>
+      <div class="ex-pill" onclick="setEx('Hey, when is the all-hands this week?')">Not a decision</div>
+    </div>
+    <textarea class="clf-ta" id="clfInput" placeholder="Paste a Slack message, email excerpt, or meeting transcript snippet…" oninput="document.getElementById('clfChar').textContent=this.value.length"></textarea>
+    <div class="clf-meta">
+      <span class="clf-char"><span id="clfChar">0</span> characters</span>
+      <button class="clf-run" id="clfBtn" onclick="runClassify()">
+        <div class="clf-spinner" id="clfSpin"></div>
+        <span id="clfBtnTxt">Classify this message</span>
+      </button>
+    </div>
+    <div class="clf-err" id="clfErr"></div>
+    <div class="clf-result" id="clfResult">
+      <div class="clf-top">
+        <span class="vbadge" id="clfVerdict"></span>
+        <div class="conf-wrap">
+          <div class="conf-lbl">Confidence: <span id="clfConfN"></span></div>
+          <div class="conf-bar"><div class="conf-fill" id="clfConfF" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="clf-summary" id="clfSum"></div>
+      <div class="clf-fields">
+        <div class="clf-field"><div class="clf-field-l">Approver</div><div class="clf-field-v" id="clfApp"></div></div>
+        <div class="clf-field"><div class="clf-field-l">Subject</div><div class="clf-field-v" id="clfSubj"></div></div>
+        <div class="clf-field"><div class="clf-field-l">Source</div><div class="clf-field-v" id="clfSrcV"></div></div>
+        <div class="clf-field"><div class="clf-field-l">Condition</div><div class="clf-field-v" id="clfCond"></div></div>
+      </div>
+      <div class="clf-reason"><div class="clf-reason-l">Reasoning</div><div id="clfReas"></div></div>
+    </div>
+    <div class="powered"><div class="dot"></div>Live classification via Anthropic API · Results are not stored</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="db-section">
+  <div class="db-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="eyebrow">Decision dashboard</div>
+        <h2 class="h2" style="margin-bottom:0">Full audit trail, live.</h2>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary)">
+        <div class="dot pulse" style="background:var(--teal)"></div>Scanning 3 sources
+      </div>
+    </div>
+    <div class="db-metrics">
+      <div class="db-metric"><div class="db-metric-l">Total decisions</div><div class="db-metric-v" id="dbTotal" style="color:var(--text-primary)">10</div></div>
+      <div class="db-metric"><div class="db-metric-l">Approved</div><div class="db-metric-v" id="dbAppr" style="color:#00C2A8">6</div></div>
+      <div class="db-metric"><div class="db-metric-l">Conditional</div><div class="db-metric-v" id="dbCond" style="color:#FAC875">2</div></div>
+      <div class="db-metric"><div class="db-metric-l">Escalations</div><div class="db-metric-v" id="dbEsc" style="color:#AFA9EC">1</div></div>
+    </div>
+    <div class="db-controls">
+      <div class="sw">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="db-search" id="dbSearch" placeholder="Search decisions, people, topics…" oninput="renderDb()">
+      </div>
+      <select class="db-sel" id="dbV" onchange="renderDb()">
+        <option value="">All verdicts</option>
+        <option value="APPROVED">Approved</option>
+        <option value="CONDITIONAL">Conditional</option>
+        <option value="REJECTED">Rejected</option>
+        <option value="ESCALATION">Escalation</option>
+      </select>
+      <select class="db-sel" id="dbS" onchange="renderDb()">
+        <option value="">All sources</option>
+        <option value="Slack">Slack</option>
+        <option value="Email">Email</option>
+        <option value="Teams">Teams</option>
+      </select>
+      <button class="exp-btn" onclick="document.getElementById('auditPanel').classList.toggle('open')">↓ Export audit</button>
+    </div>
+    <div class="db-table">
+      <div class="db-thead"><span>Verdict</span><span>Subject</span><span>Approver</span><span>Source</span><span>Date</span></div>
+      <div id="dbBody"></div>
+    </div>
+    <div class="audit-panel" id="auditPanel">
+      <div class="audit-title">Audit export preview <span class="audit-badge" id="auditCt">0 records</span></div>
+      <div class="audit-meta">
+        <div><div class="am-l">Export date</div><div class="am-v" id="auditDate"></div></div>
+        <div><div class="am-l">Date range</div><div class="am-v">Last 30 days</div></div>
+        <div><div class="am-l">Organization</div><div class="am-v">Acme Corp</div></div>
+        <div><div class="am-l">Format</div><div class="am-v">PDF · CSV</div></div>
+      </div>
+      <div class="audit-rows" id="auditRows"></div>
+      <button class="dl-btn">↓ Download audit report</button>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- PRICING -->
+<div id="pricing" class="section">
+  <div class="eyebrow">Pricing</div>
+  <h2 class="h2">Start free. Scale when you need to.</h2>
+  <p class="sub">Transparent, per-workspace pricing. No seat taxes for viewers. Cancel any time.</p>
+  <div class="pricing-grid">
+    <div class="plan"><div class="plan-name">Starter</div><div class="plan-price"><sup>$</sup>49<span class="mo">/mo</span></div><div class="plan-div"></div><ul><li>Up to 5 users</li><li>Email + Slack</li><li>90-day history</li><li>Dashboard access</li></ul></div>
+    <div class="plan featured"><div class="plan-pop">Most popular</div><div class="plan-name">Pro</div><div class="plan-price"><sup>$</sup>199<span class="mo">/mo</span></div><div class="plan-div"></div><ul><li>Up to 25 users</li><li>All integrations</li><li>Unlimited history</li><li>PDF + CSV export</li></ul></div>
+    <div class="plan"><div class="plan-name">Business</div><div class="plan-price"><sup>$</sup>499<span class="mo">/mo</span></div><div class="plan-div"></div><ul><li>Up to 100 users</li><li>All integrations</li><li>SSO included</li><li>Custom retention</li></ul></div>
+    <div class="plan"><div class="plan-name">Enterprise</div><div class="plan-price" style="font-size:24px;padding-top:4px">Custom</div><div class="plan-div"></div><ul><li>Unlimited users</li><li>SSO + SCIM</li><li>SOC 2 + GDPR</li><li>Data residency</li></ul></div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-band">
+  <div class="cta-inner">
+    <div class="eyebrow">The question every auditor asks</div>
+    <div class="cta-q">"Who approved this?"</div>
+    <p class="cta-sub">With Approline, the answer is one search away — not three weeks of archaeology.</p>
+    <button class="btn-primary" style="font-size:15px;padding:12px 28px" onclick="document.getElementById('pricing').scrollIntoView({behavior:'smooth'})">Start your free trial</button>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">Appro<span>line</span> · Every decision, finally accounted for.</div>
+  <div class="footer-copy">© 2025 Approline · SOC 2 · GDPR · CCPA</div>
+</footer>
+
+<script>
+/* HERO */
+setTimeout(function(){
+  var s=document.getElementById('sl');
+  if(s){s.style.width='100%';s.style.background='rgba(0,194,168,0.5)';}
+  setTimeout(function(){
+    var t=document.getElementById('t1'),c=document.getElementById('c1');
+    if(t)t.style.opacity='1';if(c)c.style.opacity='1';
+  },1100);
+},900);
+
+/* CLASSIFIER */
+var _src='Slack';
+function setSource(b){document.querySelectorAll('.src-btn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');_src=b.dataset.source;}
+function setEx(t){document.getElementById('clfInput').value=t;document.getElementById('clfChar').textContent=t.length;}
+var VL2={APPROVED:'Approved',CONDITIONAL:'Conditional approval',REJECTED:'Rejected / deferred',ESCALATION:'Escalation required',NOT_A_DECISION:'Not a decision'};
+var VC2={APPROVED:'vb-a',CONDITIONAL:'vb-c',REJECTED:'vb-r',ESCALATION:'vb-e',NOT_A_DECISION:'vb-n'};
+async function runClassify(){
+  var msg=document.getElementById('clfInput').value.trim();
+  if(!msg)return;
+  var btn=document.getElementById('clfBtn'),sp=document.getElementById('clfSpin'),bt=document.getElementById('clfBtnTxt');
+  var err=document.getElementById('clfErr'),res=document.getElementById('clfResult');
+  btn.disabled=true;btn.classList.add('loading');sp.style.display='block';bt.textContent='Classifying…';
+  err.classList.remove('show');res.classList.remove('show');
+  var sys='You are Approline\'s decision classification engine. Analyze business messages and extract approval intelligence. Respond ONLY with a valid JSON object, no markdown, no preamble. Schema: {"verdict":"APPROVED"|"CONDITIONAL"|"REJECTED"|"ESCALATION"|"NOT_A_DECISION","confidence":<integer 0-100>,"summary":"<one sentence>","approver":"<name or role>","subject":"<3-6 words>","condition":"<condition or None>","reasoning":"<2-3 sentences>"}';
+  try{
+    var r=await fetch('/api/classify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,source:_src})});
+    if(!r.ok)throw new Error('API error '+r.status);
+    renderClf(await r.json());
+  }catch(e){
+    err.textContent='Classification failed. Please try again.';err.classList.add('show');
+  }finally{
+    btn.disabled=false;btn.classList.remove('loading');sp.style.display='none';bt.textContent='Classify this message';
+  }
+}
+function renderClf(r){
+  var vb=document.getElementById('clfVerdict');
+  vb.textContent=VL2[r.verdict]||r.verdict;vb.className='vbadge '+(VC2[r.verdict]||'vb-n');
+  var conf=Math.min(100,Math.max(0,r.confidence||0));
+  document.getElementById('clfConfN').textContent=conf+'%';
+  var f=document.getElementById('clfConfF');
+  f.style.width=conf+'%';f.style.background=conf>=80?'#00C2A8':conf>=60?'#EF9F27':'#E24B4A';
+  document.getElementById('clfSum').textContent=r.summary||'';
+  document.getElementById('clfApp').textContent=r.approver||'—';
+  document.getElementById('clfSubj').textContent=r.subject||'—';
+  document.getElementById('clfSrcV').textContent=_src;
+  document.getElementById('clfCond').textContent=(r.condition&&r.condition!=='None')?r.condition:'—';
+  document.getElementById('clfReas').textContent=r.reasoning||'';
+  document.getElementById('clfResult').classList.add('show');
+}
+
+/* DASHBOARD */
+var DEC=[
+  {id:'D1847',verdict:'APPROVED',subject:'Stripe contract renewal',approver:'Rachel Kim',role:'Head of Compliance',source:'Slack',channel:'#legal-ops',time:'Jun 10',confidence:97,msg:'Approved — go ahead with the Stripe contract renewal at the updated terms.',condition:null},
+  {id:'D1846',verdict:'CONDITIONAL',subject:'Q3 marketing budget increase',approver:'James Okafor',role:'CFO',source:'Email',channel:'james.okafor@',time:'Jun 9',confidence:88,msg:'Budget increase for Q3 marketing is approved pending board sign-off.',condition:'Pending board sign-off'},
+  {id:'D1845',verdict:'APPROVED',subject:'AWS eu-west-1 infra upgrade',approver:'Priya Nair',role:'CTO',source:'Slack',channel:'#eng-infra',time:'Jun 9',confidence:95,msg:'Ship it. Approved the AWS eu-west-1 migration.',condition:null},
+  {id:'D1844',verdict:'APPROVED',subject:'Series A investor NDA',approver:'David Walsh',role:'VP Legal',source:'Email',channel:'d.walsh@',time:'Jun 8',confidence:99,msg:'All NDAs for the Series A diligence package are signed off.',condition:null},
+  {id:'D1843',verdict:'ESCALATION',subject:'$500K vendor payment auth',approver:'Meera Iyer',role:'VP Finance',source:'Teams',channel:'Finance · General',time:'Jun 8',confidence:82,msg:'This is above my approval limit. Needs to go to the CFO.',condition:null},
+  {id:'D1842',verdict:'REJECTED',subject:'New office lease — Bangalore HSR',approver:'Tom Reid',role:'COO',source:'Email',channel:'t.reid@',time:'Jun 7',confidence:91,msg:"Not the right time. Let's push the HSR office to Q1.",condition:null},
+  {id:'D1841',verdict:'APPROVED',subject:'Product roadmap Q3 priorities',approver:'Priya Nair',role:'CTO',source:'Slack',channel:'#product',time:'Jun 7',confidence:78,msg:"Happy with the Q3 scope. Auth revamp + mobile push — let's lock it in.",condition:null},
+  {id:'D1840',verdict:'CONDITIONAL',subject:'New hire senior engineer L5',approver:'Rachel Kim',role:'Head of Compliance',source:'Teams',channel:'HR · Hiring',time:'Jun 6',confidence:84,msg:'Conditional approval — only after the compliance background check clears.',condition:'Background check must clear'},
+  {id:'D1839',verdict:'APPROVED',subject:'External counsel — Linklaters',approver:'David Walsh',role:'VP Legal',source:'Email',channel:'d.walsh@',time:'Jun 5',confidence:96,msg:'Yes — go ahead and engage Linklaters for the data processing agreement review.',condition:null},
+  {id:'D1838',verdict:'APPROVED',subject:'SOC 2 audit scope — Vanta',approver:'Priya Nair',role:'CTO',source:'Slack',channel:'#security',time:'Jun 4',confidence:93,msg:'Vanta scope approved. Include API gateway, Supabase, and Vercel infra.',condition:null},
+];
+var SC2={Slack:'#AFA9EC',Email:'#00C2A8',Teams:'#85B7EB'};
+var VP2={APPROVED:'vb-a',CONDITIONAL:'vb-c',REJECTED:'vb-r',ESCALATION:'vb-e'};
+var _exp=null;
+function dbF(){
+  var q=document.getElementById('dbSearch').value.toLowerCase();
+  var fv=document.getElementById('dbV').value;
+  var fs=document.getElementById('dbS').value;
+  return DEC.filter(function(d){
+    return(!q||d.subject.toLowerCase().includes(q)||d.approver.toLowerCase().includes(q)||d.msg.toLowerCase().includes(q))&&(!fv||d.verdict===fv)&&(!fs||d.source===fs);
+  });
+}
+function renderDb(){
+  var rows=dbF();
+  document.getElementById('dbTotal').textContent=DEC.length;
+  document.getElementById('dbAppr').textContent=DEC.filter(function(d){return d.verdict==='APPROVED';}).length;
+  document.getElementById('dbCond').textContent=DEC.filter(function(d){return d.verdict==='CONDITIONAL';}).length;
+  document.getElementById('dbEsc').textContent=DEC.filter(function(d){return d.verdict==='ESCALATION';}).length;
+  var body=document.getElementById('dbBody');
+  if(!rows.length){body.innerHTML='<div class="db-empty">No decisions match your search.</div>';renderAudit([]);return;}
+  body.innerHTML=rows.map(function(d){
+    var isE=_exp===d.id;
+    return '<div>'+
+      '<div class="db-row" onclick="dbTog(\''+d.id+'\')">'+
+        '<div><span class="vbadge '+VP2[d.verdict]+'" style="font-size:11px;padding:3px 8px">'+VL2[d.verdict]+'</span></div>'+
+        '<div class="db-subj">'+d.subject+'</div>'+
+        '<div class="db-who">'+d.approver+'</div>'+
+        '<div class="db-src"><div style="width:6px;height:6px;border-radius:50%;background:'+(SC2[d.source]||'#888')+';flex-shrink:0"></div>'+d.source+' '+d.channel+'</div>'+
+        '<div class="db-t">'+d.time+'</div>'+
+      '</div>'+
+      '<div class="db-exp'+(isE?' open':'')+'" id="e-'+d.id+'">'+
+        '<div class="db-exp-grid">'+
+          '<div><div class="db-exp-l">Approver</div><div class="db-exp-v">'+d.approver+' · '+d.role+'</div></div>'+
+          '<div><div class="db-exp-l">Confidence</div><div class="db-exp-v">'+d.confidence+'%</div></div>'+
+          '<div><div class="db-exp-l">Decision ID</div><div class="db-exp-v">'+d.id+'</div></div>'+
+          '<div><div class="db-exp-l">Condition</div><div class="db-exp-v">'+(d.condition||'None')+'</div></div>'+
+        '</div>'+
+        '<div class="db-exp-msg">"'+d.msg+'"</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  renderAudit(rows);
+}
+function dbTog(id){_exp=_exp===id?null:id;renderDb();}
+function renderAudit(rows){
+  var ap=rows.filter(function(d){return d.verdict==='APPROVED'||d.verdict==='CONDITIONAL';});
+  document.getElementById('auditCt').textContent=ap.length+' records';
+  document.getElementById('auditDate').textContent=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('auditRows').innerHTML=ap.slice(0,6).map(function(d){
+    return '<div class="audit-row"><span class="ar-id">'+d.id+'</span><span class="ar-subj">'+d.subject+'</span><span class="ar-who">'+d.approver+'</span><span class="ar-time">'+d.time+'</span></div>';
+  }).join('');
+}
+renderDb();
+</script>
+</body>
+</html>
