@@ -726,6 +726,77 @@
       width: 100%;
     }
 
+    .classifier-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(340px, 460px);
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .classifier-input,
+    .classifier-output {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 24px;
+    }
+
+    .classifier-input textarea {
+      width: 100%;
+      min-height: 180px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 16px;
+      font: inherit;
+      color: var(--ink);
+      line-height: 1.45;
+      outline: none;
+    }
+
+    .classifier-input textarea:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(33, 85, 217, .12);
+    }
+
+    .classifier-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    .select {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 0 12px;
+      font: inherit;
+      background: #fff;
+    }
+
+    .result-box {
+      min-height: 242px;
+      border-radius: 8px;
+      background: #080b16;
+      color: #d7ddeb;
+      padding: 18px;
+      font-size: 14px;
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+
+    .result-box b {
+      color: #fff;
+    }
+
+    .status-line {
+      color: var(--muted);
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
     .cta-wrap {
       padding: 90px 0;
       background: #fff;
@@ -772,6 +843,44 @@
     .fine-print {
       color: rgba(216, 222, 239, .55);
       font-size: 15px;
+    }
+
+    .waitlist-form {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      margin: 0 auto 18px;
+      max-width: 560px;
+    }
+
+    .waitlist-form input {
+      min-width: 0;
+      flex: 1;
+      min-height: 46px;
+      border: 1px solid rgba(255, 255, 255, .24);
+      border-right: 0;
+      border-radius: 5px 0 0 5px;
+      background: rgba(255, 255, 255, .08);
+      color: #fff;
+      padding: 0 16px;
+      font: inherit;
+      outline: none;
+    }
+
+    .waitlist-form input::placeholder {
+      color: rgba(216, 222, 239, .58);
+    }
+
+    .waitlist-form .button {
+      border-radius: 0 5px 5px 0;
+      min-height: 46px;
+    }
+
+    .form-message {
+      min-height: 22px;
+      color: #b7f7c8;
+      font-weight: 700;
+      margin-bottom: 16px;
     }
 
     footer {
@@ -837,6 +946,7 @@
       }
       .dashboard { max-width: 680px; }
       .cards-4, .steps, .features-grid, .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+      .classifier-panel { grid-template-columns: 1fr; }
       .integrations-grid { grid-template-columns: repeat(3, 1fr); }
       .step:not(:last-child)::after { display: none; }
       .footer-grid {
@@ -868,6 +978,13 @@
       .section-head p { font-size: 18px; }
       .card, .price-card { padding: 22px; }
       .cta { width: calc(100% - 32px); padding: 50px 22px; border-radius: 18px; }
+      .waitlist-form { flex-direction: column; gap: 10px; }
+      .waitlist-form input,
+      .waitlist-form .button {
+        border-radius: 5px;
+        border: 1px solid rgba(255, 255, 255, .24);
+        width: 100%;
+      }
       .footer-bottom { flex-direction: column; }
     }
   </style>
@@ -891,8 +1008,8 @@
         <a href="#pricing">Pricing</a>
       </div>
       <div class="nav-actions">
-        <a class="button secondary" href="#signin">Sign In</a>
-        <a class="button primary" href="#pricing">Get Started Free</a>
+        <a class="button secondary" href="#classifier">Try AI Demo</a>
+        <a class="button primary" href="#waitlist">Get Started Free</a>
       </div>
     </nav>
 
@@ -908,7 +1025,7 @@
         <h1>Every decision. <span class="accent">Finally accounted for.</span></h1>
         <p class="hero-copy">ApprovLine captures, classifies, and stores every business approval across Slack, Gmail, Teams, and more, creating a unified, searchable audit trail your compliance team will love.</p>
         <div class="hero-actions">
-          <a class="button primary" href="#pricing">Start Free Trial <span aria-hidden="true">→</span></a>
+          <a class="button primary" href="#waitlist">Start Free Trial <span aria-hidden="true">→</span></a>
           <a class="button secondary" href="#how">See How It Works</a>
         </div>
         <div class="trust-row" aria-label="Trust indicators">
@@ -1110,7 +1227,7 @@
               <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Full-text search</li>
               <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Manual decision entry</li>
             </ul>
-            <a class="button light-button" href="#top">Start Free Trial <span aria-hidden="true">→</span></a>
+            <a class="button light-button" href="#waitlist">Start Free Trial <span aria-hidden="true">→</span></a>
           </article>
           <article class="price-card popular">
             <div class="popular-badge">Most Popular</div>
@@ -1126,7 +1243,7 @@
               <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Approval analytics</li>
               <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Priority support</li>
             </ul>
-            <a class="button primary" href="#top">Start Free Trial <span aria-hidden="true">→</span></a>
+            <a class="button primary" href="#waitlist">Start Free Trial <span aria-hidden="true">→</span></a>
           </article>
           <article class="price-card">
             <div class="plan-name">Business</div>
@@ -1141,7 +1258,7 @@
               <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Zoom + Asana + Jira integrations</li>
               <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Dedicated onboarding</li>
             </ul>
-            <a class="button light-button" href="#top">Start Free Trial <span aria-hidden="true">→</span></a>
+            <a class="button light-button" href="#waitlist">Start Free Trial <span aria-hidden="true">→</span></a>
           </article>
           <article class="price-card">
             <div class="plan-name">Enterprise</div>
@@ -1156,22 +1273,56 @@
               <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>SLA + dedicated CSM</li>
               <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2"/></svg>Custom audit formats</li>
             </ul>
-            <a class="button light-button" href="#top">Contact Sales <span aria-hidden="true">→</span></a>
+            <a class="button light-button" href="#waitlist">Contact Sales <span aria-hidden="true">→</span></a>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="cta-wrap" aria-labelledby="cta-title">
+    <section id="classifier" class="section soft" aria-labelledby="classifier-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="label">AI Demo</div>
+          <h2 id="classifier-title">Test approval detection live</h2>
+          <p>Paste a Slack, email, or meeting note snippet and ApprovLine will classify whether it contains an approval decision.</p>
+        </div>
+        <div class="classifier-panel">
+          <div class="classifier-input">
+            <textarea id="messageInput" aria-label="Message to classify">Approved. Please move forward with the Q3 marketing budget increase to $250K and use the revised contract terms Sarah shared yesterday.</textarea>
+            <div class="classifier-controls">
+              <select id="sourceInput" class="select" aria-label="Message source">
+                <option>Slack</option>
+                <option>Email</option>
+                <option>Teams</option>
+                <option>Zoom</option>
+              </select>
+              <button class="primary" id="classifyButton" type="button">Classify Message</button>
+            </div>
+            <p class="status-line">Requires `ANTHROPIC_API_KEY` in Vercel environment variables.</p>
+          </div>
+          <div class="classifier-output">
+            <div id="classifierResult" class="result-box"><b>Ready.</b>
+Paste a business message and run the classifier.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="waitlist" class="cta-wrap" aria-labelledby="cta-title">
       <div class="cta">
         <div class="logo" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z" stroke="#dbe7ff" stroke-width="1.7"/><path d="m8.8 12 2.1 2.1 4.5-5" stroke="#dbe7ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <h2 id="cta-title">Ready to make every decision accountable?</h2>
         <p>Start your free 14-day trial. Connect your first tool in 15 minutes. No credit card required.</p>
+        <form class="waitlist-form" id="waitlistForm">
+          <input id="emailInput" type="email" placeholder="you@company.com" aria-label="Work email" required>
+          <button class="button primary" type="submit">Join Waitlist <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="form-message" id="formMessage" role="status"></div>
         <div class="cta-actions">
-          <a class="button primary" href="#pricing">Start Free Trial <span aria-hidden="true">→</span></a>
-          <a class="button secondary" href="#top">Book a Demo</a>
+          <a class="button secondary" href="#classifier">Try AI Demo</a>
+          <a class="button secondary" href="mailto:hello@approvline.com?subject=ApprovLine%20Demo%20Request">Book a Demo</a>
         </div>
         <div class="fine-print">No credit card required • 14-day free trial • Cancel anytime</div>
       </div>
@@ -1202,5 +1353,66 @@
       </div>
     </div>
   </footer>
+  <script>
+    const waitlistForm = document.getElementById('waitlistForm');
+    const emailInput = document.getElementById('emailInput');
+    const formMessage = document.getElementById('formMessage');
+    const classifyButton = document.getElementById('classifyButton');
+    const classifierResult = document.getElementById('classifierResult');
+    const messageInput = document.getElementById('messageInput');
+    const sourceInput = document.getElementById('sourceInput');
+
+    waitlistForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const email = emailInput.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        formMessage.textContent = 'Enter a valid work email.';
+        formMessage.style.color = '#fecaca';
+        return;
+      }
+      const signups = JSON.parse(localStorage.getItem('approvline_waitlist') || '[]');
+      if (!signups.includes(email)) signups.push(email);
+      localStorage.setItem('approvline_waitlist', JSON.stringify(signups));
+      emailInput.value = '';
+      formMessage.textContent = "You're on the list. We'll be in touch soon.";
+      formMessage.style.color = '#b7f7c8';
+    });
+
+    classifyButton?.addEventListener('click', async () => {
+      const message = messageInput.value.trim();
+      if (!message) {
+        classifierResult.innerHTML = '<b>Add a message first.</b>';
+        return;
+      }
+
+      classifyButton.textContent = 'Classifying...';
+      classifyButton.disabled = true;
+      classifierResult.textContent = 'Analyzing message...';
+
+      try {
+        const response = await fetch('/api/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, source: sourceInput.value }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Classification failed');
+        classifierResult.innerHTML =
+          `<b>Verdict:</b> ${data.verdict}\n` +
+          `<b>Confidence:</b> ${data.confidence}%\n` +
+          `<b>Approver:</b> ${data.approver}\n` +
+          `<b>Subject:</b> ${data.subject}\n` +
+          `<b>Condition:</b> ${data.condition}\n\n` +
+          `<b>Summary:</b> ${data.summary}\n\n` +
+          `<b>Reasoning:</b> ${data.reasoning}`;
+      } catch (error) {
+        classifierResult.innerHTML =
+          `<b>Demo unavailable.</b>\n${error.message}\n\nCheck that ANTHROPIC_API_KEY is set in Vercel.`;
+      } finally {
+        classifyButton.textContent = 'Classify Message';
+        classifyButton.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
