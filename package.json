@@ -1,0 +1,13 @@
+{
+  "name": "approvline",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node -e \"console.log('ApprovLine static Vercel build ready')\"",
+    "check": "node --check api/classify.js && node --check api/health.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

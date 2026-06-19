@@ -1,17 +1,12 @@
 export default async function handler(req) {
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  // CORS — lock this down to your domain in production
   const origin = req.headers.get('origin') || '';
   const allowedOrigins = [
+    'https://approvline.com',
+    'https://www.approvline.com',
     'https://approline.com',
     'https://www.approline.com',
     'http://localhost:3000',
+    'http://localhost:4173',
   ];
   const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
 
@@ -24,6 +19,13 @@ export default async function handler(req) {
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers,
+    });
   }
 
   let body;
@@ -52,7 +54,14 @@ export default async function handler(req) {
     });
   }
 
-  const SYSTEM = `You are Approline's decision classification engine. Analyze business messages and extract approval intelligence.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return new Response(
+      JSON.stringify({ error: 'ANTHROPIC_API_KEY is not configured' }),
+      { status: 500, headers }
+    );
+  }
+
+  const SYSTEM = `You are ApprovLine's decision classification engine. Analyze business messages and extract approval intelligence.
 
 Respond ONLY with a valid JSON object, no markdown, no preamble. Schema:
 {
