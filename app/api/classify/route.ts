@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ApprovalType, type Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { getCurrentTenant } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { classifyWithOpenAI, CLASSIFIER_MODEL, CLASSIFIER_PROMPT_VERSION, hashClassifierInput } from '@/services/classifier/openai';
 import { writeAuditLog } from '@/services/audit';
@@ -39,8 +40,16 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    let organizationId: string | undefined;
+    if (parsed.data.organizationId) {
+      const tenant = await getCurrentTenant();
+      if (tenant.organization.id !== parsed.data.organizationId) {
+        return NextResponse.json({ error: 'Forbidden tenant scope' }, { status: 403 });
+      }
+      organizationId = tenant.organization.id;
+    }
+
     const result = await classifyWithOpenAI(parsed.data);
-    const organizationId = parsed.data.organizationId;
 
     if (organizationId) {
       const classifier = await prisma.classifierResult.create({
@@ -87,7 +96,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Classification failed' },
-      { status: 500 },
+      { status: error instanceof Response ? error.status : 500 },
     );
   }
 }
