@@ -1395,7 +1395,13 @@ Paste a business message and run the classifier.</div>
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message, source: sourceInput.value }),
         });
-        const data = await response.json();
+        const raw = await response.text();
+        let data;
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch {
+          data = { error: raw || 'Unexpected server response' };
+        }
         if (!response.ok) throw new Error(data.error || 'Classification failed');
         classifierResult.innerHTML =
           `<b>Verdict:</b> ${data.verdict}\n` +
