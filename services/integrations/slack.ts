@@ -29,7 +29,10 @@ export function verifySlackState(state: string) {
   const [body, signature] = state.split('.');
   if (!body || !signature) return null;
   const expected = crypto.createHmac('sha256', stateSecret()).update(body).digest('base64url');
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (signatureBuffer.length !== expectedBuffer.length) return null;
+  if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) return null;
 
   const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as {
     organizationId: string;

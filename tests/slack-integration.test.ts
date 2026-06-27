@@ -18,6 +18,8 @@ const state = signSlackState({ organizationId: 'org_123', userId: 'user_123', cr
 const verifiedState = verifySlackState(state);
 assert.equal(verifiedState?.organizationId, 'org_123');
 assert.equal(verifiedState?.userId, 'user_123');
+assert.equal(verifySlackState(`${state}tampered`), null);
+assert.equal(verifySlackState('not-a-valid-state.short'), null);
 
 const installUrl = buildSlackInstallUrl({ requestUrl: 'https://app.approvline.com/dashboard/settings/integrations', state });
 assert.equal(installUrl.hostname, 'slack.com');

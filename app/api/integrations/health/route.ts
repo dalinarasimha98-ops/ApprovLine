@@ -1,44 +1,23 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { env } from '@/config/env';
-import { createRedisConnection } from '@/services/queue/connection';
+import { buildReadinessReport } from '@/services/readiness';
 
-type HealthStatus = 'connected' | 'not_connected' | 'error' | 'needs_reauthentication' | 'syncing';
-
-async function checkPostgres() {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    return { status: 'connected' as HealthStatus };
-  } catch (error) {
-    return { status: 'error' as HealthStatus, message: error instanceof Error ? error.message : 'PostgreSQL unavailable' };
-  }
-}
-
-async function checkRedis() {
-  if (!env.REDIS_URL) return { status: 'not_connected' as HealthStatus, message: 'REDIS_URL is not configured' };
-  const connection = createRedisConnection() as { ping: () => Promise<string>; quit: () => Promise<void> };
-  try {
-    await connection.ping();
-    await connection.quit();
-    return { status: 'connected' as HealthStatus };
-  } catch (error) {
-    return { status: 'error' as HealthStatus, message: error instanceof Error ? error.message : 'Redis unavailable' };
-  }
-}
-
-function connectorStatus(configured: boolean): { status: HealthStatus } {
+function connectorStatus(configured: boolean) {
   return { status: configured ? 'connected' : 'not_connected' };
 }
 
 export async function GET() {
-  const [postgres, redis] = await Promise.all([checkPostgres(), checkRedis()]);
+  const readiness = await buildReadinessReport();
 
   return NextResponse.json({
     checkedAt: new Date().toISOString(),
     services: {
-      postgresql: postgres,
-      redis,
+      postgresql: readiness.checks.postgresql,
+      redis: readiness.checks.redis,
+      openai: readiness.checks.openai,
+      anthropic: readiness.checks.anthropic,
       ai: connectorStatus(Boolean(env.ANTHROPIC_API_KEY || env.OPENAI_API_KEY)),
+      appUrl: readiness.checks.appUrl,
     },
     connectors: {
       slack: connectorStatus(Boolean(env.SLACK_CLIENT_ID && env.SLACK_CLIENT_SECRET)),
