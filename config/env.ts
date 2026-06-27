@@ -12,8 +12,10 @@ const envSchema = z.object({
     .string()
     .regex(/^[a-f0-9]{64}$/, 'ENCRYPTION_KEY must be a 64-character lowercase hex string')
     .optional(),
+  APP_URL: z.string().url().optional(),
   SLACK_CLIENT_ID: z.string().optional(),
   SLACK_CLIENT_SECRET: z.string().optional(),
+  SLACK_SIGNING_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),

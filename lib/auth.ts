@@ -26,6 +26,8 @@ export async function getCurrentTenant() {
       clerkOrgId: orgId,
       name: session.orgSlug ?? 'Personal Workspace',
       slug: orgId ?? `personal-${session.userId}`,
+      departments: [],
+      approvalCategories: [],
     },
   });
 

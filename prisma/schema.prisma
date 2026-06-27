@@ -26,6 +26,7 @@ enum IntegrationStatus {
   DISCONNECTED
   NEEDS_REAUTH
   ERROR
+  SYNCING
 }
 
 enum ApprovalType {
@@ -56,6 +57,9 @@ model Organization {
   clerkOrgId        String?            @unique
   name              String
   slug              String             @unique
+  departments       String[]
+  approvalCategories String[]
+  onboardedAt       DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   users             User[]
