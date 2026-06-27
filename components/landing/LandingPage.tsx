@@ -68,7 +68,7 @@ export function LandingPage() {
           `<b>Reasoning:</b> ${data.reasoning}`;
       } catch (error) {
         classifierResult.innerHTML =
-          `<b>Demo unavailable.</b>\n${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck that OPENAI_API_KEY is set in Vercel.`;
+          `<b>Demo unavailable.</b>\n${error instanceof Error ? error.message : 'Unknown error'}\n\nAdd OPENAI_API_KEY in Vercel Project Settings > Environment Variables. GitHub Actions secrets are not available to Vercel runtime.`;
       } finally {
         classifyButton.textContent = 'Classify Message';
         classifyButton.disabled = false;
