@@ -1,15 +1,22 @@
-import { SignIn } from '@clerk/nextjs';
+import Link from 'next/link';
+import { AuthShell } from '@/components/auth/AuthShell';
+import { EmailSignInForm } from '@/components/auth/EmailSignInForm';
 
 export default function SignInPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10">
-      <SignIn
-        routing="path"
-        path="/sign-in"
-        signUpUrl="/sign-up"
-        afterSignInUrl="/get-started"
-        fallbackRedirectUrl="/get-started"
-      />
-    </main>
+    <AuthShell
+      title="Sign in with email"
+      subtitle="Use your work email. ApprovLine does not require phone-number authentication."
+      footer={
+        <>
+          Need an account?{' '}
+          <Link href="/sign-up" className="font-bold text-[#2155d9]">
+            Start free
+          </Link>
+        </>
+      }
+    >
+      <EmailSignInForm />
+    </AuthShell>
   );
 }

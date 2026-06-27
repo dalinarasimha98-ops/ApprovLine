@@ -85,6 +85,23 @@ npm run readiness
 
 Open `/health` in production to verify PostgreSQL, Redis, Anthropic, OpenAI fallback, Slack configuration, encryption, and app URL status.
 
+## Clerk email-only authentication
+
+ApprovLine uses custom Clerk sign-in and sign-up screens that only submit email identifiers. The app does not render phone-number fields or call phone-code strategies.
+
+In Clerk Dashboard -> User & Authentication -> Email, Phone, Username:
+
+- Enable email address sign-up.
+- Enable email address sign-in.
+- Enable password, email code, or both.
+- Disable phone number sign-up/sign-in.
+- Do not mark phone number as a required user attribute.
+
+Redirects:
+
+- Sign-up completes at `/onboarding`.
+- Sign-in completes at `/get-started`, which sends onboarded users to `/dashboard` and new users to `/onboarding`.
+
 ## Production flows
 
 Incoming webhook events are enqueued through BullMQ, classified by Anthropic or OpenAI fallback, stored as tenant-scoped approval records, and written to audit logs.
