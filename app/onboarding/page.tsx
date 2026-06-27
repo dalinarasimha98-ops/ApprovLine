@@ -89,6 +89,10 @@ export default async function OnboardingPage({
   const { organization } = await getCurrentTenant();
   const step = (await searchParams).step ?? 'organization';
 
+  if (organization.onboardedAt && step !== 'complete') {
+    redirect('/dashboard');
+  }
+
   if (step === 'invite') {
     return (
       <StepShell title="Invite team members">

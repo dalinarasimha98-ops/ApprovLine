@@ -21,7 +21,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <ClerkProvider publishableKey={publishableKey}>
+    <ClerkProvider
+      publishableKey={publishableKey}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/get-started"
+      afterSignUpUrl="/onboarding"
+      signInFallbackRedirectUrl="/get-started"
+      signUpFallbackRedirectUrl="/onboarding"
+    >
       {content}
     </ClerkProvider>
   );
