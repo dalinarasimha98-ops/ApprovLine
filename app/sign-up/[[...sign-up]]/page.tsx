@@ -1,15 +1,22 @@
-import { SignUp } from '@clerk/nextjs';
+import Link from 'next/link';
+import { AuthShell } from '@/components/auth/AuthShell';
+import { EmailSignUpForm } from '@/components/auth/EmailSignUpForm';
 
 export default function SignUpPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10">
-      <SignUp
-        routing="path"
-        path="/sign-up"
-        signInUrl="/sign-in"
-        afterSignUpUrl="/onboarding"
-        fallbackRedirectUrl="/onboarding"
-      />
-    </main>
+    <AuthShell
+      title="Create your account"
+      subtitle="Start with your work email and verify by email code. No phone number is required."
+      footer={
+        <>
+          Already registered?{' '}
+          <Link href="/sign-in" className="font-bold text-[#2155d9]">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <EmailSignUpForm />
+    </AuthShell>
   );
 }
