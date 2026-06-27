@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "test:classifier-corpus": "node scripts/validate-classifier-corpus.mjs",
     "worker": "tsx services/queue/worker.ts"
   },
   "dependencies": {

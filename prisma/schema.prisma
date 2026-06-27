@@ -156,15 +156,21 @@ model ApprovalRecord {
   messageSourceId    String?
   approverUserId     String?
   approverName       String?
+  approverEmail      String?
   subject            String
   department         String?
+  category           String?
   approvalType       ApprovalType
   status             ApprovalStatus
   confidence         Int
+  riskLevel          String?
+  businessImpact     String?
   reasoning          String
   conditions         String?
+  sourcePlatform     String?
   sourceLink         String?
   evidenceSnippet    String?
+  approvalTimestamp  DateTime?
   occurredAt         DateTime           @default(now())
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -177,6 +183,9 @@ model ApprovalRecord {
   @@index([organizationId, occurredAt])
   @@index([organizationId, department])
   @@index([organizationId, approverName])
+  @@index([organizationId, approverEmail])
+  @@index([organizationId, category])
+  @@index([organizationId, riskLevel])
 }
 
 model ClassifierResult {

@@ -1,31 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { ApprovalType, type Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
 import { getCurrentTenant } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { classifyWithOpenAI, CLASSIFIER_MODEL, CLASSIFIER_PROMPT_VERSION, hashClassifierInput } from '@/services/classifier/openai';
-import { writeAuditLog } from '@/services/audit';
+import { classifyWithOpenAI } from '@/services/classifier/openai';
+import { persistClassificationResult } from '@/services/classifier/persistence';
 
 const classifyRequestSchema = z.object({
   message: z.string().min(1).max(4000),
   source: z.string().optional(),
   channel: z.string().optional(),
   sender: z.string().optional(),
+  sender_email: z.string().email().optional(),
+  senderEmail: z.string().email().optional(),
+  slack_user: z.string().optional(),
+  teams_user: z.string().optional(),
+  zoom_participant: z.string().optional(),
+  timestamp: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
   organizationId: z.string().optional(),
 });
-
-function toPrismaApprovalType(type: string): ApprovalType {
-  const map: Record<string, ApprovalType> = {
-    explicit: 'EXPLICIT',
-    implicit: 'IMPLICIT',
-    conditional: 'CONDITIONAL',
-    rejection: 'REJECTION',
-    escalation: 'ESCALATION',
-    not_approval: 'NOT_APPROVAL',
-  };
-  return map[type] ?? 'NOT_APPROVAL';
-}
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
@@ -51,46 +44,13 @@ export async function POST(request: NextRequest) {
 
     const result = await classifyWithOpenAI(parsed.data);
 
-    if (organizationId) {
-      const classifier = await prisma.classifierResult.create({
-        data: {
-          organizationId,
-          model: CLASSIFIER_MODEL,
-          promptVersion: CLASSIFIER_PROMPT_VERSION,
-          inputHash: hashClassifierInput(parsed.data),
-          approvalDetected: result.approval_detected,
-          approvalType: toPrismaApprovalType(result.approval_type),
-          confidence: result.confidence,
-          normalizedJson: result as unknown as Prisma.InputJsonValue,
-        },
-      });
-
-      if (result.approval_detected) {
-        const approval = await prisma.approvalRecord.create({
-          data: {
-            organizationId,
-            subject: result.subject,
-            department: result.department,
-            approverName: result.approver,
-            approvalType: toPrismaApprovalType(result.approval_type),
-            status: result.approval_type === 'not_approval' ? 'NOT_A_DECISION' : 'APPROVED',
-            confidence: result.confidence,
-            reasoning: result.reasoning,
-            conditions: result.conditions,
-            evidenceSnippet: parsed.data.message.slice(0, 1000),
-            classifierResults: { connect: { id: classifier.id } },
-          },
-        });
-
-        await writeAuditLog({
-          organizationId,
-          approvalRecordId: approval.id,
-          action: 'approval_record.created',
-          ipAddress: ip,
-          userAgent: request.headers.get('user-agent') ?? undefined,
-        });
-      }
-    }
+    await persistClassificationResult({
+      organizationId,
+      request: parsed.data,
+      result,
+      ipAddress: ip,
+      userAgent: request.headers.get('user-agent') ?? undefined,
+    });
 
     return NextResponse.json(result);
   } catch (error) {
