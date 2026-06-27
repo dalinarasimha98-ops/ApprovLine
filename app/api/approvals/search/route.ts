@@ -13,6 +13,8 @@ const searchSchema = z.object({
   category: z.string().optional(),
   riskLevel: z.string().optional(),
   sourcePlatform: z.string().optional(),
+  approver: z.string().optional(),
+  approvalType: z.string().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
@@ -47,8 +49,9 @@ export async function GET(request: NextRequest) {
     ...(query.category ? { category: contains(query.category) } : {}),
     ...(query.riskLevel ? { riskLevel: query.riskLevel.toLowerCase() } : {}),
     ...(query.sourcePlatform ? { sourcePlatform: contains(query.sourcePlatform) } : {}),
+    ...(query.approvalType ? { approvalType: query.approvalType.toUpperCase() as Prisma.EnumApprovalTypeFilter['equals'] } : {}),
     ...(query.approverEmail ? { approverEmail: contains(query.approverEmail) } : {}),
-    ...(query.employee ? { approverName: contains(query.employee) } : {}),
+    ...(query.employee || query.approver ? { approverName: contains(query.employee ?? query.approver) } : {}),
     ...(query.from || query.to ? { occurredAt } : {}),
     ...(query.q
       ? {

@@ -15,10 +15,12 @@ export interface IncomingMessageJob {
   rawPayload?: unknown;
 }
 
+export const approvalQueueName = 'approval-classification';
+
 let approvalQueue: Queue<IncomingMessageJob, unknown, string> | null = null;
 
 export function getApprovalQueue() {
-  approvalQueue ??= new Queue<IncomingMessageJob, unknown, string>('approval-classification', {
+  approvalQueue ??= new Queue<IncomingMessageJob, unknown, string>(approvalQueueName, {
     connection: createRedisConnection(),
     defaultJobOptions: {
       attempts: 5,
