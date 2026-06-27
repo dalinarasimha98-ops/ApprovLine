@@ -28,7 +28,7 @@ Copy `.env.example` to `.env.local` and set:
 - `DATABASE_URL`
 - `OPENAI_API_KEY`
 - `REDIS_URL`
-- `ENCRYPTION_KEY`
+- `ENCRYPTION_KEY` - 64 lowercase hex characters / 32 random bytes, for AES-256-GCM token encryption
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 

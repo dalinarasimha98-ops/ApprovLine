@@ -7,7 +7,11 @@ function getKey() {
   if (!env.ENCRYPTION_KEY) {
     throw new Error('ENCRYPTION_KEY is not configured');
   }
-  return crypto.createHash('sha256').update(env.ENCRYPTION_KEY).digest();
+  const key = Buffer.from(env.ENCRYPTION_KEY, 'hex');
+  if (key.length !== 32) {
+    throw new Error('ENCRYPTION_KEY must decode to exactly 32 bytes');
+  }
+  return key;
 }
 
 export function encryptJson(value: unknown) {
