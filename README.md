@@ -32,6 +32,9 @@ Copy `.env.example` to `.env.local` and set:
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 
+For Vercel deployments, add these under Project Settings -> Environment Variables.
+GitHub Actions repository secrets are only available to GitHub Actions workflows and are not visible to the Vercel runtime.
+
 ## Production flows
 
 Incoming webhook events are enqueued through BullMQ, classified by OpenAI, stored as tenant-scoped approval records, and written to audit logs.
