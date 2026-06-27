@@ -1,34 +1,39 @@
 # ApprovLine
 
-Universal approval intelligence landing page and AI classification demo.
+AI-powered Universal Approval Intelligence Platform.
 
-## What is included
+## Stack
 
-- `public/index.html` - deployed landing page
-- `api/classify.js` - Vercel serverless approval classifier powered by Anthropic
-- `api/health.js` - Vercel health check endpoint
-- `vercel.json` - rewrites for static pages and API routes
+- Next.js 15 App Router
+- TypeScript
+- TailwindCSS
+- Prisma + PostgreSQL
+- Clerk auth with organization/team support
+- OpenAI classifier
+- Redis + BullMQ async processing
 
-## Required Vercel environment variable
-
-Set this in Vercel Project Settings -> Environment Variables:
-
-```bash
-ANTHROPIC_API_KEY=sk-ant-your_key_here
-```
-
-Without this key, the landing page still works, but the live AI demo will show a configuration warning.
-
-## Local checks
+## Core commands
 
 ```bash
-npm run check
-npm run build
+npm install
+npm run db:generate
+npm run db:migrate
+npm run dev
 ```
 
-## Deployment
+## Required environment
 
-Push to `main`. Vercel will serve `public/index.html` and expose:
+Copy `.env.example` to `.env.local` and set:
 
-- `/api/health`
-- `/api/classify`
+- `DATABASE_URL`
+- `OPENAI_API_KEY`
+- `REDIS_URL`
+- `ENCRYPTION_KEY`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+
+## Production flows
+
+Incoming webhook events are enqueued through BullMQ, classified by OpenAI, stored as tenant-scoped approval records, and written to audit logs.
+
+Dashboard routes are protected by Clerk middleware.
