@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url().optional(),
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  ANTHROPIC_MODEL: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
   REDIS_URL: z.string().url().optional(),
   CLERK_SECRET_KEY: z.string().min(1).optional(),

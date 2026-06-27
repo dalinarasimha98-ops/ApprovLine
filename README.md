@@ -26,6 +26,8 @@ npm run dev
 Copy `.env.example` to `.env.local` and set:
 
 - `DATABASE_URL`
+- `ANTHROPIC_API_KEY`
+- `ANTHROPIC_MODEL` - optional, defaults to `claude-3-5-sonnet-20241022`
 - `OPENAI_API_KEY`
 - `REDIS_URL`
 - `ENCRYPTION_KEY` - 64 lowercase hex characters / 32 random bytes, for AES-256-GCM token encryption
