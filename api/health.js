@@ -1,16 +1,9 @@
-export default async function handler() {
-  return new Response(
-    JSON.stringify({
+export default async function handler(req, res) {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store');
+  return res.status(200).json({
       status: 'ok',
       service: 'ApprovLine',
       timestamp: new Date().toISOString(),
-    }),
-    {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store',
-      },
-    }
-  );
+  });
 }
