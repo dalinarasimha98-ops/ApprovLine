@@ -1,0 +1,252 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+  COMPLIANCE_OFFICER
+}
+
+enum IntegrationProvider {
+  SLACK
+  GMAIL
+  MICROSOFT_TEAMS
+  ZOOM
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  NEEDS_REAUTH
+  ERROR
+}
+
+enum ApprovalType {
+  EXPLICIT
+  IMPLICIT
+  CONDITIONAL
+  REJECTION
+  ESCALATION
+  NOT_APPROVAL
+}
+
+enum ApprovalStatus {
+  APPROVED
+  PENDING_REVIEW
+  REJECTED
+  NOT_A_DECISION
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+model Organization {
+  id                String             @id @default(cuid())
+  clerkOrgId        String?            @unique
+  name              String
+  slug              String             @unique
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  users             User[]
+  teams             Team[]
+  integrations      Integration[]
+  approvalRecords   ApprovalRecord[]
+  auditLogs         AuditLog[]
+  classifierResults ClassifierResult[]
+  subscriptions     Subscription[]
+  events            Event[]
+  messageSources    MessageSource[]
+}
+
+model User {
+  id             String         @id @default(cuid())
+  organizationId String
+  clerkUserId    String         @unique
+  email          String
+  name           String?
+  role           Role           @default(EMPLOYEE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teams          TeamMember[]
+  approvals      ApprovalRecord[] @relation("ApprovalApprover")
+  auditLogs      AuditLog[]
+
+  @@index([organizationId, role])
+  @@index([email])
+}
+
+model Team {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  department     String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        TeamMember[]
+
+  @@unique([organizationId, name])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model Integration {
+  id              String             @id @default(cuid())
+  organizationId  String
+  provider        IntegrationProvider
+  status          IntegrationStatus  @default(CONNECTED)
+  externalAccount String?
+  scopes          String[]
+  encryptedTokens Json?
+  metadata        Json?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messageSources  MessageSource[]
+  events          Event[]
+
+  @@unique([organizationId, provider, externalAccount])
+  @@index([organizationId, provider])
+}
+
+model MessageSource {
+  id             String              @id @default(cuid())
+  organizationId String
+  integrationId  String?
+  provider       IntegrationProvider
+  externalId     String?
+  channel        String?
+  sender         String?
+  senderEmail    String?
+  rawPayload     Json?
+  receivedAt     DateTime            @default(now())
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integration    Integration?        @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  approvalRecords ApprovalRecord[]
+  classifierResults ClassifierResult[]
+
+  @@index([organizationId, provider, receivedAt])
+  @@index([externalId])
+}
+
+model ApprovalRecord {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  messageSourceId    String?
+  approverUserId     String?
+  approverName       String?
+  subject            String
+  department         String?
+  approvalType       ApprovalType
+  status             ApprovalStatus
+  confidence         Int
+  reasoning          String
+  conditions         String?
+  sourceLink         String?
+  evidenceSnippet    String?
+  occurredAt         DateTime           @default(now())
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messageSource      MessageSource?     @relation(fields: [messageSourceId], references: [id], onDelete: SetNull)
+  approverUser       User?              @relation("ApprovalApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  classifierResults  ClassifierResult[]
+  auditLogs          AuditLog[]
+
+  @@index([organizationId, occurredAt])
+  @@index([organizationId, department])
+  @@index([organizationId, approverName])
+}
+
+model ClassifierResult {
+  id                String          @id @default(cuid())
+  organizationId    String
+  messageSourceId   String?
+  approvalRecordId  String?
+  model             String
+  promptVersion     String
+  inputHash         String
+  approvalDetected  Boolean
+  approvalType      ApprovalType
+  confidence        Int
+  normalizedJson    Json
+  latencyMs         Int?
+  createdAt         DateTime        @default(now())
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messageSource     MessageSource?  @relation(fields: [messageSourceId], references: [id], onDelete: SetNull)
+  approvalRecord    ApprovalRecord? @relation(fields: [approvalRecordId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([inputHash])
+}
+
+model AuditLog {
+  id               String          @id @default(cuid())
+  organizationId   String
+  actorUserId      String?
+  approvalRecordId String?
+  action           String
+  ipAddress        String?
+  userAgent        String?
+  metadata         Json?
+  createdAt        DateTime        @default(now())
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser        User?           @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  approvalRecord   ApprovalRecord? @relation(fields: [approvalRecordId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([action])
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  organizationId String
+  stripeCustomerId String?
+  stripeSubscriptionId String?
+  plan           String
+  status         SubscriptionStatus
+  seats          Int                @default(1)
+  currentPeriodEnd DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+}
+
+model Event {
+  id             String       @id @default(cuid())
+  organizationId String
+  integrationId  String?
+  type           String
+  payload        Json
+  processedAt    DateTime?
+  failedAt       DateTime?
+  failureReason  String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integration    Integration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, type, createdAt])
+}
