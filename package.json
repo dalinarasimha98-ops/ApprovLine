@@ -12,7 +12,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
     "test:classifier-corpus": "node scripts/validate-classifier-corpus.mjs",
+    "test:ingestion": "tsx tests/ingestion-pipeline.test.ts",
     "worker": "tsx services/queue/worker.ts"
   },
   "dependencies": {
