@@ -14,6 +14,10 @@ export async function GET(
 ) {
   await requireRole('ADMIN');
   const { provider } = await params;
+  if (provider === 'slack') {
+    return NextResponse.redirect(new URL('/api/integrations/slack/install', request.url));
+  }
+
   const target = providerUrls[provider];
   if (!target) return NextResponse.json({ error: 'Unsupported provider' }, { status: 404 });
 

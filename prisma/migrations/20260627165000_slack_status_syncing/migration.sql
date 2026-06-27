@@ -1,0 +1,1 @@
+ALTER TYPE "IntegrationStatus" ADD VALUE IF NOT EXISTS 'SYNCING';

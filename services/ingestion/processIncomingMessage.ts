@@ -29,6 +29,23 @@ export async function processIncomingMessage(job: IncomingMessageJob, input?: { 
     metadata: job.rawPayload && typeof job.rawPayload === 'object' ? job.rawPayload as Record<string, unknown> : {},
   };
   const result = await classifyWithOpenAI(request);
+  if (job.integrationId) {
+    const integration = await prisma.integration.findUnique({
+      where: { id: job.integrationId },
+      select: { metadata: true },
+    });
+    await prisma.integration.update({
+      where: { id: job.integrationId },
+      data: {
+        status: 'CONNECTED',
+        metadata: {
+          ...(integration?.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {}),
+          lastSyncAt: new Date().toISOString(),
+          lastMessageAt: job.timestamp ?? new Date().toISOString(),
+        },
+      },
+    }).catch(() => null);
+  }
 
   return persistClassificationResult({
     organizationId: job.organizationId,
