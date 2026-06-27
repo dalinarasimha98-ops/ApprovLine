@@ -9,6 +9,7 @@ export interface IncomingMessageJob {
   channel?: string;
   sender?: string;
   senderEmail?: string;
+  timestamp?: string;
   message: string;
   sourceLink?: string;
   rawPayload?: unknown;
