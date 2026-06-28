@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
+import { RedisWarningBanner } from '@/components/system/RedisWarningBanner';
 
 const nav = [
   { href: '/dashboard/approvals', label: 'Approval History' },
@@ -36,7 +37,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
           {hasClerk ? <UserButton /> : <div className="text-sm font-semibold text-slate-500">Local build</div>}
         </header>
-        <div className="p-5 lg:p-8">{children}</div>
+        <div className="grid gap-5 p-5 lg:p-8">
+          <RedisWarningBanner />
+          {children}
+        </div>
       </main>
     </div>
   );
