@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { getCurrentTenant } from '@/lib/auth';
+import { getCurrentTenant, isTenantDatabaseError } from '@/lib/auth';
 
 const categories = ['Finance', 'Procurement', 'Legal', 'HR', 'Engineering', 'Security', 'Compliance'];
 const defaultDepartments = ['Finance', 'Legal', 'Procurement', 'Engineering', 'Security', 'Compliance', 'HR'];
@@ -81,12 +81,38 @@ function StepShell({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
+function DatabaseSetupError() {
+  return (
+    <main className="min-h-screen bg-slate-50 px-6 py-10">
+      <section className="mx-auto grid max-w-3xl gap-4 rounded-lg border border-rose-200 bg-white p-6">
+        <div>
+          <p className="text-sm font-bold uppercase text-rose-600">Database setup required</p>
+          <h1 className="mt-2 text-3xl font-black text-slate-950">ApprovLine database is not ready</h1>
+        </div>
+        <p className="text-slate-600">
+          Add a valid <code>DATABASE_URL</code> in Vercel Project Settings and redeploy so Prisma migrations can run before onboarding opens.
+        </p>
+        <a href="/health" className="w-fit rounded-md bg-[#2155d9] px-4 py-2 font-bold text-white">
+          Open health check
+        </a>
+      </section>
+    </main>
+  );
+}
+
 export default async function OnboardingPage({
   searchParams,
 }: {
   searchParams: Promise<{ step?: string }>;
 }) {
-  const { organization } = await getCurrentTenant();
+  let tenant;
+  try {
+    tenant = await getCurrentTenant();
+  } catch (error) {
+    if (isTenantDatabaseError(error)) return <DatabaseSetupError />;
+    throw error;
+  }
+  const { organization } = tenant;
   const step = (await searchParams).step ?? 'organization';
 
   if (organization.onboardedAt && step !== 'complete') {

@@ -101,7 +101,9 @@ Check deployment readiness:
 npm run readiness
 ```
 
-Production builds run `prisma migrate deploy` automatically when `DATABASE_URL` is present, then generate Prisma Client and build Next.js. This keeps Vercel deployments compatible with onboarding/database schema changes.
+Production builds require `DATABASE_URL` on Vercel. The build runs `prisma migrate deploy`, then generates Prisma Client and builds Next.js. This keeps Vercel deployments compatible with onboarding/database schema changes and prevents `/onboarding` from crashing on missing columns.
+
+If `/onboarding` shows a Prisma initialization error in Vercel logs, confirm `DATABASE_URL` is set for the same Vercel environment and redeploy.
 
 Open `/health` in production to verify PostgreSQL, Redis, Anthropic, OpenAI fallback, Slack configuration, Gmail configuration, encryption, and app URL status.
 
