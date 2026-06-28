@@ -15,6 +15,24 @@ function envCheck(name: keyof typeof env, description: string): ReadinessCheck {
     : { status: 'missing', message: `${description} missing` };
 }
 
+function databaseUrlHint() {
+  if (!env.DATABASE_URL) return '';
+  try {
+    const url = new URL(env.DATABASE_URL);
+    if (url.hostname.startsWith('db.') && url.hostname.endsWith('.supabase.co') && url.port === '5432') {
+      return ' DATABASE_URL points to the Supabase direct host on port 5432. On Vercel, use the Supabase Prisma/ORM pooler connection string instead, typically a pooler.supabase.com host, because the direct host can be unreachable from Vercel.';
+    }
+  } catch {
+    return ' DATABASE_URL is not a valid URL.';
+  }
+  return '';
+}
+
+function databaseErrorMessage(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : fallback;
+  return `${message}${databaseUrlHint()}`;
+}
+
 export async function buildReadinessReport() {
   const postgresql = await checkPostgres();
   const redis = await checkRedis();
@@ -76,7 +94,7 @@ async function checkGmailLastSync(): Promise<ReadinessCheck> {
       message: lastSyncAt ? `Last Gmail sync ${lastSyncStatus} at ${lastSyncAt}` : `Gmail ${integration.status.toLowerCase()}; no sync timestamp yet`,
     };
   } catch (error) {
-    return { status: 'error', message: error instanceof Error ? error.message : 'Unable to inspect Gmail sync status' };
+    return { status: 'error', message: databaseErrorMessage(error, 'Unable to inspect Gmail sync status') };
   }
 }
 
@@ -86,7 +104,7 @@ async function checkPostgres(): Promise<ReadinessCheck> {
     await prisma.$queryRaw`SELECT 1`;
     return { status: 'ok', message: 'PostgreSQL reachable' };
   } catch (error) {
-    return { status: 'error', message: error instanceof Error ? error.message : 'PostgreSQL unavailable' };
+    return { status: 'error', message: databaseErrorMessage(error, 'PostgreSQL unavailable') };
   }
 }
 
