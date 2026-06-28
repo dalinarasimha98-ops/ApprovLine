@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { env } from '@/config/env';
 import { buildReadinessReport } from '@/services/readiness';
 
+export const dynamic = 'force-dynamic';
+
 function connectorStatus(configured: boolean) {
   return { status: configured ? 'connected' : 'not_connected' };
 }

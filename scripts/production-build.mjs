@@ -32,12 +32,6 @@ if (process.env.REDIS_URL) {
   }
 }
 
-if (process.env.DATABASE_URL) {
-  console.log('Running production Prisma migrations...');
-  run(bin('prisma'), ['migrate', 'deploy']);
-} else {
-  console.warn('DATABASE_URL is not set. Skipping Prisma migrate deploy; runtime readiness will report database setup as missing.');
-}
-
+console.log('Skipping database migrations during build. Run npm run db:deploy separately when deploying schema changes.');
 run(bin('prisma'), ['generate']);
 run(bin('next'), ['build']);

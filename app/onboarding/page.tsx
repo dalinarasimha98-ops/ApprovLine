@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentTenant, isTenantDatabaseError } from '@/lib/auth';
 import { RedisWarningBanner } from '@/components/system/RedisWarningBanner';
 
+export const dynamic = 'force-dynamic';
+
 const categories = ['Finance', 'Procurement', 'Legal', 'HR', 'Engineering', 'Security', 'Compliance'];
 const defaultDepartments = ['Finance', 'Legal', 'Procurement', 'Engineering', 'Security', 'Compliance', 'HR'];
 

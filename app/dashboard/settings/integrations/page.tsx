@@ -3,6 +3,8 @@ import { getCurrentTenant } from '@/lib/auth';
 import { env } from '@/config/env';
 import type { Prisma } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 const stateStyles: Record<string, string> = {
   CONNECTED: 'bg-emerald-50 text-emerald-700',
   DISCONNECTED: 'bg-slate-100 text-slate-700',
