@@ -13,6 +13,15 @@ export function LandingPage() {
     const classifierResult = document.getElementById('classifierResult');
     const messageInput = document.getElementById('messageInput') as HTMLTextAreaElement | null;
     const sourceInput = document.getElementById('sourceInput') as HTMLSelectElement | null;
+    const navActions = document.querySelector('.nav-actions');
+
+    if (navActions && !document.querySelector('.auth-nav-signin')) {
+      const signInLink = document.createElement('a');
+      signInLink.className = 'button secondary auth-nav-signin';
+      signInLink.href = '/sign-in';
+      signInLink.textContent = 'Sign In';
+      navActions.insertBefore(signInLink, navActions.lastElementChild);
+    }
 
     const handleWaitlistSubmit = (event: SubmitEvent) => {
       event.preventDefault();

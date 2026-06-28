@@ -14,7 +14,7 @@ export async function requireSession() {
 export async function getCurrentTenant() {
   const session = await requireSession();
   const clerkUser = await currentUser();
-  const email = clerkUser?.emailAddresses[0]?.emailAddress ?? `${session.userId}@unknown.local`;
+  const email = clerkUser?.primaryEmailAddress?.emailAddress ?? clerkUser?.emailAddresses[0]?.emailAddress ?? `${session.userId}@unknown.local`;
   const orgId = session.orgId;
 
   const organization = await prisma.organization.upsert({
