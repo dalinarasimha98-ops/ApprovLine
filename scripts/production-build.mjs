@@ -19,8 +19,6 @@ function run(command, args, options = {}) {
   }
 }
 
-const requiresDatabase = process.env.VERCEL === '1' || process.env.CI === 'true' || process.env.NODE_ENV === 'production';
-
 if (process.env.REDIS_URL) {
   try {
     const redisUrl = new URL(process.env.REDIS_URL);
@@ -37,11 +35,8 @@ if (process.env.REDIS_URL) {
 if (process.env.DATABASE_URL) {
   console.log('Running production Prisma migrations...');
   run(bin('prisma'), ['migrate', 'deploy']);
-} else if (requiresDatabase) {
-  console.error('DATABASE_URL is required for production deployments. Add it in Vercel Project Settings > Environment Variables.');
-  process.exit(1);
 } else {
-  console.log('DATABASE_URL is not set. Skipping Prisma migrate deploy.');
+  console.warn('DATABASE_URL is not set. Skipping Prisma migrate deploy; runtime readiness will report database setup as missing.');
 }
 
 run(bin('prisma'), ['generate']);
