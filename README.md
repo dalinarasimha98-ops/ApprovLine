@@ -101,6 +101,8 @@ Check deployment readiness:
 npm run readiness
 ```
 
+Production builds run `prisma migrate deploy` automatically when `DATABASE_URL` is present, then generate Prisma Client and build Next.js. This keeps Vercel deployments compatible with onboarding/database schema changes.
+
 Open `/health` in production to verify PostgreSQL, Redis, Anthropic, OpenAI fallback, Slack configuration, Gmail configuration, encryption, and app URL status.
 
 ## Clerk email-only authentication
