@@ -1,4 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import { normalizeDatabaseUrlForPrisma } from '@/lib/env';
+
+normalizeDatabaseUrlForPrisma();
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

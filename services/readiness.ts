@@ -1,5 +1,6 @@
 import { env } from '@/config/env';
 import { prisma } from '@/lib/prisma';
+import { validateDatabaseUrl } from '@/lib/env';
 import { checkRedisConnection } from '@/services/queue/connection';
 
 export type ReadinessStatus = 'ok' | 'missing' | 'error';
@@ -16,9 +17,10 @@ function envCheck(name: keyof typeof env, description: string): ReadinessCheck {
 }
 
 function databaseUrlHint() {
-  if (!env.DATABASE_URL) return '';
+  const databaseUrl = validateDatabaseUrl();
+  if (!databaseUrl.valid) return databaseUrl.safeErrorMessage ? ` ${databaseUrl.safeErrorMessage}` : '';
   try {
-    const url = new URL(env.DATABASE_URL);
+    const url = new URL(databaseUrl.normalized!);
     if (url.hostname.startsWith('db.') && url.hostname.endsWith('.supabase.co') && url.port === '5432') {
       return ' DATABASE_URL points to the Supabase direct host on port 5432. On Vercel, use the Supabase Prisma/ORM pooler connection string instead, typically a pooler.supabase.com host, because the direct host can be unreachable from Vercel.';
     }
@@ -78,7 +80,10 @@ export async function buildReadinessReport() {
 }
 
 async function checkGmailLastSync(): Promise<ReadinessCheck> {
-  if (!env.DATABASE_URL) return { status: 'missing', message: 'DATABASE_URL missing; cannot inspect Gmail sync status' };
+  const databaseUrl = validateDatabaseUrl();
+  if (!databaseUrl.valid) {
+    return { status: databaseUrl.errorCode === 'DATABASE_URL_MISSING' ? 'missing' : 'error', message: databaseUrl.safeErrorMessage ?? 'DATABASE_URL invalid; cannot inspect Gmail sync status' };
+  }
   try {
     const integration = await prisma.integration.findFirst({
       where: { provider: 'GMAIL' },
@@ -99,7 +104,10 @@ async function checkGmailLastSync(): Promise<ReadinessCheck> {
 }
 
 async function checkPostgres(): Promise<ReadinessCheck> {
-  if (!env.DATABASE_URL) return { status: 'missing', message: 'DATABASE_URL missing' };
+  const databaseUrl = validateDatabaseUrl();
+  if (!databaseUrl.valid) {
+    return { status: databaseUrl.errorCode === 'DATABASE_URL_MISSING' ? 'missing' : 'error', message: databaseUrl.safeErrorMessage ?? 'DATABASE_URL invalid' };
+  }
   try {
     await prisma.$queryRaw`SELECT 1`;
     return { status: 'ok', message: 'PostgreSQL reachable' };

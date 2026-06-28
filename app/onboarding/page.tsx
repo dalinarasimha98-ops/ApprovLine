@@ -85,7 +85,7 @@ function StepShell({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-function DatabaseSetupError() {
+function DatabaseSetupError({ message }: { message?: string }) {
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-10">
       <section className="mx-auto grid max-w-3xl gap-4 rounded-lg border border-rose-200 bg-white p-6">
@@ -94,7 +94,8 @@ function DatabaseSetupError() {
           <h1 className="mt-2 text-3xl font-black text-slate-950">ApprovLine database is not ready</h1>
         </div>
         <p className="text-slate-600">
-          Add a valid <code>DATABASE_URL</code> in Vercel Project Settings and redeploy so Prisma migrations can run before onboarding opens.
+          {message ??
+            'Invalid DATABASE_URL format. In Vercel, the variable name should be DATABASE_URL and the value should start with postgresql:// or postgres://. Do not include DATABASE_URL= in the value field.'}
         </p>
         <a href="/health" className="w-fit rounded-md bg-[#2155d9] px-4 py-2 font-bold text-white">
           Open health check
@@ -113,7 +114,7 @@ export default async function OnboardingPage({
   try {
     tenant = await getCurrentTenant();
   } catch (error) {
-    if (isTenantDatabaseError(error)) return <DatabaseSetupError />;
+    if (isTenantDatabaseError(error)) return <DatabaseSetupError message={error.message} />;
     throw error;
   }
   const { organization } = tenant;
