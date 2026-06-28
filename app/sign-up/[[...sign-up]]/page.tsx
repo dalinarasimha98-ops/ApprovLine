@@ -1,22 +1,31 @@
+import { SignUp } from '@clerk/nextjs';
 import Link from 'next/link';
 import { AuthShell } from '@/components/auth/AuthShell';
-import { EmailSignUpForm } from '@/components/auth/EmailSignUpForm';
+import { clerkAuthAppearance } from '@/components/auth/clerkAppearance';
 
 export default function SignUpPage() {
   return (
     <AuthShell
-      title="Create your account"
-      subtitle="Start with your work email and verify by email code. No phone number is required."
+      cardTitle="Create account"
+      cardSubtitle="Start with work email, Google, or Microsoft 365. Email verification is required."
       footer={
         <>
-          Already registered?{' '}
-          <Link href="/sign-in" className="font-bold text-[#2155d9]">
+          Already have an account?{' '}
+          <Link href="/sign-in" className="auth-link">
             Sign in
           </Link>
         </>
       }
     >
-      <EmailSignUpForm />
+      <SignUp
+        appearance={clerkAuthAppearance}
+        routing="path"
+        path="/sign-up"
+        signInUrl="/sign-in"
+        forceRedirectUrl="/onboarding"
+        fallbackRedirectUrl="/onboarding"
+        oauthFlow="redirect"
+      />
     </AuthShell>
   );
 }

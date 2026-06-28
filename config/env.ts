@@ -18,6 +18,7 @@ const envSchema = z.object({
   SLACK_SIGNING_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GMAIL_SYNC_INTERVAL_MINUTES: z.enum(['5', '15', '60']).optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
   ZOOM_CLIENT_ID: z.string().optional(),
