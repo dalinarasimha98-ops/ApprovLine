@@ -5,7 +5,7 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   ANTHROPIC_MODEL: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
-  REDIS_URL: z.string().url().optional(),
+  REDIS_URL: z.string().min(1).optional(),
   CLERK_SECRET_KEY: z.string().min(1).optional(),
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
   ENCRYPTION_KEY: z

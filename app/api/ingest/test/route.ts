@@ -44,10 +44,10 @@ export async function POST(request: NextRequest) {
   let queueStatus: 'queued' | 'queue_unavailable' = 'queued';
   let jobId: string | undefined;
 
-  try {
-    const queued = await enqueueIncomingMessage(job);
+  const queued = await enqueueIncomingMessage(job);
+  if (queued.queued) {
     jobId = queued.id;
-  } catch {
+  } else {
     queueStatus = 'queue_unavailable';
   }
 

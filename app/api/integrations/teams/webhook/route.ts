@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   const tenantId = payload.tenantId ?? payload.resourceData?.tenantId;
   const integration = await resolveIntegrationTenant('MICROSOFT_TEAMS', tenantId);
 
-  await enqueueIncomingMessage({
+  const queued = await enqueueIncomingMessage({
     organizationId: integration.organizationId,
     integrationId: integration.id,
     provider: 'MICROSOFT_TEAMS',
@@ -18,5 +18,7 @@ export async function POST(request: NextRequest) {
     rawPayload: payload,
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json(queued.queued ? { ok: true, queued: true } : { ok: true, queued: false, warning: queued.reason }, {
+    status: queued.queued ? 200 : 202,
+  });
 }

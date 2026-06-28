@@ -353,13 +353,13 @@ export async function syncGmailIntegration(integration: Integration, input?: { m
     );
     threadsProcessed += 1;
     for (const message of thread.messages ?? []) {
-      await enqueueIncomingMessage(gmailMessageToJob({
+      const queuedMessage = await enqueueIncomingMessage(gmailMessageToJob({
         organizationId: integration.organizationId,
         integrationId: integration.id,
         accountEmail,
         message,
       }));
-      queued += 1;
+      if (queuedMessage.queued) queued += 1;
     }
   }
 

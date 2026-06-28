@@ -123,41 +123,40 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  try {
-    await enqueueIncomingMessage({
-      organizationId: integration.organizationId,
-      integrationId: integration.id,
-      provider: 'SLACK',
-      externalId: payload.event_id ?? event.client_msg_id ?? messageTs,
-      channel,
-      sender: event.user_profile?.real_name ?? event.user,
-      senderEmail: event.user_profile?.email,
-      timestamp: messageTs ? new Date(Number(messageTs.split('.')[0]) * 1000).toISOString() : undefined,
-      message: event.text,
-      sourceLink,
-      rawPayload: {
-        ...payload,
-        evidence: {
-          teamId,
-          channel,
-          channelName: event.channel_name ?? channel,
-          messageTs,
-          senderUserId: event.user,
-          senderName: event.user_profile?.real_name,
-          senderEmail: event.user_profile?.email,
-          sourceLink,
-        },
+  const queued = await enqueueIncomingMessage({
+    organizationId: integration.organizationId,
+    integrationId: integration.id,
+    provider: 'SLACK',
+    externalId: payload.event_id ?? event.client_msg_id ?? messageTs,
+    channel,
+    sender: event.user_profile?.real_name ?? event.user,
+    senderEmail: event.user_profile?.email,
+    timestamp: messageTs ? new Date(Number(messageTs.split('.')[0]) * 1000).toISOString() : undefined,
+    message: event.text,
+    sourceLink,
+    rawPayload: {
+      ...payload,
+      evidence: {
+        teamId,
+        channel,
+        channelName: event.channel_name ?? channel,
+        messageTs,
+        senderUserId: event.user,
+        senderName: event.user_profile?.real_name,
+        senderEmail: event.user_profile?.email,
+        sourceLink,
       },
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : 'Unable to enqueue Slack message';
+    },
+  });
+
+  if (!queued.queued) {
     await prisma.integration.update({
       where: { id: integration.id },
       data: {
         status: 'ERROR',
         metadata: {
           ...(integration.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {}),
-          lastError: reason,
+          lastError: queued.reason,
           lastErrorAt: new Date().toISOString(),
         },
       },
@@ -168,9 +167,9 @@ export async function POST(request: NextRequest) {
       type: 'slack.event.queue_error',
       payload: eventSummary(payload, event),
       failedAt: new Date(),
-      failureReason: reason,
+      failureReason: queued.reason,
     });
-    return NextResponse.json({ error: 'Slack event could not be queued', reason }, { status: 500 });
+    return NextResponse.json({ ok: true, queued: false, warning: queued.reason }, { status: 202 });
   }
 
   await writeSlackEvent({

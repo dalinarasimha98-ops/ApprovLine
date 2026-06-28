@@ -1,6 +1,6 @@
 import { env } from '@/config/env';
 import { prisma } from '@/lib/prisma';
-import { createRedisConnection } from '@/services/queue/connection';
+import { checkRedisConnection } from '@/services/queue/connection';
 
 export type ReadinessStatus = 'ok' | 'missing' | 'error';
 
@@ -91,13 +91,6 @@ async function checkPostgres(): Promise<ReadinessCheck> {
 }
 
 async function checkRedis(): Promise<ReadinessCheck> {
-  if (!env.REDIS_URL) return { status: 'missing', message: 'REDIS_URL missing; inline demo ingestion still works' };
-  const connection = createRedisConnection() as { ping: () => Promise<string>; quit: () => Promise<void> };
-  try {
-    await connection.ping();
-    await connection.quit();
-    return { status: 'ok', message: 'Redis reachable' };
-  } catch (error) {
-    return { status: 'error', message: error instanceof Error ? error.message : 'Redis unavailable' };
-  }
+  const redis = await checkRedisConnection();
+  return { status: redis.status, message: redis.message };
 }

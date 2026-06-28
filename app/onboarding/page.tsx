@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getCurrentTenant, isTenantDatabaseError } from '@/lib/auth';
+import { RedisWarningBanner } from '@/components/system/RedisWarningBanner';
 
 const categories = ['Finance', 'Procurement', 'Legal', 'HR', 'Engineering', 'Security', 'Compliance'];
 const defaultDepartments = ['Finance', 'Legal', 'Procurement', 'Engineering', 'Security', 'Compliance', 'HR'];
@@ -75,6 +76,7 @@ function StepShell({ title, children }: { title: string; children: React.ReactNo
           <p className="text-sm font-bold uppercase text-[#2155d9]">ApprovLine setup</p>
           <h1 className="mt-2 text-3xl font-black text-slate-950">{title}</h1>
         </div>
+        <RedisWarningBanner />
         {children}
       </section>
     </main>

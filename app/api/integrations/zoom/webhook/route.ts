@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const accountId = payload.payload?.account_id;
   const integration = await resolveIntegrationTenant('ZOOM', accountId);
 
-  await enqueueIncomingMessage({
+  const queued = await enqueueIncomingMessage({
     organizationId: integration.organizationId,
     integrationId: integration.id,
     provider: 'ZOOM',
@@ -25,5 +25,7 @@ export async function POST(request: NextRequest) {
     rawPayload: payload,
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json(queued.queued ? { ok: true, queued: true } : { ok: true, queued: false, warning: queued.reason }, {
+    status: queued.queued ? 200 : 202,
+  });
 }
