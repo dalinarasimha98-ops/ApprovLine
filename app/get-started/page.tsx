@@ -2,6 +2,8 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { getCurrentTenant, isTenantDatabaseError } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 function DatabaseSetupError() {
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-10">

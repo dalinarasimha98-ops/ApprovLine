@@ -3,6 +3,8 @@ import { getCurrentTenant } from '@/lib/auth';
 import { ApprovalTable } from '@/components/dashboard/ApprovalTable';
 import type { Prisma } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ApprovalsPage({
   searchParams,
 }: {

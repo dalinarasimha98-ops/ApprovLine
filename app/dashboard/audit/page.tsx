@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentTenant } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AuditPage() {
   const { organization } = await getCurrentTenant();
   const logs = await prisma.auditLog.findMany({

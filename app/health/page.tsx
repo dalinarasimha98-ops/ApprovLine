@@ -1,5 +1,7 @@
 import { buildReadinessReport } from '@/services/readiness';
 
+export const dynamic = 'force-dynamic';
+
 const styles = {
   ok: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   missing: 'bg-amber-50 text-amber-700 border-amber-200',
