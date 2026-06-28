@@ -50,22 +50,44 @@ export default async function ApprovalsPage({
   });
 
   return (
-    <section className="grid gap-5">
-      <div>
-        <h2 className="text-2xl font-black">Approval history</h2>
-        <p className="text-slate-600">Search and filter every captured approval record.</p>
+    <section className="grid gap-6">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-end">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-[#2155d9]">Approval evidence</p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Approval history</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">Search and filter every captured approval record across Slack, Gmail, and future connectors.</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+          <span className="block text-xs font-bold uppercase tracking-wide text-slate-500">Records shown</span>
+          <span className="text-2xl font-black text-slate-950">{approvals.length}</span>
+        </div>
       </div>
-      <form className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-4">
-        <input name="q" placeholder="Search approvals" className="rounded-md border border-slate-200 px-3 py-2" />
-        <input name="employee" placeholder="Filter by employee" className="rounded-md border border-slate-200 px-3 py-2" />
-        <input name="department" placeholder="Filter by department" className="rounded-md border border-slate-200 px-3 py-2" />
-        <input name="sourcePlatform" placeholder="Source platform" className="rounded-md border border-slate-200 px-3 py-2" />
-        <input name="category" placeholder="Category" className="rounded-md border border-slate-200 px-3 py-2" />
-        <input name="riskLevel" placeholder="Risk level" className="rounded-md border border-slate-200 px-3 py-2" />
-        <input name="approvalType" placeholder="Approval type" className="rounded-md border border-slate-200 px-3 py-2" />
-        <input name="from" type="date" className="rounded-md border border-slate-200 px-3 py-2" />
-        <input name="to" type="date" className="rounded-md border border-slate-200 px-3 py-2" />
-        <button className="rounded-md bg-[#2155d9] px-4 py-2 font-bold text-white">Apply filters</button>
+      <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-4">
+        {[
+          ['q', 'Search approvals'],
+          ['employee', 'Approver'],
+          ['department', 'Department'],
+          ['sourcePlatform', 'Source platform'],
+          ['category', 'Category'],
+          ['riskLevel', 'Risk level'],
+          ['approvalType', 'Approval type'],
+        ].map(([name, placeholder]) => (
+          <label key={name} className="grid gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">{placeholder}</span>
+            <input name={name} placeholder={placeholder} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition placeholder:text-slate-400 focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
+          </label>
+        ))}
+        <label className="grid gap-1.5">
+          <span className="text-xs font-bold uppercase tracking-wide text-slate-500">From</span>
+          <input name="from" type="date" className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
+        </label>
+        <label className="grid gap-1.5">
+          <span className="text-xs font-bold uppercase tracking-wide text-slate-500">To</span>
+          <input name="to" type="date" className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
+        </label>
+        <div className="flex items-end">
+          <button className="min-h-0 h-11 w-full rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">Apply filters</button>
+        </div>
       </form>
       <ApprovalTable approvals={approvals} />
     </section>

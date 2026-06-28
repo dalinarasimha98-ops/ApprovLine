@@ -6,12 +6,12 @@ import type { Prisma } from '@prisma/client';
 export const dynamic = 'force-dynamic';
 
 const stateStyles: Record<string, string> = {
-  CONNECTED: 'bg-emerald-50 text-emerald-700',
-  DISCONNECTED: 'bg-slate-100 text-slate-700',
-  ERROR: 'bg-rose-50 text-rose-700',
-  NEEDS_REAUTH: 'bg-amber-50 text-amber-700',
-  SYNCING: 'bg-blue-50 text-blue-700',
-  NOT_CONNECTED: 'bg-slate-100 text-slate-700',
+  CONNECTED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  DISCONNECTED: 'border-slate-200 bg-slate-100 text-slate-700',
+  ERROR: 'border-rose-200 bg-rose-50 text-rose-700',
+  NEEDS_REAUTH: 'border-amber-200 bg-amber-50 text-amber-700',
+  SYNCING: 'border-blue-200 bg-blue-50 text-blue-700',
+  NOT_CONNECTED: 'border-slate-200 bg-slate-100 text-slate-700',
 };
 
 function stateLabel(status?: string) {
@@ -58,12 +58,12 @@ function oauthMessage(provider: 'Slack' | 'Gmail', status?: string, reason?: str
 
 function setupItem(label: string, complete: boolean, help: string) {
   return (
-    <li key={label} className="flex items-start justify-between gap-4 rounded-md border border-slate-200 bg-white px-3 py-2">
+    <li key={label} className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
       <span>
         <span className="block text-sm font-bold text-slate-900">{label}</span>
         <span className="block text-xs text-slate-500">{help}</span>
       </span>
-      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${complete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+      <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${complete ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
         {complete ? 'Ready' : 'Missing'}
       </span>
     </li>
@@ -119,31 +119,32 @@ export default async function IntegrationsPage({
   ] as const;
 
   return (
-    <section className="grid gap-5">
-      <div>
-        <h2 className="text-2xl font-black">Read-only integrations</h2>
-        <p className="text-slate-600">Connect Slack, Gmail, Teams, and Zoom using least-privilege scopes.</p>
+    <section className="grid gap-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#2155d9]">Connector readiness</p>
+        <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Read-only integrations</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Connect Slack, Gmail, Teams, and Zoom using least-privilege scopes.</p>
       </div>
       {slackNotice ? (
-        <div className={`rounded-lg border p-4 ${slackNotice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
+        <div className={`rounded-2xl border p-4 shadow-sm ${slackNotice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
           <h3 className="font-black">{slackNotice.title}</h3>
           <p className="mt-1 text-sm">{slackNotice.body}</p>
         </div>
       ) : null}
       {gmailNotice ? (
-        <div className={`rounded-lg border p-4 ${gmailNotice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
+        <div className={`rounded-2xl border p-4 shadow-sm ${gmailNotice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
           <h3 className="font-black">{gmailNotice.title}</h3>
           <p className="mt-1 text-sm">{gmailNotice.body}</p>
         </div>
       ) : null}
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-black">Slack beta setup checklist</h3>
               <p className="text-sm text-slate-600">Use this before inviting the first customer workspace.</p>
             </div>
-            <a href="/health" className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-900">
+            <a href="/health" className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
               Health
             </a>
           </div>
@@ -151,35 +152,35 @@ export default async function IntegrationsPage({
             {slackChecklist.map(([label, complete, help]) => setupItem(label, complete, help))}
           </ul>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="text-lg font-black">Slack test tools</h3>
           <p className="mt-1 text-sm text-slate-600">Run beta checks without waiting for a real workspace event.</p>
           <div className="mt-4 grid gap-3">
             <form action="/api/integrations/slack/demo" method="post">
-              <button className="w-full rounded-md bg-[#2155d9] px-3 py-2 text-sm font-bold text-white">
+              <button className="min-h-0 h-11 w-full rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
                 Run Slack demo ingestion
               </button>
             </form>
             <form action="/api/integrations/slack/seed" method="post">
-              <button className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-bold text-slate-900">
+              <button className="min-h-0 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
                 Seed sample Slack approvals
               </button>
             </form>
           </div>
           <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-md bg-slate-50 p-3">
+            <div className="rounded-xl bg-slate-50 p-3">
               <dt className="text-slate-500">Slack approvals</dt>
               <dd className="text-xl font-black">{slackApprovals}</dd>
             </div>
-            <div className="rounded-md bg-slate-50 p-3">
+            <div className="rounded-xl bg-slate-50 p-3">
               <dt className="text-slate-500">Gmail approvals</dt>
               <dd className="text-xl font-black">{gmailApprovals}</dd>
             </div>
-            <div className="rounded-md bg-slate-50 p-3">
+            <div className="rounded-xl bg-slate-50 p-3">
               <dt className="text-slate-500">Gmail emails</dt>
               <dd className="text-xl font-black">{gmailProcessed}</dd>
             </div>
-            <div className="rounded-md bg-slate-50 p-3">
+            <div className="rounded-xl bg-slate-50 p-3">
               <dt className="text-slate-500">All approvals</dt>
               <dd className="text-xl font-black">{totalApprovals}</dd>
             </div>
@@ -195,19 +196,19 @@ export default async function IntegrationsPage({
           const accountEmail = metadataValue(integration?.metadata ?? null, 'accountEmail');
           const workspaceDomain = metadataValue(integration?.metadata ?? null, 'workspaceDomain');
           return (
-            <div key={provider} className="rounded-lg border border-slate-200 bg-white p-5">
+            <div key={provider} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-black">{provider.replaceAll('_', ' ')}</h3>
                   {teamName ? <p className="text-sm text-slate-500">{teamName}</p> : null}
                 </div>
                 {(provider === 'SLACK' || provider === 'GMAIL') && status === 'NOT_CONNECTED' ? (
-                  <a href={`/api/integrations/${provider === 'SLACK' ? 'slack' : 'gmail'}/install`} className="rounded-md bg-[#2155d9] px-3 py-2 text-sm font-bold text-white">
+                  <a href={`/api/integrations/${provider === 'SLACK' ? 'slack' : 'gmail'}/install`} className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
                     Connect
                   </a>
                 ) : null}
               </div>
-              <p className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-xs font-bold capitalize ${stateStyles[status] ?? stateStyles.NOT_CONNECTED}`}>
+              <p className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-xs font-bold capitalize ${stateStyles[status] ?? stateStyles.NOT_CONNECTED}`}>
                 {stateLabel(status)}
               </p>
               {provider === 'GMAIL' && accountEmail ? <p className="mt-3 text-xs text-slate-500">Account: {accountEmail}</p> : null}
@@ -216,14 +217,14 @@ export default async function IntegrationsPage({
               {provider === 'GMAIL' && status !== 'NOT_CONNECTED' && status !== 'DISCONNECTED' ? (
                 <form action="/api/integrations/gmail/sync" method="post" className="mt-4">
                   <input type="hidden" name="integrationId" value={integration?.id ?? ''} />
-                  <button className="rounded-md border border-slate-300 px-3 py-2 text-sm font-bold text-slate-900">
+                  <button className="min-h-0 h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
                     Sync Gmail
                   </button>
                 </form>
               ) : null}
               {provider === 'SLACK' && status !== 'NOT_CONNECTED' && status !== 'DISCONNECTED' ? (
                 <form action="/api/integrations/slack/disconnect" method="post" className="mt-4">
-                  <button className="rounded-md border border-rose-200 px-3 py-2 text-sm font-bold text-rose-700">
+                  <button className="min-h-0 h-10 rounded-lg border border-rose-200 bg-white px-3 text-sm font-bold text-rose-700 shadow-sm hover:bg-rose-50">
                     Disconnect Slack
                   </button>
                 </form>
@@ -236,46 +237,46 @@ export default async function IntegrationsPage({
         })}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="font-black">Beta empty states</h3>
           <div className="mt-4 grid gap-3 text-sm">
             {totalApprovals === 0 ? (
-              <p className="rounded-md bg-slate-50 p-3 text-slate-600">No approvals yet. Use demo ingestion, connect Slack, or sync Gmail to create the first approval record.</p>
+              <p className="rounded-xl bg-slate-50 p-3 text-slate-600">No approvals yet. Use demo ingestion, connect Slack, or sync Gmail to create the first approval record.</p>
             ) : null}
             {(slackStatus === 'CONNECTED' || slackStatus === 'SYNCING') && slackApprovals === 0 ? (
-              <p className="rounded-md bg-blue-50 p-3 text-blue-800">Slack is connected, but no Slack messages have been processed yet. Send a human message in an approved channel or run the demo.</p>
+              <p className="rounded-xl bg-blue-50 p-3 text-blue-800">Slack is connected, but no Slack messages have been processed yet. Send a human message in an approved channel or run the demo.</p>
             ) : null}
             {(gmailStatus === 'CONNECTED' || gmailStatus === 'SYNCING') && gmailApprovals === 0 ? (
-              <p className="rounded-md bg-blue-50 p-3 text-blue-800">Gmail is connected, but no email approvals have been found yet. Run Sync Gmail or wait for the next scheduled sync.</p>
+              <p className="rounded-xl bg-blue-50 p-3 text-blue-800">Gmail is connected, but no email approvals have been found yet. Run Sync Gmail or wait for the next scheduled sync.</p>
             ) : null}
             {classifierErrors > 0 ? (
-              <p className="rounded-md bg-rose-50 p-3 text-rose-800">{classifierErrors} classifier error event{classifierErrors === 1 ? '' : 's'} recorded. Check model keys and recent event logs.</p>
+              <p className="rounded-xl bg-rose-50 p-3 text-rose-800">{classifierErrors} classifier error event{classifierErrors === 1 ? '' : 's'} recorded. Check model keys and recent event logs.</p>
             ) : (
-              <p className="rounded-md bg-emerald-50 p-3 text-emerald-800">No classifier errors recorded.</p>
+              <p className="rounded-xl bg-emerald-50 p-3 text-emerald-800">No classifier errors recorded.</p>
             )}
             {queueErrors > 0 ? (
-              <p className="rounded-md bg-rose-50 p-3 text-rose-800">{queueErrors} Slack queue error{queueErrors === 1 ? '' : 's'} recorded. Check Redis and worker health.</p>
+              <p className="rounded-xl bg-rose-50 p-3 text-rose-800">{queueErrors} Slack queue error{queueErrors === 1 ? '' : 's'} recorded. Check Redis and worker health.</p>
             ) : (
-              <p className="rounded-md bg-emerald-50 p-3 text-emerald-800">No queue errors recorded.</p>
+              <p className="rounded-xl bg-emerald-50 p-3 text-emerald-800">No queue errors recorded.</p>
             )}
-            {slackLastError ? <p className="rounded-md bg-amber-50 p-3 text-amber-800">Latest Slack error: {slackLastError}</p> : null}
-            {slackLastSyncAt ? <p className="rounded-md bg-slate-50 p-3 text-slate-600">Last Slack sync: {new Date(slackLastSyncAt).toLocaleString()}</p> : null}
-            {gmailLastError ? <p className="rounded-md bg-amber-50 p-3 text-amber-800">Latest Gmail error: {gmailLastError}</p> : null}
-            {gmailLastSyncAt ? <p className="rounded-md bg-slate-50 p-3 text-slate-600">Last Gmail sync: {new Date(gmailLastSyncAt).toLocaleString()}</p> : null}
+            {slackLastError ? <p className="rounded-xl bg-amber-50 p-3 text-amber-800">Latest Slack error: {slackLastError}</p> : null}
+            {slackLastSyncAt ? <p className="rounded-xl bg-slate-50 p-3 text-slate-600">Last Slack sync: {new Date(slackLastSyncAt).toLocaleString()}</p> : null}
+            {gmailLastError ? <p className="rounded-xl bg-amber-50 p-3 text-amber-800">Latest Gmail error: {gmailLastError}</p> : null}
+            {gmailLastSyncAt ? <p className="rounded-xl bg-slate-50 p-3 text-slate-600">Last Gmail sync: {new Date(gmailLastSyncAt).toLocaleString()}</p> : null}
           </div>
         </div>
         {[
           ['Slack', slackEvents, 'No Slack events have been received yet.'],
           ['Gmail', gmailEvents, 'No Gmail sync events have been recorded yet.'],
         ].map(([label, events, empty]) => (
-          <div key={label as string} className="rounded-lg border border-slate-200 bg-white p-5">
+          <div key={label as string} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="font-black">Recent {label as string} event log</h3>
             {(events as typeof slackEvents).length === 0 ? (
-              <p className="mt-4 rounded-md bg-slate-50 p-3 text-sm text-slate-600">{empty as string}</p>
+              <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{empty as string}</p>
             ) : (
               <ul className="mt-4 grid gap-2">
                 {(events as typeof slackEvents).map((event) => (
-                  <li key={event.id} className="rounded-md border border-slate-200 p-3 text-sm">
+                  <li key={event.id} className="rounded-xl border border-slate-200 p-3 text-sm">
                     <div className="flex items-center justify-between gap-3">
                       <span className="font-bold text-slate-900">{event.type.replaceAll('.', ' ')}</span>
                       <span className="text-xs text-slate-500">{event.createdAt.toLocaleString()}</span>
