@@ -16,14 +16,15 @@ export default async function DashboardPage() {
 
   if (!user?.organization) {
     return (
-      <section className="grid gap-5 rounded-lg border border-slate-200 bg-white p-6">
+      <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div>
-          <h2 className="text-2xl font-black">Complete onboarding</h2>
-          <p className="mt-2 text-slate-600">
+          <p className="text-xs font-bold uppercase tracking-wide text-[#2155d9]">Workspace setup</p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Complete onboarding</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
             Create your ApprovLine organization before opening the dashboard.
           </p>
         </div>
-        <Link href="/onboarding" className="w-fit rounded-md bg-[#2155d9] px-4 py-2 font-bold text-white">
+        <Link href="/onboarding" className="inline-flex min-h-0 h-11 w-fit items-center justify-center rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
           Complete onboarding
         </Link>
       </section>
