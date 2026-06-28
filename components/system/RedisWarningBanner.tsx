@@ -5,5 +5,5 @@ export async function RedisWarningBanner() {
   const redis = await checkRedisConnection(800);
   if (redis.status === 'ok') return null;
 
-  return <QueueWarningDismissible message={redis.message} />;
+  return <QueueWarningDismissible />;
 }
