@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { PendingLink } from '@/components/system/PendingLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,9 +24,9 @@ export default async function DashboardPage() {
             Create your ApprovLine organization before opening the dashboard.
           </p>
         </div>
-        <Link href="/onboarding" className="inline-flex min-h-0 h-11 w-fit items-center justify-center rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+        <PendingLink href="/onboarding" pendingText="Opening onboarding..." className="inline-flex min-h-0 h-11 w-fit items-center justify-center rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
           Complete onboarding
-        </Link>
+        </PendingLink>
       </section>
     );
   }

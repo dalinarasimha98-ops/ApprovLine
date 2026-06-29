@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentTenant } from '@/lib/auth';
 import { env } from '@/config/env';
+import { FormSubmitButton } from '@/components/system/FormSubmitButton';
+import { PendingLink } from '@/components/system/PendingLink';
 import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -144,9 +146,9 @@ export default async function IntegrationsPage({
               <h3 className="text-lg font-black">Slack beta setup checklist</h3>
               <p className="text-sm text-slate-600">Use this before inviting the first customer workspace.</p>
             </div>
-            <a href="/health" className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
+            <PendingLink href="/health" pendingText="Opening..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
               Health
-            </a>
+            </PendingLink>
           </div>
           <ul className="mt-4 grid gap-2">
             {slackChecklist.map(([label, complete, help]) => setupItem(label, complete, help))}
@@ -157,14 +159,14 @@ export default async function IntegrationsPage({
           <p className="mt-1 text-sm text-slate-600">Run beta checks without waiting for a real workspace event.</p>
           <div className="mt-4 grid gap-3">
             <form action="/api/integrations/slack/demo" method="post">
-              <button className="min-h-0 h-11 w-full rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+              <FormSubmitButton pendingText="Running demo..." className="min-h-0 h-11 w-full rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
                 Run Slack demo ingestion
-              </button>
+              </FormSubmitButton>
             </form>
             <form action="/api/integrations/slack/seed" method="post">
-              <button className="min-h-0 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
+              <FormSubmitButton pendingText="Seeding..." className="min-h-0 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
                 Seed sample Slack approvals
-              </button>
+              </FormSubmitButton>
             </form>
           </div>
           <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
@@ -203,9 +205,9 @@ export default async function IntegrationsPage({
                   {teamName ? <p className="text-sm text-slate-500">{teamName}</p> : null}
                 </div>
                 {(provider === 'SLACK' || provider === 'GMAIL') && status === 'NOT_CONNECTED' ? (
-                  <a href={`/api/integrations/${provider === 'SLACK' ? 'slack' : 'gmail'}/install`} className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+                  <PendingLink href={`/api/integrations/${provider === 'SLACK' ? 'slack' : 'gmail'}/install`} pendingText="Connecting..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
                     Connect
-                  </a>
+                  </PendingLink>
                 ) : null}
               </div>
               <p className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-xs font-bold capitalize ${stateStyles[status] ?? stateStyles.NOT_CONNECTED}`}>
@@ -217,16 +219,16 @@ export default async function IntegrationsPage({
               {provider === 'GMAIL' && status !== 'NOT_CONNECTED' && status !== 'DISCONNECTED' ? (
                 <form action="/api/integrations/gmail/sync" method="post" className="mt-4">
                   <input type="hidden" name="integrationId" value={integration?.id ?? ''} />
-                  <button className="min-h-0 h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
+                  <FormSubmitButton pendingText="Syncing..." className="min-h-0 h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
                     Sync Gmail
-                  </button>
+                  </FormSubmitButton>
                 </form>
               ) : null}
               {provider === 'SLACK' && status !== 'NOT_CONNECTED' && status !== 'DISCONNECTED' ? (
                 <form action="/api/integrations/slack/disconnect" method="post" className="mt-4">
-                  <button className="min-h-0 h-10 rounded-lg border border-rose-200 bg-white px-3 text-sm font-bold text-rose-700 shadow-sm hover:bg-rose-50">
+                  <FormSubmitButton pendingText="Disconnecting..." className="min-h-0 h-10 rounded-lg border border-rose-200 bg-white px-3 text-sm font-bold text-rose-700 shadow-sm hover:bg-rose-50">
                     Disconnect Slack
-                  </button>
+                  </FormSubmitButton>
                 </form>
               ) : null}
               <p className="mt-3 text-xs text-slate-500">

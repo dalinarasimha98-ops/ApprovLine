@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
 import { RedisWarningBanner } from '@/components/system/RedisWarningBanner';
+import { PendingLink } from '@/components/system/PendingLink';
+import { ToastOnQuery } from '@/components/system/ToastOnQuery';
 
 const nav = [
   { href: '/dashboard', label: 'Overview' },
@@ -29,13 +31,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </Link>
         <nav className="grid gap-2">
           {nav.map((item) => (
-            <Link
+            <PendingLink
               key={item.href}
               href={item.href}
+              pendingText="Loading..."
               className="rounded-xl px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
             >
               {item.label}
-            </Link>
+            </PendingLink>
           ))}
         </nav>
         <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -55,18 +58,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
           <nav className="mx-auto mt-4 flex max-w-7xl gap-2 overflow-x-auto pb-1 lg:hidden">
             {nav.map((item) => (
-              <Link
+              <PendingLink
                 key={item.href}
                 href={item.href}
+                pendingText="Loading..."
                 className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm"
               >
                 {item.label}
-              </Link>
+              </PendingLink>
             ))}
           </nav>
         </header>
         <div className="mx-auto grid max-w-7xl gap-6 p-4 sm:p-6 lg:p-8">
           <RedisWarningBanner />
+          <ToastOnQuery />
           {children}
         </div>
       </main>

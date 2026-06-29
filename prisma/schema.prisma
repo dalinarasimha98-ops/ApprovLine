@@ -190,6 +190,9 @@ model ApprovalRecord {
   @@index([organizationId, approverEmail])
   @@index([organizationId, category])
   @@index([organizationId, riskLevel])
+  @@index([organizationId, sourcePlatform])
+  @@index([organizationId, approvalType])
+  @@index([organizationId, status, occurredAt])
 }
 
 model ClassifierResult {
@@ -230,6 +233,7 @@ model AuditLog {
 
   @@index([organizationId, createdAt])
   @@index([action])
+  @@index([organizationId, actorUserId, createdAt])
 }
 
 model Subscription {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { measure } from '@/lib/performance';
 import { syncAllGmailIntegrations, syncGmailIntegration } from '@/services/integrations/gmail';
 
 async function readSyncInput(request: NextRequest) {
@@ -37,6 +38,7 @@ function syncResponse(request: NextRequest, fromForm: boolean, payload: unknown,
 }
 
 export async function POST(request: NextRequest) {
+  return measure('POST /api/integrations/gmail/sync', async () => {
   const tenant = await requireRole('ADMIN');
   const body = await readSyncInput(request);
   const maxThreads = Number.isFinite(Number(body.maxThreads)) ? Number(body.maxThreads) : undefined;
@@ -99,9 +101,12 @@ export async function POST(request: NextRequest) {
   }
 
   return syncResponse(request, fromForm, { ok: true, results });
+  });
 }
 
 export async function GET() {
+  return measure('GET /api/integrations/gmail/sync', async () => {
   await requireRole('ADMIN');
   return NextResponse.json({ ok: true, results: await syncAllGmailIntegrations() });
+  });
 }

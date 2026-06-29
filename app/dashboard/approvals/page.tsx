@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentTenant } from '@/lib/auth';
 import { ApprovalTable } from '@/components/dashboard/ApprovalTable';
+import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -86,7 +87,9 @@ export default async function ApprovalsPage({
           <input name="to" type="date" className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
         </label>
         <div className="flex items-end">
-          <button className="min-h-0 h-11 w-full rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">Apply filters</button>
+          <FormSubmitButton pendingText="Filtering..." className="min-h-0 h-11 w-full rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+            Apply filters
+          </FormSubmitButton>
         </div>
       </form>
       <ApprovalTable approvals={approvals} />

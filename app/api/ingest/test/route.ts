@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
+import { measure } from '@/lib/performance';
 import { buildSimulationJob } from '@/services/integrations/simulation';
 import { enqueueIncomingMessage } from '@/services/queue/approvalQueue';
 import { processIncomingMessage } from '@/services/ingestion/processIncomingMessage';
@@ -28,6 +29,7 @@ async function getDemoOrganization(slug = 'public-demo') {
 }
 
 export async function POST(request: NextRequest) {
+  return measure('POST /api/ingest/test', async () => {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
   const limit = rateLimit(`ingest-test:${ip}`, 60, 60_000);
   if (!limit.allowed) {
@@ -62,5 +64,6 @@ export async function POST(request: NextRequest) {
     processedInline: Boolean(processed),
     classifierResultId: processed?.classifier.id ?? null,
     approvalRecordId: processed?.approval?.id ?? null,
+  });
   });
 }
