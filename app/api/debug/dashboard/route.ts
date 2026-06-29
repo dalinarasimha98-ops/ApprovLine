@@ -15,7 +15,7 @@ type CheckResult = {
 async function checkWithResult<T>(label: string, fn: () => Promise<T>): Promise<CheckResult & { result?: T }> {
   const startedAt = Date.now();
   try {
-    const result = await withTimeout(label, fn(), 2500);
+    const result = await withTimeout(label, fn(), 1500);
     return {
       status: 'success',
       ms: Date.now() - startedAt,

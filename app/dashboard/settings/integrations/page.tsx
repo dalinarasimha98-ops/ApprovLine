@@ -117,7 +117,7 @@ export default async function IntegrationsPage({
         prisma.event.count({ where: { organizationId: organization.id, type: 'slack.event.queue_error' } }),
         prisma.event.count({ where: { organizationId: organization.id, type: { in: ['slack.event.classifier_error', 'gmail.event.classifier_error'] } } }),
       ]),
-      3000,
+      1500,
     );
     console.info(`[dashboard] integrations queries finished in ${Date.now() - startedAt}ms`);
   } catch (error) {
