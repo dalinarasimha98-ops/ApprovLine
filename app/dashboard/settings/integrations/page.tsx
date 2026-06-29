@@ -3,6 +3,7 @@ import { getCurrentTenant } from '@/lib/auth';
 import { env } from '@/config/env';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
+import { withTimeout } from '@/lib/performance';
 import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -77,29 +78,52 @@ export default async function IntegrationsPage({
 }: {
   searchParams: Promise<{ slack?: string; gmail?: string; reason?: string }>;
 }) {
+  const startedAt = Date.now();
+  console.info('[dashboard] integrations page start load');
   const { organization } = await getCurrentTenant();
   const query = await searchParams;
-  const [integrations, totalApprovals, slackApprovals, gmailApprovals, slackEvents, gmailEvents, queueErrors, classifierErrors] = await prisma.$transaction([
-    prisma.integration.findMany({
-      where: { organizationId: organization.id },
-      orderBy: { provider: 'asc' },
-    }),
-    prisma.approvalRecord.count({ where: { organizationId: organization.id } }),
-    prisma.approvalRecord.count({ where: { organizationId: organization.id, sourcePlatform: { equals: 'slack', mode: 'insensitive' } } }),
-    prisma.approvalRecord.count({ where: { organizationId: organization.id, sourcePlatform: { equals: 'gmail', mode: 'insensitive' } } }),
-    prisma.event.findMany({
-      where: { organizationId: organization.id, type: { startsWith: 'slack.' } },
-      orderBy: { createdAt: 'desc' },
-      take: 8,
-    }),
-    prisma.event.findMany({
-      where: { organizationId: organization.id, type: { startsWith: 'gmail.' } },
-      orderBy: { createdAt: 'desc' },
-      take: 8,
-    }),
-    prisma.event.count({ where: { organizationId: organization.id, type: 'slack.event.queue_error' } }),
-    prisma.event.count({ where: { organizationId: organization.id, type: { in: ['slack.event.classifier_error', 'gmail.event.classifier_error'] } } }),
-  ]);
+  let loadError: string | null = null;
+  let integrations: Awaited<ReturnType<typeof prisma.integration.findMany>> = [];
+  let totalApprovals = 0;
+  let slackApprovals = 0;
+  let gmailApprovals = 0;
+  let slackEvents: Awaited<ReturnType<typeof prisma.event.findMany>> = [];
+  let gmailEvents: Awaited<ReturnType<typeof prisma.event.findMany>> = [];
+  let queueErrors = 0;
+  let classifierErrors = 0;
+
+  try {
+    console.info('[dashboard] integrations queries start');
+    [integrations, totalApprovals, slackApprovals, gmailApprovals, slackEvents, gmailEvents, queueErrors, classifierErrors] = await withTimeout(
+      'dashboard integrations queries',
+      prisma.$transaction([
+        prisma.integration.findMany({
+          where: { organizationId: organization.id },
+          orderBy: { provider: 'asc' },
+        }),
+        prisma.approvalRecord.count({ where: { organizationId: organization.id } }),
+        prisma.approvalRecord.count({ where: { organizationId: organization.id, sourcePlatform: { equals: 'slack', mode: 'insensitive' } } }),
+        prisma.approvalRecord.count({ where: { organizationId: organization.id, sourcePlatform: { equals: 'gmail', mode: 'insensitive' } } }),
+        prisma.event.findMany({
+          where: { organizationId: organization.id, type: { startsWith: 'slack.' } },
+          orderBy: { createdAt: 'desc' },
+          take: 8,
+        }),
+        prisma.event.findMany({
+          where: { organizationId: organization.id, type: { startsWith: 'gmail.' } },
+          orderBy: { createdAt: 'desc' },
+          take: 8,
+        }),
+        prisma.event.count({ where: { organizationId: organization.id, type: 'slack.event.queue_error' } }),
+        prisma.event.count({ where: { organizationId: organization.id, type: { in: ['slack.event.classifier_error', 'gmail.event.classifier_error'] } } }),
+      ]),
+      3000,
+    );
+    console.info(`[dashboard] integrations queries finished in ${Date.now() - startedAt}ms`);
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : 'Unable to load integration data.';
+    console.error(`[dashboard] integrations queries failed after ${Date.now() - startedAt}ms`, error);
+  }
   const slackIntegration = integrations.find((item) => item.provider === 'SLACK');
   const gmailIntegration = integrations.find((item) => item.provider === 'GMAIL');
   const slackStatus = slackIntegration?.status ?? 'NOT_CONNECTED';
@@ -127,6 +151,16 @@ export default async function IntegrationsPage({
         <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Read-only integrations</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">Connect Slack, Gmail, Teams, and Zoom using least-privilege scopes.</p>
       </div>
+      {loadError ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm">
+          <h3 className="font-black">Unable to load integration metrics</h3>
+          <p className="mt-1 text-sm">Connector actions remain available. Metrics and recent events can be retried.</p>
+          <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs font-semibold">{loadError}</p>
+          <PendingLink href="/dashboard/settings/integrations" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200">
+            Retry
+          </PendingLink>
+        </div>
+      ) : null}
       {slackNotice ? (
         <div className={`rounded-2xl border p-4 shadow-sm ${slackNotice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
           <h3 className="font-black">{slackNotice.title}</h3>
