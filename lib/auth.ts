@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { validateDatabaseUrl } from '@/lib/env';
+import { withTimeout } from '@/lib/performance';
 import type { AppRole } from '@/types/rbac';
 import { canAccessRole } from '@/types/rbac';
 
@@ -24,6 +25,8 @@ export async function requireSession() {
 }
 
 export async function getCurrentTenant() {
+  const startedAt = Date.now();
+  console.info('[tenant] start load');
   const session = await requireSession();
   const clerkUser = await currentUser();
   const email = clerkUser?.primaryEmailAddress?.emailAddress ?? clerkUser?.emailAddresses[0]?.emailAddress ?? `${session.userId}@unknown.local`;
@@ -35,35 +38,47 @@ export async function getCurrentTenant() {
   }
 
   try {
-    const organization = await prisma.organization.upsert({
-      where: {
-        slug: orgId ?? `personal-${session.userId}`,
-      },
-      update: {},
-      create: {
-        clerkOrgId: orgId,
-        name: session.orgSlug ?? 'Personal Workspace',
-        slug: orgId ?? `personal-${session.userId}`,
-        departments: [],
-        approvalCategories: [],
-      },
-    });
+    console.info('[tenant] organization upsert start');
+    const organization = await withTimeout(
+      'tenant organization upsert',
+      prisma.organization.upsert({
+        where: {
+          slug: orgId ?? `personal-${session.userId}`,
+        },
+        update: {},
+        create: {
+          clerkOrgId: orgId,
+          name: session.orgSlug ?? 'Personal Workspace',
+          slug: orgId ?? `personal-${session.userId}`,
+          departments: [],
+          approvalCategories: [],
+        },
+      }),
+      3000,
+    );
+    console.info(`[tenant] organization upsert finished in ${Date.now() - startedAt}ms`);
 
-    const user = await prisma.user.upsert({
-      where: { clerkUserId: session.userId },
-      update: {
-        email,
-        name: clerkUser?.fullName,
-        organizationId: organization.id,
-      },
-      create: {
-        clerkUserId: session.userId,
-        email,
-        name: clerkUser?.fullName,
-        organizationId: organization.id,
-        role: 'ADMIN',
-      },
-    });
+    console.info('[tenant] user upsert start');
+    const user = await withTimeout(
+      'tenant user upsert',
+      prisma.user.upsert({
+        where: { clerkUserId: session.userId },
+        update: {
+          email,
+          name: clerkUser?.fullName,
+          organizationId: organization.id,
+        },
+        create: {
+          clerkUserId: session.userId,
+          email,
+          name: clerkUser?.fullName,
+          organizationId: organization.id,
+          role: 'ADMIN',
+        },
+      }),
+      3000,
+    );
+    console.info(`[tenant] finish load in ${Date.now() - startedAt}ms`);
 
     return { session, organization, user };
   } catch (error) {

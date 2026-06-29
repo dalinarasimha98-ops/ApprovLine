@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentTenant } from '@/lib/auth';
 import { ApprovalTable } from '@/components/dashboard/ApprovalTable';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
+import { PendingLink } from '@/components/system/PendingLink';
+import { withTimeout } from '@/lib/performance';
 import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -21,34 +23,50 @@ export default async function ApprovalsPage({
     to?: string;
   }>;
 }) {
+  const startedAt = Date.now();
+  console.info('[dashboard] approvals page start load');
   const { organization } = await getCurrentTenant();
   const filters = await searchParams;
   const occurredAt: Prisma.DateTimeFilter = {};
   if (filters.from) occurredAt.gte = new Date(filters.from);
   if (filters.to) occurredAt.lte = new Date(filters.to);
-  const approvals = await prisma.approvalRecord.findMany({
-    where: {
-      organizationId: organization.id,
-      ...(filters.department ? { department: { contains: filters.department, mode: 'insensitive' } } : {}),
-      ...(filters.employee ? { approverName: { contains: filters.employee, mode: 'insensitive' } } : {}),
-      ...(filters.sourcePlatform ? { sourcePlatform: { contains: filters.sourcePlatform, mode: 'insensitive' } } : {}),
-      ...(filters.category ? { category: { contains: filters.category, mode: 'insensitive' } } : {}),
-      ...(filters.riskLevel ? { riskLevel: filters.riskLevel.toLowerCase() } : {}),
-      ...(filters.approvalType ? { approvalType: filters.approvalType.toUpperCase() as Prisma.EnumApprovalTypeFilter['equals'] } : {}),
-      ...(filters.from || filters.to ? { occurredAt } : {}),
-      ...(filters.q
-        ? {
-            OR: [
-              { subject: { contains: filters.q, mode: 'insensitive' } },
-              { reasoning: { contains: filters.q, mode: 'insensitive' } },
-              { evidenceSnippet: { contains: filters.q, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 100,
-  });
+  let approvals: Awaited<ReturnType<typeof prisma.approvalRecord.findMany>> = [];
+  let loadError: string | null = null;
+
+  try {
+    console.info('[dashboard] approvals query start');
+    approvals = await withTimeout(
+      'dashboard approvals query',
+      prisma.approvalRecord.findMany({
+        where: {
+          organizationId: organization.id,
+          ...(filters.department ? { department: { contains: filters.department, mode: 'insensitive' } } : {}),
+          ...(filters.employee ? { approverName: { contains: filters.employee, mode: 'insensitive' } } : {}),
+          ...(filters.sourcePlatform ? { sourcePlatform: { contains: filters.sourcePlatform, mode: 'insensitive' } } : {}),
+          ...(filters.category ? { category: { contains: filters.category, mode: 'insensitive' } } : {}),
+          ...(filters.riskLevel ? { riskLevel: filters.riskLevel.toLowerCase() } : {}),
+          ...(filters.approvalType ? { approvalType: filters.approvalType.toUpperCase() as Prisma.EnumApprovalTypeFilter['equals'] } : {}),
+          ...(filters.from || filters.to ? { occurredAt } : {}),
+          ...(filters.q
+            ? {
+                OR: [
+                  { subject: { contains: filters.q, mode: 'insensitive' } },
+                  { reasoning: { contains: filters.q, mode: 'insensitive' } },
+                  { evidenceSnippet: { contains: filters.q, mode: 'insensitive' } },
+                ],
+              }
+            : {}),
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      2500,
+    );
+    console.info(`[dashboard] approvals query finished in ${Date.now() - startedAt}ms`);
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : 'Unable to load approvals.';
+    console.error(`[dashboard] approvals query failed after ${Date.now() - startedAt}ms`, error);
+  }
 
   return (
     <section className="grid gap-6">
@@ -92,6 +110,16 @@ export default async function ApprovalsPage({
           </FormSubmitButton>
         </div>
       </form>
+      {loadError ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm">
+          <h3 className="font-black">Unable to load approvals</h3>
+          <p className="mt-1 text-sm">The dashboard stopped waiting so you are not stuck on an infinite loading screen.</p>
+          <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs font-semibold">{loadError}</p>
+          <PendingLink href="/dashboard/approvals" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200">
+            Retry
+          </PendingLink>
+        </div>
+      ) : null}
       <ApprovalTable approvals={approvals} />
     </section>
   );

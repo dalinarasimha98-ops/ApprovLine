@@ -1,15 +1,33 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentTenant } from '@/lib/auth';
+import { PendingLink } from '@/components/system/PendingLink';
+import { withTimeout } from '@/lib/performance';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AuditPage() {
+  const startedAt = Date.now();
+  console.info('[dashboard] audit page start load');
   const { organization } = await getCurrentTenant();
-  const logs = await prisma.auditLog.findMany({
-    where: { organizationId: organization.id },
-    orderBy: { createdAt: 'desc' },
-    take: 100,
-  });
+  let logs: Awaited<ReturnType<typeof prisma.auditLog.findMany>> = [];
+  let loadError: string | null = null;
+
+  try {
+    console.info('[dashboard] audit logs query start');
+    logs = await withTimeout(
+      'dashboard audit logs query',
+      prisma.auditLog.findMany({
+        where: { organizationId: organization.id },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      2500,
+    );
+    console.info(`[dashboard] audit logs query finished in ${Date.now() - startedAt}ms`);
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : 'Unable to load audit logs.';
+    console.error(`[dashboard] audit logs query failed after ${Date.now() - startedAt}ms`, error);
+  }
 
   return (
     <section className="grid gap-6">
@@ -19,6 +37,16 @@ export default async function AuditPage() {
         <p className="mt-2 text-sm leading-6 text-slate-600">Immutable activity stream for compliance review and operational debugging.</p>
       </div>
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {loadError ? (
+          <div className="border-b border-amber-100 bg-amber-50 p-5 text-amber-900">
+            <h3 className="font-black">Unable to load audit logs</h3>
+            <p className="mt-1 text-sm">The dashboard stopped waiting so this page can still render safely.</p>
+            <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs font-semibold">{loadError}</p>
+            <PendingLink href="/dashboard/audit" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white">
+              Retry
+            </PendingLink>
+          </div>
+        ) : null}
         {logs.map((log) => (
           <div key={log.id} className="grid gap-1 border-b border-slate-100 p-4 transition hover:bg-slate-50 last:border-b-0 sm:grid-cols-[1fr_auto] sm:items-center">
             <span className="font-mono text-xs font-bold uppercase tracking-wide text-[#2155d9]">{log.action}</span>

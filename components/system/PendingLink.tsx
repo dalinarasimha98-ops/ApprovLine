@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 type PendingLinkProps = {
   href: string;
@@ -13,13 +14,23 @@ type PendingLinkProps = {
 
 export function PendingLink({ href, children, pendingText = 'Redirecting...', className, prefetch }: PendingLinkProps) {
   const [pending, setPending] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setPending(false);
+  }, [pathname]);
+
+  const targetPath = href.startsWith('http') ? href : href.split('?')[0];
+  const isCurrentPage = targetPath === pathname;
 
   return (
     <Link
       href={href}
       prefetch={prefetch ?? false}
       aria-disabled={pending}
-      onClick={() => setPending(true)}
+      onClick={() => {
+        if (!isCurrentPage) setPending(true);
+      }}
       className={`${className ?? ''} ${pending ? 'pointer-events-none opacity-80' : ''}`}
     >
       {pending ? (
