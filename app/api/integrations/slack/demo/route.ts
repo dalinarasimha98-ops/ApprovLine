@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth';
+import { measure } from '@/lib/performance';
 import { buildSimulationJob } from '@/services/integrations/simulation';
 import { processIncomingMessage } from '@/services/ingestion/processIncomingMessage';
 
 export async function POST(request: NextRequest) {
+  return measure('POST /api/integrations/slack/demo', async () => {
   const tenant = await requireRole('ADMIN');
   const job = buildSimulationJob(tenant.organization.id, {
     source_platform: 'slack',
@@ -16,4 +18,5 @@ export async function POST(request: NextRequest) {
   });
   const result = await processIncomingMessage(job, { auditAction: 'integration.slack.demo_message_processed' });
   return NextResponse.redirect(new URL(`/dashboard/approvals?sourcePlatform=slack&approvalRecordId=${result?.approval?.id ?? ''}`, request.url));
+  });
 }

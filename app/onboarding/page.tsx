@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { getCurrentTenant, isTenantDatabaseError } from '@/lib/auth';
 import { RedisWarningBanner } from '@/components/system/RedisWarningBanner';
+import { FormSubmitButton } from '@/components/system/FormSubmitButton';
+import { PendingLink } from '@/components/system/PendingLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -189,9 +191,9 @@ function StepShell({
               <Link href="/" aria-label="ApprovLine home" className="rounded-xl bg-[#030612] px-3 py-2">
                 <BrandMark theme="dark" />
               </Link>
-              <Link href="/dashboard" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 shadow-sm">
+              <PendingLink href="/dashboard" pendingText="Opening..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 shadow-sm">
                 Dashboard
-              </Link>
+              </PendingLink>
             </header>
           <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:p-8">
             <ProgressIndicator currentStep={step} />
@@ -278,8 +280,8 @@ export default async function OnboardingPage({
             <input name="departments" placeholder="Customer Success" className={inputClass} />
           </label>
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <Link href="/onboarding" className={secondaryButtonClass}>Back</Link>
-            <button className={primaryButtonClass}>Continue →</button>
+            <PendingLink href="/onboarding" pendingText="Going back..." className={secondaryButtonClass}>Back</PendingLink>
+            <FormSubmitButton pendingText="Saving..." className={primaryButtonClass}>Continue →</FormSubmitButton>
           </div>
         </form>
       </StepShell>
@@ -303,8 +305,8 @@ export default async function OnboardingPage({
             ))}
           </div>
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <Link href="/onboarding?step=departments" className={secondaryButtonClass}>Back</Link>
-            <button className={primaryButtonClass}>Continue →</button>
+            <PendingLink href="/onboarding?step=departments" pendingText="Going back..." className={secondaryButtonClass}>Back</PendingLink>
+            <FormSubmitButton pendingText="Saving..." className={primaryButtonClass}>Continue →</FormSubmitButton>
           </div>
         </form>
       </StepShell>
@@ -329,9 +331,9 @@ export default async function OnboardingPage({
                     </div>
                     <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
                     {href ? (
-                      <a href={href} className="mt-3 inline-flex min-h-0 h-9 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-xs font-bold text-white shadow-sm hover:bg-[#1b49bd]">
+                      <PendingLink href={href} pendingText="Connecting..." className="mt-3 inline-flex min-h-0 h-9 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-xs font-bold text-white shadow-sm hover:bg-[#1b49bd]">
                         Connect
-                      </a>
+                      </PendingLink>
                     ) : null}
                   </div>
                 </div>
@@ -339,15 +341,15 @@ export default async function OnboardingPage({
             ))}
           </div>
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <Link href="/onboarding?step=categories" className={secondaryButtonClass}>Back</Link>
+            <PendingLink href="/onboarding?step=categories" pendingText="Going back..." className={secondaryButtonClass}>Back</PendingLink>
             <form action={completeOnboarding}>
-              <button className={primaryButtonClass}>Complete Setup →</button>
+              <FormSubmitButton pendingText="Completing..." className={primaryButtonClass}>Complete Setup →</FormSubmitButton>
             </form>
           </div>
           <form action={completeOnboarding} className="sm:hidden">
-            <button className="min-h-0 h-11 w-full rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50">
+            <FormSubmitButton pendingText="Opening dashboard..." className="min-h-0 h-11 w-full rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50">
               Skip integrations for now
-            </button>
+            </FormSubmitButton>
           </form>
         </div>
       </StepShell>
@@ -357,7 +359,7 @@ export default async function OnboardingPage({
   if (step === 'complete') {
     return (
       <StepShell step="connect" title="Setup complete" subtitle="Your organization is ready to capture approvals, classify decisions, and build an audit-ready timeline.">
-        <a href="/dashboard" className={`${primaryButtonClass} w-full`}>Open dashboard</a>
+        <PendingLink href="/dashboard" pendingText="Opening dashboard..." className={`${primaryButtonClass} w-full`}>Open dashboard</PendingLink>
       </StepShell>
     );
   }
@@ -371,8 +373,8 @@ export default async function OnboardingPage({
           <span className="text-xs font-semibold text-slate-500">This will be your workspace name.</span>
         </label>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-          <Link href="/" className={secondaryButtonClass}>Back</Link>
-          <button className={primaryButtonClass}>Continue →</button>
+          <PendingLink href="/" pendingText="Going back..." className={secondaryButtonClass}>Back</PendingLink>
+          <FormSubmitButton pendingText="Creating workspace..." className={primaryButtonClass}>Continue →</FormSubmitButton>
         </div>
       </form>
     </StepShell>

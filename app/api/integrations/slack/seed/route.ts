@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { measure } from '@/lib/performance';
 import { writeAuditLog } from '@/services/audit';
 
 const samples = [
@@ -13,6 +14,7 @@ const samples = [
 ] as const;
 
 export async function POST(request: NextRequest) {
+  return measure('POST /api/integrations/slack/seed', async () => {
   const tenant = await requireRole('ADMIN');
   const created = [];
   for (const [subject, approverName, approverEmail, department, category, approvalType, status, riskLevel] of samples) {
@@ -48,4 +50,5 @@ export async function POST(request: NextRequest) {
     });
   }
   return NextResponse.redirect(new URL('/dashboard/approvals?sourcePlatform=slack', request.url));
+  });
 }

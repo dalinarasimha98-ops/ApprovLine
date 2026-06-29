@@ -1,3 +1,5 @@
+import { PendingLink } from '@/components/system/PendingLink';
+
 export default function ExportPage() {
   return (
     <section className="grid gap-6">
@@ -11,9 +13,9 @@ export default function ExportPage() {
           <h3 className="text-lg font-black text-slate-950">Approval records CSV</h3>
           <p className="mt-1 text-sm text-slate-500">Includes approval type, confidence, approver, source platform, category, and timestamps.</p>
         </div>
-        <a className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]" href="/api/export/approvals">
+        <PendingLink className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]" href="/api/export/approvals" pendingText="Preparing CSV...">
           Download CSV
-        </a>
+        </PendingLink>
       </div>
     </section>
   );
