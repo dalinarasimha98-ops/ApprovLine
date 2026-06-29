@@ -60,7 +60,7 @@ export default async function ApprovalsPage({
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),
-      2500,
+      1500,
     );
     console.info(`[dashboard] approvals query finished in ${Date.now() - startedAt}ms`);
   } catch (error) {

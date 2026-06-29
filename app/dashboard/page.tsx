@@ -6,21 +6,6 @@ import { withTimeout } from '@/lib/performance';
 
 export const dynamic = 'force-dynamic';
 
-async function safeCount(label: string, query: Promise<number>) {
-  const startedAt = Date.now();
-  try {
-    const count = await withTimeout(label, query, 2500);
-    console.info(`[dashboard] ${label} finished in ${Date.now() - startedAt}ms`);
-    return { count, error: null };
-  } catch (error) {
-    console.error(`[dashboard] ${label} failed after ${Date.now() - startedAt}ms`, error);
-    return {
-      count: 0,
-      error: error instanceof Error ? error.message : `${label} unavailable`,
-    };
-  }
-}
-
 export default async function DashboardPage() {
   const startedAt = Date.now();
   console.info('[dashboard] start load');
@@ -28,13 +13,22 @@ export default async function DashboardPage() {
   if (!session.userId) redirect('/sign-in');
 
   console.info('[dashboard] user query start');
-  const user = await prisma.user.findUnique({
-    where: { clerkUserId: session.userId },
-    include: { organization: true },
+  let userQueryDelayed = false;
+  const user = await withTimeout(
+    'dashboard user query',
+    prisma.user.findUnique({
+      where: { clerkUserId: session.userId },
+      include: { organization: true },
+    }),
+    900,
+  ).catch((error) => {
+    userQueryDelayed = true;
+    console.error(`[dashboard] user query delayed after ${Date.now() - startedAt}ms`, error);
+    return null;
   });
   console.info(`[dashboard] user query finished in ${Date.now() - startedAt}ms`);
 
-  if (!user?.organization) {
+  if (!user?.organization && !userQueryDelayed) {
     return (
       <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div>
@@ -51,17 +45,10 @@ export default async function DashboardPage() {
     );
   }
 
-  if (!user.organization.onboardedAt) {
+  if (user?.organization && !user.organization.onboardedAt) {
     redirect('/onboarding');
   }
 
-  const [approvals, auditLogs, integrations, pendingReview] = await Promise.all([
-    safeCount('approvals query', prisma.approvalRecord.count({ where: { organizationId: user.organization.id } })),
-    safeCount('audit logs query', prisma.auditLog.count({ where: { organizationId: user.organization.id } })),
-    safeCount('integrations query', prisma.integration.count({ where: { organizationId: user.organization.id } })),
-    safeCount('pending review query', prisma.approvalRecord.count({ where: { organizationId: user.organization.id, status: 'PENDING_REVIEW' } })),
-  ]);
-  const errors = [approvals, auditLogs, integrations, pendingReview].filter((item) => item.error);
   console.info(`[dashboard] finish load in ${Date.now() - startedAt}ms`);
 
   return (
@@ -79,26 +66,23 @@ export default async function DashboardPage() {
         </PendingLink>
       </div>
 
-      {errors.length > 0 ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm">
-          <h3 className="font-black">Some dashboard metrics are temporarily unavailable</h3>
-          <p className="mt-1 text-sm">Core navigation still works. Open the health page or retry in a moment.</p>
-          <PendingLink href="/health" pendingText="Opening health..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-amber-300 bg-white px-3 text-sm font-bold text-amber-900 shadow-sm">
-            Open health check
-          </PendingLink>
+      {userQueryDelayed ? (
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-blue-900 shadow-sm">
+          <h3 className="font-black">Dashboard opened in quick mode</h3>
+          <p className="mt-1 text-sm">Workspace verification is taking longer than usual, so ApprovLine opened the dashboard first. Detailed pages will verify data as they load.</p>
         </div>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          ['Approvals captured', approvals.count, 'Searchable approval records'],
-          ['Audit log events', auditLogs.count, 'Compliance activity entries'],
-          ['Connected integrations', integrations.count, 'Slack, Gmail, Teams, Zoom'],
-          ['Pending review', pendingReview.count, 'Low-confidence approvals'],
+          ['Approval history', 'Open', 'Searchable approval records'],
+          ['Audit trail', 'Ready', 'Compliance activity entries'],
+          ['Integrations', 'Manage', 'Slack, Gmail, Teams, Zoom'],
+          ['Review queue', 'Available', 'Low-confidence approvals'],
         ].map(([label, value, help]) => (
           <div key={label as string} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-            <p className="mt-3 text-3xl font-black text-slate-950">{value}</p>
+            <p className="mt-3 text-2xl font-black text-slate-950">{value}</p>
             <p className="mt-2 text-sm text-slate-500">{help}</p>
           </div>
         ))}

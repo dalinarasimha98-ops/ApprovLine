@@ -54,7 +54,7 @@ export async function getCurrentTenant() {
           approvalCategories: [],
         },
       }),
-      3000,
+      1500,
     );
     console.info(`[tenant] organization upsert finished in ${Date.now() - startedAt}ms`);
 
@@ -76,7 +76,7 @@ export async function getCurrentTenant() {
           role: 'ADMIN',
         },
       }),
-      3000,
+      1500,
     );
     console.info(`[tenant] finish load in ${Date.now() - startedAt}ms`);
 

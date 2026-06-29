@@ -21,7 +21,7 @@ export default async function AuditPage() {
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),
-      2500,
+      1500,
     );
     console.info(`[dashboard] audit logs query finished in ${Date.now() - startedAt}ms`);
   } catch (error) {

@@ -26,7 +26,7 @@ export function PendingLink({ href, children, pendingText = 'Redirecting...', cl
   return (
     <Link
       href={href}
-      prefetch={prefetch ?? false}
+      prefetch={prefetch ?? true}
       aria-disabled={pending}
       onClick={() => {
         if (!isCurrentPage) setPending(true);
