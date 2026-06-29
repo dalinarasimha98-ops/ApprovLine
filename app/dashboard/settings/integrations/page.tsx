@@ -1,39 +1,123 @@
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { getCurrentTenant } from '@/lib/auth';
-import { env } from '@/config/env';
-import { FormSubmitButton } from '@/components/system/FormSubmitButton';
-import { PendingLink } from '@/components/system/PendingLink';
 import { withTimeout } from '@/lib/performance';
-import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-const stateStyles: Record<string, string> = {
-  CONNECTED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  DISCONNECTED: 'border-slate-200 bg-slate-100 text-slate-700',
-  ERROR: 'border-rose-200 bg-rose-50 text-rose-700',
-  NEEDS_REAUTH: 'border-amber-200 bg-amber-50 text-amber-700',
-  SYNCING: 'border-blue-200 bg-blue-50 text-blue-700',
-  NOT_CONNECTED: 'border-slate-200 bg-slate-100 text-slate-700',
+type IntegrationCard = {
+  key: string;
+  provider?: 'GMAIL' | 'SLACK' | 'MICROSOFT_TEAMS' | 'ZOOM';
+  name: string;
+  description: string;
+  icon: string;
+  iconClass: string;
+  href?: string;
 };
 
-function stateLabel(status?: string) {
-  if (!status) return 'Not connected';
-  if (status === 'NEEDS_REAUTH') return 'Needs re-authentication';
-  return status.toLowerCase().replaceAll('_', ' ');
-}
+type IntegrationSection = {
+  title: string;
+  cards: IntegrationCard[];
+};
 
-function metadataValue(metadata: Prisma.JsonValue | null, key: string) {
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
-  const value = metadata[key as keyof typeof metadata];
-  return typeof value === 'string' ? value : null;
-}
-
-function metadataNumber(metadata: Prisma.JsonValue | null, key: string) {
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return 0;
-  const value = metadata[key as keyof typeof metadata];
-  return typeof value === 'number' ? value : 0;
-}
+const sections: IntegrationSection[] = [
+  {
+    title: 'Email',
+    cards: [
+      {
+        key: 'gmail',
+        provider: 'GMAIL',
+        name: 'Gmail',
+        description: 'Capture decisions from email threads and approval chains',
+        icon: 'G',
+        iconClass: 'bg-rose-50 text-rose-600',
+        href: '/api/integrations/gmail/install',
+      },
+      {
+        key: 'outlook',
+        name: 'Outlook',
+        description: 'Sync decision emails from Microsoft Outlook and Exchange',
+        icon: 'O',
+        iconClass: 'bg-blue-50 text-blue-600',
+      },
+    ],
+  },
+  {
+    title: 'Messaging',
+    cards: [
+      {
+        key: 'slack',
+        provider: 'SLACK',
+        name: 'Slack',
+        description: 'Track decisions made in Slack channels, DMs and huddles',
+        icon: 'S',
+        iconClass: 'bg-purple-50 text-purple-600',
+        href: '/api/integrations/slack/install',
+      },
+      {
+        key: 'teams',
+        provider: 'MICROSOFT_TEAMS',
+        name: 'Microsoft Teams',
+        description: 'Capture decisions from Teams meetings, channels and chats',
+        icon: 'T',
+        iconClass: 'bg-indigo-50 text-indigo-600',
+      },
+      {
+        key: 'whatsapp',
+        name: 'WhatsApp',
+        description: 'Log business decisions shared via WhatsApp Business',
+        icon: 'W',
+        iconClass: 'bg-emerald-50 text-emerald-600',
+      },
+    ],
+  },
+  {
+    title: 'Meetings',
+    cards: [
+      {
+        key: 'zoom',
+        provider: 'ZOOM',
+        name: 'Zoom',
+        description: 'Automatically extract decisions from Zoom meeting transcripts',
+        icon: 'Z',
+        iconClass: 'bg-sky-50 text-sky-600',
+      },
+    ],
+  },
+  {
+    title: 'Project Management',
+    cards: [
+      {
+        key: 'jira',
+        name: 'Jira',
+        description: 'Track ticket-based decisions, approvals and scope changes',
+        icon: 'J',
+        iconClass: 'bg-blue-50 text-blue-700',
+      },
+      {
+        key: 'asana',
+        name: 'Asana',
+        description: 'Capture task sign-offs and project decisions from Asana',
+        icon: 'A',
+        iconClass: 'bg-pink-50 text-pink-600',
+      },
+      {
+        key: 'notion',
+        name: 'Notion',
+        description: 'Sync decisions documented in Notion pages and databases',
+        icon: 'N',
+        iconClass: 'bg-slate-100 text-slate-600',
+      },
+      {
+        key: 'monday',
+        name: 'Monday.com',
+        description: 'Pull decisions and approvals from Monday.com boards and items',
+        icon: 'M',
+        iconClass: 'bg-orange-50 text-orange-600',
+      },
+    ],
+  },
+];
 
 function oauthMessage(provider: 'Slack' | 'Gmail', status?: string, reason?: string) {
   if (status === 'connected') {
@@ -59,18 +143,63 @@ function oauthMessage(provider: 'Slack' | 'Gmail', status?: string, reason?: str
   };
 }
 
-function setupItem(label: string, complete: boolean, help: string) {
+function toggleVisual(connected: boolean) {
   return (
-    <li key={label} className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-      <span>
-        <span className="block text-sm font-bold text-slate-900">{label}</span>
-        <span className="block text-xs text-slate-500">{help}</span>
+    <span className="flex shrink-0 items-center gap-3" aria-hidden="true">
+      <span className={`h-5 w-5 rounded-full border-2 ${connected ? 'border-[#2155d9]' : 'border-slate-300'}`} />
+      <span className={`relative h-8 w-14 rounded-full p-1 shadow-sm transition ${connected ? 'bg-[#2155d9]' : 'bg-slate-300'}`}>
+        <span className={`block h-6 w-6 rounded-full bg-white shadow-sm transition ${connected ? 'translate-x-6' : 'translate-x-0'}`} />
       </span>
-      <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${complete ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
-        {complete ? 'Ready' : 'Missing'}
-      </span>
-    </li>
+    </span>
   );
+}
+
+function IntegrationTile({
+  card,
+  status,
+}: {
+  card: IntegrationCard;
+  status: string;
+}) {
+  const connected = status === 'CONNECTED' || status === 'SYNCING';
+  const disabled = !card.href && !connected;
+  const content = (
+    <div
+      className={`group flex min-h-[148px] items-start justify-between gap-6 rounded-2xl border border-slate-200 bg-white p-7 shadow-[0_2px_10px_rgba(15,23,42,0.08)] transition ${
+        disabled ? 'opacity-95' : 'hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_32px_rgba(15,23,42,0.12)]'
+      }`}
+    >
+      <div className="flex min-w-0 gap-6">
+        <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-2xl font-black ${card.iconClass}`}>
+          {card.icon}
+        </span>
+        <span>
+          <span className="block text-xl font-black tracking-tight text-slate-950">{card.name}</span>
+          <span className="mt-2 block max-w-md text-lg font-semibold leading-8 text-slate-500">{card.description}</span>
+          {connected ? (
+            <span className="mt-4 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700">
+              Connected
+            </span>
+          ) : card.href ? (
+            <span className="mt-4 inline-flex text-xs font-black uppercase tracking-wide text-[#2155d9]">Click to connect</span>
+          ) : (
+            <span className="mt-4 inline-flex text-xs font-black uppercase tracking-wide text-slate-400">Coming soon</span>
+          )}
+        </span>
+      </div>
+      {toggleVisual(connected)}
+    </div>
+  );
+
+  if (card.href && !connected) {
+    return (
+      <Link href={card.href} className="block focus:outline-none focus:ring-4 focus:ring-blue-100">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
 export default async function IntegrationsPage({
@@ -78,253 +207,72 @@ export default async function IntegrationsPage({
 }: {
   searchParams: Promise<{ slack?: string; gmail?: string; reason?: string }>;
 }) {
-  const startedAt = Date.now();
-  console.info('[dashboard] integrations page start load');
   const { organization } = await getCurrentTenant();
   const query = await searchParams;
   let loadError: string | null = null;
   let integrations: Awaited<ReturnType<typeof prisma.integration.findMany>> = [];
-  let totalApprovals = 0;
-  let slackApprovals = 0;
-  let gmailApprovals = 0;
-  let slackEvents: Awaited<ReturnType<typeof prisma.event.findMany>> = [];
-  let gmailEvents: Awaited<ReturnType<typeof prisma.event.findMany>> = [];
-  let queueErrors = 0;
-  let classifierErrors = 0;
 
   try {
-    console.info('[dashboard] integrations queries start');
-    [integrations, totalApprovals, slackApprovals, gmailApprovals, slackEvents, gmailEvents, queueErrors, classifierErrors] = await withTimeout(
-      'dashboard integrations queries',
-      prisma.$transaction([
-        prisma.integration.findMany({
-          where: { organizationId: organization.id },
-          orderBy: { provider: 'asc' },
-        }),
-        prisma.approvalRecord.count({ where: { organizationId: organization.id } }),
-        prisma.approvalRecord.count({ where: { organizationId: organization.id, sourcePlatform: { equals: 'slack', mode: 'insensitive' } } }),
-        prisma.approvalRecord.count({ where: { organizationId: organization.id, sourcePlatform: { equals: 'gmail', mode: 'insensitive' } } }),
-        prisma.event.findMany({
-          where: { organizationId: organization.id, type: { startsWith: 'slack.' } },
-          orderBy: { createdAt: 'desc' },
-          take: 8,
-        }),
-        prisma.event.findMany({
-          where: { organizationId: organization.id, type: { startsWith: 'gmail.' } },
-          orderBy: { createdAt: 'desc' },
-          take: 8,
-        }),
-        prisma.event.count({ where: { organizationId: organization.id, type: 'slack.event.queue_error' } }),
-        prisma.event.count({ where: { organizationId: organization.id, type: { in: ['slack.event.classifier_error', 'gmail.event.classifier_error'] } } }),
-      ]),
-      1500,
+    integrations = await withTimeout(
+      'dashboard integrations list',
+      prisma.integration.findMany({
+        where: { organizationId: organization.id },
+        orderBy: { provider: 'asc' },
+      }),
+      1200,
     );
-    console.info(`[dashboard] integrations queries finished in ${Date.now() - startedAt}ms`);
   } catch (error) {
-    loadError = error instanceof Error ? error.message : 'Unable to load integration data.';
-    console.error(`[dashboard] integrations queries failed after ${Date.now() - startedAt}ms`, error);
+    loadError = error instanceof Error ? error.message : 'Unable to load integration status.';
   }
-  const slackIntegration = integrations.find((item) => item.provider === 'SLACK');
-  const gmailIntegration = integrations.find((item) => item.provider === 'GMAIL');
-  const slackStatus = slackIntegration?.status ?? 'NOT_CONNECTED';
-  const gmailStatus = gmailIntegration?.status ?? 'NOT_CONNECTED';
+
+  const statusByProvider = new Map(integrations.map((item) => [item.provider, item.status]));
   const slackNotice = oauthMessage('Slack', query.slack, query.reason);
   const gmailNotice = oauthMessage('Gmail', query.gmail, query.reason);
-  const slackLastError = metadataValue(slackIntegration?.metadata ?? null, 'lastError');
-  const slackLastSyncAt = metadataValue(slackIntegration?.metadata ?? null, 'lastSyncAt');
-  const gmailLastError = metadataValue(gmailIntegration?.metadata ?? null, 'lastError');
-  const gmailLastSyncAt = metadataValue(gmailIntegration?.metadata ?? null, 'lastSyncAt');
-  const gmailProcessed = metadataNumber(gmailIntegration?.metadata ?? null, 'totalEmailsProcessed');
-  const slackChecklist = [
-    ['Slack client ID', Boolean(env.SLACK_CLIENT_ID), 'Set SLACK_CLIENT_ID in Vercel.'],
-    ['Slack client secret', Boolean(env.SLACK_CLIENT_SECRET), 'Set SLACK_CLIENT_SECRET in Vercel.'],
-    ['Slack signing secret', Boolean(env.SLACK_SIGNING_SECRET), 'Set SLACK_SIGNING_SECRET for event verification.'],
-    ['App URL', Boolean(env.APP_URL), 'Set APP_URL to the deployed Vercel production URL.'],
-    ['Encryption key', Boolean(env.ENCRYPTION_KEY), 'Set ENCRYPTION_KEY before storing workspace tokens.'],
-    ['Slack workspace', slackStatus === 'CONNECTED' || slackStatus === 'SYNCING', 'Install the Slack app into the beta workspace.'],
-  ] as const;
 
   return (
-    <section className="grid gap-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#2155d9]">Connector readiness</p>
-        <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Read-only integrations</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Connect Slack, Gmail, Teams, and Zoom using least-privilege scopes.</p>
+    <section className="mx-auto grid w-full max-w-6xl gap-10 pb-10">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2155d9]">Integrations</p>
+        <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Connect approval sources</h2>
+        <p className="mt-2 max-w-2xl text-base font-semibold leading-7 text-slate-500">
+          Choose where ApprovLine should capture decisions. Gmail and Slack are available now; the rest are staged for rollout.
+        </p>
       </div>
+
       {loadError ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm">
-          <h3 className="font-black">Unable to load integration metrics</h3>
-          <p className="mt-1 text-sm">Connector actions remain available. Metrics and recent events can be retried.</p>
+          <h3 className="font-black">Unable to load integration status</h3>
+          <p className="mt-1 text-sm">Connector cards are still available. Status will refresh on retry.</p>
           <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs font-semibold">{loadError}</p>
-          <PendingLink href="/dashboard/settings/integrations" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200">
-            Retry
-          </PendingLink>
         </div>
       ) : null}
-      {slackNotice ? (
-        <div className={`rounded-2xl border p-4 shadow-sm ${slackNotice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
-          <h3 className="font-black">{slackNotice.title}</h3>
-          <p className="mt-1 text-sm">{slackNotice.body}</p>
+
+      {[slackNotice, gmailNotice].filter(Boolean).map((notice) => (
+        <div
+          key={notice!.title}
+          className={`rounded-2xl border p-4 shadow-sm ${
+            notice!.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'
+          }`}
+        >
+          <h3 className="font-black">{notice!.title}</h3>
+          <p className="mt-1 text-sm">{notice!.body}</p>
         </div>
-      ) : null}
-      {gmailNotice ? (
-        <div className={`rounded-2xl border p-4 shadow-sm ${gmailNotice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
-          <h3 className="font-black">{gmailNotice.title}</h3>
-          <p className="mt-1 text-sm">{gmailNotice.body}</p>
-        </div>
-      ) : null}
-      <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-black">Slack beta setup checklist</h3>
-              <p className="text-sm text-slate-600">Use this before inviting the first customer workspace.</p>
-            </div>
-            <PendingLink href="/health" pendingText="Opening..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
-              Health
-            </PendingLink>
-          </div>
-          <ul className="mt-4 grid gap-2">
-            {slackChecklist.map(([label, complete, help]) => setupItem(label, complete, help))}
-          </ul>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-lg font-black">Slack test tools</h3>
-          <p className="mt-1 text-sm text-slate-600">Run beta checks without waiting for a real workspace event.</p>
-          <div className="mt-4 grid gap-3">
-            <form action="/api/integrations/slack/demo" method="post">
-              <FormSubmitButton pendingText="Running demo..." className="min-h-0 h-11 w-full rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
-                Run Slack demo ingestion
-              </FormSubmitButton>
-            </form>
-            <form action="/api/integrations/slack/seed" method="post">
-              <FormSubmitButton pendingText="Seeding..." className="min-h-0 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
-                Seed sample Slack approvals
-              </FormSubmitButton>
-            </form>
-          </div>
-          <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl bg-slate-50 p-3">
-              <dt className="text-slate-500">Slack approvals</dt>
-              <dd className="text-xl font-black">{slackApprovals}</dd>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <dt className="text-slate-500">Gmail approvals</dt>
-              <dd className="text-xl font-black">{gmailApprovals}</dd>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <dt className="text-slate-500">Gmail emails</dt>
-              <dd className="text-xl font-black">{gmailProcessed}</dd>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <dt className="text-slate-500">All approvals</dt>
-              <dd className="text-xl font-black">{totalApprovals}</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        {['SLACK', 'GMAIL', 'MICROSOFT_TEAMS', 'ZOOM'].map((provider) => {
-          const integration = integrations.find((item) => item.provider === provider);
-          const status = integration?.status ?? 'NOT_CONNECTED';
-          const lastSyncAt = metadataValue(integration?.metadata ?? null, 'lastSyncAt');
-          const teamName = metadataValue(integration?.metadata ?? null, 'teamName');
-          const accountEmail = metadataValue(integration?.metadata ?? null, 'accountEmail');
-          const workspaceDomain = metadataValue(integration?.metadata ?? null, 'workspaceDomain');
-          return (
-            <div key={provider} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-black">{provider.replaceAll('_', ' ')}</h3>
-                  {teamName ? <p className="text-sm text-slate-500">{teamName}</p> : null}
-                </div>
-                {(provider === 'SLACK' || provider === 'GMAIL') && status === 'NOT_CONNECTED' ? (
-                  <PendingLink href={`/api/integrations/${provider === 'SLACK' ? 'slack' : 'gmail'}/install`} pendingText="Connecting..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
-                    Connect
-                  </PendingLink>
-                ) : null}
-              </div>
-              <p className={`mt-3 inline-flex rounded-full border px-2.5 py-1 text-xs font-bold capitalize ${stateStyles[status] ?? stateStyles.NOT_CONNECTED}`}>
-                {stateLabel(status)}
-              </p>
-              {provider === 'GMAIL' && accountEmail ? <p className="mt-3 text-xs text-slate-500">Account: {accountEmail}</p> : null}
-              {provider === 'GMAIL' && workspaceDomain ? <p className="mt-1 text-xs text-slate-500">Domain: {workspaceDomain}</p> : null}
-              {lastSyncAt ? <p className="mt-3 text-xs text-slate-500">Last sync: {new Date(lastSyncAt).toLocaleString()}</p> : null}
-              {provider === 'GMAIL' && status !== 'NOT_CONNECTED' && status !== 'DISCONNECTED' ? (
-                <form action="/api/integrations/gmail/sync" method="post" className="mt-4">
-                  <input type="hidden" name="integrationId" value={integration?.id ?? ''} />
-                  <FormSubmitButton pendingText="Syncing..." className="min-h-0 h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-50">
-                    Sync Gmail
-                  </FormSubmitButton>
-                </form>
-              ) : null}
-              {provider === 'SLACK' && status !== 'NOT_CONNECTED' && status !== 'DISCONNECTED' ? (
-                <form action="/api/integrations/slack/disconnect" method="post" className="mt-4">
-                  <FormSubmitButton pendingText="Disconnecting..." className="min-h-0 h-10 rounded-lg border border-rose-200 bg-white px-3 text-sm font-bold text-rose-700 shadow-sm hover:bg-rose-50">
-                    Disconnect Slack
-                  </FormSubmitButton>
-                </form>
-              ) : null}
-              <p className="mt-3 text-xs text-slate-500">
-                States: Connected, Not connected, Error, Needs re-authentication, Syncing
-              </p>
-            </div>
-          );
-        })}
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="font-black">Beta empty states</h3>
-          <div className="mt-4 grid gap-3 text-sm">
-            {totalApprovals === 0 ? (
-              <p className="rounded-xl bg-slate-50 p-3 text-slate-600">No approvals yet. Use demo ingestion, connect Slack, or sync Gmail to create the first approval record.</p>
-            ) : null}
-            {(slackStatus === 'CONNECTED' || slackStatus === 'SYNCING') && slackApprovals === 0 ? (
-              <p className="rounded-xl bg-blue-50 p-3 text-blue-800">Slack is connected, but no Slack messages have been processed yet. Send a human message in an approved channel or run the demo.</p>
-            ) : null}
-            {(gmailStatus === 'CONNECTED' || gmailStatus === 'SYNCING') && gmailApprovals === 0 ? (
-              <p className="rounded-xl bg-blue-50 p-3 text-blue-800">Gmail is connected, but no email approvals have been found yet. Run Sync Gmail or wait for the next scheduled sync.</p>
-            ) : null}
-            {classifierErrors > 0 ? (
-              <p className="rounded-xl bg-rose-50 p-3 text-rose-800">{classifierErrors} classifier error event{classifierErrors === 1 ? '' : 's'} recorded. Check model keys and recent event logs.</p>
-            ) : (
-              <p className="rounded-xl bg-emerald-50 p-3 text-emerald-800">No classifier errors recorded.</p>
-            )}
-            {queueErrors > 0 ? (
-              <p className="rounded-xl bg-rose-50 p-3 text-rose-800">{queueErrors} Slack queue error{queueErrors === 1 ? '' : 's'} recorded. Check Redis and worker health.</p>
-            ) : (
-              <p className="rounded-xl bg-emerald-50 p-3 text-emerald-800">No queue errors recorded.</p>
-            )}
-            {slackLastError ? <p className="rounded-xl bg-amber-50 p-3 text-amber-800">Latest Slack error: {slackLastError}</p> : null}
-            {slackLastSyncAt ? <p className="rounded-xl bg-slate-50 p-3 text-slate-600">Last Slack sync: {new Date(slackLastSyncAt).toLocaleString()}</p> : null}
-            {gmailLastError ? <p className="rounded-xl bg-amber-50 p-3 text-amber-800">Latest Gmail error: {gmailLastError}</p> : null}
-            {gmailLastSyncAt ? <p className="rounded-xl bg-slate-50 p-3 text-slate-600">Last Gmail sync: {new Date(gmailLastSyncAt).toLocaleString()}</p> : null}
+      ))}
+
+      {sections.map((section) => (
+        <div key={section.title} className="grid gap-5">
+          <h3 className="text-xl font-black uppercase tracking-[0.08em] text-slate-500">{section.title}</h3>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {section.cards.map((card) => (
+              <IntegrationTile
+                key={card.key}
+                card={card}
+                status={card.provider ? statusByProvider.get(card.provider) ?? 'NOT_CONNECTED' : 'NOT_CONNECTED'}
+              />
+            ))}
           </div>
         </div>
-        {[
-          ['Slack', slackEvents, 'No Slack events have been received yet.'],
-          ['Gmail', gmailEvents, 'No Gmail sync events have been recorded yet.'],
-        ].map(([label, events, empty]) => (
-          <div key={label as string} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="font-black">Recent {label as string} event log</h3>
-            {(events as typeof slackEvents).length === 0 ? (
-              <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{empty as string}</p>
-            ) : (
-              <ul className="mt-4 grid gap-2">
-                {(events as typeof slackEvents).map((event) => (
-                  <li key={event.id} className="rounded-xl border border-slate-200 p-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-bold text-slate-900">{event.type.replaceAll('.', ' ')}</span>
-                      <span className="text-xs text-slate-500">{event.createdAt.toLocaleString()}</span>
-                    </div>
-                    {event.failureReason ? <p className="mt-1 text-xs text-rose-700">{event.failureReason}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
-      </div>
+      ))}
     </section>
   );
 }
