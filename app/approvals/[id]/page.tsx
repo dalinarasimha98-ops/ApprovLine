@@ -63,6 +63,9 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
             <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="text-xs font-black uppercase tracking-wide text-blue-200">
               Approval History
             </PendingLink>
+            <PendingLink href={`/investigations?approvalId=${approval.id}`} pendingText="Opening investigation center..." className="text-xs font-black uppercase tracking-wide text-blue-200">
+              Investigate
+            </PendingLink>
           </div>
           <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-blue-200">Approval Evidence</p>
           <h2 className="mt-2 max-w-4xl text-3xl font-black tracking-tight">{approval.subject}</h2>

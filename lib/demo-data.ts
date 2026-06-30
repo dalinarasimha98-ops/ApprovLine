@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import type { ApprovalStatus, ApprovalType, IntegrationProvider } from '@prisma/client';
+import { createDemoInvestigationsForOrganization } from '@/services/investigations';
 
 type DemoApproval = {
   subject: string;
@@ -368,7 +369,8 @@ export async function createDemoDataForOrganization(organizationId: string) {
     },
   });
 
-  return { approvalCount: created.length };
+  const investigations = await createDemoInvestigationsForOrganization(organizationId);
+  return { approvalCount: created.length, investigationCount: investigations.investigationCount };
 }
 
 export async function resetDemoDataForOrganization(organizationId: string) {
@@ -394,6 +396,24 @@ export async function resetDemoDataForOrganization(organizationId: string) {
   const demoApprovalIds = demoApprovals.map((approval) => approval.id);
 
   await prisma.$transaction([
+    prisma.investigationNote.deleteMany({
+      where: {
+        organizationId,
+        OR: [
+          { investigation: { metadata: { path: ['demo'], equals: true } } },
+          { investigation: { approvals: { some: { approvalRecordId: { in: demoApprovalIds.length ? demoApprovalIds : ['__none__'] } } } } },
+        ],
+      },
+    }),
+    prisma.investigationCase.deleteMany({
+      where: {
+        organizationId,
+        OR: [
+          { metadata: { path: ['demo'], equals: true } },
+          { approvals: { some: { approvalRecordId: { in: demoApprovalIds.length ? demoApprovalIds : ['__none__'] } } } },
+        ],
+      },
+    }),
     prisma.classifierResult.deleteMany({
       where: {
         organizationId,

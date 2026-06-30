@@ -52,6 +52,11 @@ enum SubscriptionStatus {
   CANCELED
 }
 
+enum InvestigationStatus {
+  OPEN
+  CLOSED
+}
+
 model Organization {
   id                String             @id @default(cuid())
   clerkOrgId        String?            @unique
@@ -74,6 +79,8 @@ model Organization {
   playbookDocuments PlaybookDocument[]
   playbookChunks    PlaybookChunk[]
   playbookQueries   PlaybookQuery[]
+  investigations    InvestigationCase[]
+  investigationNotes InvestigationNote[]
 }
 
 model User {
@@ -89,6 +96,7 @@ model User {
   teams          TeamMember[]
   approvals      ApprovalRecord[] @relation("ApprovalApprover")
   auditLogs      AuditLog[]
+  investigationNotes InvestigationNote[]
 
   @@index([organizationId, role])
   @@index([email])
@@ -186,6 +194,7 @@ model ApprovalRecord {
   approverUser       User?              @relation("ApprovalApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
   classifierResults  ClassifierResult[]
   auditLogs          AuditLog[]
+  investigations     InvestigationApproval[]
 
   @@index([organizationId, occurredAt])
   @@index([organizationId, department])
@@ -328,4 +337,52 @@ model PlaybookQuery {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
+}
+
+model InvestigationCase {
+  id             String                  @id @default(cuid())
+  organizationId String
+  title          String
+  status         InvestigationStatus     @default(OPEN)
+  department     String?
+  riskLevel      String?
+  summary        String?
+  dateRangeStart DateTime?
+  dateRangeEnd   DateTime?
+  metadata       Json?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approvals      InvestigationApproval[]
+  notes          InvestigationNote[]
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, department])
+  @@index([organizationId, riskLevel])
+}
+
+model InvestigationApproval {
+  id              String            @id @default(cuid())
+  investigationId String
+  approvalRecordId String
+  createdAt       DateTime          @default(now())
+  investigation   InvestigationCase @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  approvalRecord  ApprovalRecord    @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
+
+  @@unique([investigationId, approvalRecordId])
+  @@index([approvalRecordId])
+}
+
+model InvestigationNote {
+  id              String            @id @default(cuid())
+  organizationId  String
+  investigationId String
+  authorUserId    String?
+  body            String
+  createdAt       DateTime          @default(now())
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  investigation   InvestigationCase @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  authorUser      User?             @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, investigationId, createdAt])
 }
