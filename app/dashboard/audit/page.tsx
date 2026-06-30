@@ -1,23 +1,27 @@
 import { prisma } from '@/lib/prisma';
-import { getCurrentTenant } from '@/lib/auth';
+import { getDashboardTenant } from '@/lib/auth';
 import { PendingLink } from '@/components/system/PendingLink';
 import { withTimeout } from '@/lib/performance';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AuditPage() {
   const startedAt = Date.now();
   console.info('[dashboard] audit page start load');
-  const { organization } = await getCurrentTenant();
+  const tenant = await getDashboardTenant(1500);
+  if (tenant.status === 'unauthenticated') redirect('/sign-in');
+  if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   let logs: Awaited<ReturnType<typeof prisma.auditLog.findMany>> = [];
   let loadError: string | null = null;
 
   try {
+    if (!tenant.organization) throw new Error(tenant.error ?? 'Workspace unavailable.');
     console.info('[dashboard] audit logs query start');
     logs = await withTimeout(
       'dashboard audit logs query',
       prisma.auditLog.findMany({
-        where: { organizationId: organization.id },
+        where: { organizationId: tenant.organization.id },
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),

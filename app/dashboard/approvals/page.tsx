@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma';
-import { getCurrentTenant } from '@/lib/auth';
+import { getDashboardTenant } from '@/lib/auth';
 import { ApprovalTable } from '@/components/dashboard/ApprovalTable';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import { withTimeout } from '@/lib/performance';
 import type { Prisma } from '@prisma/client';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,9 @@ export default async function ApprovalsPage({
 }) {
   const startedAt = Date.now();
   console.info('[dashboard] approvals page start load');
-  const { organization } = await getCurrentTenant();
+  const tenant = await getDashboardTenant(1500);
+  if (tenant.status === 'unauthenticated') redirect('/sign-in');
+  if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   const filters = await searchParams;
   const occurredAt: Prisma.DateTimeFilter = {};
   if (filters.from) occurredAt.gte = new Date(filters.from);
@@ -34,12 +37,13 @@ export default async function ApprovalsPage({
   let loadError: string | null = null;
 
   try {
+    if (!tenant.organization) throw new Error(tenant.error ?? 'Workspace unavailable.');
     console.info('[dashboard] approvals query start');
     approvals = await withTimeout(
       'dashboard approvals query',
       prisma.approvalRecord.findMany({
         where: {
-          organizationId: organization.id,
+          organizationId: tenant.organization.id,
           ...(filters.department ? { department: { contains: filters.department, mode: 'insensitive' } } : {}),
           ...(filters.employee ? { approverName: { contains: filters.employee, mode: 'insensitive' } } : {}),
           ...(filters.sourcePlatform ? { sourcePlatform: { contains: filters.sourcePlatform, mode: 'insensitive' } } : {}),
@@ -118,6 +122,21 @@ export default async function ApprovalsPage({
           <PendingLink href="/dashboard/approvals" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200">
             Retry
           </PendingLink>
+        </div>
+      ) : null}
+      {!loadError && approvals.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/60 p-6 shadow-sm">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <h3 className="text-lg font-black text-slate-950">No approval records yet</h3>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">Connect Slack or Gmail to start capturing approvals, or generate sample records for a quick demo.</p>
+            </div>
+            <form action="/api/demo/seed" method="post">
+              <FormSubmitButton pendingText="Generating..." className="min-h-0 h-11 rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200">
+                Generate demo data
+              </FormSubmitButton>
+            </form>
+          </div>
         </div>
       ) : null}
       <ApprovalTable approvals={approvals} />

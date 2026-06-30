@@ -5,17 +5,17 @@ import { withTimeout } from '@/lib/performance';
 
 export const dynamic = 'force-dynamic';
 
-type CheckResult = {
-  status: 'success' | 'fail';
+type CheckStatus = {
+  status: 'success' | 'fail' | 'skipped';
   ms: number;
   message?: string;
   count?: number;
 };
 
-async function checkWithResult<T>(label: string, fn: () => Promise<T>): Promise<CheckResult & { result?: T }> {
+async function timed<T>(label: string, fn: () => Promise<T>, timeoutMs = 1500): Promise<CheckStatus & { result?: T }> {
   const startedAt = Date.now();
   try {
-    const result = await withTimeout(label, fn(), 1500);
+    const result = await withTimeout(label, fn(), timeoutMs);
     return {
       status: 'success',
       ms: Date.now() - startedAt,
@@ -31,69 +31,92 @@ async function checkWithResult<T>(label: string, fn: () => Promise<T>): Promise<
   }
 }
 
-async function check(label: string, fn: () => Promise<unknown>): Promise<CheckResult> {
-  const { result: _result, ...status } = await checkWithResult(label, fn);
-  return status;
+function publicStatus<T extends CheckStatus & { result?: unknown }>(status: T): CheckStatus {
+  const { result: _result, ...safe } = status;
+  return safe;
+}
+
+function slowestOperation(checks: Record<string, CheckStatus>) {
+  return Object.entries(checks)
+    .sort(([, a], [, b]) => b.ms - a.ms)
+    .map(([name, status]) => ({ name, ms: status.ms, status: status.status }))[0] ?? null;
 }
 
 export async function GET() {
-  const totalStartedAt = Date.now();
+  const startedAt = Date.now();
   const session = await auth();
+  const authStatus: CheckStatus = {
+    status: session.userId ? 'success' : 'fail',
+    ms: Date.now() - startedAt,
+    message: session.userId ? undefined : 'No Clerk session found.',
+  };
 
   if (!session.userId) {
+    const skipped: CheckStatus = { status: 'skipped', ms: 0, message: 'Skipped because auth failed.' };
+    const checks = {
+      database: skipped,
+      organization: skipped,
+      approvals: skipped,
+      auditLogs: skipped,
+      integrations: skipped,
+    };
     return NextResponse.json({
-      auth: { status: 'fail', ms: 0, message: 'No Clerk session found.' },
-      organization: { status: 'fail', ms: 0, message: 'Skipped because auth failed.' },
-      approvals: { status: 'fail', ms: 0, message: 'Skipped because auth failed.' },
-      auditLogs: { status: 'fail', ms: 0, message: 'Skipped because auth failed.' },
-      integrations: { status: 'fail', ms: 0, message: 'Skipped because auth failed.' },
-      databaseMs: null,
-      totalLoadMs: Date.now() - totalStartedAt,
+      auth: { status: authStatus.status, userIdPresent: false, ms: authStatus.ms, message: authStatus.message },
+      organizationFound: false,
+      onboardingCompleted: false,
+      checks,
+      totalDashboardLoadMs: Date.now() - startedAt,
+      slowestOperation: slowestOperation(checks),
     });
   }
 
-  const authCheck: CheckResult = { status: 'success', ms: Date.now() - totalStartedAt };
-  const userCheck = await checkWithResult('dashboard user lookup', () =>
+  const database = await timed('database connection', () => prisma.$queryRaw`SELECT 1`, 1500);
+  const user = await timed('user organization lookup', () =>
     prisma.user.findUnique({
       where: { clerkUserId: session.userId! },
-      select: { organizationId: true },
+      select: {
+        organizationId: true,
+        organization: {
+          select: {
+            id: true,
+            onboardedAt: true,
+          },
+        },
+      },
     }),
   );
-  const user = userCheck.result;
+  const organizationId = user.result?.organizationId;
+  const organizationFound = Boolean(user.result?.organization);
+  const onboardingCompleted = Boolean(user.result?.organization?.onboardedAt);
 
-  if (!user?.organizationId) {
-    return NextResponse.json({
-      auth: authCheck,
-      organization: { status: 'fail', ms: userCheck.ms, message: 'No ApprovLine organization found for this user.' },
-      approvals: { status: 'fail', ms: 0, message: 'Skipped because organization is missing.' },
-      auditLogs: { status: 'fail', ms: 0, message: 'Skipped because organization is missing.' },
-      integrations: { status: 'fail', ms: 0, message: 'Skipped because organization is missing.' },
-      databaseMs: userCheck.ms,
-      totalLoadMs: Date.now() - totalStartedAt,
-    });
-  }
+  const skippedMissingOrg: CheckStatus = {
+    status: 'skipped',
+    ms: 0,
+    message: 'Skipped because organization is missing.',
+  };
 
-  const organizationId = user.organizationId;
-  const databaseStartedAt = Date.now();
-  const [organization, approvals, auditLogs, integrations] = await Promise.all([
-    check('dashboard organization lookup', () =>
-      prisma.organization.findUnique({
-        where: { id: organizationId },
-        select: { id: true, onboardedAt: true },
-      }),
-    ),
-    check('dashboard approvals count', () => prisma.approvalRecord.count({ where: { organizationId } })),
-    check('dashboard audit logs count', () => prisma.auditLog.count({ where: { organizationId } })),
-    check('dashboard integrations count', () => prisma.integration.count({ where: { organizationId } })),
-  ]);
+  const [approvals, auditLogs, integrations] = organizationId
+    ? await Promise.all([
+        timed('approvals query', () => prisma.approvalRecord.count({ where: { organizationId } })),
+        timed('audit logs query', () => prisma.auditLog.count({ where: { organizationId } })),
+        timed('integrations query', () => prisma.integration.count({ where: { organizationId } })),
+      ])
+    : [skippedMissingOrg, skippedMissingOrg, skippedMissingOrg];
+
+  const checks = {
+    database: publicStatus(database),
+    organization: publicStatus(user),
+    approvals: publicStatus(approvals),
+    auditLogs: publicStatus(auditLogs),
+    integrations: publicStatus(integrations),
+  };
 
   return NextResponse.json({
-    auth: authCheck,
-    organization,
-    approvals,
-    auditLogs,
-    integrations,
-    databaseMs: Date.now() - databaseStartedAt,
-    totalLoadMs: Date.now() - totalStartedAt,
+    auth: { status: authStatus.status, userIdPresent: true, ms: authStatus.ms },
+    organizationFound,
+    onboardingCompleted,
+    checks,
+    totalDashboardLoadMs: Date.now() - startedAt,
+    slowestOperation: slowestOperation(checks),
   });
 }

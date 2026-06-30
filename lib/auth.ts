@@ -83,6 +83,87 @@ export async function getCurrentTenant() {
   }
 }
 
+export async function getDashboardTenant(timeoutMs = 1500) {
+  const startedAt = Date.now();
+  const session = await auth();
+  if (!session.userId) {
+    return {
+      session,
+      user: null,
+      organization: null,
+      status: 'unauthenticated' as const,
+      error: 'No Clerk session found.',
+      loadMs: Date.now() - startedAt,
+    };
+  }
+  const databaseUrl = validateDatabaseUrl();
+
+  if (!databaseUrl.valid) {
+    return {
+      session,
+      user: null,
+      organization: null,
+      status: 'database_invalid' as const,
+      error: databaseUrl.safeErrorMessage ?? 'ApprovLine database configuration is invalid.',
+      loadMs: Date.now() - startedAt,
+    };
+  }
+
+  try {
+    const userPromise = prisma.user.findUnique({
+      where: { clerkUserId: session.userId },
+      include: { organization: true },
+    });
+    const user = await Promise.race([
+      userPromise,
+      new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error(`Dashboard tenant lookup timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+
+    if (!user?.organization) {
+      return {
+        session,
+        user,
+        organization: null,
+        status: 'organization_missing' as const,
+        error: null,
+        loadMs: Date.now() - startedAt,
+      };
+    }
+
+    if (!user.organization.onboardedAt) {
+      return {
+        session,
+        user,
+        organization: user.organization,
+        status: 'onboarding_incomplete' as const,
+        error: null,
+        loadMs: Date.now() - startedAt,
+      };
+    }
+
+    return {
+      session,
+      user,
+      organization: user.organization,
+      status: 'ready' as const,
+      error: null,
+      loadMs: Date.now() - startedAt,
+    };
+  } catch (error) {
+    console.error('[tenant] dashboard tenant lookup failed', error);
+    return {
+      session,
+      user: null,
+      organization: null,
+      status: 'error' as const,
+      error: error instanceof Error ? error.message : 'Unable to load workspace.',
+      loadMs: Date.now() - startedAt,
+    };
+  }
+}
+
 export async function requireRole(requiredRole: AppRole) {
   const tenant = await getCurrentTenant();
   if (!canAccessRole(tenant.user.role as AppRole, requiredRole)) {
