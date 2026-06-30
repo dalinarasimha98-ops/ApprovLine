@@ -1,4 +1,5 @@
 import type { ApprovalRecord } from '@prisma/client';
+import { PendingLink } from '@/components/system/PendingLink';
 
 function riskClass(risk?: string | null) {
   if (risk === 'high') return 'bg-rose-50 text-rose-700 border-rose-100';
@@ -46,6 +47,7 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalRecord[] }) {
             <th className="px-4 py-3">Status</th>
             <th className="px-4 py-3">Date</th>
             <th className="px-4 py-3">Evidence</th>
+            <th className="px-4 py-3">Details</th>
           </tr>
         </thead>
         <tbody>
@@ -97,6 +99,11 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalRecord[] }) {
                 ) : (
                   <span className="text-xs font-semibold text-slate-400">No link</span>
                 )}
+              </td>
+              <td className="px-4 py-3">
+                <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening..." className="text-xs font-black text-[#2155d9] hover:underline">
+                  View Full Approval
+                </PendingLink>
               </td>
             </tr>
           ))}

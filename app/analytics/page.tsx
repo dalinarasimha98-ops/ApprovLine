@@ -16,7 +16,19 @@ function numberFormat(value: number) {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
-function MetricCard({ label, value, help, tone = 'blue' }: { label: string; value: string; help: string; tone?: 'blue' | 'dark' | 'amber' | 'green' }) {
+function MetricCard({
+  label,
+  value,
+  help,
+  tone = 'blue',
+  href,
+}: {
+  label: string;
+  value: string;
+  help: string;
+  tone?: 'blue' | 'dark' | 'amber' | 'green';
+  href?: string;
+}) {
   const toneClass = {
     blue: 'bg-blue-50 text-[#2155d9]',
     dark: 'bg-slate-950 text-white',
@@ -24,12 +36,21 @@ function MetricCard({ label, value, help, tone = 'blue' }: { label: string; valu
     green: 'bg-emerald-50 text-emerald-700',
   }[tone];
 
-  return (
+  const content = (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className={`mb-4 inline-flex rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${toneClass}`}>{label}</div>
       <p className="text-3xl font-black tracking-tight text-slate-950">{value}</p>
       <p className="mt-2 text-sm leading-6 text-slate-500">{help}</p>
+      {href ? <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View details &gt;</p> : null}
     </div>
+  );
+
+  if (!href) return content;
+
+  return (
+    <PendingLink href={href} pendingText="Opening details..." className="block transition hover:-translate-y-0.5 hover:shadow-md">
+      {content}
+    </PendingLink>
   );
 }
 
@@ -135,10 +156,10 @@ function ReportPreview({ report, exportSuffix }: { report: ExecutiveAnalytics; e
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Captured" value={numberFormat(report.approvals.total)} help="Approval decisions available for executive review." />
-        <MetricCard label="Hours saved" value={`${numberFormat(report.timeSaved.totalHours)} hrs`} help="Estimated manual audit and retrieval effort avoided." tone="green" />
-        <MetricCard label="Risk surfaced" value={numberFormat(report.riskReduction.highRiskApprovalsDetected)} help="High-risk approval records identified for control review." tone="amber" />
-        <MetricCard label="Coverage" value={`${report.complianceReadiness.evidenceCoverage}%`} help="Approval records with usable evidence links or snippets." tone="dark" />
+        <MetricCard label="Captured" value={numberFormat(report.approvals.total)} help="Approval decisions available for executive review." href="/analytics/drilldown/approvals-captured" />
+        <MetricCard label="Hours saved" value={`${numberFormat(report.timeSaved.totalHours)} hrs`} help="Estimated manual audit and retrieval effort avoided." tone="green" href="/analytics/drilldown/time-saved" />
+        <MetricCard label="Risk surfaced" value={numberFormat(report.riskReduction.highRiskApprovalsDetected)} help="High-risk approval records identified for control review." tone="amber" href="/analytics/drilldown/high-risk-approvals" />
+        <MetricCard label="Coverage" value={`${report.complianceReadiness.evidenceCoverage}%`} help="Approval records with usable evidence links or snippets." tone="dark" href="/analytics/drilldown/traceability" />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -157,14 +178,15 @@ function ReportPreview({ report, exportSuffix }: { report: ExecutiveAnalytics; e
           <p className="mb-3 text-sm font-black text-slate-950">Department breakdown</p>
           <DepartmentTable items={report.approvals.byDepartment} />
         </div>
-        <div className="rounded-2xl border border-slate-200 p-5">
-          <p className="text-sm font-black text-slate-950">Compliance score</p>
-          <div className="mt-5 grid gap-5">
-            <ProgressRow label="Audit completeness" value={report.complianceReadiness.auditCompleteness} />
-            <ProgressRow label="Evidence coverage" value={report.complianceReadiness.evidenceCoverage} />
-            <ProgressRow label="Approval traceability" value={report.complianceReadiness.approvalTraceability} />
-          </div>
-        </div>
+          <PendingLink href="/analytics/drilldown/compliance-readiness" pendingText="Opening compliance details..." className="block rounded-2xl border border-slate-200 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+            <p className="text-sm font-black text-slate-950">Compliance score</p>
+            <div className="mt-5 grid gap-5">
+              <ProgressRow label="Audit completeness" value={report.complianceReadiness.auditCompleteness} />
+              <ProgressRow label="Evidence coverage" value={report.complianceReadiness.evidenceCoverage} />
+              <ProgressRow label="Approval traceability" value={report.complianceReadiness.approvalTraceability} />
+            </div>
+            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View details &gt;</p>
+          </PendingLink>
       </div>
 
       <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
@@ -279,30 +301,32 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         )}
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label="Approvals captured" value={numberFormat(report.approvals.total)} help="Total approval and rejection decisions in the executive reporting window." />
-          <MetricCard label="Time saved" value={`${numberFormat(report.timeSaved.totalHours)} hrs`} help="Manual search, retrieval, and audit preparation effort avoided." tone="green" />
-          <MetricCard label="High-risk approvals" value={numberFormat(report.riskReduction.highRiskApprovalsDetected)} help="Security, compliance, legal, finance, and procurement decisions surfaced." tone="amber" />
-          <MetricCard label="Traceability" value={`${report.complianceReadiness.approvalTraceability}%`} help="Records with approver, source, timestamp, and decision context." tone="dark" />
+          <MetricCard label="Approvals captured" value={numberFormat(report.approvals.total)} help="Total approval and rejection decisions in the executive reporting window." href="/analytics/drilldown/approvals-captured" />
+          <MetricCard label="Time saved" value={`${numberFormat(report.timeSaved.totalHours)} hrs`} help="Manual search, retrieval, and audit preparation effort avoided." tone="green" href="/analytics/drilldown/time-saved" />
+          <MetricCard label="High-risk approvals" value={numberFormat(report.riskReduction.highRiskApprovalsDetected)} help="Security, compliance, legal, finance, and procurement decisions surfaced." tone="amber" href="/analytics/drilldown/high-risk-approvals" />
+          <MetricCard label="Traceability" value={`${report.complianceReadiness.approvalTraceability}%`} help="Records with approver, source, timestamp, and decision context." tone="dark" href="/analytics/drilldown/traceability" />
         </div>
 
         <ReportPreview report={report} exportSuffix={exportSuffix} />
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <PendingLink href="/analytics/drilldown/approval-categories" pendingText="Opening category details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Approvals captured</p>
             <h3 className="mt-1 text-lg font-black text-slate-950">Approvals by department</h3>
             <div className="mt-5">
               <DepartmentTable items={report.approvals.byDepartment} />
             </div>
-          </div>
+            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View department and category details &gt;</p>
+          </PendingLink>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <PendingLink href="/analytics/drilldown/integration-insights" pendingText="Opening integration details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Approvals by source</p>
             <h3 className="mt-1 text-lg font-black text-slate-950">Integration contribution</h3>
             <div className="mt-5">
               <CountList items={report.approvals.bySource} empty="Source data appears after Slack or Gmail ingestion runs." />
             </div>
-          </div>
+            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View integration details &gt;</p>
+          </PendingLink>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-3">
@@ -334,7 +358,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <PendingLink href="/analytics/drilldown/compliance-readiness" pendingText="Opening compliance details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Compliance readiness</p>
             <h3 className="mt-1 text-lg font-black text-slate-950">Audit posture</h3>
             <div className="mt-5 grid gap-5">
@@ -342,11 +366,12 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
               <ProgressRow label="Evidence coverage" value={report.complianceReadiness.evidenceCoverage} />
               <ProgressRow label="Approval traceability" value={report.complianceReadiness.approvalTraceability} />
             </div>
-          </div>
+            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View readiness details &gt;</p>
+          </PendingLink>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <PendingLink href="/analytics/drilldown/integration-insights" pendingText="Opening integration details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Integration insights</p>
             <h3 className="mt-1 text-lg font-black text-slate-950">Connector contribution</h3>
             <div className="mt-5 grid gap-3">
@@ -362,7 +387,8 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
                 </div>
               ))}
             </div>
-          </div>
+            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View integration approvals &gt;</p>
+          </PendingLink>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Playbook AI insights</p>
