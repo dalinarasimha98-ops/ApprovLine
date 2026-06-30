@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
-import { getCurrentTenant } from '@/lib/auth';
+import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 function contains(value: string | null) {
@@ -12,7 +12,14 @@ function jsonReplacer(_: string, value: unknown) {
 }
 
 export async function GET(request: NextRequest) {
-  const { organization } = await getCurrentTenant();
+  const tenant = await getDashboardTenant(2000);
+  if (tenant.status === 'unauthenticated') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!tenant.organization) {
+    return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  }
+  const { organization } = tenant;
   const params = request.nextUrl.searchParams;
   const format = params.get('format') ?? 'csv';
   const occurredAt: Prisma.DateTimeFilter = {};

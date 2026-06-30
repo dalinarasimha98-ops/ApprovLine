@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
     "test:classifier-corpus": "node scripts/validate-classifier-corpus.mjs",
     "test:ingestion": "tsx tests/ingestion-pipeline.test.ts",
     "test:slack": "tsx tests/slack-integration.test.ts",

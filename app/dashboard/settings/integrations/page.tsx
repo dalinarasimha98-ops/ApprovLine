@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { getCurrentTenant } from '@/lib/auth';
+import { getDashboardTenant } from '@/lib/auth';
 import { withTimeout } from '@/lib/performance';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -207,16 +208,19 @@ export default async function IntegrationsPage({
 }: {
   searchParams: Promise<{ slack?: string; gmail?: string; reason?: string }>;
 }) {
-  const { organization } = await getCurrentTenant();
+  const tenant = await getDashboardTenant(1500);
+  if (tenant.status === 'unauthenticated') redirect('/sign-in');
+  if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   const query = await searchParams;
   let loadError: string | null = null;
   let integrations: Awaited<ReturnType<typeof prisma.integration.findMany>> = [];
 
   try {
+    if (!tenant.organization) throw new Error(tenant.error ?? 'Workspace unavailable.');
     integrations = await withTimeout(
       'dashboard integrations list',
       prisma.integration.findMany({
-        where: { organizationId: organization.id },
+        where: { organizationId: tenant.organization.id },
         orderBy: { provider: 'asc' },
       }),
       1200,
