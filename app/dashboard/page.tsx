@@ -103,6 +103,12 @@ export default async function DashboardPage({
           <p className="mt-1 text-sm">{query.reason ?? 'Please try again or check database readiness.'}</p>
         </div>
       ) : null}
+      {query.demo === 'reset' ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-700 shadow-sm">
+          <h3 className="font-black text-slate-950">Demo data reset</h3>
+          <p className="mt-1 text-sm">Your workspace demo records were removed. Real approval data was left untouched.</p>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
@@ -174,17 +180,38 @@ export default async function DashboardPage({
       <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/60 p-6 shadow-sm">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <h3 className="text-lg font-black text-slate-950">Connect Slack or Gmail to start capturing approvals</h3>
+            <h3 className="text-lg font-black text-slate-950">Generate a polished demo workspace</h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              New workspace? Generate safe sample approvals to demo finance, procurement, legal, engineering, and compliance workflows.
+              Create marked demo records for the full journey: Slack/Gmail message, approval detection, timeline, audit log, and export.
             </p>
           </div>
-          <form action="/api/demo/seed" method="post">
-            <FormSubmitButton pendingText="Generating..." className="min-h-0 h-11 rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
-              Generate demo data
-            </FormSubmitButton>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            <form action="/api/demo/seed" method="post">
+              <FormSubmitButton pendingText="Generating..." className="inline-flex min-h-0 h-11 items-center gap-2 rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+                Generate Demo Workspace
+              </FormSubmitButton>
+            </form>
+            <form action="/api/demo/reset" method="post">
+              <FormSubmitButton pendingText="Resetting..." className="inline-flex min-h-0 h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50">
+                Reset Demo Data
+              </FormSubmitButton>
+            </form>
+          </div>
         </div>
+      </div>
+
+      <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-[1fr_auto_auto] sm:items-center">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Demo exports</p>
+          <h3 className="mt-1 text-lg font-black text-slate-950">Share customer-ready evidence</h3>
+          <p className="mt-1 text-sm text-slate-500">Export approval evidence with demo markers, source links, confidence scores, and audit-ready metadata.</p>
+        </div>
+        <PendingLink href="/api/export/approvals?format=csv" pendingText="Preparing CSV..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">
+          Export CSV
+        </PendingLink>
+        <PendingLink href="/api/export/approvals?format=pdf" pendingText="Preparing PDF..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-[#07111f] px-4 text-sm font-bold text-white hover:bg-slate-800">
+          Export PDF
+        </PendingLink>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
