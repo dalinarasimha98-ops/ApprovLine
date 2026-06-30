@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getDashboardTenant } from '@/lib/auth';
 import { withTimeout } from '@/lib/performance';
 import { redirect } from 'next/navigation';
+import { FormSubmitButton } from '@/components/system/FormSubmitButton';
+import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -144,6 +146,20 @@ function oauthMessage(provider: 'Slack' | 'Gmail', status?: string, reason?: str
   };
 }
 
+function metadataValue(metadata: Prisma.JsonValue | null | undefined, key: string) {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+  const value = metadata[key as keyof typeof metadata];
+  return typeof value === 'string' ? value : null;
+}
+
+function statusBadge(status: string) {
+  if (status === 'CONNECTED') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (status === 'SYNCING') return 'border-blue-200 bg-blue-50 text-blue-700';
+  if (status === 'ERROR') return 'border-rose-200 bg-rose-50 text-rose-700';
+  if (status === 'NEEDS_REAUTH') return 'border-amber-200 bg-amber-50 text-amber-700';
+  return 'border-slate-200 bg-slate-100 text-slate-600';
+}
+
 function toggleVisual(connected: boolean) {
   return (
     <span className="flex shrink-0 items-center gap-3" aria-hidden="true">
@@ -158,35 +174,59 @@ function toggleVisual(connected: boolean) {
 function IntegrationTile({
   card,
   status,
+  integration,
 }: {
   card: IntegrationCard;
   status: string;
+  integration?: Awaited<ReturnType<typeof prisma.integration.findMany>>[number];
 }) {
   const connected = status === 'CONNECTED' || status === 'SYNCING';
   const disabled = !card.href && !connected;
+  const lastSync = metadataValue(integration?.metadata, 'lastSyncAt') ?? metadataValue(integration?.metadata, 'lastEventAt');
+  const health = status === 'ERROR' ? 'Error' : status === 'NEEDS_REAUTH' ? 'Needs reconnect' : connected ? 'Healthy' : 'Not connected';
   const content = (
     <div
-      className={`group flex min-h-[148px] items-start justify-between gap-6 rounded-2xl border border-slate-200 bg-white p-7 shadow-[0_2px_10px_rgba(15,23,42,0.08)] transition ${
+      className={`group flex min-h-[190px] items-start justify-between gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_10px_rgba(15,23,42,0.08)] transition ${
         disabled ? 'opacity-95' : 'hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_32px_rgba(15,23,42,0.12)]'
       }`}
     >
-      <div className="flex min-w-0 gap-6">
+      <div className="flex min-w-0 gap-5">
         <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-2xl font-black ${card.iconClass}`}>
           {card.icon}
         </span>
-        <span>
-          <span className="block text-xl font-black tracking-tight text-slate-950">{card.name}</span>
-          <span className="mt-2 block max-w-md text-lg font-semibold leading-8 text-slate-500">{card.description}</span>
-          {connected ? (
-            <span className="mt-4 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700">
-              Connected
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="block text-xl font-black tracking-tight text-slate-950">{card.name}</span>
+            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${statusBadge(status)}`}>
+              {status.toLowerCase().replaceAll('_', ' ')}
             </span>
-          ) : card.href ? (
-            <span className="mt-4 inline-flex text-xs font-black uppercase tracking-wide text-[#2155d9]">Click to connect</span>
-          ) : (
-            <span className="mt-4 inline-flex text-xs font-black uppercase tracking-wide text-slate-400">Coming soon</span>
-          )}
-        </span>
+          </div>
+          <span className="mt-2 block max-w-md text-base font-semibold leading-7 text-slate-500">{card.description}</span>
+          <div className="mt-4 grid gap-1 text-xs font-bold text-slate-500">
+            <span>Health: <b className="text-slate-800">{health}</b></span>
+            <span>Last sync: <b className="text-slate-800">{lastSync ? new Date(lastSync).toLocaleString() : 'Not synced yet'}</b></span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {card.href && !connected ? (
+              <span className="inline-flex rounded-lg bg-[#2155d9] px-3 py-2 text-xs font-black text-white">Connect</span>
+            ) : null}
+            {card.key === 'slack' && connected ? (
+              <form action="/api/integrations/slack/disconnect" method="post">
+                <FormSubmitButton pendingText="Disconnecting..." className="min-h-0 h-9 rounded-lg border border-rose-200 bg-white px-3 text-xs font-black text-rose-700 shadow-sm hover:bg-rose-50">
+                  Disconnect
+                </FormSubmitButton>
+              </form>
+            ) : null}
+            {card.key === 'gmail' && connected ? (
+              <form action="/api/integrations/gmail/sync" method="post">
+                <input type="hidden" name="integrationId" value={integration?.id ?? ''} />
+                <FormSubmitButton pendingText="Syncing..." className="min-h-0 h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50">
+                  Sync now
+                </FormSubmitButton>
+              </form>
+            ) : null}
+          </div>
+        </div>
       </div>
       {toggleVisual(connected)}
     </div>
@@ -230,6 +270,7 @@ export default async function IntegrationsPage({
   }
 
   const statusByProvider = new Map(integrations.map((item) => [item.provider, item.status]));
+  const integrationByProvider = new Map(integrations.map((item) => [item.provider, item]));
   const slackNotice = oauthMessage('Slack', query.slack, query.reason);
   const gmailNotice = oauthMessage('Gmail', query.gmail, query.reason);
 
@@ -272,6 +313,7 @@ export default async function IntegrationsPage({
                 key={card.key}
                 card={card}
                 status={card.provider ? statusByProvider.get(card.provider) ?? 'NOT_CONNECTED' : 'NOT_CONNECTED'}
+                integration={card.provider ? integrationByProvider.get(card.provider) : undefined}
               />
             ))}
           </div>
