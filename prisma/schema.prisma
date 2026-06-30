@@ -71,6 +71,9 @@ model Organization {
   subscriptions     Subscription[]
   events            Event[]
   messageSources    MessageSource[]
+  playbookDocuments PlaybookDocument[]
+  playbookChunks    PlaybookChunk[]
+  playbookQueries   PlaybookQuery[]
 }
 
 model User {
@@ -266,4 +269,63 @@ model Event {
   integration    Integration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, type, createdAt])
+}
+
+enum PlaybookStatus {
+  UPLOADED
+  INDEXING
+  READY
+  ERROR
+}
+
+model PlaybookDocument {
+  id             String          @id @default(cuid())
+  organizationId String
+  ownerUserId    String?
+  name           String
+  fileType       String
+  status         PlaybookStatus  @default(UPLOADED)
+  contentHash    String
+  metadata       Json?
+  uploadedAt     DateTime        @default(now())
+  lastIndexedAt  DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  chunks         PlaybookChunk[]
+
+  @@index([organizationId, status, uploadedAt])
+  @@index([organizationId, contentHash])
+}
+
+model PlaybookChunk {
+  id             String           @id @default(cuid())
+  organizationId String
+  documentId     String
+  chunkIndex     Int
+  content        String
+  sectionTitle   String?
+  tokenEstimate  Int
+  embedding      Json
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  document       PlaybookDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([organizationId, documentId])
+}
+
+model PlaybookQuery {
+  id             String       @id @default(cuid())
+  organizationId String
+  actorUserId    String?
+  question       String
+  answer         Json
+  sourceChunkIds String[]
+  confidence     Int
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
 }
