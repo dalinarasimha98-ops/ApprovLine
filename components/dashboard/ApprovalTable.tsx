@@ -55,6 +55,9 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalRecord[] }) {
                 <details>
                   <summary className="cursor-pointer list-none font-black text-slate-950">
                     {approval.subject}
+                    {approval.sourceLink?.includes('demo') || approval.sourceLink?.includes('TDEMO') ? (
+                      <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#2155d9]">Demo</span>
+                    ) : null}
                     <span className="ml-2 text-xs font-bold text-[#2155d9]">Details</span>
                   </summary>
                   <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600 shadow-sm">

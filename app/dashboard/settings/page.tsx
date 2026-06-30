@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getDashboardTenant } from '@/lib/auth';
 import { PendingLink } from '@/components/system/PendingLink';
+import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,30 @@ export default async function SettingsPage() {
             <PendingLink href="/api/debug/dashboard" pendingText="Opening diagnostics..." className="rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
               Dashboard diagnostics
             </PendingLink>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-6 shadow-sm">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Demo mode</p>
+            <h3 className="mt-1 text-lg font-black text-slate-950">Customer-ready demo workspace</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              Generate marked demo approvals, rejections, Slack and Gmail evidence, audit logs, timeline events, confidence scores, and export-ready records.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <form action="/api/demo/seed" method="post">
+              <FormSubmitButton pendingText="Generating..." className="inline-flex min-h-0 h-11 items-center gap-2 rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+                Generate Demo Workspace
+              </FormSubmitButton>
+            </form>
+            <form action="/api/demo/reset" method="post">
+              <FormSubmitButton pendingText="Resetting..." className="inline-flex min-h-0 h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50">
+                Reset Demo Data
+              </FormSubmitButton>
+            </form>
           </div>
         </div>
       </div>

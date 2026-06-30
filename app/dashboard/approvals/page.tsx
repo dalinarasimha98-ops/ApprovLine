@@ -80,9 +80,17 @@ export default async function ApprovalsPage({
           <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Approval history</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">Search and filter every captured approval record across Slack, Gmail, and future connectors.</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-          <span className="block text-xs font-bold uppercase tracking-wide text-slate-500">Records shown</span>
-          <span className="text-2xl font-black text-slate-950">{approvals.length}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <PendingLink href="/api/export/approvals?format=csv" pendingText="Preparing CSV..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">
+            Export CSV
+          </PendingLink>
+          <PendingLink href="/api/export/approvals?format=pdf" pendingText="Preparing PDF..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-[#07111f] px-4 text-sm font-bold text-white hover:bg-slate-800">
+            Export PDF
+          </PendingLink>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+            <span className="block text-xs font-bold uppercase tracking-wide text-slate-500">Records shown</span>
+            <span className="text-2xl font-black text-slate-950">{approvals.length}</span>
+          </div>
         </div>
       </div>
       <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-4">
