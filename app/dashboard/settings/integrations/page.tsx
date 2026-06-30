@@ -248,25 +248,29 @@ export default async function IntegrationsPage({
 }: {
   searchParams: Promise<{ slack?: string; gmail?: string; reason?: string }>;
 }) {
-  const tenant = await getDashboardTenant(1500);
+  const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   const query = await searchParams;
-  let loadError: string | null = null;
+  let statusNotice: string | null = null;
   let integrations: Awaited<ReturnType<typeof prisma.integration.findMany>> = [];
 
   try {
-    if (!tenant.organization) throw new Error(tenant.error ?? 'Workspace unavailable.');
-    integrations = await withTimeout(
-      'dashboard integrations list',
-      prisma.integration.findMany({
-        where: { organizationId: tenant.organization.id },
-        orderBy: { provider: 'asc' },
-      }),
-      1200,
-    );
+    if (tenant.organization) {
+      integrations = await withTimeout(
+        'dashboard integrations list',
+        prisma.integration.findMany({
+          where: { organizationId: tenant.organization.id },
+          orderBy: { provider: 'asc' },
+        }),
+        2500,
+      );
+    } else if (tenant.status === 'error' || tenant.status === 'database_invalid') {
+      statusNotice = 'Integration status is refreshing. Connector cards remain available.';
+    }
   } catch (error) {
-    loadError = error instanceof Error ? error.message : 'Unable to load integration status.';
+    console.warn('[integrations] status lookup unavailable', error);
+    statusNotice = 'Integration status is refreshing. Connector cards remain available.';
   }
 
   const statusByProvider = new Map(integrations.map((item) => [item.provider, item.status]));
@@ -284,11 +288,10 @@ export default async function IntegrationsPage({
         </p>
       </div>
 
-      {loadError ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm">
-          <h3 className="font-black">Unable to load integration status</h3>
-          <p className="mt-1 text-sm">Connector cards are still available. Status will refresh on retry.</p>
-          <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs font-semibold">{loadError}</p>
+      {statusNotice ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-sm">
+          <h3 className="text-slate-950">Status refresh delayed</h3>
+          <p className="mt-1">{statusNotice}</p>
         </div>
       ) : null}
 
