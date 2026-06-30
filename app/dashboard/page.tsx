@@ -3,8 +3,19 @@ import { redirect } from 'next/navigation';
 import { getDashboardTenant } from '@/lib/auth';
 import { PendingLink } from '@/components/system/PendingLink';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
+import { prisma } from '@/lib/prisma';
+import { withTimeout } from '@/lib/performance';
 
 export const dynamic = 'force-dynamic';
+
+async function safeMetric<T>(label: string, query: Promise<T>, fallback: T) {
+  try {
+    return await withTimeout(label, query, 1200);
+  } catch (error) {
+    console.error(`[dashboard] ${label} failed`, error);
+    return fallback;
+  }
+}
 
 export default async function DashboardPage({
   searchParams,
@@ -25,24 +36,55 @@ export default async function DashboardPage({
   }
 
   const workspaceWarning = tenant.status !== 'ready' ? tenant.error ?? 'Workspace verification is temporarily unavailable.' : null;
+  const organizationId = tenant.organization?.id;
+  const [totalApprovals, pendingReview, highRiskApprovals, connectedIntegrations, recentApprovals, categoryGroups] = organizationId
+    ? await Promise.all([
+        safeMetric('total approvals', prisma.approvalRecord.count({ where: { organizationId } }), 0),
+        safeMetric('pending approvals', prisma.approvalRecord.count({ where: { organizationId, status: 'PENDING_REVIEW' } }), 0),
+        safeMetric('high risk approvals', prisma.approvalRecord.count({ where: { organizationId, riskLevel: 'high' } }), 0),
+        safeMetric('connected integrations', prisma.integration.count({ where: { organizationId, status: { in: ['CONNECTED', 'SYNCING'] } } }), 0),
+        safeMetric(
+          'recent approvals',
+          prisma.approvalRecord.findMany({
+            where: { organizationId },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+          }),
+          [],
+        ),
+        safeMetric(
+          'approval categories',
+          prisma.approvalRecord.groupBy({
+            by: ['category'],
+            where: { organizationId },
+            _count: { _all: true },
+            orderBy: { _count: { category: 'desc' } },
+            take: 5,
+          }),
+          [],
+        ),
+      ])
+    : [0, 0, 0, 0, [], []] as const;
 
   console.info(`[dashboard] finish load in ${Date.now() - startedAt}ms`);
 
   return (
     <section className="grid gap-6">
-      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-end">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-[#07111f] p-6 text-white shadow-sm sm:p-7">
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-[#2155d9]">Workspace overview</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-200">Workspace overview</p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-white">
             {tenant.organization?.name ? `${tenant.organization.name} dashboard` : 'Welcome back to ApprovLine'}
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
             Your approval intelligence workspace is ready. Open approval history, audit logs, or integrations from here.
           </p>
         </div>
-        <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+        <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-950/30 hover:bg-[#2f66ff]">
           View approval history
         </PendingLink>
+        </div>
       </div>
 
       {workspaceWarning ? (
@@ -64,17 +106,69 @@ export default async function DashboardPage({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          ['Approval history', 'Open', 'Searchable approval records'],
-          ['Audit trail', 'Ready', 'Compliance activity entries'],
-          ['Integrations', 'Manage', 'Slack, Gmail, Teams, Zoom'],
-          ['Review queue', 'Available', 'Low-confidence approvals'],
+          ['Approvals captured', totalApprovals, 'All recorded approval decisions'],
+          ['Pending review', pendingReview, 'Low-confidence or conditional records'],
+          ['High-risk approvals', highRiskApprovals, 'Security, compliance, legal risk'],
+          ['Connected integrations', connectedIntegrations, 'Active approval sources'],
         ].map(([label, value, help]) => (
           <div key={label as string} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-            <p className="mt-3 text-2xl font-black text-slate-950">{value}</p>
+            <p className="mt-3 text-3xl font-black text-slate-950">{value}</p>
             <p className="mt-2 text-sm text-slate-500">{help}</p>
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Recent timeline</p>
+              <h3 className="mt-1 text-lg font-black text-slate-950">Latest approval activity</h3>
+            </div>
+            <PendingLink href="/dashboard/approvals" pendingText="Opening..." className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50">
+              View all
+            </PendingLink>
+          </div>
+          <div className="mt-5 grid gap-3">
+            {recentApprovals.length > 0 ? recentApprovals.map((approval) => (
+              <div key={approval.id} className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-black text-slate-950">{approval.subject}</p>
+                    <p className="mt-1 text-sm text-slate-500">{approval.approverName ?? 'Unknown approver'} · {approval.department ?? 'Unassigned'}</p>
+                  </div>
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-black uppercase text-[#2155d9]">{approval.confidence}%</span>
+                </div>
+              </div>
+            )) : (
+              <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center">
+                <p className="font-black text-slate-950">No approval activity yet</p>
+                <p className="mt-1 text-sm text-slate-500">Connect Slack or Gmail, or generate sample data.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Categories</p>
+          <h3 className="mt-1 text-lg font-black text-slate-950">Approval mix</h3>
+          <div className="mt-5 grid gap-3">
+            {categoryGroups.length > 0 ? categoryGroups.map((item) => (
+              <div key={item.category ?? 'Unassigned'} className="grid gap-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-bold text-slate-700">{item.category ?? 'Unassigned'}</span>
+                  <span className="font-black text-slate-950">{item._count._all}</span>
+                </div>
+                <div className="h-2 rounded-full bg-slate-100">
+                  <div className="h-2 rounded-full bg-[#2155d9]" style={{ width: `${Math.min(100, item._count._all * 18)}%` }} />
+                </div>
+              </div>
+            )) : (
+              <p className="rounded-xl border border-dashed border-slate-200 p-4 text-sm font-semibold text-slate-500">Categories appear once approvals are captured.</p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/60 p-6 shadow-sm">
