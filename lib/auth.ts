@@ -83,7 +83,7 @@ export async function getCurrentTenant() {
   }
 }
 
-export async function getDashboardTenant(timeoutMs = 1500) {
+export async function getDashboardTenant(timeoutMs = 3000) {
   const startedAt = Date.now();
   const session = await auth();
   if (!session.userId) {
