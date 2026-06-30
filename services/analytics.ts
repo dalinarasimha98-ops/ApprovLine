@@ -17,6 +17,7 @@ export type ExecutiveAnalytics = {
     total: number;
     byDepartment: NamedCount[];
     bySource: NamedCount[];
+    trends: NamedCount[];
   };
   timeSaved: {
     totalHours: number;
@@ -47,6 +48,7 @@ export type ExecutiveAnalytics = {
     missingPolicyAreas: string[];
     approvalBottlenecks: NamedCount[];
   };
+  highRiskSummary: NamedCount[];
 };
 
 function percent(numerator: number, denominator: number) {
@@ -77,6 +79,10 @@ function sourceName(source?: string | null) {
   if (normalized.includes('team')) return 'Teams';
   if (normalized.includes('outlook')) return 'Outlook';
   return normalized === 'unknown' ? 'Unknown' : normalized[0].toUpperCase() + normalized.slice(1);
+}
+
+function monthLabel(date: Date) {
+  return date.toLocaleString('en-US', { month: 'short' });
 }
 
 function extractMissingEvidence(answer: unknown) {
@@ -125,6 +131,28 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
     approvals.filter((item) => item.status === 'PENDING_REVIEW' || item.approvalType === 'CONDITIONAL').map((item) => item.department),
     'Unassigned',
   ).map((item) => ({ ...item, count: scale(item.count, multiplier) }));
+  const highRiskSummary = topCounts(
+    approvals.filter((item) => item.riskLevel === 'high' || item.riskLevel === 'critical').map((item) => item.department ?? item.category),
+    'Unassigned',
+  ).map((item) => ({ ...item, count: scale(item.count, multiplier, demoProjection ? 3 : 0) }));
+
+  const trendMonths = Array.from({ length: 6 }, (_, offset) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (5 - offset));
+    return { name: monthLabel(date), count: 0 };
+  });
+  const trendByMonth = new Map(trendMonths.map((item) => [item.name, item]));
+  for (const approval of approvals) {
+    const key = monthLabel(approval.createdAt);
+    const bucket = trendByMonth.get(key);
+    if (bucket) bucket.count += 1;
+  }
+  const trends = trendMonths.map((item, index) => ({
+    name: item.name,
+    count: demoProjection
+      ? Math.max([82, 96, 117, 131, 149, 167][index], scale(item.count, multiplier))
+      : item.count,
+  }));
 
   const chunkById = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const referencedPolicies = new Map<string, number>();
@@ -155,6 +183,7 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
       total: totalApprovals,
       byDepartment: departmentCounts,
       bySource: sourceCounts,
+      trends,
     },
     timeSaved: {
       totalHours,
@@ -197,6 +226,15 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
           : [],
       approvalBottlenecks: pendingByDepartment,
     },
+    highRiskSummary: highRiskSummary.length
+      ? highRiskSummary
+      : demoProjection
+        ? [
+            { name: 'Compliance', count: 8 },
+            { name: 'Security', count: 6 },
+            { name: 'Procurement', count: 4 },
+          ]
+        : [],
   };
 
   if (integrations.length === 0 && demoProjection) {
@@ -228,6 +266,7 @@ export function analyticsCsv(report: ExecutiveAnalytics) {
     ['Teams Approvals', String(report.integrations.teamsApprovals)],
     ['Outlook Approvals', String(report.integrations.outlookApprovals)],
     ['Playbook Questions Asked', String(report.playbookAi.questionsAsked)],
+    ...report.approvals.trends.map((item) => [`Trend: ${item.name}`, String(item.count)]),
     ...report.approvals.byDepartment.map((item) => [`Department: ${item.name}`, String(item.count)]),
     ...report.approvals.bySource.map((item) => [`Source: ${item.name}`, String(item.count)]),
     ...report.playbookAi.mostReferencedPolicies.map((item) => [`Referenced Policy: ${item.name}`, String(item.count)]),
@@ -256,11 +295,17 @@ export function analyticsPdf(report: ExecutiveAnalytics) {
     `Evidence coverage: ${report.complianceReadiness.evidenceCoverage}%`,
     `Audit completeness: ${report.complianceReadiness.auditCompleteness}%`,
     '',
+    'Approval trend:',
+    ...report.approvals.trends.map((item) => `- ${item.name}: ${item.count}`),
+    '',
     'Approvals by department:',
     ...report.approvals.byDepartment.map((item) => `- ${item.name}: ${item.count}`),
     '',
     'Most referenced policies:',
     ...report.playbookAi.mostReferencedPolicies.map((item) => `- ${item.name}: ${item.count}`),
+    '',
+    'High-risk approval summary:',
+    ...report.highRiskSummary.map((item) => `- ${item.name}: ${item.count}`),
   ];
   const content = lines.slice(0, 48).map((line, index) => `BT /F1 9 Tf 42 ${760 - index * 15} Td (${escapePdfText(line.slice(0, 116))}) Tj ET`).join('\n');
   const objects = [
