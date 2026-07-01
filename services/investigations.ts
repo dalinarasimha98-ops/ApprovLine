@@ -118,14 +118,17 @@ export function timelineForApproval(approval: InvestigationApprovalWithEvidence)
 }
 
 export async function getInvestigationMetrics(organizationId: string) {
-  const [openInvestigations, closedInvestigations, highRiskApprovals, missingApprovals, conditionalApprovals, approvalsWithoutEvidence] = await Promise.all([
-    prisma.investigationCase.count({ where: { organizationId, status: 'OPEN' } }),
-    prisma.investigationCase.count({ where: { organizationId, status: 'CLOSED' } }),
+  const [investigationCounts, highRiskApprovals, missingApprovals, conditionalApprovals, approvalsWithoutEvidence] = await Promise.all([
+    Promise.all([
+      prisma.investigationCase.count({ where: { organizationId, status: 'OPEN' } }),
+      prisma.investigationCase.count({ where: { organizationId, status: 'CLOSED' } }),
+    ]).catch(() => [0, 0] as const),
     prisma.approvalRecord.count({ where: { organizationId, OR: [{ riskLevel: 'high' }, { riskLevel: 'critical' }] } }),
     prisma.approvalRecord.count({ where: { organizationId, status: 'PENDING_REVIEW' } }),
     prisma.approvalRecord.count({ where: { organizationId, approvalType: 'CONDITIONAL' } }),
     prisma.approvalRecord.count({ where: { organizationId, OR: [{ evidenceSnippet: null }, { sourceLink: null }] } }),
   ]);
+  const [openInvestigations, closedInvestigations] = investigationCounts;
 
   return { openInvestigations, closedInvestigations, highRiskApprovals, missingApprovals, conditionalApprovals, approvalsWithoutEvidence };
 }
