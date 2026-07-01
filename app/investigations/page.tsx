@@ -35,6 +35,12 @@ function riskClass(risk?: string | null) {
   return 'border-emerald-100 bg-emerald-50 text-emerald-700';
 }
 
+function isMigrationError(message: string | null) {
+  if (!message) return false;
+  const lower = message.toLowerCase();
+  return lower.includes('does not exist') || lower.includes('relation') || lower.includes('table') || lower.includes('p2021') || lower.includes('migration');
+}
+
 function MetricCard({ label, value, help, tone = 'blue' }: { label: string; value: number; help: string; tone?: 'blue' | 'amber' | 'rose' | 'green' }) {
   const toneClass = {
     blue: 'bg-blue-50 text-[#2155d9]',
@@ -149,7 +155,7 @@ export default async function InvestigationsPage({ searchParams }: Investigation
         orderBy: { updatedAt: 'desc' },
         take: 20,
       }),
-      1400,
+      3000,
     ).then((cases) => ({ cases, error: null as string | null })).catch((error) => ({
       cases: [],
       error: error instanceof Error ? error.message : 'Investigation database tables are not ready.',
@@ -166,7 +172,7 @@ export default async function InvestigationsPage({ searchParams }: Investigation
     ).catch(() => []),
   ]);
   const investigations = investigationsResult.cases;
-  const setupWarning = filters.setup === 'required' || Boolean(investigationsResult.error);
+  const setupWarning = filters.setup === 'required' || isMigrationError(investigationsResult.error);
 
   return (
     <DashboardShell>
