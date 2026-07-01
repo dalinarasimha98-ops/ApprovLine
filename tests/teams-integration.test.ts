@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 process.env.MICROSOFT_CLIENT_ID = 'microsoft-client-id';
 process.env.MICROSOFT_CLIENT_SECRET = 'microsoft-client-secret';
+process.env.MICROSOFT_TENANT_ID = 'tenant-guid-123';
 process.env.APP_URL = 'https://app.approvline.com';
 process.env.ENCRYPTION_KEY = 'f4c73124c11a3f8a129979f56a6bca9c9703ea4985f3b74ba467ea9a19c53291';
 
@@ -26,7 +27,7 @@ assert.equal(verifyTeamsState('not-a-valid-state.short'), null);
 
 const installUrl = buildTeamsInstallUrl({ requestUrl: 'https://app.approvline.com/dashboard/settings/integrations', state });
 assert.equal(installUrl.hostname, 'login.microsoftonline.com');
-assert.equal(installUrl.pathname, '/common/oauth2/v2.0/authorize');
+assert.equal(installUrl.pathname, '/tenant-guid-123/oauth2/v2.0/authorize');
 assert.equal(installUrl.searchParams.get('client_id'), 'microsoft-client-id');
 assert.equal(installUrl.searchParams.get('redirect_uri'), 'https://app.approvline.com/api/integrations/teams/callback');
 assert.equal(installUrl.searchParams.get('scope'), TEAMS_READ_ONLY_SCOPES);

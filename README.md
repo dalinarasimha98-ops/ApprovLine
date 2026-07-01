@@ -42,6 +42,7 @@ Copy `.env.example` to `.env.local` and set:
 - `GMAIL_SYNC_INTERVAL_MINUTES` - optional, allowed values: `5`, `15`, or `60`; defaults to 15 minutes
 - `MICROSOFT_CLIENT_ID`
 - `MICROSOFT_CLIENT_SECRET`
+- `MICROSOFT_TENANT_ID` - Directory tenant ID from Microsoft Entra ID Overview; recommended for single-tenant Teams OAuth
 
 For Vercel deployments, add these under Project Settings -> Environment Variables.
 GitHub Actions repository secrets are only available to GitHub Actions workflows and are not visible to the Vercel runtime.
@@ -74,6 +75,7 @@ GOOGLE_CLIENT_SECRET=...
 GMAIL_SYNC_INTERVAL_MINUTES=15
 MICROSOFT_CLIENT_ID=...
 MICROSOFT_CLIENT_SECRET=...
+MICROSOFT_TENANT_ID=...
 ```
 
 Gmail OAuth must use this exact redirect URL in Google Cloud:
@@ -95,6 +97,8 @@ Microsoft Teams OAuth must use this exact redirect URL in Microsoft Entra ID:
 ```text
 https://your-vercel-domain.vercel.app/api/integrations/teams/callback
 ```
+
+For single-tenant app registrations, add the Directory tenant ID from Microsoft Entra ID Overview to Vercel as `MICROSOFT_TENANT_ID`. This keeps Teams OAuth on the organizational login endpoint and avoids Microsoft consumer-account errors.
 
 Requested Microsoft Graph scopes are read-only only:
 
