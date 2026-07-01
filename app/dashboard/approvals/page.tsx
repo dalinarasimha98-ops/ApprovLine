@@ -9,6 +9,10 @@ import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
+function isQueryTimeout(message: string) {
+  return message.toLowerCase().includes('timed out');
+}
+
 export default async function ApprovalsPage({
   searchParams,
 }: {
@@ -26,7 +30,7 @@ export default async function ApprovalsPage({
 }) {
   const startedAt = Date.now();
   console.info('[dashboard] approvals page start load');
-  const tenant = await getDashboardTenant(1500);
+  const tenant = await getDashboardTenant(3000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   const filters = await searchParams;
@@ -35,6 +39,7 @@ export default async function ApprovalsPage({
   if (filters.to) occurredAt.lte = new Date(filters.to);
   let approvals: Awaited<ReturnType<typeof prisma.approvalRecord.findMany>> = [];
   let loadError: string | null = null;
+  let loadNotice: string | null = null;
 
   try {
     if (!tenant.organization) throw new Error(tenant.error ?? 'Workspace unavailable.');
@@ -61,14 +66,19 @@ export default async function ApprovalsPage({
               }
             : {}),
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { occurredAt: 'desc' },
         take: 50,
       }),
-      1500,
+      5000,
     );
     console.info(`[dashboard] approvals query finished in ${Date.now() - startedAt}ms`);
   } catch (error) {
-    loadError = error instanceof Error ? error.message : 'Unable to load approvals.';
+    const message = error instanceof Error ? error.message : 'Unable to load approvals.';
+    if (isQueryTimeout(message)) {
+      loadNotice = 'Approval records are taking longer than expected. The page is available now, and you can retry or generate demo data while the database warms up.';
+    } else {
+      loadError = message;
+    }
     console.error(`[dashboard] approvals query failed after ${Date.now() - startedAt}ms`, error);
   }
 
@@ -122,10 +132,19 @@ export default async function ApprovalsPage({
           </FormSubmitButton>
         </div>
       </form>
+      {loadNotice ? (
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 text-blue-950 shadow-sm">
+          <h3 className="font-black">Approval history is still warming up</h3>
+          <p className="mt-1 text-sm leading-6">{loadNotice}</p>
+          <PendingLink href="/dashboard/approvals" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200">
+            Retry
+          </PendingLink>
+        </div>
+      ) : null}
       {loadError ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm">
           <h3 className="font-black">Unable to load approvals</h3>
-          <p className="mt-1 text-sm">The dashboard stopped waiting so you are not stuck on an infinite loading screen.</p>
+          <p className="mt-1 text-sm">The approval records query returned an error. Your dashboard shell is still available.</p>
           <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs font-semibold">{loadError}</p>
           <PendingLink href="/dashboard/approvals" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200">
             Retry
