@@ -45,6 +45,7 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
         auditLogs: { orderBy: { createdAt: 'desc' }, take: 20 },
         classifierResults: { orderBy: { createdAt: 'desc' }, take: 3 },
         messageSource: true,
+        complianceEvaluations: { include: { rule: true }, orderBy: { createdAt: 'desc' }, take: 3 },
       },
     }),
     1200,
@@ -136,6 +137,31 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
           </div>
 
           <div className="grid gap-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Compliance Analysis</p>
+              <h3 className="mt-1 text-lg font-black text-slate-950">Playbook policy evaluation</h3>
+              <div className="mt-5 grid gap-3">
+                {approval.complianceEvaluations.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-slate-200 p-4 text-sm font-semibold text-slate-500">No Playbook AI compliance evaluation yet. Upload playbooks and run Evaluate Approvals.</p>
+                ) : (
+                  approval.complianceEvaluations.map((evaluation) => (
+                    <div key={evaluation.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-black text-slate-950">{evaluation.status}</p>
+                        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-[#2155d9]">{evaluation.score}/100</span>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{evaluation.explanation}</p>
+                      {evaluation.triggeredRule ? <p className="mt-2 text-xs font-black text-slate-500">Rule: {evaluation.triggeredRule}</p> : null}
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
+                        {evaluation.missingApprovers.map((item) => <span key={item} className="rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">Missing {item}</span>)}
+                        {evaluation.missingEvidence.map((item) => <span key={item} className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">Need {item}</span>)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Message Source</p>
               <h3 className="mt-1 text-lg font-black text-slate-950">Captured from source system</h3>

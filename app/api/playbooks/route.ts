@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { seedDemoPlaybooks } from '@/services/playbooks';
+import { evaluateRecentApprovals, getPlaybookComplianceInsights, seedDemoPlaybooks } from '@/services/playbooks';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +12,7 @@ export async function GET() {
 
   const documents = await prisma.playbookDocument.findMany({
     where: { organizationId: tenant.organization.id },
-    include: { _count: { select: { chunks: true } } },
+    include: { _count: { select: { chunks: true, rules: true } } },
     orderBy: { uploadedAt: 'desc' },
   });
   const recentQueries = await prisma.playbookQuery.findMany({
@@ -21,7 +21,9 @@ export async function GET() {
     take: 5,
   });
 
-  return NextResponse.json({ documents, recentQueries });
+  const insights = await getPlaybookComplianceInsights(tenant.organization.id);
+
+  return NextResponse.json({ documents, recentQueries, insights });
 }
 
 export async function POST() {
@@ -30,5 +32,6 @@ export async function POST() {
   if (!tenant.organization) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
 
   const result = await seedDemoPlaybooks(tenant.organization.id, tenant.user?.id);
+  await evaluateRecentApprovals(tenant.organization.id, 50);
   return NextResponse.json(result);
 }

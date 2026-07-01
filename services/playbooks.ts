@@ -3,7 +3,7 @@ import zlib from 'node:zlib';
 import OpenAI from 'openai';
 import { prisma } from '@/lib/prisma';
 import { env } from '@/config/env';
-import type { Prisma } from '@prisma/client';
+import type { ApprovalRecord, PlaybookRule, Prisma } from '@prisma/client';
 
 const embeddingDimensions = 96;
 
@@ -25,6 +25,23 @@ export type PlaybookAnswer = {
   compliant: 'yes' | 'no' | 'needs_review';
   confidence: number;
 };
+
+export type ExtractedPlaybookRule = {
+  category: string;
+  title: string;
+  description: string;
+  requiredApprovers: string[];
+  requiredDepartments: string[];
+  escalationChain: string[];
+  spendingLimit?: number;
+  riskTriggers: string[];
+  evidenceRequired: string[];
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  sourceSection?: string;
+  sourceExcerpt: string;
+};
+
+const playbookCategories = ['Legal', 'Procurement', 'Finance', 'Security', 'Compliance', 'HR', 'Engineering'];
 
 function sha256(value: string | Buffer) {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -105,6 +122,113 @@ function sectionTitleFor(chunk: string, index: number) {
   return heading ?? `Section ${index + 1}`;
 }
 
+function inferCategory(text: string, fallback?: string) {
+  if (fallback && playbookCategories.includes(fallback)) return fallback;
+  const lower = text.toLowerCase();
+  if (/\b(contract|msa|legal|redline|liability|indemnity|terms)\b/.test(lower)) return 'Legal';
+  if (/\b(procurement|vendor|supplier|purchase|po|payment terms)\b/.test(lower)) return 'Procurement';
+  if (/\b(finance|budget|spend|invoice|payment|cost center|cfo)\b/.test(lower)) return 'Finance';
+  if (/\b(security|soc 2|access|production|vulnerability|subprocessor)\b/.test(lower)) return 'Security';
+  if (/\b(compliance|gdpr|audit|retention|governance|control)\b/.test(lower)) return 'Compliance';
+  if (/\b(hr|candidate|compensation|employee|offer)\b/.test(lower)) return 'HR';
+  if (/\b(engineering|release|code|deploy|architecture)\b/.test(lower)) return 'Engineering';
+  return fallback || 'Compliance';
+}
+
+function amountThreshold(text: string) {
+  const matches = [...text.matchAll(/\$?\s?([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)\s?(?:k|K|000)?/g)];
+  const values = matches
+    .map((match) => {
+      const raw = match[1].replaceAll(',', '');
+      const base = Number(raw);
+      const suffix = match[0].toLowerCase().includes('k') ? 1000 : 1;
+      const thousands = /\b000\b/.test(match[0]) && base < 1000 ? 1000 : 1;
+      return base * suffix * thousands;
+    })
+    .filter((value) => Number.isFinite(value) && value > 0);
+  return values.length ? Math.max(...values) : undefined;
+}
+
+function approversFromText(text: string) {
+  const lower = text.toLowerCase();
+  const approvers = new Set<string>();
+  if (lower.includes('legal')) approvers.add('Legal');
+  if (lower.includes('procurement')) approvers.add('Procurement');
+  if (lower.includes('finance')) approvers.add('Finance');
+  if (lower.includes('cfo')) approvers.add('CFO');
+  if (lower.includes('security')) approvers.add('Security');
+  if (lower.includes('compliance')) approvers.add('Compliance');
+  if (lower.includes('hr') || lower.includes('people')) approvers.add('HR');
+  if (lower.includes('manager')) approvers.add('Manager');
+  if (lower.includes('department head')) approvers.add('Department Head');
+  return [...approvers];
+}
+
+function evidenceFromText(text: string) {
+  const lower = text.toLowerCase();
+  const evidence = new Set<string>();
+  if (lower.includes('redline')) evidence.add('Final redlines');
+  if (lower.includes('budget')) evidence.add('Budget owner approval');
+  if (lower.includes('soc 2')) evidence.add('SOC 2 report');
+  if (lower.includes('risk review')) evidence.add('Risk review');
+  if (lower.includes('intake')) evidence.add('Intake form');
+  if (lower.includes('cost center')) evidence.add('Cost center');
+  if (lower.includes('business justification')) evidence.add('Business justification');
+  if (lower.includes('signature authority')) evidence.add('Signature authority');
+  return [...evidence];
+}
+
+function severityForRule(text: string, spendingLimit?: number): ExtractedPlaybookRule['severity'] {
+  const lower = text.toLowerCase();
+  if (lower.includes('critical') || spendingLimit && spendingLimit >= 100000 || lower.includes('production access')) return 'critical';
+  if (lower.includes('security') || lower.includes('legal') || spendingLimit && spendingLimit >= 25000) return 'high';
+  if (spendingLimit && spendingLimit >= 10000) return 'medium';
+  return 'medium';
+}
+
+export function extractPlaybookRules(content: string, category?: string): ExtractedPlaybookRule[] {
+  const chunks = chunkPlaybookContent(content);
+  const rules: ExtractedPlaybookRule[] = [];
+
+  chunks.forEach((chunk, index) => {
+    const sentences = chunk.split(/(?<=[.!?])\s+|\n+/).map((item) => item.trim()).filter(Boolean);
+    const ruleSentences = sentences.filter((sentence) => /\b(require|required|must|approval|approv|escalat|above|over|greater than|evidence|review)\b/i.test(sentence));
+    const source = ruleSentences.join(' ').slice(0, 1200) || chunk.slice(0, 1200);
+    if (source.length < 20) return;
+
+    const spendingLimit = amountThreshold(source);
+    const requiredApprovers = approversFromText(source);
+    const inferredCategory = inferCategory(source, category);
+    const requiredDepartments = requiredApprovers.length
+      ? requiredApprovers.filter((item) => !['CFO', 'Manager', 'Department Head'].includes(item))
+      : [inferredCategory];
+    const evidenceRequired = evidenceFromText(source);
+    const escalationChain = source.toLowerCase().includes('escalat') || source.toLowerCase().includes('cfo') ? ['Manager', 'Department Head', 'CFO'].filter((item) => source.toLowerCase().includes(item.toLowerCase()) || item === 'CFO') : [];
+    const titleAmount = spendingLimit ? ` above $${new Intl.NumberFormat('en-US').format(spendingLimit)}` : '';
+
+    rules.push({
+      category: inferredCategory,
+      title: `${inferredCategory} approval rule${titleAmount}`,
+      description: source.slice(0, 500),
+      requiredApprovers: requiredApprovers.length ? requiredApprovers : [`${inferredCategory} approval`],
+      requiredDepartments: requiredDepartments.length ? requiredDepartments : [inferredCategory],
+      escalationChain,
+      spendingLimit,
+      riskTriggers: [
+        ...(source.toLowerCase().includes('customer data') ? ['Customer data access'] : []),
+        ...(source.toLowerCase().includes('production') ? ['Production system access'] : []),
+        ...(source.toLowerCase().includes('non-standard') ? ['Non-standard terms'] : []),
+      ],
+      evidenceRequired: evidenceRequired.length ? evidenceRequired : ['Approval evidence', 'Source message link'],
+      severity: severityForRule(source, spendingLimit),
+      sourceSection: sectionTitleFor(chunk, index),
+      sourceExcerpt: source,
+    });
+  });
+
+  return rules.slice(0, 20);
+}
+
 export function chunkPlaybookContent(content: string) {
   const paragraphs = content.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
   const chunks: string[] = [];
@@ -172,6 +296,7 @@ export async function indexPlaybookDocument(input: {
   fileType: string;
   content: string;
   metadata?: Record<string, unknown>;
+  category?: string;
 }) {
   const contentHash = sha256(input.content);
   const document = await prisma.playbookDocument.create({
@@ -207,6 +332,28 @@ export async function indexPlaybookDocument(input: {
       });
     }
 
+    const rules = extractPlaybookRules(input.content, input.category ?? String(input.metadata?.category ?? ''));
+    for (const rule of rules) {
+      await prisma.playbookRule.create({
+        data: {
+          organizationId: input.organizationId,
+          documentId: document.id,
+          category: rule.category,
+          title: rule.title,
+          description: rule.description,
+          requiredApprovers: rule.requiredApprovers,
+          requiredDepartments: rule.requiredDepartments,
+          escalationChain: rule.escalationChain,
+          spendingLimit: rule.spendingLimit,
+          riskTriggers: rule.riskTriggers,
+          evidenceRequired: rule.evidenceRequired,
+          severity: rule.severity,
+          sourceSection: rule.sourceSection,
+          sourceExcerpt: rule.sourceExcerpt,
+        },
+      });
+    }
+
     return prisma.playbookDocument.update({
       where: { id: document.id },
       data: {
@@ -215,6 +362,8 @@ export async function indexPlaybookDocument(input: {
         metadata: {
           ...(input.metadata ?? {}),
           chunkCount: chunks.length,
+          category: input.category ?? input.metadata?.category ?? inferCategory(input.content),
+          ruleCount: rules.length,
         } as Prisma.InputJsonValue,
       },
     });
@@ -231,6 +380,168 @@ export async function indexPlaybookDocument(input: {
     });
     throw error;
   }
+}
+
+function approvalAmount(approval: Pick<ApprovalRecord, 'subject' | 'businessImpact' | 'evidenceSnippet' | 'reasoning'>) {
+  return amountThreshold([approval.subject, approval.businessImpact, approval.evidenceSnippet, approval.reasoning].filter(Boolean).join(' '));
+}
+
+function ruleAppliesToApproval(rule: PlaybookRule, approval: Pick<ApprovalRecord, 'subject' | 'department' | 'category' | 'businessImpact' | 'evidenceSnippet' | 'reasoning'>) {
+  const combined = [approval.subject, approval.department, approval.category, approval.businessImpact, approval.evidenceSnippet, approval.reasoning].filter(Boolean).join(' ').toLowerCase();
+  const amount = approvalAmount(approval);
+  const categoryMatch = [approval.department, approval.category].filter(Boolean).some((item) => item?.toLowerCase() === rule.category.toLowerCase());
+  const keywordMatch = [rule.category, ...rule.requiredDepartments, ...rule.riskTriggers].some((item) => combined.includes(item.toLowerCase()));
+  const thresholdMatch = rule.spendingLimit ? Boolean(amount && amount >= rule.spendingLimit) : false;
+  return categoryMatch || keywordMatch || thresholdMatch;
+}
+
+function approverPresent(required: string, approval: Pick<ApprovalRecord, 'approverName' | 'approverEmail' | 'department' | 'category' | 'reasoning' | 'evidenceSnippet'>) {
+  const combined = [approval.approverName, approval.approverEmail, approval.department, approval.category, approval.reasoning, approval.evidenceSnippet].filter(Boolean).join(' ').toLowerCase();
+  return combined.includes(required.toLowerCase());
+}
+
+function evidencePresent(required: string, approval: Pick<ApprovalRecord, 'evidenceSnippet' | 'sourceLink' | 'reasoning' | 'conditions'>) {
+  const combined = [approval.evidenceSnippet, approval.sourceLink, approval.reasoning, approval.conditions].filter(Boolean).join(' ').toLowerCase();
+  if (required === 'Source message link') return Boolean(approval.sourceLink);
+  return combined.includes(required.toLowerCase().split(' ')[0]);
+}
+
+export async function evaluateApprovalCompliance(organizationId: string, approvalId: string) {
+  const approval = await prisma.approvalRecord.findFirst({
+    where: { id: approvalId, organizationId },
+  });
+  if (!approval) return null;
+
+  const rules = await prisma.playbookRule.findMany({
+    where: { organizationId },
+    orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
+    take: 200,
+  });
+  const applicable = rules.filter((rule) => ruleAppliesToApproval(rule, approval));
+  const rule = applicable[0] ?? rules[0] ?? null;
+
+  const missingApprovers = rule ? rule.requiredApprovers.filter((item) => !approverPresent(item, approval)) : [];
+  const missingDepartments = rule ? rule.requiredDepartments.filter((item) => !approverPresent(item, approval)) : [];
+  const missingEscalationSteps = rule ? rule.escalationChain.filter((item) => !approverPresent(item, approval)) : [];
+  const missingEvidence = rule ? rule.evidenceRequired.filter((item) => !evidencePresent(item, approval)) : [];
+  if (!approval.sourceLink) missingEvidence.push('Source link');
+  if (!approval.evidenceSnippet) missingEvidence.push('Evidence snippet');
+
+  let score = 100;
+  score -= missingApprovers.length * 18;
+  score -= missingDepartments.length * 12;
+  score -= missingEscalationSteps.length * 10;
+  score -= missingEvidence.length * 8;
+  if (approval.riskLevel === 'high') score -= 8;
+  if (approval.riskLevel === 'critical') score -= 15;
+  if (approval.status === 'PENDING_REVIEW') score -= 10;
+  if (approval.approvalType === 'CONDITIONAL') score -= 8;
+  score = Math.max(0, Math.min(100, score));
+
+  const status = score >= 85 ? 'Compliant' : score >= 60 ? 'Partially Compliant' : 'Non-Compliant';
+  const severity = score < 60 ? 'high' : score < 85 ? 'medium' : 'low';
+  const explanation = rule
+    ? `${status}: evaluated against "${rule.title}". ${missingApprovers.length ? `Missing approvers: ${missingApprovers.join(', ')}. ` : ''}${missingEvidence.length ? `Missing evidence: ${missingEvidence.join(', ')}.` : 'Required approvers and evidence are present.'}`
+    : `${status}: no playbook rule matched yet. Upload policy playbooks for stronger evaluation.`;
+
+  await prisma.approvalComplianceEvaluation.deleteMany({ where: { organizationId, approvalRecordId: approval.id } });
+  const evaluation = await prisma.approvalComplianceEvaluation.create({
+    data: {
+      organizationId,
+      approvalRecordId: approval.id,
+      ruleId: rule?.id,
+      status,
+      score,
+      severity,
+      missingApprovers,
+      missingDepartments,
+      missingEscalationSteps,
+      missingEvidence: [...new Set(missingEvidence)],
+      triggeredRule: rule?.title,
+      explanation,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId,
+      approvalRecordId: approval.id,
+      action: 'playbook.compliance.evaluated',
+      metadata: {
+        evaluationId: evaluation.id,
+        status,
+        score,
+        ruleId: rule?.id,
+        missingApprovers,
+        missingEvidence,
+      } as Prisma.InputJsonValue,
+    },
+  });
+
+  return evaluation;
+}
+
+export async function evaluateRecentApprovals(organizationId: string, limit = 50) {
+  const approvals = await prisma.approvalRecord.findMany({
+    where: { organizationId },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: { id: true },
+  });
+  const results = [];
+  for (const approval of approvals) {
+    const result = await evaluateApprovalCompliance(organizationId, approval.id);
+    if (result) results.push(result);
+  }
+  return results;
+}
+
+export async function getPlaybookComplianceInsights(organizationId: string) {
+  const [ruleCount, evaluationCount, evaluations, violationsByRule, violationsByDepartment] = await Promise.all([
+    prisma.playbookRule.count({ where: { organizationId } }),
+    prisma.approvalComplianceEvaluation.count({ where: { organizationId } }),
+    prisma.approvalComplianceEvaluation.findMany({
+      where: { organizationId },
+      include: { approvalRecord: true, rule: true },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    }),
+    prisma.approvalComplianceEvaluation.groupBy({
+      by: ['triggeredRule'],
+      where: { organizationId, status: { not: 'Compliant' } },
+      _count: { _all: true },
+      orderBy: { _count: { triggeredRule: 'desc' } },
+      take: 6,
+    }),
+    prisma.approvalComplianceEvaluation.groupBy({
+      by: ['severity'],
+      where: { organizationId },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const compliant = evaluations.filter((item) => item.status === 'Compliant').length;
+  const partial = evaluations.filter((item) => item.status === 'Partially Compliant').length;
+  const nonCompliant = evaluations.filter((item) => item.status === 'Non-Compliant').length;
+  const averageScore = evaluations.length ? Math.round(evaluations.reduce((sum, item) => sum + item.score, 0) / evaluations.length) : 0;
+  const departmentMap = new Map<string, number>();
+  for (const evaluation of evaluations.filter((item) => item.status !== 'Compliant')) {
+    const key = evaluation.approvalRecord.department ?? 'Unassigned';
+    departmentMap.set(key, (departmentMap.get(key) ?? 0) + 1);
+  }
+
+  return {
+    ruleCount,
+    evaluationCount,
+    averageScore,
+    compliant,
+    partial,
+    nonCompliant,
+    mostViolatedPolicies: violationsByRule.map((item) => ({ name: item.triggeredRule ?? 'Unmatched rule', count: item._count._all })),
+    departmentsWithHighestViolations: [...departmentMap.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 6),
+    riskTrend: violationsByDepartment.map((item) => ({ name: item.severity, count: item._count._all })),
+    recentEvaluations: evaluations,
+  };
 }
 
 export async function searchPlaybookChunks(organizationId: string, question: string, limit = 5): Promise<SourceMatch[]> {

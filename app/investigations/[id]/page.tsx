@@ -115,6 +115,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
               include: {
                 messageSource: true,
                 auditLogs: { orderBy: { createdAt: 'asc' } },
+                complianceEvaluations: { include: { rule: true }, orderBy: { createdAt: 'desc' }, take: 2 },
               },
             },
           },
@@ -136,6 +137,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
   const metadata = (investigation.metadata ?? {}) as InvestigationMetadata;
   const summary = metadata.aiSummary ?? generatedSummary;
   const policyChecks = metadata.policyChecks ?? buildPolicyChecks(approvals);
+  const complianceEvaluations = approvals.flatMap((approval) => approval.complianceEvaluations);
   const timeline = approvals.flatMap(timelineForApproval).sort((left, right) => left.at.getTime() - right.at.getTime());
   const riskScore = Math.max(summary.riskScore, ...approvals.map(calculateRiskScore), 0);
 
@@ -224,7 +226,19 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
             <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Playbook AI Integration</p>
             <h3 className="mt-1 text-lg font-black text-slate-950">Policy compliance checks</h3>
             <div className="mt-5 grid gap-3">
-              {policyChecks.map((check) => (
+              {complianceEvaluations.length ? complianceEvaluations.map((evaluation) => (
+                <div key={evaluation.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-black text-slate-950">{evaluation.triggeredRule ?? evaluation.rule?.title ?? 'Playbook rule'}</p>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-black ${policyClass(evaluation.status)}`}>{evaluation.status} · {evaluation.score}</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{evaluation.explanation}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
+                    {evaluation.missingApprovers.map((item) => <span key={item} className="rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">Missing {item}</span>)}
+                    {evaluation.missingEvidence.map((item) => <span key={item} className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">Need {item}</span>)}
+                  </div>
+                </div>
+              )) : policyChecks.map((check) => (
                 <div key={check.policy} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-black text-slate-950">{check.policy}</p>
