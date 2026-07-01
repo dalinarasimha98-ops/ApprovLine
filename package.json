@@ -18,6 +18,7 @@
     "test:ingestion": "tsx tests/ingestion-pipeline.test.ts",
     "test:slack": "tsx tests/slack-integration.test.ts",
     "test:gmail": "tsx tests/gmail-integration.test.ts",
+    "test:teams": "tsx tests/teams-integration.test.ts",
     "readiness": "tsx scripts/readiness.ts",
     "gmail:sync": "tsx scripts/gmail-sync.ts",
     "worker": "tsx services/queue/worker.ts"

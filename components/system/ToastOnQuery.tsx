@@ -8,10 +8,11 @@ const reasonLabels: Record<string, string> = {
   invalid_oauth_state: 'The install session expired. Please start again.',
   missing_workspace_token: 'The provider did not return a workspace token.',
   missing_google_account_profile: 'Google did not return an email profile.',
+  missing_microsoft_profile: 'Microsoft did not return an organizational user profile.',
 };
 
-function messageFor(provider: 'slack' | 'gmail', status: string | null, reason: string | null) {
-  const name = provider === 'slack' ? 'Slack' : 'Gmail';
+function messageFor(provider: 'slack' | 'gmail' | 'teams', status: string | null, reason: string | null) {
+  const name = provider === 'slack' ? 'Slack' : provider === 'gmail' ? 'Gmail' : 'Microsoft Teams';
   if (status === 'connected') return { tone: 'success', text: `${name} connected successfully.` };
   if (status === 'error') return { tone: 'error', text: reasonLabels[reason ?? ''] ?? `${name} action needs attention.` };
   return null;
@@ -21,8 +22,9 @@ export function ToastOnQuery() {
   const params = useSearchParams();
   const slack = messageFor('slack', params.get('slack'), params.get('reason'));
   const gmail = messageFor('gmail', params.get('gmail'), params.get('reason'));
+  const teams = messageFor('teams', params.get('teams'), params.get('reason'));
   const approvalRecordId = params.get('approvalRecordId');
-  const message = slack ?? gmail ?? (approvalRecordId ? { tone: 'success', text: 'Approval record created.' } : null);
+  const message = slack ?? gmail ?? teams ?? (approvalRecordId ? { tone: 'success', text: 'Approval record created.' } : null);
 
   if (!message) return null;
 

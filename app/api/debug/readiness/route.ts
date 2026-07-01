@@ -29,6 +29,8 @@ export async function GET() {
       SLACK_SIGNING_SECRET: configured(env.SLACK_SIGNING_SECRET),
       GOOGLE_CLIENT_ID: configured(env.GOOGLE_CLIENT_ID),
       GOOGLE_CLIENT_SECRET: configured(env.GOOGLE_CLIENT_SECRET),
+      MICROSOFT_CLIENT_ID: configured(env.MICROSOFT_CLIENT_ID),
+      MICROSOFT_CLIENT_SECRET: configured(env.MICROSOFT_CLIENT_SECRET),
     },
   });
 }

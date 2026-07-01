@@ -21,6 +21,7 @@ export async function GET() {
       ai: connectorStatus(Boolean(env.ANTHROPIC_API_KEY || env.OPENAI_API_KEY)),
       appUrl: readiness.checks.appUrl,
       gmailApi: readiness.checks.gmailLastSync,
+      teamsApi: readiness.checks.teamsLastSync,
     },
     connectors: {
       slack: connectorStatus(Boolean(env.SLACK_CLIENT_ID && env.SLACK_CLIENT_SECRET)),

@@ -40,6 +40,8 @@ Copy `.env.example` to `.env.local` and set:
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GMAIL_SYNC_INTERVAL_MINUTES` - optional, allowed values: `5`, `15`, or `60`; defaults to 15 minutes
+- `MICROSOFT_CLIENT_ID`
+- `MICROSOFT_CLIENT_SECRET`
 
 For Vercel deployments, add these under Project Settings -> Environment Variables.
 GitHub Actions repository secrets are only available to GitHub Actions workflows and are not visible to the Vercel runtime.
@@ -70,6 +72,8 @@ SLACK_SIGNING_SECRET=...
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GMAIL_SYNC_INTERVAL_MINUTES=15
+MICROSOFT_CLIENT_ID=...
+MICROSOFT_CLIENT_SECRET=...
 ```
 
 Gmail OAuth must use this exact redirect URL in Google Cloud:
@@ -86,11 +90,25 @@ https://www.googleapis.com/auth/userinfo.profile
 https://www.googleapis.com/auth/userinfo.email
 ```
 
+Microsoft Teams OAuth must use this exact redirect URL in Microsoft Entra ID:
+
+```text
+https://your-vercel-domain.vercel.app/api/integrations/teams/callback
+```
+
+Requested Microsoft Graph scopes are read-only only:
+
+```text
+offline_access
+User.Read
+Team.ReadBasic.All
+Channel.ReadBasic.All
+ChannelMessage.Read.All
+```
+
 Optional future connector variables:
 
 ```bash
-MICROSOFT_CLIENT_ID=
-MICROSOFT_CLIENT_SECRET=
 ZOOM_CLIENT_ID=
 ZOOM_CLIENT_SECRET=
 ```
@@ -101,11 +119,11 @@ Check deployment readiness:
 npm run readiness
 ```
 
-Production builds require `DATABASE_URL` on Vercel. The build runs `prisma migrate deploy`, then generates Prisma Client and builds Next.js. This keeps Vercel deployments compatible with onboarding/database schema changes and prevents `/onboarding` from crashing on missing columns.
+Production builds require `DATABASE_URL` on Vercel. The build generates Prisma Client and builds Next.js. Run `npm run db:deploy` separately when deploying schema changes so production tables stay current.
 
 If `/onboarding` shows a Prisma initialization error in Vercel logs, confirm `DATABASE_URL` is set for the same Vercel environment and redeploy.
 
-Open `/health` in production to verify PostgreSQL, Redis, Anthropic, OpenAI fallback, Slack configuration, Gmail configuration, encryption, and app URL status.
+Open `/health` in production to verify PostgreSQL, Redis, Anthropic, OpenAI fallback, Slack configuration, Gmail configuration, Teams configuration, encryption, and app URL status.
 
 ## Clerk email-only authentication
 

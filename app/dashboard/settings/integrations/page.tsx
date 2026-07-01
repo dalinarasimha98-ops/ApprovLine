@@ -64,6 +64,7 @@ const sections: IntegrationSection[] = [
         description: 'Capture decisions from Teams meetings, channels and chats',
         icon: 'T',
         iconClass: 'bg-indigo-50 text-indigo-600',
+        href: '/api/integrations/teams/install',
       },
       {
         key: 'whatsapp',
@@ -122,7 +123,7 @@ const sections: IntegrationSection[] = [
   },
 ];
 
-function oauthMessage(provider: 'Slack' | 'Gmail', status?: string, reason?: string) {
+function oauthMessage(provider: 'Slack' | 'Gmail' | 'Microsoft Teams', status?: string, reason?: string) {
   if (status === 'connected') {
     return {
       tone: 'success',
@@ -138,6 +139,7 @@ function oauthMessage(provider: 'Slack' | 'Gmail', status?: string, reason?: str
     invalid_oauth_state: `The ${provider} install session expired or did not match this organization. Start the install again.`,
     missing_workspace_token: `${provider} did not return a workspace token. Confirm scopes and OAuth settings.`,
     missing_google_account_profile: 'Google did not return an email profile. Confirm profile and email scopes are enabled.',
+    missing_microsoft_profile: 'Microsoft did not return an organizational user profile. Confirm Microsoft Graph User.Read permission is granted.',
   };
   return {
     tone: 'error',
@@ -225,6 +227,14 @@ function IntegrationTile({
                 </FormSubmitButton>
               </form>
             ) : null}
+            {card.key === 'teams' && connected ? (
+              <form action="/api/integrations/teams/sync" method="post">
+                <input type="hidden" name="integrationId" value={integration?.id ?? ''} />
+                <FormSubmitButton pendingText="Syncing Teams..." className="min-h-0 h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50">
+                  Sync now
+                </FormSubmitButton>
+              </form>
+            ) : null}
           </div>
         </div>
       </div>
@@ -246,7 +256,7 @@ function IntegrationTile({
 export default async function IntegrationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ slack?: string; gmail?: string; reason?: string }>;
+  searchParams: Promise<{ slack?: string; gmail?: string; teams?: string; reason?: string }>;
 }) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
@@ -277,6 +287,7 @@ export default async function IntegrationsPage({
   const integrationByProvider = new Map(integrations.map((item) => [item.provider, item]));
   const slackNotice = oauthMessage('Slack', query.slack, query.reason);
   const gmailNotice = oauthMessage('Gmail', query.gmail, query.reason);
+  const teamsNotice = oauthMessage('Microsoft Teams', query.teams, query.reason);
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-10 pb-10">
@@ -284,7 +295,7 @@ export default async function IntegrationsPage({
         <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2155d9]">Integrations</p>
         <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Connect approval sources</h2>
         <p className="mt-2 max-w-2xl text-base font-semibold leading-7 text-slate-500">
-          Choose where ApprovLine should capture decisions. Gmail and Slack are available now; the rest are staged for rollout.
+          Choose where ApprovLine should capture decisions. Slack, Gmail, and Microsoft Teams are available now; the rest are staged for rollout.
         </p>
       </div>
 
@@ -295,7 +306,7 @@ export default async function IntegrationsPage({
         </div>
       ) : null}
 
-      {[slackNotice, gmailNotice].filter(Boolean).map((notice) => (
+      {[slackNotice, gmailNotice, teamsNotice].filter(Boolean).map((notice) => (
         <div
           key={notice!.title}
           className={`rounded-2xl border p-4 shadow-sm ${
