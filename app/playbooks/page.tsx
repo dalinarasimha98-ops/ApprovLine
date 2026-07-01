@@ -4,6 +4,7 @@ import { PlaybookClient } from '@/components/playbooks/PlaybookClient';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
+import { getPlaybookComplianceInsights } from '@/services/playbooks';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,12 +18,20 @@ export default async function PlaybooksPage() {
         'playbooks documents',
         prisma.playbookDocument.findMany({
           where: { organizationId: tenant.organization.id },
-          include: { _count: { select: { chunks: true } } },
+          include: { _count: { select: { chunks: true, rules: true } } },
           orderBy: { uploadedAt: 'desc' },
         }),
         2500,
       ).catch(() => [])
     : [];
+
+  const insights = tenant.organization
+    ? await withTimeout(
+        'playbooks compliance insights',
+        getPlaybookComplianceInsights(tenant.organization.id),
+        2500,
+      ).catch(() => null)
+    : null;
 
   const recentQueries = tenant.organization
     ? await withTimeout(
@@ -38,7 +47,7 @@ export default async function PlaybooksPage() {
 
   return (
     <DashboardShell>
-      <PlaybookClient initialDocuments={documents} initialQueries={recentQueries} />
+      <PlaybookClient initialDocuments={documents} initialQueries={recentQueries} initialInsights={insights} />
     </DashboardShell>
   );
 }

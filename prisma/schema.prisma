@@ -78,7 +78,9 @@ model Organization {
   messageSources    MessageSource[]
   playbookDocuments PlaybookDocument[]
   playbookChunks    PlaybookChunk[]
+  playbookRules     PlaybookRule[]
   playbookQueries   PlaybookQuery[]
+  complianceEvaluations ApprovalComplianceEvaluation[]
   investigations    InvestigationCase[]
   investigationNotes InvestigationNote[]
 }
@@ -195,6 +197,7 @@ model ApprovalRecord {
   classifierResults  ClassifierResult[]
   auditLogs          AuditLog[]
   investigations     InvestigationApproval[]
+  complianceEvaluations ApprovalComplianceEvaluation[]
 
   @@index([organizationId, occurredAt])
   @@index([organizationId, department])
@@ -302,6 +305,7 @@ model PlaybookDocument {
   updatedAt      DateTime        @updatedAt
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   chunks         PlaybookChunk[]
+  rules          PlaybookRule[]
 
   @@index([organizationId, status, uploadedAt])
   @@index([organizationId, contentHash])
@@ -323,6 +327,58 @@ model PlaybookChunk {
 
   @@unique([documentId, chunkIndex])
   @@index([organizationId, documentId])
+}
+
+model PlaybookRule {
+  id                  String       @id @default(cuid())
+  organizationId      String
+  documentId          String
+  category            String
+  title               String
+  description         String
+  requiredApprovers   String[]
+  requiredDepartments String[]
+  escalationChain     String[]
+  spendingLimit       Int?
+  riskTriggers        String[]
+  evidenceRequired    String[]
+  severity            String       @default("medium")
+  sourceSection       String?
+  sourceExcerpt       String
+  createdAt           DateTime     @default(now())
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  document            PlaybookDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  evaluations         ApprovalComplianceEvaluation[]
+
+  @@index([organizationId, category])
+  @@index([organizationId, severity])
+  @@index([organizationId, documentId])
+}
+
+model ApprovalComplianceEvaluation {
+  id                   String          @id @default(cuid())
+  organizationId       String
+  approvalRecordId     String
+  ruleId               String?
+  status               String
+  score                Int
+  severity             String
+  missingApprovers     String[]
+  missingDepartments   String[]
+  missingEscalationSteps String[]
+  missingEvidence      String[]
+  triggeredRule        String?
+  explanation          String
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approvalRecord       ApprovalRecord  @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
+  rule                 PlaybookRule?   @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, severity])
+  @@index([approvalRecordId])
+  @@index([ruleId])
 }
 
 model PlaybookQuery {

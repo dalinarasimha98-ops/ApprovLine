@@ -27,13 +27,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Could not extract enough text from this document.' }, { status: 400 });
   }
 
+  const category = String(form.get('category') ?? '').trim();
   const document = await indexPlaybookDocument({
     organizationId: tenant.organization.id,
     ownerUserId: tenant.user?.id,
     name: file.name,
     fileType: extension,
     content,
+    category: category || undefined,
     metadata: {
+      category: category || undefined,
       originalSize: file.size,
       contentType: file.type || 'unknown',
     },

@@ -60,6 +60,7 @@ export async function GET(_: Request, { params }: ReportRouteProps) {
             include: {
               messageSource: true,
               auditLogs: { orderBy: { createdAt: 'asc' } },
+              complianceEvaluations: { include: { rule: true }, orderBy: { createdAt: 'desc' }, take: 2 },
             },
           },
         },
@@ -78,6 +79,7 @@ export async function GET(_: Request, { params }: ReportRouteProps) {
   const approvals = investigation.approvals.map((item) => item.approvalRecord);
   const summary = buildInvestigationSummary(approvals);
   const policyChecks = buildPolicyChecks(approvals);
+  const complianceEvaluations = approvals.flatMap((item) => item.complianceEvaluations);
   const timeline = approvals.flatMap(timelineForApproval).sort((left, right) => left.at.getTime() - right.at.getTime());
   const lines = [
     'ApprovLine Investigation Report',
@@ -95,7 +97,9 @@ export async function GET(_: Request, { params }: ReportRouteProps) {
     ...summary.policyApplies.map((item) => `- ${item}`),
     '',
     'Policy Assessment',
-    ...policyChecks.map((item) => `- ${item.policy}: ${item.status}. ${item.finding}`),
+    ...(complianceEvaluations.length
+      ? complianceEvaluations.map((item) => `- ${item.triggeredRule ?? item.rule?.title ?? 'Playbook rule'}: ${item.status} (${item.score}/100). ${item.explanation}`)
+      : policyChecks.map((item) => `- ${item.policy}: ${item.status}. ${item.finding}`)),
     '',
     'Evidence Timeline',
     ...timeline.slice(0, 12).map((item) => `- ${item.at.toISOString()} | ${item.type} | ${item.title}: ${item.body}`),
