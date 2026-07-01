@@ -17,6 +17,7 @@ type InvestigationsPageProps = {
     source?: string;
     risk?: string;
     approvalId?: string;
+    setup?: string;
   }>;
 };
 
@@ -69,7 +70,8 @@ async function createInvestigationAction(formData: FormData) {
     department: department || undefined,
     dateRangeStart: from ? new Date(from) : undefined,
     dateRangeEnd: to ? new Date(to) : undefined,
-  });
+  }).catch(() => null);
+  if (!investigation) redirect('/investigations?setup=required');
   redirect(`/investigations/${investigation.id}`);
 }
 
@@ -78,7 +80,8 @@ async function seedInvestigationsAction() {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (!tenant.organization) redirect('/onboarding');
-  await createDemoInvestigationsForOrganization(tenant.organization.id);
+  const result = await createDemoInvestigationsForOrganization(tenant.organization.id).catch(() => null);
+  if (!result) redirect('/investigations?setup=required');
   redirect('/investigations?demo=created');
 }
 
@@ -123,8 +126,15 @@ export default async function InvestigationsPage({ searchParams }: Investigation
     ...(filters.risk ? { riskLevel: filters.risk.toLowerCase() } : {}),
   };
 
-  const [metrics, investigations, riskyApprovals] = await Promise.all([
-    withTimeout('investigation metrics', getInvestigationMetrics(tenant.organization.id), 1200),
+  const [metrics, investigationsResult, riskyApprovals] = await Promise.all([
+    withTimeout('investigation metrics', getInvestigationMetrics(tenant.organization.id), 1200).catch(() => ({
+      openInvestigations: 0,
+      closedInvestigations: 0,
+      highRiskApprovals: 0,
+      missingApprovals: 0,
+      conditionalApprovals: 0,
+      approvalsWithoutEvidence: 0,
+    })),
     withTimeout(
       'investigation cases',
       prisma.investigationCase.findMany({
@@ -140,7 +150,10 @@ export default async function InvestigationsPage({ searchParams }: Investigation
         take: 20,
       }),
       1400,
-    ),
+    ).then((cases) => ({ cases, error: null as string | null })).catch((error) => ({
+      cases: [],
+      error: error instanceof Error ? error.message : 'Investigation database tables are not ready.',
+    })),
     withTimeout(
       'investigation risky approvals',
       prisma.approvalRecord.findMany({
@@ -150,8 +163,10 @@ export default async function InvestigationsPage({ searchParams }: Investigation
         take: 12,
       }),
       1400,
-    ),
+    ).catch(() => []),
   ]);
+  const investigations = investigationsResult.cases;
+  const setupWarning = filters.setup === 'required' || Boolean(investigationsResult.error);
 
   return (
     <DashboardShell>
@@ -182,6 +197,18 @@ export default async function InvestigationsPage({ searchParams }: Investigation
           <MetricCard label="Conditional approvals" value={metrics.conditionalApprovals} help="Conditions need verification." tone="amber" />
           <MetricCard label="No evidence" value={metrics.approvalsWithoutEvidence} help="Missing source proof." tone="rose" />
         </div>
+
+        {setupWarning ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-wide">Database migration required</p>
+            <h3 className="mt-2 text-lg font-black text-slate-950">Investigation tables are not ready yet</h3>
+            <p className="mt-2 text-sm leading-6">
+              The risk queue can still load from approval records, but creating and viewing investigation cases requires the latest Prisma migrations in production.
+            </p>
+            <p className="mt-3 rounded-xl bg-white/70 p-3 font-mono text-xs">Run once: npm run db:deploy</p>
+            {investigationsResult.error ? <p className="mt-2 text-xs font-semibold">Safe diagnostic: {investigationsResult.error.slice(0, 220)}</p> : null}
+          </div>
+        ) : null}
 
         <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-5">
           {[
