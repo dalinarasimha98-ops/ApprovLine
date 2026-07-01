@@ -173,6 +173,7 @@ export default async function InvestigationsPage({ searchParams }: Investigation
   ]);
   const investigations = investigationsResult.cases;
   const setupWarning = filters.setup === 'required' || isMigrationError(investigationsResult.error);
+  const casesReady = !setupWarning;
 
   return (
     <DashboardShell>
@@ -187,11 +188,17 @@ export default async function InvestigationsPage({ searchParams }: Investigation
             <PendingLink href="/analytics/drilldown/high-risk-approvals" pendingText="Opening risk KPI..." className="inline-flex h-10 items-center rounded-xl border border-white/10 bg-white/[0.08] px-4 text-sm font-black text-white">
               Review high-risk KPI
             </PendingLink>
-            <form action={seedInvestigationsAction}>
-              <FormSubmitButton pendingText="Creating demo cases..." className="min-h-0 h-10 rounded-xl bg-[#2155d9] px-4 text-sm font-black text-white shadow-sm shadow-blue-950/30">
-                Generate demo investigations
-              </FormSubmitButton>
-            </form>
+            {casesReady ? (
+              <form action={seedInvestigationsAction}>
+                <FormSubmitButton pendingText="Creating demo cases..." className="min-h-0 h-10 rounded-xl bg-[#2155d9] px-4 text-sm font-black text-white shadow-sm shadow-blue-950/30">
+                  Generate demo investigations
+                </FormSubmitButton>
+              </form>
+            ) : (
+              <button type="button" disabled className="h-10 rounded-xl bg-white/10 px-4 text-sm font-black text-white/70">
+                Demo cases unlock after migration
+              </button>
+            )}
           </div>
         </div>
 
@@ -205,11 +212,11 @@ export default async function InvestigationsPage({ searchParams }: Investigation
         </div>
 
         {setupWarning ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide">Database migration required</p>
-            <h3 className="mt-2 text-lg font-black text-slate-950">Investigation tables are not ready yet</h3>
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 text-blue-950 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-wide">Investigation case storage pending</p>
+            <h3 className="mt-2 text-lg font-black text-slate-950">Risk review is available now</h3>
             <p className="mt-2 text-sm leading-6">
-              The risk queue can still load from approval records, but creating and viewing investigation cases requires the latest Prisma migrations in production.
+              The risk queue can still load from approval records. Creating, saving, and viewing investigation cases will unlock after the latest Prisma migration is deployed once in production.
             </p>
             <p className="mt-3 rounded-xl bg-white/70 p-3 font-mono text-xs">Run once: npm run db:deploy</p>
             {investigationsResult.error ? <p className="mt-2 text-xs font-semibold">Safe diagnostic: {investigationsResult.error.slice(0, 220)}</p> : null}
@@ -279,17 +286,27 @@ export default async function InvestigationsPage({ searchParams }: Investigation
                   ))
                 )}
               </div>
-              <FormSubmitButton pendingText="Creating case..." className="min-h-0 h-11 rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200">
-                Create Investigation Case
-              </FormSubmitButton>
+              {casesReady ? (
+                <FormSubmitButton pendingText="Creating case..." className="min-h-0 h-11 rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200">
+                  Create Investigation Case
+                </FormSubmitButton>
+              ) : (
+                <button type="button" disabled className="h-11 rounded-lg bg-slate-100 px-5 text-sm font-bold text-slate-500">
+                  Case creation pending migration
+                </button>
+              )}
             </div>
           </form>
 
           <div className="grid gap-4">
             {investigations.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50/60 p-8 text-center shadow-sm">
-                <h3 className="text-lg font-black text-slate-950">No investigation cases yet</h3>
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">Create a case from risky approvals or generate demo investigations to show the full customer workflow.</p>
+                <h3 className="text-lg font-black text-slate-950">{casesReady ? 'No investigation cases yet' : 'Investigation cases pending'}</h3>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+                  {casesReady
+                    ? 'Create a case from risky approvals or generate demo investigations to show the full customer workflow.'
+                    : 'Risk approvals are still visible on this page. Saved case history will appear here after the production migration creates the investigation tables.'}
+                </p>
               </div>
             ) : (
               investigations.map((item) => {
