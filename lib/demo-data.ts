@@ -14,7 +14,7 @@ type DemoApproval = {
   businessImpact: string;
   approverName: string;
   approverEmail: string;
-  sourcePlatform: 'slack' | 'gmail';
+  sourcePlatform: 'slack' | 'gmail' | 'teams';
   provider: IntegrationProvider;
   channel: string;
   sourceLink: string;
@@ -132,6 +132,26 @@ const demoApprovals: DemoApproval[] = [
     receivedHoursAgo: 18,
   },
   {
+    subject: 'EU data processing addendum approval',
+    department: 'Legal',
+    category: 'Legal',
+    approvalType: 'EXPLICIT',
+    status: 'APPROVED',
+    confidence: 95,
+    riskLevel: 'high',
+    businessImpact: 'Allows enterprise customer contract execution with GDPR evidence retained.',
+    approverName: 'Nora Ellis',
+    approverEmail: 'nora.ellis@acme.example',
+    sourcePlatform: 'teams',
+    provider: 'MICROSOFT_TEAMS',
+    channel: 'Legal Review / Customer Contracts',
+    sourceLink: 'https://teams.microsoft.com/l/message/demo-legal-channel/demo-teams-legal-dpa?groupId=TDEMO-TEAMS',
+    externalId: 'demo-teams-legal-dpa',
+    evidenceSnippet: 'Approved from Legal. The EU DPA language is acceptable for signature.',
+    reasoning: 'Explicit Legal approval captured from a Teams channel with contract context.',
+    receivedHoursAgo: 20,
+  },
+  {
     subject: 'GDPR retention policy update',
     department: 'Compliance',
     category: 'Compliance',
@@ -191,6 +211,27 @@ const demoApprovals: DemoApproval[] = [
     reasoning: 'Direct rejection of a compliance-sensitive data export request.',
     conditions: 'Legal basis and customer request ID must be documented before approval.',
     receivedHoursAgo: 36,
+  },
+  {
+    subject: 'Vendor security questionnaire exception',
+    department: 'Security',
+    category: 'Security',
+    approvalType: 'CONDITIONAL',
+    status: 'PENDING_REVIEW',
+    confidence: 91,
+    riskLevel: 'critical',
+    businessImpact: 'Allows vendor onboarding only if missing security evidence is received.',
+    approverName: 'Victor Lane',
+    approverEmail: 'victor.lane@acme.example',
+    sourcePlatform: 'teams',
+    provider: 'MICROSOFT_TEAMS',
+    channel: 'Security Council / Vendor Risk',
+    sourceLink: 'https://teams.microsoft.com/l/message/demo-security-channel/demo-teams-security-exception?groupId=TDEMO-TEAMS',
+    externalId: 'demo-teams-security-exception',
+    evidenceSnippet: 'Approved only if the updated penetration test summary is attached before go-live.',
+    reasoning: 'Conditional security approval with missing evidence requirement and high business risk.',
+    conditions: 'Updated penetration test summary must be attached before go-live.',
+    receivedHoursAgo: 42,
   },
 ];
 
@@ -252,10 +293,54 @@ export async function createDemoDataForOrganization(organizationId: string) {
       metadata: demoMetadata({ account: 'approvals@acme.example', health: 'healthy', emailsProcessed: 32, approvalsFound: 4 }),
     },
   });
+  const teamsIntegration = await prisma.integration.upsert({
+    where: {
+      organizationId_provider_externalAccount: {
+        organizationId,
+        provider: 'MICROSOFT_TEAMS',
+        externalAccount: 'Acme Demo Microsoft 365',
+      },
+    },
+    update: {
+      status: 'CONNECTED',
+      scopes: ['offline_access', 'User.Read', 'Team.ReadBasic.All', 'Channel.ReadBasic.All', 'ChannelMessage.Read.All'],
+      metadata: demoMetadata({
+        tenantId: 'TDEMO-TEAMS',
+        workspace: 'Acme Demo Microsoft 365',
+        health: 'healthy',
+        teamsProcessed: 4,
+        channelsProcessed: 12,
+        messagesProcessed: 27,
+        approvalsFound: 2,
+      }),
+    },
+    create: {
+      organizationId,
+      provider: 'MICROSOFT_TEAMS',
+      status: 'CONNECTED',
+      externalAccount: 'Acme Demo Microsoft 365',
+      scopes: ['offline_access', 'User.Read', 'Team.ReadBasic.All', 'Channel.ReadBasic.All', 'ChannelMessage.Read.All'],
+      metadata: demoMetadata({
+        tenantId: 'TDEMO-TEAMS',
+        workspace: 'Acme Demo Microsoft 365',
+        health: 'healthy',
+        teamsProcessed: 4,
+        channelsProcessed: 12,
+        messagesProcessed: 27,
+        approvalsFound: 2,
+      }),
+    },
+  });
 
   for (const [index, item] of demoApprovals.entries()) {
     const receivedAt = new Date(Date.now() - item.receivedHoursAgo * 60 * 60 * 1000);
-    const integrationId = item.provider === 'SLACK' ? slackIntegration.id : gmailIntegration.id;
+    const integrationByProvider = {
+      SLACK: slackIntegration.id,
+      GMAIL: gmailIntegration.id,
+      MICROSOFT_TEAMS: teamsIntegration.id,
+      ZOOM: undefined,
+    } satisfies Partial<Record<IntegrationProvider, string | undefined>>;
+    const integrationId = integrationByProvider[item.provider];
 
     const messageSource = await prisma.messageSource.create({
       data: {
@@ -365,7 +450,7 @@ export async function createDemoDataForOrganization(organizationId: string) {
       action: 'demo.workspace.generated',
       metadata: demoMetadata({
         approvalCount: created.length,
-        journey: 'Slack/Gmail message -> approval detected -> timeline -> audit log -> CSV/PDF export',
+        journey: 'Slack/Gmail/Teams message -> approval detected -> timeline -> audit log -> CSV/PDF export',
       }),
     },
   });

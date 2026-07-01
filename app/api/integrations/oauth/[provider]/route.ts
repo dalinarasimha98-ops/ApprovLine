@@ -17,6 +17,12 @@ export async function GET(
   if (provider === 'slack') {
     return NextResponse.redirect(new URL('/api/integrations/slack/install', request.url));
   }
+  if (provider === 'gmail') {
+    return NextResponse.redirect(new URL('/api/integrations/gmail/install', request.url));
+  }
+  if (provider === 'teams') {
+    return NextResponse.redirect(new URL('/api/integrations/teams/install', request.url));
+  }
 
   const target = providerUrls[provider];
   if (!target) return NextResponse.json({ error: 'Unsupported provider' }, { status: 404 });
