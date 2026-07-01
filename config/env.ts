@@ -23,6 +23,7 @@ const envSchema = z.object({
   GMAIL_SYNC_INTERVAL_MINUTES: optionalEnvString,
   MICROSOFT_CLIENT_ID: optionalEnvString,
   MICROSOFT_CLIENT_SECRET: optionalEnvString,
+  MICROSOFT_TENANT_ID: optionalEnvString,
   ZOOM_CLIENT_ID: optionalEnvString,
   ZOOM_CLIENT_SECRET: optionalEnvString,
 });

@@ -31,6 +31,7 @@ export async function GET() {
       GOOGLE_CLIENT_SECRET: configured(env.GOOGLE_CLIENT_SECRET),
       MICROSOFT_CLIENT_ID: configured(env.MICROSOFT_CLIENT_ID),
       MICROSOFT_CLIENT_SECRET: configured(env.MICROSOFT_CLIENT_SECRET),
+      MICROSOFT_TENANT_ID: configured(env.MICROSOFT_TENANT_ID),
     },
   });
 }

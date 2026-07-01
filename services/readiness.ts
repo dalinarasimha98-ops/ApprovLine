@@ -50,6 +50,9 @@ export async function buildReadinessReport() {
     googleClientSecret: envCheck('GOOGLE_CLIENT_SECRET', 'Google client secret'),
     microsoftClientId: envCheck('MICROSOFT_CLIENT_ID', 'Microsoft client ID'),
     microsoftClientSecret: envCheck('MICROSOFT_CLIENT_SECRET', 'Microsoft client secret'),
+    microsoftTenantId: env.MICROSOFT_TENANT_ID
+      ? { status: 'ok' as const, message: 'Microsoft tenant ID configured' }
+      : { status: 'missing' as const, message: 'MICROSOFT_TENANT_ID missing; Teams OAuth will use organizations endpoint' },
     gmailSyncInterval: env.GMAIL_SYNC_INTERVAL_MINUTES
       ? { status: 'ok' as const, message: `Gmail sync interval ${env.GMAIL_SYNC_INTERVAL_MINUTES} minutes` }
       : { status: 'missing' as const, message: 'GMAIL_SYNC_INTERVAL_MINUTES missing; defaults to 15 minutes' },

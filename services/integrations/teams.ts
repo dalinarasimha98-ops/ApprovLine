@@ -117,12 +117,20 @@ export function teamsRedirectUri(requestUrl: string) {
   return new URL('/api/integrations/teams/callback', base).toString();
 }
 
+function microsoftTenantSegment() {
+  return env.MICROSOFT_TENANT_ID ?? 'organizations';
+}
+
+function microsoftOAuthUrl(path: 'authorize' | 'token') {
+  return `https://login.microsoftonline.com/${encodeURIComponent(microsoftTenantSegment())}/oauth2/v2.0/${path}`;
+}
+
 export function buildTeamsInstallUrl(input: { requestUrl: string; state: string }) {
   if (!env.MICROSOFT_CLIENT_ID) {
     throw new Error('MICROSOFT_CLIENT_ID is not configured');
   }
 
-  const url = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
+  const url = new URL(microsoftOAuthUrl('authorize'));
   url.searchParams.set('client_id', env.MICROSOFT_CLIENT_ID);
   url.searchParams.set('redirect_uri', teamsRedirectUri(input.requestUrl));
   url.searchParams.set('response_type', 'code');
@@ -138,7 +146,7 @@ export async function exchangeTeamsOAuthCode(input: { code: string; requestUrl: 
     throw new Error('Microsoft OAuth client credentials are not configured');
   }
 
-  const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+  const response = await fetch(microsoftOAuthUrl('token'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -207,7 +215,7 @@ export async function refreshTeamsAccessToken(integration: Pick<Integration, 'id
     throw new Error('Microsoft OAuth client credentials are not configured');
   }
 
-  const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+  const response = await fetch(microsoftOAuthUrl('token'), {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
