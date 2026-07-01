@@ -6,6 +6,10 @@ import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
+function isQueryTimeout(message: string) {
+  return message.toLowerCase().includes('timed out');
+}
+
 function badgeClass(action: string) {
   if (action.includes('error') || action.includes('failed')) return 'bg-rose-50 text-rose-700 border-rose-100';
   if (action.includes('demo')) return 'bg-blue-50 text-[#2155d9] border-blue-100';
@@ -16,11 +20,12 @@ function badgeClass(action: string) {
 export default async function AuditPage() {
   const startedAt = Date.now();
   console.info('[dashboard] audit page start load');
-  const tenant = await getDashboardTenant(1500);
+  const tenant = await getDashboardTenant(3000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   let logs: Awaited<ReturnType<typeof prisma.auditLog.findMany>> = [];
   let loadError: string | null = null;
+  let loadNotice: string | null = null;
 
   try {
     if (!tenant.organization) throw new Error(tenant.error ?? 'Workspace unavailable.');
@@ -32,11 +37,16 @@ export default async function AuditPage() {
         orderBy: { createdAt: 'desc' },
         take: 50,
       }),
-      1500,
+      5000,
     );
     console.info(`[dashboard] audit logs query finished in ${Date.now() - startedAt}ms`);
   } catch (error) {
-    loadError = error instanceof Error ? error.message : 'Unable to load audit logs.';
+    const message = error instanceof Error ? error.message : 'Unable to load audit logs.';
+    if (isQueryTimeout(message)) {
+      loadNotice = 'Audit logs are taking longer than expected. The page is available now, and you can retry while the database warms up.';
+    } else {
+      loadError = message;
+    }
     console.error(`[dashboard] audit logs query failed after ${Date.now() - startedAt}ms`, error);
   }
 
@@ -53,10 +63,19 @@ export default async function AuditPage() {
         </PendingLink>
       </div>
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+        {loadNotice ? (
+          <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-5 text-blue-950">
+            <h3 className="font-black">Audit history is still warming up</h3>
+            <p className="mt-1 text-sm leading-6">{loadNotice}</p>
+            <PendingLink href="/dashboard/audit" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white">
+              Retry
+            </PendingLink>
+          </div>
+        ) : null}
         {loadError ? (
           <div className="rounded-xl border border-amber-100 bg-amber-50 p-5 text-amber-900">
             <h3 className="font-black">Unable to load audit logs</h3>
-            <p className="mt-1 text-sm">The dashboard stopped waiting so this page can still render safely.</p>
+            <p className="mt-1 text-sm">The audit log query returned an error. The rest of the dashboard remains available.</p>
             <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs font-semibold">{loadError}</p>
             <PendingLink href="/dashboard/audit" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white">
               Retry
