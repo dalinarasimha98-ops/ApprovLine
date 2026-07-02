@@ -1,6 +1,44 @@
 import type { IntegrationProvider, Prisma, Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
+const pilotAuditActions = [
+  'pilot.invite.created',
+  'pilot.feedback.submitted',
+  'pilot.issue.reported',
+  'pilot.feature_flag.updated',
+  'pilot.demo_workspace.generated',
+  'pilot.demo_workspace.reset',
+  'pilot.integration.disconnect_confirmed',
+] as const;
+
+type PilotInviteView = {
+  id: string;
+  email: string;
+  role: Role;
+  status: string;
+  invitedAt: Date;
+};
+
+type PilotFlagView = {
+  id: string;
+  organizationId?: string;
+  key: string;
+  enabled: boolean;
+  description: string | null;
+  updatedByUserId?: string | null;
+  metadata?: Prisma.JsonValue;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+type PilotActivityView = {
+  id: string;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  createdAt: Date;
+};
+
 export const pilotFeatureFlags = [
   {
     key: 'demo_mode',
@@ -75,16 +113,33 @@ export async function logPilotActivity(input: {
   entityId?: string | null;
   metadata?: Prisma.InputJsonValue;
 }) {
-  return prisma.pilotActivityLog.create({
-    data: {
-      organizationId: input.organizationId,
-      actorUserId: input.actorUserId ?? null,
-      action: input.action,
-      entityType: input.entityType ?? null,
-      entityId: input.entityId ?? null,
-      metadata: input.metadata ?? {},
-    },
-  });
+  try {
+    return await prisma.pilotActivityLog.create({
+      data: {
+        organizationId: input.organizationId,
+        actorUserId: input.actorUserId ?? null,
+        action: input.action,
+        entityType: input.entityType ?? null,
+        entityId: input.entityId ?? null,
+        metadata: input.metadata ?? {},
+      },
+    });
+  } catch (error) {
+    if (!isMissingPilotTableError(error)) throw error;
+    return prisma.auditLog.create({
+      data: {
+        organizationId: input.organizationId,
+        actorUserId: input.actorUserId ?? null,
+        action: input.action,
+        metadata: {
+          ...inputMetadata(input.metadata),
+          pilotFallback: true,
+          entityType: input.entityType ?? null,
+          entityId: input.entityId ?? null,
+        },
+      },
+    });
+  }
 }
 
 export async function createPilotInvite(input: {
@@ -93,15 +148,27 @@ export async function createPilotInvite(input: {
   email: string;
   role: Role;
 }) {
-  const invite = await prisma.pilotInvite.create({
-    data: {
-      organizationId: input.organizationId,
-      inviterUserId: input.inviterUserId ?? null,
+  let invite: PilotInviteView;
+  try {
+    invite = await prisma.pilotInvite.create({
+      data: {
+        organizationId: input.organizationId,
+        inviterUserId: input.inviterUserId ?? null,
+        email: input.email,
+        role: input.role,
+        metadata: { betaInvite: true, emailDelivery: 'manual' },
+      },
+    });
+  } catch (error) {
+    if (!isMissingPilotTableError(error)) throw error;
+    invite = {
+      id: `pilot-invite-${Date.now()}`,
       email: input.email,
       role: input.role,
-      metadata: { betaInvite: true, emailDelivery: 'manual' },
-    },
-  });
+      status: 'pending',
+      invitedAt: new Date(),
+    };
+  }
   await logPilotActivity({
     organizationId: input.organizationId,
     actorUserId: input.inviterUserId,
@@ -122,17 +189,23 @@ export async function createPilotFeedback(input: {
   pageUrl?: string | null;
   screenshot?: Prisma.InputJsonValue;
 }) {
-  const feedback = await prisma.pilotFeedback.create({
-    data: {
-      organizationId: input.organizationId,
-      userId: input.userId ?? null,
-      type: input.type,
-      title: input.title,
-      body: input.body,
-      pageUrl: input.pageUrl ?? null,
-      screenshot: input.screenshot ?? undefined,
-    },
-  });
+  let feedback: { id: string };
+  try {
+    feedback = await prisma.pilotFeedback.create({
+      data: {
+        organizationId: input.organizationId,
+        userId: input.userId ?? null,
+        type: input.type,
+        title: input.title,
+        body: input.body,
+        pageUrl: input.pageUrl ?? null,
+        screenshot: input.screenshot ?? undefined,
+      },
+    });
+  } catch (error) {
+    if (!isMissingPilotTableError(error)) throw error;
+    feedback = { id: `pilot-feedback-${Date.now()}` };
+  }
   await logPilotActivity({
     organizationId: input.organizationId,
     actorUserId: input.userId,
@@ -152,22 +225,38 @@ export async function setPilotFeatureFlag(input: {
 }) {
   const known = pilotFeatureFlags.find((flag) => flag.key === input.key);
   if (!known) throw new Error('Unknown feature flag.');
-  const flag = await prisma.featureFlag.upsert({
-    where: { organizationId_key: { organizationId: input.organizationId, key: input.key } },
-    update: {
-      enabled: input.enabled,
-      updatedByUserId: input.userId ?? null,
-      description: known.description,
-    },
-    create: {
+  let flag: PilotFlagView;
+  try {
+    flag = await prisma.featureFlag.upsert({
+      where: { organizationId_key: { organizationId: input.organizationId, key: input.key } },
+      update: {
+        enabled: input.enabled,
+        updatedByUserId: input.userId ?? null,
+        description: known.description,
+      },
+      create: {
+        organizationId: input.organizationId,
+        key: input.key,
+        enabled: input.enabled,
+        description: known.description,
+        updatedByUserId: input.userId ?? null,
+        metadata: { pilotManaged: true },
+      },
+    });
+  } catch (error) {
+    if (!isMissingPilotTableError(error)) throw error;
+    flag = {
+      id: input.key,
       organizationId: input.organizationId,
       key: input.key,
       enabled: input.enabled,
       description: known.description,
       updatedByUserId: input.userId ?? null,
-      metadata: { pilotManaged: true },
-    },
-  });
+      metadata: { pilotManaged: true, auditLogFallback: true },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
   await logPilotActivity({
     organizationId: input.organizationId,
     actorUserId: input.userId,
@@ -200,12 +289,30 @@ function safeErrorMessage(error: unknown) {
   return String(error).slice(0, 220);
 }
 
-function fallbackFlags(organizationId: string) {
+function inputMetadata(value: Prisma.InputJsonValue | undefined): Record<string, Prisma.InputJsonValue> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, Prisma.InputJsonValue>;
+}
+
+function objectMetadata(value: Prisma.JsonValue | null | undefined): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function fallbackFlags(organizationId: string, activityLogs: PilotActivityView[] = []): PilotFlagView[] {
+  const latestFlagState = new Map<string, boolean>();
+  for (const log of activityLogs) {
+    if (log.action !== 'pilot.feature_flag.updated') continue;
+    const metadata = objectMetadata((log as PilotActivityView & { metadata?: Prisma.JsonValue }).metadata);
+    const key = typeof metadata.key === 'string' ? metadata.key : null;
+    const enabled = typeof metadata.enabled === 'boolean' ? metadata.enabled : null;
+    if (key && enabled !== null && !latestFlagState.has(key)) latestFlagState.set(key, enabled);
+  }
   return pilotFeatureFlags.map((flag) => ({
     id: flag.key,
     organizationId,
     key: flag.key,
-    enabled: flag.defaultEnabled,
+    enabled: latestFlagState.get(flag.key) ?? flag.defaultEnabled,
     description: flag.description,
     updatedByUserId: null,
     metadata: { pilotManaged: true, pendingMigration: true },
@@ -225,8 +332,53 @@ async function pilotTablesReady() {
   return ['FeatureFlag', 'PilotInvite', 'PilotFeedback', 'PilotActivityLog'].every((name) => names.has(name));
 }
 
+async function getFallbackPilotLogs(organizationId: string) {
+  return prisma.auditLog.findMany({
+    where: {
+      organizationId,
+      action: { in: [...pilotAuditActions] },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 24,
+  });
+}
+
+function fallbackInvitesFromAuditLogs(logs: Awaited<ReturnType<typeof getFallbackPilotLogs>>): PilotInviteView[] {
+  return logs
+    .filter((log) => log.action === 'pilot.invite.created')
+    .map((log) => {
+      const metadata = objectMetadata(log.metadata);
+      const role = typeof metadata.role === 'string' && ['ADMIN', 'MANAGER', 'EMPLOYEE', 'COMPLIANCE_OFFICER'].includes(metadata.role)
+        ? metadata.role as Role
+        : 'EMPLOYEE';
+      return {
+        id: log.id,
+        email: typeof metadata.email === 'string' ? metadata.email : 'beta-user@example.com',
+        role,
+        status: 'pending',
+        invitedAt: log.createdAt,
+      };
+    })
+    .slice(0, 8);
+}
+
+function fallbackActivityFromAuditLogs(logs: Awaited<ReturnType<typeof getFallbackPilotLogs>>): Array<PilotActivityView & { metadata?: Prisma.JsonValue }> {
+  return logs.map((log) => {
+    const metadata = objectMetadata(log.metadata);
+    return {
+      id: log.id,
+      action: log.action,
+      entityType: typeof metadata.entityType === 'string' ? metadata.entityType : 'PilotActivity',
+      entityId: typeof metadata.entityId === 'string' ? metadata.entityId : log.approvalRecordId,
+      createdAt: log.createdAt,
+      metadata: log.metadata,
+    };
+  });
+}
+
 export async function buildPilotReadiness(organizationId: string) {
   let migrationRequired = false;
+  let storageFallback = false;
   let degraded = false;
   let safeError: string | null = null;
   let users = 0;
@@ -234,9 +386,9 @@ export async function buildPilotReadiness(organizationId: string) {
   let approvalsCaptured = 0;
   let openErrors = 0;
   let feedbackSubmitted = 0;
-  let invites: Awaited<ReturnType<typeof prisma.pilotInvite.findMany>> = [];
-  let flags: Awaited<ReturnType<typeof prisma.featureFlag.findMany>> = [];
-  let activityLogs: Awaited<ReturnType<typeof prisma.pilotActivityLog.findMany>> = [];
+  let invites: PilotInviteView[] = [];
+  let flags: PilotFlagView[] = [];
+  let activityLogs: PilotActivityView[] = [];
 
   try {
     const tablesReady = await pilotTablesReady();
@@ -262,26 +414,37 @@ export async function buildPilotReadiness(organizationId: string) {
         prisma.pilotActivityLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 12 }),
       ]);
     } else {
-      migrationRequired = true;
+      storageFallback = true;
+      const fallbackLogsPromise = getFallbackPilotLogs(organizationId);
       [users, integrations, approvalsCaptured, openErrors] = await Promise.all([
         prisma.user.count({ where: { organizationId } }),
         prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
         prisma.approvalRecord.count({ where: { organizationId } }),
         prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
       ]);
-      flags = fallbackFlags(organizationId);
+      const fallbackLogs = await fallbackLogsPromise;
+      feedbackSubmitted = fallbackLogs.filter((log) => log.action === 'pilot.feedback.submitted' || log.action === 'pilot.issue.reported').length;
+      invites = fallbackInvitesFromAuditLogs(fallbackLogs);
+      activityLogs = fallbackActivityFromAuditLogs(fallbackLogs);
+      flags = fallbackFlags(organizationId, activityLogs);
     }
   } catch (error) {
     degraded = !isMissingPilotTableError(error);
-    migrationRequired = true;
+    storageFallback = isMissingPilotTableError(error);
+    migrationRequired = false;
     safeError = safeErrorMessage(error);
     try {
+      const fallbackLogsPromise = getFallbackPilotLogs(organizationId).catch(() => []);
       [users, integrations, approvalsCaptured, openErrors] = await Promise.all([
         prisma.user.count({ where: { organizationId } }),
         prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
         prisma.approvalRecord.count({ where: { organizationId } }),
         prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
       ]);
+      const fallbackLogs = await fallbackLogsPromise;
+      feedbackSubmitted = fallbackLogs.filter((log) => log.action === 'pilot.feedback.submitted' || log.action === 'pilot.issue.reported').length;
+      invites = fallbackInvitesFromAuditLogs(fallbackLogs);
+      activityLogs = fallbackActivityFromAuditLogs(fallbackLogs);
     } catch (coreError) {
       degraded = true;
       safeError = safeErrorMessage(coreError);
@@ -290,7 +453,7 @@ export async function buildPilotReadiness(organizationId: string) {
       approvalsCaptured = 0;
       openErrors = 0;
     }
-    flags = fallbackFlags(organizationId);
+    flags = fallbackFlags(organizationId, activityLogs);
   }
 
   const connected = new Set(integrations.filter((item) => item.status === 'CONNECTED' || item.status === 'SYNCING').map((item) => item.provider));
@@ -318,6 +481,7 @@ export async function buildPilotReadiness(organizationId: string) {
     flags,
     activityLogs,
     migrationRequired,
+    storageFallback,
     degraded,
     safeError,
   };
