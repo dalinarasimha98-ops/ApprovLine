@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
 import { createDemoDataForOrganization } from '@/lib/demo-data';
+import { logPilotActivity } from '@/services/pilot';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,13 @@ export async function POST(request: Request) {
 
   try {
     await createDemoDataForOrganization(tenant.organization.id);
+    await logPilotActivity({
+      organizationId: tenant.organization.id,
+      actorUserId: tenant.user?.id,
+      action: 'pilot.demo_workspace.generated',
+      entityType: 'DemoWorkspace',
+      metadata: { demoOnly: true },
+    });
     return NextResponse.redirect(new URL('/dashboard/approvals?demo=created', request.url));
   } catch (error) {
     const url = new URL('/dashboard?demo=error', request.url);

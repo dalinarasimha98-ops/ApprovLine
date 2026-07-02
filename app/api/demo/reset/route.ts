@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
 import { resetDemoDataForOrganization } from '@/lib/demo-data';
+import { logPilotActivity } from '@/services/pilot';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,13 @@ export async function POST(request: Request) {
 
   try {
     await resetDemoDataForOrganization(tenant.organization.id);
+    await logPilotActivity({
+      organizationId: tenant.organization.id,
+      actorUserId: tenant.user?.id,
+      action: 'pilot.demo_workspace.reset',
+      entityType: 'DemoWorkspace',
+      metadata: { demoOnly: true, realDataPreserved: true },
+    });
     return NextResponse.redirect(new URL('/dashboard?demo=reset', request.url));
   } catch (error) {
     const url = new URL('/dashboard?demo=error', request.url);
