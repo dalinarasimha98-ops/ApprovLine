@@ -133,7 +133,40 @@ export default async function PilotReadinessPage({
 
   const query = await searchParams;
   const notice = queryNotice(query.pilot);
-  const readiness = await buildPilotReadiness(tenant.organization.id);
+  const readiness = await buildPilotReadiness(tenant.organization.id).catch((error) => {
+    console.error('[pilot] failed to build readiness payload', error);
+    return {
+      metrics: {
+        activeUsers: 0,
+        connectedIntegrations: 0,
+        approvalsCaptured: 0,
+        errors: 0,
+        feedbackSubmitted: 0,
+      },
+      integrations: [],
+      checklist: [
+        { key: 'connect_slack', label: 'Connect Slack', href: '/dashboard/settings/integrations', provider: 'SLACK' as const, complete: false },
+        { key: 'connect_gmail', label: 'Connect Gmail', href: '/dashboard/settings/integrations', provider: 'GMAIL' as const, complete: false },
+        { key: 'connect_teams', label: 'Connect Microsoft Teams', href: '/dashboard/settings/integrations', provider: 'MICROSOFT_TEAMS' as const, complete: false },
+        { key: 'connect_jira', label: 'Connect Jira', href: '/dashboard/settings/integrations', provider: 'JIRA' as const, complete: false },
+        { key: 'upload_playbook', label: 'Upload first playbook', href: '/playbooks', complete: false },
+        { key: 'audit_report', label: 'Generate first audit report', href: '/dashboard/export', complete: false },
+      ],
+      invites: [],
+      flags: [
+        { id: 'demo_mode', key: 'demo_mode', enabled: true, description: 'Allow clearly marked sample data and demo previews for sales calls.' },
+        { id: 'beta_features', key: 'beta_features', enabled: true, description: 'Show pilot-only surfaces such as investigations, Playbook AI, and ROI drilldowns.' },
+        { id: 'slack_connector', key: 'slack_connector', enabled: true, description: 'Enable Slack OAuth, event ingestion, and sync controls.' },
+        { id: 'gmail_connector', key: 'gmail_connector', enabled: true, description: 'Enable Gmail OAuth and approval-thread sync.' },
+        { id: 'teams_connector', key: 'teams_connector', enabled: true, description: 'Enable Microsoft Teams OAuth and read-only sync.' },
+        { id: 'jira_connector', key: 'jira_connector', enabled: true, description: 'Enable Jira OAuth and issue evidence sync.' },
+      ],
+      activityLogs: [],
+      migrationRequired: true,
+      degraded: true,
+      safeError: error instanceof Error ? error.message.slice(0, 220) : 'Pilot readiness payload failed to load.',
+    };
+  });
   const checklistComplete = readiness.checklist.filter((item) => item.complete).length;
 
   return (
@@ -168,6 +201,16 @@ export default async function PilotReadinessPage({
             Core workspace metrics are still visible. Invites, feedback, issue reports, feature flag changes, and activity logs require the latest Prisma migration in production.
           </p>
           <code className="mt-4 block rounded-xl bg-white/75 px-4 py-3 text-sm font-black text-amber-950">Run once: npm run db:deploy</code>
+        </div>
+      ) : null}
+
+      {readiness.degraded ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-950 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide">Pilot diagnostics</p>
+          <h3 className="mt-2 text-xl font-black text-slate-950">Pilot mode is running in safe fallback</h3>
+          <p className="mt-2 text-sm font-semibold leading-6">
+            The dashboard is intentionally staying online while production finishes database readiness. Safe diagnostic: {readiness.safeError ?? 'pilot readiness fallback active'}
+          </p>
         </div>
       ) : null}
 
