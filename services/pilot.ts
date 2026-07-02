@@ -237,7 +237,6 @@ export async function buildPilotReadiness(organizationId: string) {
   let invites: Awaited<ReturnType<typeof prisma.pilotInvite.findMany>> = [];
   let flags: Awaited<ReturnType<typeof prisma.featureFlag.findMany>> = [];
   let activityLogs: Awaited<ReturnType<typeof prisma.pilotActivityLog.findMany>> = [];
-  let playbooks = 0;
 
   try {
     const tablesReady = await pilotTablesReady();
@@ -252,7 +251,6 @@ export async function buildPilotReadiness(organizationId: string) {
         invites,
         flags,
         activityLogs,
-        playbooks,
       ] = await Promise.all([
         prisma.user.count({ where: { organizationId } }),
         prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
@@ -262,16 +260,14 @@ export async function buildPilotReadiness(organizationId: string) {
         prisma.pilotInvite.findMany({ where: { organizationId }, orderBy: { invitedAt: 'desc' }, take: 8 }),
         prisma.featureFlag.findMany({ where: { organizationId }, orderBy: { key: 'asc' } }),
         prisma.pilotActivityLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 12 }),
-        prisma.playbookDocument.count({ where: { organizationId } }),
       ]);
     } else {
       migrationRequired = true;
-      [users, integrations, approvalsCaptured, openErrors, playbooks] = await Promise.all([
+      [users, integrations, approvalsCaptured, openErrors] = await Promise.all([
         prisma.user.count({ where: { organizationId } }),
         prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
         prisma.approvalRecord.count({ where: { organizationId } }),
         prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
-        prisma.playbookDocument.count({ where: { organizationId } }),
       ]);
       flags = fallbackFlags(organizationId);
     }
@@ -280,12 +276,11 @@ export async function buildPilotReadiness(organizationId: string) {
     migrationRequired = true;
     safeError = safeErrorMessage(error);
     try {
-      [users, integrations, approvalsCaptured, openErrors, playbooks] = await Promise.all([
+      [users, integrations, approvalsCaptured, openErrors] = await Promise.all([
         prisma.user.count({ where: { organizationId } }),
         prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
         prisma.approvalRecord.count({ where: { organizationId } }),
         prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
-        prisma.playbookDocument.count({ where: { organizationId } }),
       ]);
     } catch (coreError) {
       degraded = true;
@@ -294,7 +289,6 @@ export async function buildPilotReadiness(organizationId: string) {
       integrations = [];
       approvalsCaptured = 0;
       openErrors = 0;
-      playbooks = 0;
     }
     flags = fallbackFlags(organizationId);
   }
@@ -305,7 +299,7 @@ export async function buildPilotReadiness(organizationId: string) {
     if (item.provider) {
       return { ...item, complete: connected.has(item.provider) };
     }
-    if (item.key === 'upload_playbook') return { ...item, complete: playbooks > 0 };
+    if (item.key === 'upload_playbook') return { ...item, complete: false };
     if (item.key === 'audit_report') return { ...item, complete: approvalsCaptured > 0 };
     return { ...item, complete: false };
   });
