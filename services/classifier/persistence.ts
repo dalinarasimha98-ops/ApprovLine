@@ -33,6 +33,8 @@ function toIntegrationProvider(source?: string | null): IntegrationProvider | nu
     googlemail: 'GMAIL',
     teams: 'MICROSOFT_TEAMS',
     microsoftteams: 'MICROSOFT_TEAMS',
+    jira: 'JIRA',
+    atlassianjira: 'JIRA',
     zoom: 'ZOOM',
   };
   return normalized ? map[normalized] ?? null : null;

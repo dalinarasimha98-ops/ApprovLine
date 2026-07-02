@@ -18,6 +18,7 @@ enum IntegrationProvider {
   SLACK
   GMAIL
   MICROSOFT_TEAMS
+  JIRA
   ZOOM
 }
 

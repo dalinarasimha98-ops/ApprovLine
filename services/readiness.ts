@@ -53,11 +53,14 @@ export async function buildReadinessReport() {
     microsoftTenantId: env.MICROSOFT_TENANT_ID
       ? { status: 'ok' as const, message: 'Microsoft tenant ID configured' }
       : { status: 'missing' as const, message: 'MICROSOFT_TENANT_ID missing; Teams OAuth will use organizations endpoint' },
+    jiraClientId: envCheck('JIRA_CLIENT_ID', 'Jira client ID'),
+    jiraClientSecret: envCheck('JIRA_CLIENT_SECRET', 'Jira client secret'),
     gmailSyncInterval: env.GMAIL_SYNC_INTERVAL_MINUTES
       ? { status: 'ok' as const, message: `Gmail sync interval ${env.GMAIL_SYNC_INTERVAL_MINUTES} minutes` }
       : { status: 'missing' as const, message: 'GMAIL_SYNC_INTERVAL_MINUTES missing; defaults to 15 minutes' },
     gmailLastSync: await checkGmailLastSync(),
     teamsLastSync: await checkTeamsLastSync(),
+    jiraLastSync: await checkJiraLastSync(),
     appUrl: envCheck('APP_URL', 'App URL'),
     encryptionKey: envCheck('ENCRYPTION_KEY', 'Encryption key'),
     clerkPublishableKey: envCheck('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'Clerk publishable key'),
@@ -74,6 +77,8 @@ export async function buildReadinessReport() {
     checks.googleClientSecret,
     checks.microsoftClientId,
     checks.microsoftClientSecret,
+    checks.jiraClientId,
+    checks.jiraClientSecret,
     checks.appUrl,
     checks.encryptionKey,
     checks.clerkPublishableKey,
@@ -85,6 +90,30 @@ export async function buildReadinessReport() {
     checkedAt: new Date().toISOString(),
     checks,
   };
+}
+
+async function checkJiraLastSync(): Promise<ReadinessCheck> {
+  const databaseUrl = validateDatabaseUrl();
+  if (!databaseUrl.valid) {
+    return { status: databaseUrl.errorCode === 'DATABASE_URL_MISSING' ? 'missing' : 'error', message: databaseUrl.safeErrorMessage ?? 'DATABASE_URL invalid; cannot inspect Jira sync status' };
+  }
+  try {
+    const integration = await prisma.integration.findFirst({
+      where: { provider: 'JIRA' },
+      orderBy: { updatedAt: 'desc' },
+      select: { status: true, metadata: true },
+    });
+    if (!integration) return { status: 'missing', message: 'No Jira integration connected yet' };
+    const metadata = integration.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {};
+    const lastSyncAt = typeof metadata.lastSyncAt === 'string' ? metadata.lastSyncAt : null;
+    const lastSyncStatus = typeof metadata.lastSyncStatus === 'string' ? metadata.lastSyncStatus : integration.status.toLowerCase();
+    return {
+      status: integration.status === 'ERROR' || integration.status === 'NEEDS_REAUTH' ? 'error' : 'ok',
+      message: lastSyncAt ? `Last Jira sync ${lastSyncStatus} at ${lastSyncAt}` : `Jira ${integration.status.toLowerCase()}; no sync timestamp yet`,
+    };
+  } catch (error) {
+    return { status: 'error', message: databaseErrorMessage(error, 'Unable to inspect Jira sync status') };
+  }
 }
 
 async function checkGmailLastSync(): Promise<ReadinessCheck> {

@@ -32,6 +32,8 @@ export async function GET() {
       MICROSOFT_CLIENT_ID: configured(env.MICROSOFT_CLIENT_ID),
       MICROSOFT_CLIENT_SECRET: configured(env.MICROSOFT_CLIENT_SECRET),
       MICROSOFT_TENANT_ID: configured(env.MICROSOFT_TENANT_ID),
+      JIRA_CLIENT_ID: configured(env.JIRA_CLIENT_ID),
+      JIRA_CLIENT_SECRET: configured(env.JIRA_CLIENT_SECRET),
     },
   });
 }

@@ -14,7 +14,7 @@ type DemoApproval = {
   businessImpact: string;
   approverName: string;
   approverEmail: string;
-  sourcePlatform: 'slack' | 'gmail' | 'teams';
+  sourcePlatform: 'slack' | 'gmail' | 'teams' | 'jira';
   provider: IntegrationProvider;
   channel: string;
   sourceLink: string;
@@ -233,6 +233,47 @@ const demoApprovals: DemoApproval[] = [
     conditions: 'Updated penetration test summary must be attached before go-live.',
     receivedHoursAgo: 42,
   },
+  {
+    subject: 'CRM rollout scope change sign-off',
+    department: 'Engineering',
+    category: 'Engineering',
+    approvalType: 'EXPLICIT',
+    status: 'APPROVED',
+    confidence: 93,
+    riskLevel: 'medium',
+    businessImpact: 'Approves a Jira-tracked scope change for the CRM rollout milestone.',
+    approverName: 'Isha Nair',
+    approverEmail: 'isha.nair@acme.example',
+    sourcePlatform: 'jira',
+    provider: 'JIRA',
+    channel: 'CRM / CRM-248',
+    sourceLink: 'https://acme-demo.atlassian.net/browse/CRM-248',
+    externalId: 'demo-jira-crm-scope-change',
+    evidenceSnippet: 'Approved. Move CRM-248 to Done and proceed with the revised rollout scope.',
+    reasoning: 'Jira comment contains explicit approval and a status-change instruction for a scoped engineering ticket.',
+    receivedHoursAgo: 10,
+  },
+  {
+    subject: 'Procurement exception for implementation partner',
+    department: 'Procurement',
+    category: 'Procurement',
+    approvalType: 'CONDITIONAL',
+    status: 'PENDING_REVIEW',
+    confidence: 91,
+    riskLevel: 'high',
+    businessImpact: 'Allows partner onboarding only after finance confirms the revised purchase order.',
+    approverName: 'Rafael Costa',
+    approverEmail: 'rafael.costa@acme.example',
+    sourcePlatform: 'jira',
+    provider: 'JIRA',
+    channel: 'PROC / PROC-117',
+    sourceLink: 'https://acme-demo.atlassian.net/browse/PROC-117',
+    externalId: 'demo-jira-procurement-exception',
+    evidenceSnippet: 'Approved provided Finance confirms the revised PO before vendor kickoff.',
+    reasoning: 'Jira evidence contains conditional procurement approval with a Finance dependency.',
+    conditions: 'Finance must confirm the revised purchase order before vendor kickoff.',
+    receivedHoursAgo: 16,
+  },
 ];
 
 function demoMetadata(extra: Record<string, unknown> = {}) {
@@ -331,6 +372,44 @@ export async function createDemoDataForOrganization(organizationId: string) {
       }),
     },
   });
+  const jiraIntegration = await prisma.integration.upsert({
+    where: {
+      organizationId_provider_externalAccount: {
+        organizationId,
+        provider: 'JIRA',
+        externalAccount: 'Acme Demo Jira',
+      },
+    },
+    update: {
+      status: 'CONNECTED',
+      scopes: ['read:jira-work', 'read:jira-user'],
+      metadata: demoMetadata({
+        cloudId: 'JIRA-DEMO-CLOUD',
+        siteName: 'Acme Demo Jira',
+        siteUrl: 'https://acme-demo.atlassian.net',
+        health: 'healthy',
+        issuesProcessed: 12,
+        commentsProcessed: 21,
+        approvalsFound: 2,
+      }),
+    },
+    create: {
+      organizationId,
+      provider: 'JIRA',
+      status: 'CONNECTED',
+      externalAccount: 'Acme Demo Jira',
+      scopes: ['read:jira-work', 'read:jira-user'],
+      metadata: demoMetadata({
+        cloudId: 'JIRA-DEMO-CLOUD',
+        siteName: 'Acme Demo Jira',
+        siteUrl: 'https://acme-demo.atlassian.net',
+        health: 'healthy',
+        issuesProcessed: 12,
+        commentsProcessed: 21,
+        approvalsFound: 2,
+      }),
+    },
+  });
 
   for (const [index, item] of demoApprovals.entries()) {
     const receivedAt = new Date(Date.now() - item.receivedHoursAgo * 60 * 60 * 1000);
@@ -338,6 +417,7 @@ export async function createDemoDataForOrganization(organizationId: string) {
       SLACK: slackIntegration.id,
       GMAIL: gmailIntegration.id,
       MICROSOFT_TEAMS: teamsIntegration.id,
+      JIRA: jiraIntegration.id,
       ZOOM: undefined,
     } satisfies Partial<Record<IntegrationProvider, string | undefined>>;
     const integrationId = integrationByProvider[item.provider];

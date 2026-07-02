@@ -379,6 +379,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
                 ['Slack approvals', report.integrations.slackApprovals],
                 ['Gmail approvals', report.integrations.gmailApprovals],
                 ['Teams approvals', report.integrations.teamsApprovals],
+                ['Jira approvals', report.integrations.jiraApprovals],
                 ['Outlook approvals', report.integrations.outlookApprovals],
               ].map(([label, value]) => (
                 <div key={label as string} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
