@@ -195,6 +195,25 @@ export function isPilotMigrationRequired(error: unknown) {
   return isMissingPilotTableError(error);
 }
 
+function safeErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message.slice(0, 220);
+  return String(error).slice(0, 220);
+}
+
+function fallbackFlags(organizationId: string) {
+  return pilotFeatureFlags.map((flag) => ({
+    id: flag.key,
+    organizationId,
+    key: flag.key,
+    enabled: flag.defaultEnabled,
+    description: flag.description,
+    updatedByUserId: null,
+    metadata: { pilotManaged: true, pendingMigration: true },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }));
+}
+
 async function pilotTablesReady() {
   const rows = await prisma.$queryRaw<Array<{ table_name: string }>>`
     SELECT table_name
@@ -208,6 +227,8 @@ async function pilotTablesReady() {
 
 export async function buildPilotReadiness(organizationId: string) {
   let migrationRequired = false;
+  let degraded = false;
+  let safeError: string | null = null;
   let users = 0;
   let integrations: Awaited<ReturnType<typeof prisma.integration.findMany>> = [];
   let approvalsCaptured = 0;
@@ -252,39 +273,30 @@ export async function buildPilotReadiness(organizationId: string) {
         prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
         prisma.playbookDocument.count({ where: { organizationId } }),
       ]);
-      flags = pilotFeatureFlags.map((flag) => ({
-        id: flag.key,
-        organizationId,
-        key: flag.key,
-        enabled: flag.defaultEnabled,
-        description: flag.description,
-        updatedByUserId: null,
-        metadata: { pilotManaged: true, pendingMigration: true },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
+      flags = fallbackFlags(organizationId);
     }
   } catch (error) {
-    if (!isMissingPilotTableError(error)) throw error;
+    degraded = !isMissingPilotTableError(error);
     migrationRequired = true;
-    [users, integrations, approvalsCaptured, openErrors, playbooks] = await Promise.all([
-      prisma.user.count({ where: { organizationId } }),
-      prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
-      prisma.approvalRecord.count({ where: { organizationId } }),
-      prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
-      prisma.playbookDocument.count({ where: { organizationId } }),
-    ]);
-    flags = pilotFeatureFlags.map((flag) => ({
-      id: flag.key,
-      organizationId,
-      key: flag.key,
-      enabled: flag.defaultEnabled,
-      description: flag.description,
-      updatedByUserId: null,
-      metadata: { pilotManaged: true, pendingMigration: true },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }));
+    safeError = safeErrorMessage(error);
+    try {
+      [users, integrations, approvalsCaptured, openErrors, playbooks] = await Promise.all([
+        prisma.user.count({ where: { organizationId } }),
+        prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
+        prisma.approvalRecord.count({ where: { organizationId } }),
+        prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
+        prisma.playbookDocument.count({ where: { organizationId } }),
+      ]);
+    } catch (coreError) {
+      degraded = true;
+      safeError = safeErrorMessage(coreError);
+      users = 0;
+      integrations = [];
+      approvalsCaptured = 0;
+      openErrors = 0;
+      playbooks = 0;
+    }
+    flags = fallbackFlags(organizationId);
   }
 
   const connected = new Set(integrations.filter((item) => item.status === 'CONNECTED' || item.status === 'SYNCING').map((item) => item.provider));
@@ -312,5 +324,7 @@ export async function buildPilotReadiness(organizationId: string) {
     flags,
     activityLogs,
     migrationRequired,
+    degraded,
+    safeError,
   };
 }
