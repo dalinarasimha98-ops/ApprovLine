@@ -11,6 +11,7 @@ const reasonLabels: Record<string, string> = {
   missing_microsoft_profile: 'Microsoft did not return an organizational user profile.',
   missing_jira_site: 'Atlassian did not return a Jira site.',
   jira_integration_missing: 'Jira is not connected yet.',
+  jira_database_migration_required: 'Production database needs the Jira migration. Run npm run db:deploy.',
 };
 
 function messageFor(provider: 'slack' | 'gmail' | 'teams' | 'jira', status: string | null, reason: string | null) {
