@@ -12,6 +12,7 @@ const nav = [
   { href: '/dashboard/audit', label: 'Audit Logs', pending: 'Opening audit logs...' },
   { href: '/playbooks', label: 'Playbook AI', pending: 'Opening playbooks...' },
   { href: '/dashboard/settings/integrations', label: 'Integrations', pending: 'Opening integrations...' },
+  { href: '/dashboard/pilot', label: 'Pilot Readiness', pending: 'Opening pilot readiness...' },
   { href: '/dashboard/settings', label: 'Settings', pending: 'Opening settings...' },
 ];
 
@@ -87,6 +88,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <ToastOnQuery />
           {children}
         </div>
+        <PendingLink
+          href="/dashboard/pilot#feedback"
+          pendingText="Opening feedback..."
+          className="fixed bottom-5 right-5 z-30 inline-flex min-h-0 h-12 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 text-sm font-black text-slate-800 shadow-[0_18px_50px_rgba(15,23,42,0.20)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.24)]"
+        >
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-[#2155d9] text-xs text-white">?</span>
+          Feedback
+        </PendingLink>
       </main>
     </div>
   );

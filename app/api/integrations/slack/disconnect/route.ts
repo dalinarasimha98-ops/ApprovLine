@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { writeAuditLog } from '@/services/audit';
+import { logPilotActivity } from '@/services/pilot';
 
-export async function POST() {
+export const dynamic = 'force-dynamic';
+
+export async function POST(request: Request) {
   const tenant = await requireRole('ADMIN');
   const result = await prisma.integration.updateMany({
     where: {
@@ -24,6 +27,13 @@ export async function POST() {
     action: 'integration.slack.disconnected',
     metadata: { count: result.count },
   });
+  await logPilotActivity({
+    organizationId: tenant.organization.id,
+    actorUserId: tenant.user.id,
+    action: 'pilot.integration.disconnect_confirmed',
+    entityType: 'Integration',
+    metadata: { provider: 'SLACK', count: result.count },
+  });
 
-  return NextResponse.json({ ok: true, disconnected: result.count });
+  return NextResponse.redirect(new URL('/dashboard/settings/integrations?slack=disconnected', request.url));
 }

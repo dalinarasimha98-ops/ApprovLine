@@ -4,6 +4,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { withTimeout } from '@/lib/performance';
 import { redirect } from 'next/navigation';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
+import { ConfirmSubmitButton } from '@/components/system/ConfirmSubmitButton';
 import type { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -226,9 +227,13 @@ function IntegrationTile({
             ) : null}
             {card.key === 'slack' && connected ? (
               <form action="/api/integrations/slack/disconnect" method="post">
-                <FormSubmitButton pendingText="Disconnecting..." className="min-h-0 h-9 rounded-lg border border-rose-200 bg-white px-3 text-xs font-black text-rose-700 shadow-sm hover:bg-rose-50">
+                <ConfirmSubmitButton
+                  pendingText="Disconnecting..."
+                  confirmMessage="Disconnect Slack from this workspace? ApprovLine will stop ingesting new Slack approval evidence."
+                  className="min-h-0 h-9 rounded-lg border border-rose-200 bg-white px-3 text-xs font-black text-rose-700 shadow-sm hover:bg-rose-50"
+                >
                   Disconnect
-                </FormSubmitButton>
+                </ConfirmSubmitButton>
               </form>
             ) : null}
             {card.key === 'gmail' && connected ? (

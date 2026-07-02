@@ -84,6 +84,10 @@ model Organization {
   complianceEvaluations ApprovalComplianceEvaluation[]
   investigations    InvestigationCase[]
   investigationNotes InvestigationNote[]
+  featureFlags      FeatureFlag[]
+  pilotInvites      PilotInvite[]
+  pilotFeedback     PilotFeedback[]
+  pilotActivityLogs PilotActivityLog[]
 }
 
 model User {
@@ -100,6 +104,10 @@ model User {
   approvals      ApprovalRecord[] @relation("ApprovalApprover")
   auditLogs      AuditLog[]
   investigationNotes InvestigationNote[]
+  pilotInvites    PilotInvite[] @relation("PilotInviteInviter")
+  pilotFeedback   PilotFeedback[]
+  pilotActivityLogs PilotActivityLog[]
+  featureFlagsUpdated FeatureFlag[] @relation("FeatureFlagUpdater")
 
   @@index([organizationId, role])
   @@index([email])
@@ -442,4 +450,73 @@ model InvestigationNote {
   authorUser      User?             @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, investigationId, createdAt])
+}
+
+model FeatureFlag {
+  id              String       @id @default(cuid())
+  organizationId  String
+  key             String
+  enabled         Boolean      @default(false)
+  description     String?
+  updatedByUserId String?
+  metadata        Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  updatedByUser   User?        @relation("FeatureFlagUpdater", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, key])
+  @@index([organizationId, enabled])
+}
+
+model PilotInvite {
+  id              String       @id @default(cuid())
+  organizationId  String
+  inviterUserId   String?
+  email           String
+  role            Role         @default(EMPLOYEE)
+  status          String       @default("pending")
+  invitedAt       DateTime     @default(now())
+  acceptedAt      DateTime?
+  metadata        Json?
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviterUser     User?        @relation("PilotInviteInviter", fields: [inviterUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status, invitedAt])
+  @@index([email])
+}
+
+model PilotFeedback {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String?
+  type           String
+  title          String
+  body           String
+  pageUrl        String?
+  screenshot     Json?
+  status         String       @default("open")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, type])
+}
+
+model PilotActivityLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  actorUserId    String?
+  action         String
+  entityType     String?
+  entityId       String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser      User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action])
 }

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getDashboardTenant } from '@/lib/auth';
 import { PendingLink } from '@/components/system/PendingLink';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
+import { ConfirmSubmitButton } from '@/components/system/ConfirmSubmitButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,9 +76,13 @@ export default async function SettingsPage() {
               </FormSubmitButton>
             </form>
             <form action="/api/demo/reset" method="post">
-              <FormSubmitButton pendingText="Resetting..." className="inline-flex min-h-0 h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50">
+              <ConfirmSubmitButton
+                pendingText="Resetting..."
+                confirmMessage="Reset only ApprovLine demo data? Real approval records will remain untouched."
+                className="inline-flex min-h-0 h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+              >
                 Reset Demo Data
-              </FormSubmitButton>
+              </ConfirmSubmitButton>
             </form>
           </div>
         </div>
