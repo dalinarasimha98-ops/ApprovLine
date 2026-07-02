@@ -131,6 +131,7 @@ export default async function PilotReadinessPage({
       checklist: [
         { key: 'connect_slack', label: 'Connect Slack', href: '/dashboard/settings/integrations', provider: 'SLACK' as const, complete: false },
         { key: 'connect_gmail', label: 'Connect Gmail', href: '/dashboard/settings/integrations', provider: 'GMAIL' as const, complete: false },
+        { key: 'connect_outlook', label: 'Connect Outlook or Exchange', href: '/dashboard/settings/integrations', provider: 'OUTLOOK' as const, complete: false },
         { key: 'connect_teams', label: 'Connect Microsoft Teams', href: '/dashboard/settings/integrations', provider: 'MICROSOFT_TEAMS' as const, complete: false },
         { key: 'connect_jira', label: 'Connect Jira', href: '/dashboard/settings/integrations', provider: 'JIRA' as const, complete: false },
         { key: 'upload_playbook', label: 'Upload first playbook', href: '/playbooks', complete: false },
@@ -142,6 +143,7 @@ export default async function PilotReadinessPage({
         { id: 'beta_features', key: 'beta_features', enabled: true, description: 'Show pilot-only surfaces such as investigations, Playbook AI, and ROI drilldowns.' },
         { id: 'slack_connector', key: 'slack_connector', enabled: true, description: 'Enable Slack OAuth, event ingestion, and sync controls.' },
         { id: 'gmail_connector', key: 'gmail_connector', enabled: true, description: 'Enable Gmail OAuth and approval-thread sync.' },
+        { id: 'outlook_connector', key: 'outlook_connector', enabled: true, description: 'Enable Outlook and Exchange OAuth plus read-only email sync.' },
         { id: 'teams_connector', key: 'teams_connector', enabled: true, description: 'Enable Microsoft Teams OAuth and read-only sync.' },
         { id: 'jira_connector', key: 'jira_connector', enabled: true, description: 'Enable Jira OAuth and issue evidence sync.' },
       ],

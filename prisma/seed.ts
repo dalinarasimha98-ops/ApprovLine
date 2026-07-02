@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 const demoApprovals = [
   ['Finance budget approval', 'Priya Sharma', 'priya@company.com', 'Finance', 'Finance', ApprovalType.EXPLICIT, ApprovalStatus.APPROVED, 97, 'high', 'Approves Q3 budget expansion for marketing.', 'slack'],
   ['Vendor payment approved', 'Sarah Chen', 'sarah@company.com', 'Procurement', 'Procurement', ApprovalType.EXPLICIT, ApprovalStatus.APPROVED, 94, 'medium', 'Allows vendor invoice payment to proceed.', 'gmail'],
+  ['Exchange renewal approved', 'Monica Reyes', 'monica@company.com', 'Finance', 'Finance', ApprovalType.EXPLICIT, ApprovalStatus.APPROVED, 95, 'medium', 'Approves Outlook and Exchange renewal before service expiry.', 'outlook'],
   ['Contract terms conditionally approved', 'James Okafor', 'james@company.com', 'Legal', 'Legal', ApprovalType.CONDITIONAL, ApprovalStatus.PENDING_REVIEW, 92, 'high', 'Allows contract execution after revised terms are used.', 'teams'],
   ['Production migration rejected', 'Maya Singh', 'maya@company.com', 'Engineering', 'Engineering', ApprovalType.REJECTION, ApprovalStatus.REJECTED, 91, 'high', 'Blocks database migration until rollback testing is complete.', 'slack'],
   ['Security access exception approved', 'Nora Ellis', 'nora@company.com', 'Security', 'Security', ApprovalType.CONDITIONAL, ApprovalStatus.PENDING_REVIEW, 95, 'critical', 'Grants temporary elevated access under time-bound controls.', 'teams'],

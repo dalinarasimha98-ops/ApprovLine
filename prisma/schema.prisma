@@ -17,6 +17,7 @@ enum Role {
 enum IntegrationProvider {
   SLACK
   GMAIL
+  OUTLOOK
   MICROSOFT_TEAMS
   JIRA
   ZOOM

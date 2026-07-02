@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 type IntegrationCard = {
   key: string;
-  provider?: 'GMAIL' | 'SLACK' | 'MICROSOFT_TEAMS' | 'JIRA' | 'ZOOM';
+  provider?: 'GMAIL' | 'OUTLOOK' | 'SLACK' | 'MICROSOFT_TEAMS' | 'JIRA' | 'ZOOM';
   name: string;
   description: string;
   icon: string;
@@ -39,10 +39,12 @@ const sections: IntegrationSection[] = [
       },
       {
         key: 'outlook',
+        provider: 'OUTLOOK',
         name: 'Outlook',
         description: 'Sync decision emails from Microsoft Outlook and Exchange',
         icon: 'O',
         iconClass: 'bg-blue-50 text-blue-600',
+        href: '/api/integrations/outlook/install',
       },
     ],
   },
@@ -126,7 +128,7 @@ const sections: IntegrationSection[] = [
   },
 ];
 
-function oauthMessage(provider: 'Slack' | 'Gmail' | 'Microsoft Teams' | 'Jira', status?: string, reason?: string) {
+function oauthMessage(provider: 'Slack' | 'Gmail' | 'Outlook' | 'Microsoft Teams' | 'Jira', status?: string, reason?: string) {
   if (status === 'connected') {
     return {
       tone: 'success',
@@ -244,6 +246,14 @@ function IntegrationTile({
                 </FormSubmitButton>
               </form>
             ) : null}
+            {card.key === 'outlook' && connected ? (
+              <form action="/api/integrations/outlook/sync" method="post">
+                <input type="hidden" name="integrationId" value={integration?.id ?? ''} />
+                <FormSubmitButton pendingText="Syncing Outlook..." className="min-h-0 h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50">
+                  Sync now
+                </FormSubmitButton>
+              </form>
+            ) : null}
             {card.key === 'teams' && connected ? (
               <form action="/api/integrations/teams/sync" method="post">
                 <input type="hidden" name="integrationId" value={integration?.id ?? ''} />
@@ -281,7 +291,7 @@ function IntegrationTile({
 export default async function IntegrationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ slack?: string; gmail?: string; teams?: string; jira?: string; reason?: string }>;
+  searchParams: Promise<{ slack?: string; gmail?: string; outlook?: string; teams?: string; jira?: string; reason?: string }>;
 }) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
@@ -312,6 +322,7 @@ export default async function IntegrationsPage({
   const integrationByProvider = new Map(integrations.map((item) => [item.provider, item]));
   const slackNotice = oauthMessage('Slack', query.slack, query.reason);
   const gmailNotice = oauthMessage('Gmail', query.gmail, query.reason);
+  const outlookNotice = oauthMessage('Outlook', query.outlook, query.reason);
   const teamsNotice = oauthMessage('Microsoft Teams', query.teams, query.reason);
   const jiraNotice = oauthMessage('Jira', query.jira, query.reason);
 
@@ -321,7 +332,7 @@ export default async function IntegrationsPage({
         <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2155d9]">Integrations</p>
         <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Connect approval sources</h2>
         <p className="mt-2 max-w-2xl text-base font-semibold leading-7 text-slate-500">
-          Choose where ApprovLine should capture decisions. Slack, Gmail, Microsoft Teams, and Jira are available now; the rest are staged for rollout.
+          Choose where ApprovLine should capture decisions. Slack, Gmail, Outlook, Microsoft Teams, and Jira are available now; the rest are staged for rollout.
         </p>
       </div>
 
@@ -332,7 +343,7 @@ export default async function IntegrationsPage({
         </div>
       ) : null}
 
-      {[slackNotice, gmailNotice, teamsNotice, jiraNotice].filter(Boolean).map((notice) => (
+      {[slackNotice, gmailNotice, outlookNotice, teamsNotice, jiraNotice].filter(Boolean).map((notice) => (
         <div
           key={notice!.title}
           className={`rounded-2xl border p-4 shadow-sm ${
