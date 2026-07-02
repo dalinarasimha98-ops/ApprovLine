@@ -195,6 +195,17 @@ export function isPilotMigrationRequired(error: unknown) {
   return isMissingPilotTableError(error);
 }
 
+async function pilotTablesReady() {
+  const rows = await prisma.$queryRaw<Array<{ table_name: string }>>`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name IN ('FeatureFlag', 'PilotInvite', 'PilotFeedback', 'PilotActivityLog')
+  `;
+  const names = new Set(rows.map((row) => row.table_name));
+  return ['FeatureFlag', 'PilotInvite', 'PilotFeedback', 'PilotActivityLog'].every((name) => names.has(name));
+}
+
 export async function buildPilotReadiness(organizationId: string) {
   let migrationRequired = false;
   let users = 0;
@@ -208,28 +219,51 @@ export async function buildPilotReadiness(organizationId: string) {
   let playbooks = 0;
 
   try {
-    await ensurePilotFeatureFlags(organizationId);
-    [
-      users,
-      integrations,
-      approvalsCaptured,
-      openErrors,
-      feedbackSubmitted,
-      invites,
-      flags,
-      activityLogs,
-      playbooks,
-    ] = await Promise.all([
-      prisma.user.count({ where: { organizationId } }),
-      prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
-      prisma.approvalRecord.count({ where: { organizationId } }),
-      prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
-      prisma.pilotFeedback.count({ where: { organizationId } }),
-      prisma.pilotInvite.findMany({ where: { organizationId }, orderBy: { invitedAt: 'desc' }, take: 8 }),
-      prisma.featureFlag.findMany({ where: { organizationId }, orderBy: { key: 'asc' } }),
-      prisma.pilotActivityLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 12 }),
-      prisma.playbookDocument.count({ where: { organizationId } }),
-    ]);
+    const tablesReady = await pilotTablesReady();
+    if (tablesReady) {
+      await ensurePilotFeatureFlags(organizationId);
+      [
+        users,
+        integrations,
+        approvalsCaptured,
+        openErrors,
+        feedbackSubmitted,
+        invites,
+        flags,
+        activityLogs,
+        playbooks,
+      ] = await Promise.all([
+        prisma.user.count({ where: { organizationId } }),
+        prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
+        prisma.approvalRecord.count({ where: { organizationId } }),
+        prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
+        prisma.pilotFeedback.count({ where: { organizationId } }),
+        prisma.pilotInvite.findMany({ where: { organizationId }, orderBy: { invitedAt: 'desc' }, take: 8 }),
+        prisma.featureFlag.findMany({ where: { organizationId }, orderBy: { key: 'asc' } }),
+        prisma.pilotActivityLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 12 }),
+        prisma.playbookDocument.count({ where: { organizationId } }),
+      ]);
+    } else {
+      migrationRequired = true;
+      [users, integrations, approvalsCaptured, openErrors, playbooks] = await Promise.all([
+        prisma.user.count({ where: { organizationId } }),
+        prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
+        prisma.approvalRecord.count({ where: { organizationId } }),
+        prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
+        prisma.playbookDocument.count({ where: { organizationId } }),
+      ]);
+      flags = pilotFeatureFlags.map((flag) => ({
+        id: flag.key,
+        organizationId,
+        key: flag.key,
+        enabled: flag.defaultEnabled,
+        description: flag.description,
+        updatedByUserId: null,
+        metadata: { pilotManaged: true, pendingMigration: true },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+    }
   } catch (error) {
     if (!isMissingPilotTableError(error)) throw error;
     migrationRequired = true;
