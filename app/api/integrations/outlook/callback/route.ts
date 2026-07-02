@@ -12,6 +12,21 @@ import {
   verifyOutlookState,
 } from '@/services/integrations/outlook';
 
+export const dynamic = 'force-dynamic';
+
+function outlookCallbackFailureReason(error: unknown) {
+  const message = error instanceof Error ? error.message : 'Outlook connection storage failed';
+  if (
+    message.includes('Invalid value for argument `provider`') ||
+    message.includes('invalid input value for enum') ||
+    message.includes('IntegrationProvider') ||
+    message.includes('OUTLOOK')
+  ) {
+    return 'outlook_database_migration_required';
+  }
+  return message;
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
   const state = request.nextUrl.searchParams.get('state');
@@ -74,52 +89,63 @@ export async function GET(request: NextRequest) {
     totalEmailsProcessed: 0,
   };
 
-  const integration = await prisma.integration.upsert({
-    where: {
-      organizationId_provider_externalAccount: {
+  try {
+    const integration = await prisma.integration.upsert({
+      where: {
+        organizationId_provider_externalAccount: {
+          organizationId: tenant.organization.id,
+          provider: 'OUTLOOK',
+          externalAccount: accountId,
+        },
+      },
+      update: {
+        status: 'CONNECTED',
+        scopes: tokenPayload.scope?.split(' ') ?? [],
+        encryptedTokens: encryptJson(tokens),
+        metadata,
+      },
+      create: {
         organizationId: tenant.organization.id,
         provider: 'OUTLOOK',
+        status: 'CONNECTED',
         externalAccount: accountId,
+        scopes: tokenPayload.scope?.split(' ') ?? [],
+        encryptedTokens: encryptJson(tokens),
+        metadata,
       },
-    },
-    update: {
-      status: 'CONNECTED',
-      scopes: tokenPayload.scope?.split(' ') ?? [],
-      encryptedTokens: encryptJson(tokens),
-      metadata,
-    },
-    create: {
-      organizationId: tenant.organization.id,
-      provider: 'OUTLOOK',
-      status: 'CONNECTED',
-      externalAccount: accountId,
-      scopes: tokenPayload.scope?.split(' ') ?? [],
-      encryptedTokens: encryptJson(tokens),
-      metadata,
-    },
-  });
+    });
 
-  await writeAuditLog({
-    organizationId: tenant.organization.id,
-    actorUserId: tenant.user.id,
-    action: 'integration.outlook.connected',
-    metadata: {
-      integrationId: integration.id,
-      tenantId,
-      microsoftUserId: profile.id,
-      accountEmail,
-    },
-  });
-
-  await prisma.event.create({
-    data: {
+    await writeAuditLog({
       organizationId: tenant.organization.id,
-      integrationId: integration.id,
-      type: 'outlook.oauth.connected',
-      payload: { tenantId, microsoftUserId: profile.id, accountEmail } as Prisma.InputJsonValue,
-      processedAt: new Date(),
-    },
-  });
+      actorUserId: tenant.user.id,
+      action: 'integration.outlook.connected',
+      metadata: {
+        integrationId: integration.id,
+        tenantId,
+        microsoftUserId: profile.id,
+        accountEmail,
+      },
+    });
+
+    await prisma.event.create({
+      data: {
+        organizationId: tenant.organization.id,
+        integrationId: integration.id,
+        type: 'outlook.oauth.connected',
+        payload: { tenantId, microsoftUserId: profile.id, accountEmail } as Prisma.InputJsonValue,
+        processedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    const reason = outlookCallbackFailureReason(error);
+    await writeAuditLog({
+      organizationId: tenant.organization.id,
+      actorUserId: tenant.user.id,
+      action: 'integration.outlook.oauth_failed',
+      metadata: { reason },
+    }).catch(() => null);
+    return NextResponse.redirect(new URL(`/dashboard/settings/integrations?outlook=error&reason=${encodeURIComponent(reason)}`, request.url));
+  }
 
   return NextResponse.redirect(new URL('/dashboard/settings/integrations?outlook=connected', request.url));
 }
