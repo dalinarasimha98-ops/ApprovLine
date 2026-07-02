@@ -13,6 +13,19 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+function jiraCallbackFailureReason(error: unknown) {
+  const message = error instanceof Error ? error.message : 'Jira connection storage failed';
+  if (
+    message.includes('Invalid value for argument `provider`') ||
+    message.includes('invalid input value for enum') ||
+    message.includes('IntegrationProvider') ||
+    message.includes('JIRA')
+  ) {
+    return 'jira_database_migration_required';
+  }
+  return message;
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
   const state = request.nextUrl.searchParams.get('state');
@@ -76,52 +89,63 @@ export async function GET(request: NextRequest) {
     totalJiraEventsProcessed: 0,
   };
 
-  const integration = await prisma.integration.upsert({
-    where: {
-      organizationId_provider_externalAccount: {
+  try {
+    const integration = await prisma.integration.upsert({
+      where: {
+        organizationId_provider_externalAccount: {
+          organizationId: tenant.organization.id,
+          provider: 'JIRA',
+          externalAccount: resource.id,
+        },
+      },
+      update: {
+        status: 'CONNECTED',
+        scopes: tokenPayload.scope?.split(' ') ?? resource.scopes ?? [],
+        encryptedTokens: encryptJson(tokens),
+        metadata,
+      },
+      create: {
         organizationId: tenant.organization.id,
         provider: 'JIRA',
+        status: 'CONNECTED',
         externalAccount: resource.id,
+        scopes: tokenPayload.scope?.split(' ') ?? resource.scopes ?? [],
+        encryptedTokens: encryptJson(tokens),
+        metadata,
       },
-    },
-    update: {
-      status: 'CONNECTED',
-      scopes: tokenPayload.scope?.split(' ') ?? resource.scopes ?? [],
-      encryptedTokens: encryptJson(tokens),
-      metadata,
-    },
-    create: {
-      organizationId: tenant.organization.id,
-      provider: 'JIRA',
-      status: 'CONNECTED',
-      externalAccount: resource.id,
-      scopes: tokenPayload.scope?.split(' ') ?? resource.scopes ?? [],
-      encryptedTokens: encryptJson(tokens),
-      metadata,
-    },
-  });
+    });
 
-  await writeAuditLog({
-    organizationId: tenant.organization.id,
-    actorUserId: tenant.user.id,
-    action: 'integration.jira.connected',
-    metadata: {
-      integrationId: integration.id,
-      cloudId: resource.id,
-      siteName: resource.name,
-      siteUrl: resource.url,
-    },
-  });
-
-  await prisma.event.create({
-    data: {
+    await writeAuditLog({
       organizationId: tenant.organization.id,
-      integrationId: integration.id,
-      type: 'jira.oauth.connected',
-      payload: { cloudId: resource.id, siteName: resource.name, siteUrl: resource.url } as Prisma.InputJsonValue,
-      processedAt: new Date(),
-    },
-  });
+      actorUserId: tenant.user.id,
+      action: 'integration.jira.connected',
+      metadata: {
+        integrationId: integration.id,
+        cloudId: resource.id,
+        siteName: resource.name,
+        siteUrl: resource.url,
+      },
+    });
+
+    await prisma.event.create({
+      data: {
+        organizationId: tenant.organization.id,
+        integrationId: integration.id,
+        type: 'jira.oauth.connected',
+        payload: { cloudId: resource.id, siteName: resource.name, siteUrl: resource.url } as Prisma.InputJsonValue,
+        processedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    const reason = jiraCallbackFailureReason(error);
+    await writeAuditLog({
+      organizationId: tenant.organization.id,
+      actorUserId: tenant.user.id,
+      action: 'integration.jira.oauth_failed',
+      metadata: { reason },
+    }).catch(() => null);
+    return NextResponse.redirect(new URL(`/dashboard/settings/integrations?jira=error&reason=${encodeURIComponent(reason)}`, request.url));
+  }
 
   return NextResponse.redirect(new URL('/dashboard/settings/integrations?jira=connected', request.url));
 }

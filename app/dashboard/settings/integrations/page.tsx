@@ -151,6 +151,7 @@ function oauthMessage(provider: 'Slack' | 'Gmail' | 'Microsoft Teams' | 'Jira', 
     missing_microsoft_profile: 'Microsoft did not return an organizational user profile. Confirm Microsoft Graph User.Read permission is granted.',
     missing_jira_site: 'Atlassian did not return a Jira site. Confirm this account has access to a Jira Cloud workspace.',
     jira_integration_missing: 'Jira is not connected for this workspace yet. Connect Jira first, then sync.',
+    jira_database_migration_required: 'Jira connected at Atlassian, but ApprovLine production database needs the latest migration. Run npm run db:deploy, then reconnect Jira.',
   };
   return {
     tone: 'error',
