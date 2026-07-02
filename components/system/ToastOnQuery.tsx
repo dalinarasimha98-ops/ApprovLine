@@ -10,6 +10,7 @@ const reasonLabels: Record<string, string> = {
   missing_google_account_profile: 'Google did not return an email profile.',
   missing_outlook_profile: 'Microsoft did not return an Outlook or Exchange mailbox profile.',
   missing_microsoft_profile: 'Microsoft did not return an organizational user profile.',
+  outlook_database_migration_required: 'Production database needs the Outlook/Exchange migration. Run npm run db:deploy.',
   missing_jira_site: 'Atlassian did not return a Jira site.',
   jira_integration_missing: 'Jira is not connected yet.',
   jira_database_migration_required: 'Production database needs the Jira migration. Run npm run db:deploy.',
