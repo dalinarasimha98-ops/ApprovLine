@@ -14,7 +14,7 @@ type DemoApproval = {
   businessImpact: string;
   approverName: string;
   approverEmail: string;
-  sourcePlatform: 'slack' | 'gmail' | 'teams' | 'jira';
+  sourcePlatform: 'slack' | 'gmail' | 'outlook' | 'teams' | 'jira';
   provider: IntegrationProvider;
   channel: string;
   sourceLink: string;
@@ -88,6 +88,47 @@ const demoApprovals: DemoApproval[] = [
     evidenceSnippet: 'Legal is good with these revised terms. You can send for signature.',
     reasoning: 'Legal sign-off is stated clearly for revised contract terms.',
     receivedHoursAgo: 8,
+  },
+  {
+    subject: 'Exchange Online renewal approval',
+    department: 'Finance',
+    category: 'Finance',
+    approvalType: 'EXPLICIT',
+    status: 'APPROVED',
+    confidence: 95,
+    riskLevel: 'medium',
+    businessImpact: 'Renews the Microsoft 365 and Exchange Online agreement before service expiration.',
+    approverName: 'Monica Reyes',
+    approverEmail: 'monica.reyes@acme.example',
+    sourcePlatform: 'outlook',
+    provider: 'OUTLOOK',
+    channel: 'Outlook / Finance Approvals',
+    sourceLink: 'https://outlook.office.com/mail/inbox/id/demo-outlook-finance-renewal',
+    externalId: 'demo-outlook-finance-renewal',
+    evidenceSnippet: 'Approved. Please proceed with the Exchange Online renewal at the quoted annual amount.',
+    reasoning: 'Explicit finance approval was captured from an Outlook email thread with renewal context.',
+    receivedHoursAgo: 9,
+  },
+  {
+    subject: 'Contract amendment for regional distributor',
+    department: 'Legal',
+    category: 'Legal',
+    approvalType: 'CONDITIONAL',
+    status: 'PENDING_REVIEW',
+    confidence: 93,
+    riskLevel: 'high',
+    businessImpact: 'Allows the distributor amendment to move forward once the indemnity language is attached.',
+    approverName: 'Harper Singh',
+    approverEmail: 'harper.singh@acme.example',
+    sourcePlatform: 'outlook',
+    provider: 'OUTLOOK',
+    channel: 'Exchange / Legal Approvals',
+    sourceLink: 'https://outlook.office.com/mail/inbox/id/demo-exchange-legal-amendment',
+    externalId: 'demo-exchange-legal-amendment',
+    evidenceSnippet: 'Legal approves provided the revised indemnity clause from yesterday is included before signature.',
+    reasoning: 'Legal approval is conditional because the email requires a revised contract clause before signature.',
+    conditions: 'Revised indemnity clause must be included before signature.',
+    receivedHoursAgo: 14,
   },
   {
     subject: 'Production database access exception',
@@ -334,6 +375,28 @@ export async function createDemoDataForOrganization(organizationId: string) {
       metadata: demoMetadata({ account: 'approvals@acme.example', health: 'healthy', emailsProcessed: 32, approvalsFound: 4 }),
     },
   });
+  const outlookIntegration = await prisma.integration.upsert({
+    where: {
+      organizationId_provider_externalAccount: {
+        organizationId,
+        provider: 'OUTLOOK',
+        externalAccount: 'approvals@acme.example',
+      },
+    },
+    update: {
+      status: 'CONNECTED',
+      scopes: ['offline_access', 'User.Read', 'Mail.Read'],
+      metadata: demoMetadata({ account: 'approvals@acme.example', tenantId: 'TDEMO-M365', health: 'healthy', emailsProcessed: 28, approvalsFound: 2, mailboxType: 'Exchange Online' }),
+    },
+    create: {
+      organizationId,
+      provider: 'OUTLOOK',
+      status: 'CONNECTED',
+      externalAccount: 'approvals@acme.example',
+      scopes: ['offline_access', 'User.Read', 'Mail.Read'],
+      metadata: demoMetadata({ account: 'approvals@acme.example', tenantId: 'TDEMO-M365', health: 'healthy', emailsProcessed: 28, approvalsFound: 2, mailboxType: 'Exchange Online' }),
+    },
+  });
   const teamsIntegration = await prisma.integration.upsert({
     where: {
       organizationId_provider_externalAccount: {
@@ -416,6 +479,7 @@ export async function createDemoDataForOrganization(organizationId: string) {
     const integrationByProvider = {
       SLACK: slackIntegration.id,
       GMAIL: gmailIntegration.id,
+      OUTLOOK: outlookIntegration.id,
       MICROSOFT_TEAMS: teamsIntegration.id,
       JIRA: jiraIntegration.id,
       ZOOM: undefined,

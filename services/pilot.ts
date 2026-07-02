@@ -65,6 +65,12 @@ export const pilotFeatureFlags = [
     defaultEnabled: true,
   },
   {
+    key: 'outlook_connector',
+    label: 'Outlook connector',
+    description: 'Enable Outlook and Exchange OAuth plus read-only email sync.',
+    defaultEnabled: true,
+  },
+  {
     key: 'teams_connector',
     label: 'Microsoft Teams connector',
     description: 'Enable Microsoft Teams OAuth and read-only sync.',
@@ -81,6 +87,7 @@ export const pilotFeatureFlags = [
 export const pilotChecklist: Array<{ key: string; label: string; href: string; provider?: IntegrationProvider }> = [
   { key: 'connect_slack', label: 'Connect Slack', href: '/dashboard/settings/integrations', provider: 'SLACK' },
   { key: 'connect_gmail', label: 'Connect Gmail', href: '/dashboard/settings/integrations', provider: 'GMAIL' },
+  { key: 'connect_outlook', label: 'Connect Outlook or Exchange', href: '/dashboard/settings/integrations', provider: 'OUTLOOK' },
   { key: 'connect_teams', label: 'Connect Microsoft Teams', href: '/dashboard/settings/integrations', provider: 'MICROSOFT_TEAMS' },
   { key: 'connect_jira', label: 'Connect Jira', href: '/dashboard/settings/integrations', provider: 'JIRA' },
   { key: 'upload_playbook', label: 'Upload first playbook', href: '/playbooks' },

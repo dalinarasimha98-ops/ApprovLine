@@ -59,6 +59,7 @@ export async function buildReadinessReport() {
       ? { status: 'ok' as const, message: `Gmail sync interval ${env.GMAIL_SYNC_INTERVAL_MINUTES} minutes` }
       : { status: 'missing' as const, message: 'GMAIL_SYNC_INTERVAL_MINUTES missing; defaults to 15 minutes' },
     gmailLastSync: await checkGmailLastSync(),
+    outlookLastSync: await checkOutlookLastSync(),
     teamsLastSync: await checkTeamsLastSync(),
     jiraLastSync: await checkJiraLastSync(),
     appUrl: envCheck('APP_URL', 'App URL'),
@@ -137,6 +138,30 @@ async function checkGmailLastSync(): Promise<ReadinessCheck> {
     };
   } catch (error) {
     return { status: 'error', message: databaseErrorMessage(error, 'Unable to inspect Gmail sync status') };
+  }
+}
+
+async function checkOutlookLastSync(): Promise<ReadinessCheck> {
+  const databaseUrl = validateDatabaseUrl();
+  if (!databaseUrl.valid) {
+    return { status: databaseUrl.errorCode === 'DATABASE_URL_MISSING' ? 'missing' : 'error', message: databaseUrl.safeErrorMessage ?? 'DATABASE_URL invalid; cannot inspect Outlook sync status' };
+  }
+  try {
+    const integration = await prisma.integration.findFirst({
+      where: { provider: 'OUTLOOK' },
+      orderBy: { updatedAt: 'desc' },
+      select: { status: true, metadata: true },
+    });
+    if (!integration) return { status: 'missing', message: 'No Outlook or Exchange integration connected yet' };
+    const metadata = integration.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {};
+    const lastSyncAt = typeof metadata.lastSyncAt === 'string' ? metadata.lastSyncAt : null;
+    const lastSyncStatus = typeof metadata.lastSyncStatus === 'string' ? metadata.lastSyncStatus : integration.status.toLowerCase();
+    return {
+      status: integration.status === 'ERROR' || integration.status === 'NEEDS_REAUTH' ? 'error' : 'ok',
+      message: lastSyncAt ? `Last Outlook/Exchange sync ${lastSyncStatus} at ${lastSyncAt}` : `Outlook/Exchange ${integration.status.toLowerCase()}; no sync timestamp yet`,
+    };
+  } catch (error) {
+    return { status: 'error', message: databaseErrorMessage(error, 'Unable to inspect Outlook/Exchange sync status') };
   }
 }
 
