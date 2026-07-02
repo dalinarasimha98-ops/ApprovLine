@@ -22,11 +22,13 @@ export async function GET() {
       appUrl: readiness.checks.appUrl,
       gmailApi: readiness.checks.gmailLastSync,
       teamsApi: readiness.checks.teamsLastSync,
+      jiraApi: readiness.checks.jiraLastSync,
     },
     connectors: {
       slack: connectorStatus(Boolean(env.SLACK_CLIENT_ID && env.SLACK_CLIENT_SECRET)),
       gmail: connectorStatus(Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)),
       teams: connectorStatus(Boolean(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET)),
+      jira: connectorStatus(Boolean(env.JIRA_CLIENT_ID && env.JIRA_CLIENT_SECRET)),
       zoom: connectorStatus(Boolean(env.ZOOM_CLIENT_ID && env.ZOOM_CLIENT_SECRET)),
     },
     states: ['connected', 'not_connected', 'error', 'needs_reauthentication', 'syncing'],

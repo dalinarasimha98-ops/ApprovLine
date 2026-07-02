@@ -4,7 +4,7 @@ import { createRedisConnection, getRedisConfigurationStatus } from '@/services/q
 export interface IncomingMessageJob {
   organizationId: string;
   integrationId?: string;
-  provider: 'SLACK' | 'GMAIL' | 'MICROSOFT_TEAMS' | 'ZOOM';
+  provider: 'SLACK' | 'GMAIL' | 'MICROSOFT_TEAMS' | 'JIRA' | 'ZOOM';
   externalId?: string;
   channel?: string;
   sender?: string;

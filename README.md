@@ -43,6 +43,8 @@ Copy `.env.example` to `.env.local` and set:
 - `MICROSOFT_CLIENT_ID`
 - `MICROSOFT_CLIENT_SECRET`
 - `MICROSOFT_TENANT_ID` - Directory tenant ID from Microsoft Entra ID Overview; recommended for single-tenant Teams OAuth
+- `JIRA_CLIENT_ID`
+- `JIRA_CLIENT_SECRET`
 
 For Vercel deployments, add these under Project Settings -> Environment Variables.
 GitHub Actions repository secrets are only available to GitHub Actions workflows and are not visible to the Vercel runtime.
@@ -76,6 +78,8 @@ GMAIL_SYNC_INTERVAL_MINUTES=15
 MICROSOFT_CLIENT_ID=...
 MICROSOFT_CLIENT_SECRET=...
 MICROSOFT_TENANT_ID=...
+JIRA_CLIENT_ID=...
+JIRA_CLIENT_SECRET=...
 ```
 
 Gmail OAuth must use this exact redirect URL in Google Cloud:
@@ -108,6 +112,20 @@ User.Read
 Team.ReadBasic.All
 Channel.ReadBasic.All
 ChannelMessage.Read.All
+```
+
+Jira OAuth must use this exact callback URL in the Atlassian Developer Console:
+
+```text
+https://your-vercel-domain.vercel.app/api/integrations/jira/callback
+```
+
+Requested Jira scopes are read-only only:
+
+```text
+read:jira-work
+read:jira-user
+offline_access
 ```
 
 Optional future connector variables:
