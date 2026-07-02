@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation';
-import { prisma } from '@/lib/prisma';
 import { getDashboardTenant } from '@/lib/auth';
-import { buildPilotReadiness, createPilotFeedback, createPilotInvite, setPilotFeatureFlag } from '@/services/pilot';
+import {
+  buildPilotReadiness,
+  createPilotFeedback,
+  createPilotInvite,
+  isPilotMigrationRequired,
+  setPilotFeatureFlag,
+} from '@/services/pilot';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import type { Role } from '@prisma/client';
@@ -25,12 +30,17 @@ async function invitePilotUser(formData: FormData) {
   const email = cleanString(formData.get('email')).toLowerCase();
   const role = cleanString(formData.get('role'), 'EMPLOYEE') as Role;
   if (!email.includes('@')) redirect('/dashboard/pilot?pilot=invalid_invite');
-  await createPilotInvite({
-    organizationId: tenant.organization.id,
-    inviterUserId: tenant.user.id,
-    email,
-    role,
-  });
+  try {
+    await createPilotInvite({
+      organizationId: tenant.organization.id,
+      inviterUserId: tenant.user.id,
+      email,
+      role,
+    });
+  } catch (error) {
+    if (isPilotMigrationRequired(error)) redirect('/dashboard/pilot?pilot=migration_required');
+    throw error;
+  }
   redirect('/dashboard/pilot?pilot=invited');
 }
 
@@ -55,15 +65,20 @@ async function submitPilotFeedback(formData: FormData) {
       : undefined;
 
   if (!title || !body) redirect('/dashboard/pilot?pilot=invalid_feedback');
-  await createPilotFeedback({
-    organizationId: tenant.organization.id,
-    userId: tenant.user.id,
-    type,
-    title,
-    body,
-    pageUrl: pageUrl || null,
-    screenshot,
-  });
+  try {
+    await createPilotFeedback({
+      organizationId: tenant.organization.id,
+      userId: tenant.user.id,
+      type,
+      title,
+      body,
+      pageUrl: pageUrl || null,
+      screenshot,
+    });
+  } catch (error) {
+    if (isPilotMigrationRequired(error)) redirect('/dashboard/pilot?pilot=migration_required');
+    throw error;
+  }
   redirect('/dashboard/pilot?pilot=feedback_submitted');
 }
 
@@ -71,12 +86,17 @@ async function updateFeatureFlag(formData: FormData) {
   'use server';
   const tenant = await getDashboardTenant(3000);
   if (!tenant.organization || !tenant.user) redirect('/dashboard/pilot?pilot=error');
-  await setPilotFeatureFlag({
-    organizationId: tenant.organization.id,
-    userId: tenant.user.id,
-    key: cleanString(formData.get('key')),
-    enabled: cleanString(formData.get('enabled')) === 'true',
-  });
+  try {
+    await setPilotFeatureFlag({
+      organizationId: tenant.organization.id,
+      userId: tenant.user.id,
+      key: cleanString(formData.get('key')),
+      enabled: cleanString(formData.get('enabled')) === 'true',
+    });
+  } catch (error) {
+    if (isPilotMigrationRequired(error)) redirect('/dashboard/pilot?pilot=migration_required');
+    throw error;
+  }
   redirect('/dashboard/pilot?pilot=flag_updated');
 }
 
@@ -87,6 +107,7 @@ function queryNotice(status?: string) {
     flag_updated: { title: 'Feature flag updated', body: 'The workspace feature setting was changed safely.', tone: 'success' },
     invalid_invite: { title: 'Invite needs a valid email', body: 'Enter a beta user work email and try again.', tone: 'error' },
     invalid_feedback: { title: 'Feedback needs detail', body: 'Add a short title and description before submitting.', tone: 'error' },
+    migration_required: { title: 'Pilot storage migration required', body: 'Run npm run db:deploy for the latest pilot readiness tables, then refresh this page.', tone: 'error' },
     error: { title: 'Pilot action unavailable', body: 'Workspace state could not be loaded. Retry in a moment.', tone: 'error' },
   };
   return status ? messages[status] : null;
@@ -136,6 +157,17 @@ export default async function PilotReadinessPage({
         <div className={`rounded-2xl border p-4 text-sm font-semibold shadow-sm ${notice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
           <h3 className="font-black">{notice.title}</h3>
           <p className="mt-1">{notice.body}</p>
+        </div>
+      ) : null}
+
+      {readiness.migrationRequired ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide">Database migration required</p>
+          <h3 className="mt-2 text-xl font-black text-slate-950">Pilot readiness storage is not ready yet</h3>
+          <p className="mt-2 text-sm font-semibold leading-6">
+            Core workspace metrics are still visible. Invites, feedback, issue reports, feature flag changes, and activity logs require the latest Prisma migration in production.
+          </p>
+          <code className="mt-4 block rounded-xl bg-white/75 px-4 py-3 text-sm font-black text-amber-950">Run once: npm run db:deploy</code>
         </div>
       ) : null}
 

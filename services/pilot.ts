@@ -179,30 +179,79 @@ export async function setPilotFeatureFlag(input: {
   return flag;
 }
 
-export async function buildPilotReadiness(organizationId: string) {
-  await ensurePilotFeatureFlags(organizationId);
+function isMissingPilotTableError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes('FeatureFlag') ||
+    message.includes('PilotInvite') ||
+    message.includes('PilotFeedback') ||
+    message.includes('PilotActivityLog') ||
+    message.includes('does not exist in the current database') ||
+    message.includes('table') && message.includes('does not exist')
+  );
+}
 
-  const [
-    users,
-    integrations,
-    approvalsCaptured,
-    openErrors,
-    feedbackSubmitted,
-    invites,
-    flags,
-    activityLogs,
-    playbooks,
-  ] = await Promise.all([
-    prisma.user.count({ where: { organizationId } }),
-    prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
-    prisma.approvalRecord.count({ where: { organizationId } }),
-    prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
-    prisma.pilotFeedback.count({ where: { organizationId } }),
-    prisma.pilotInvite.findMany({ where: { organizationId }, orderBy: { invitedAt: 'desc' }, take: 8 }),
-    prisma.featureFlag.findMany({ where: { organizationId }, orderBy: { key: 'asc' } }),
-    prisma.pilotActivityLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 12 }),
-    prisma.playbookDocument.count({ where: { organizationId } }),
-  ]);
+export function isPilotMigrationRequired(error: unknown) {
+  return isMissingPilotTableError(error);
+}
+
+export async function buildPilotReadiness(organizationId: string) {
+  let migrationRequired = false;
+  let users = 0;
+  let integrations: Awaited<ReturnType<typeof prisma.integration.findMany>> = [];
+  let approvalsCaptured = 0;
+  let openErrors = 0;
+  let feedbackSubmitted = 0;
+  let invites: Awaited<ReturnType<typeof prisma.pilotInvite.findMany>> = [];
+  let flags: Awaited<ReturnType<typeof prisma.featureFlag.findMany>> = [];
+  let activityLogs: Awaited<ReturnType<typeof prisma.pilotActivityLog.findMany>> = [];
+  let playbooks = 0;
+
+  try {
+    await ensurePilotFeatureFlags(organizationId);
+    [
+      users,
+      integrations,
+      approvalsCaptured,
+      openErrors,
+      feedbackSubmitted,
+      invites,
+      flags,
+      activityLogs,
+      playbooks,
+    ] = await Promise.all([
+      prisma.user.count({ where: { organizationId } }),
+      prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
+      prisma.approvalRecord.count({ where: { organizationId } }),
+      prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
+      prisma.pilotFeedback.count({ where: { organizationId } }),
+      prisma.pilotInvite.findMany({ where: { organizationId }, orderBy: { invitedAt: 'desc' }, take: 8 }),
+      prisma.featureFlag.findMany({ where: { organizationId }, orderBy: { key: 'asc' } }),
+      prisma.pilotActivityLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 12 }),
+      prisma.playbookDocument.count({ where: { organizationId } }),
+    ]);
+  } catch (error) {
+    if (!isMissingPilotTableError(error)) throw error;
+    migrationRequired = true;
+    [users, integrations, approvalsCaptured, openErrors, playbooks] = await Promise.all([
+      prisma.user.count({ where: { organizationId } }),
+      prisma.integration.findMany({ where: { organizationId }, orderBy: { provider: 'asc' } }),
+      prisma.approvalRecord.count({ where: { organizationId } }),
+      prisma.integration.count({ where: { organizationId, status: 'ERROR' } }),
+      prisma.playbookDocument.count({ where: { organizationId } }),
+    ]);
+    flags = pilotFeatureFlags.map((flag) => ({
+      id: flag.key,
+      organizationId,
+      key: flag.key,
+      enabled: flag.defaultEnabled,
+      description: flag.description,
+      updatedByUserId: null,
+      metadata: { pilotManaged: true, pendingMigration: true },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+  }
 
   const connected = new Set(integrations.filter((item) => item.status === 'CONNECTED' || item.status === 'SYNCING').map((item) => item.provider));
   const connectedIntegrations = connected.size;
@@ -228,5 +277,6 @@ export async function buildPilotReadiness(organizationId: string) {
     invites,
     flags,
     activityLogs,
+    migrationRequired,
   };
 }
