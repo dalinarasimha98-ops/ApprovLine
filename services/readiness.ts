@@ -58,6 +58,8 @@ export async function buildReadinessReport() {
     serviceNowClientId: envCheck('SERVICENOW_CLIENT_ID', 'ServiceNow client ID'),
     serviceNowClientSecret: envCheck('SERVICENOW_CLIENT_SECRET', 'ServiceNow client secret'),
     serviceNowInstanceUrl: envCheck('SERVICENOW_INSTANCE_URL', 'ServiceNow instance URL'),
+    zoomClientId: envCheck('ZOOM_CLIENT_ID', 'Zoom client ID'),
+    zoomClientSecret: envCheck('ZOOM_CLIENT_SECRET', 'Zoom client secret'),
     gmailSyncInterval: env.GMAIL_SYNC_INTERVAL_MINUTES
       ? { status: 'ok' as const, message: `Gmail sync interval ${env.GMAIL_SYNC_INTERVAL_MINUTES} minutes` }
       : { status: 'missing' as const, message: 'GMAIL_SYNC_INTERVAL_MINUTES missing; defaults to 15 minutes' },
@@ -66,6 +68,7 @@ export async function buildReadinessReport() {
     teamsLastSync: await checkTeamsLastSync(),
     jiraLastSync: await checkJiraLastSync(),
     serviceNowLastSync: await checkServiceNowLastSync(),
+    zoomLastSync: await checkZoomLastSync(),
     appUrl: envCheck('APP_URL', 'App URL'),
     encryptionKey: envCheck('ENCRYPTION_KEY', 'Encryption key'),
     clerkPublishableKey: envCheck('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'Clerk publishable key'),
@@ -87,6 +90,8 @@ export async function buildReadinessReport() {
     checks.serviceNowClientId,
     checks.serviceNowClientSecret,
     checks.serviceNowInstanceUrl,
+    checks.zoomClientId,
+    checks.zoomClientSecret,
     checks.appUrl,
     checks.encryptionKey,
     checks.clerkPublishableKey,
@@ -98,6 +103,30 @@ export async function buildReadinessReport() {
     checkedAt: new Date().toISOString(),
     checks,
   };
+}
+
+async function checkZoomLastSync(): Promise<ReadinessCheck> {
+  const databaseUrl = validateDatabaseUrl();
+  if (!databaseUrl.valid) {
+    return { status: databaseUrl.errorCode === 'DATABASE_URL_MISSING' ? 'missing' : 'error', message: databaseUrl.safeErrorMessage ?? 'DATABASE_URL invalid; cannot inspect Zoom sync status' };
+  }
+  try {
+    const integration = await prisma.integration.findFirst({
+      where: { provider: 'ZOOM' },
+      orderBy: { updatedAt: 'desc' },
+      select: { status: true, metadata: true },
+    });
+    if (!integration) return { status: 'missing', message: 'No Zoom integration connected yet' };
+    const metadata = integration.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {};
+    const lastSyncAt = typeof metadata.lastSyncAt === 'string' ? metadata.lastSyncAt : null;
+    const lastSyncStatus = typeof metadata.lastSyncStatus === 'string' ? metadata.lastSyncStatus : integration.status.toLowerCase();
+    return {
+      status: integration.status === 'ERROR' || integration.status === 'NEEDS_REAUTH' ? 'error' : 'ok',
+      message: lastSyncAt ? `Last Zoom sync ${lastSyncStatus} at ${lastSyncAt}` : `Zoom ${integration.status.toLowerCase()}; no sync timestamp yet`,
+    };
+  } catch (error) {
+    return { status: 'error', message: databaseErrorMessage(error, 'Unable to inspect Zoom sync status') };
+  }
 }
 
 async function checkServiceNowLastSync(): Promise<ReadinessCheck> {

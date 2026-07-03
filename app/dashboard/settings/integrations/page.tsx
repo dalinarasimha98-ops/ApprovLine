@@ -88,6 +88,7 @@ const sections: IntegrationSection[] = [
         description: 'Automatically extract decisions from Zoom meeting transcripts',
         icon: 'Z',
         iconClass: 'bg-sky-50 text-sky-600',
+        href: '/api/integrations/zoom/install',
       },
     ],
   },
@@ -142,7 +143,7 @@ const sections: IntegrationSection[] = [
   },
 ];
 
-function oauthMessage(provider: 'Slack' | 'Gmail' | 'Outlook' | 'Microsoft Teams' | 'Jira' | 'ServiceNow', status?: string, reason?: string) {
+function oauthMessage(provider: 'Slack' | 'Gmail' | 'Outlook' | 'Microsoft Teams' | 'Jira' | 'ServiceNow' | 'Zoom', status?: string, reason?: string) {
   if (status === 'connected') {
     return {
       tone: 'success',
@@ -174,6 +175,9 @@ function oauthMessage(provider: 'Slack' | 'Gmail' | 'Outlook' | 'Microsoft Teams
     missing_servicenow_instance: 'ServiceNow needs an instance URL. Add SERVICENOW_INSTANCE_URL in Vercel, for example https://your-instance.service-now.com.',
     servicenow_integration_missing: 'ServiceNow is not connected for this workspace yet. Connect ServiceNow first, then sync.',
     servicenow_database_migration_required: 'ServiceNow connected, but ApprovLine production database needs the ServiceNow migration. Run npm run db:deploy, then reconnect ServiceNow.',
+    missing_zoom_account: 'Zoom did not return an account or user profile. Confirm user:read scope is enabled, then reconnect Zoom.',
+    zoom_integration_missing: 'Zoom is not connected for this workspace yet. Connect Zoom first, then sync.',
+    zoom_database_migration_required: 'Zoom connected, but ApprovLine production database needs the Zoom migration. Run npm run db:deploy, then reconnect Zoom.',
   };
   return {
     tone: 'error',
@@ -297,6 +301,14 @@ function IntegrationTile({
                 </FormSubmitButton>
               </form>
             ) : null}
+            {card.key === 'zoom' && connected ? (
+              <form action="/api/integrations/zoom/sync" method="post">
+                <input type="hidden" name="integrationId" value={integration?.id ?? ''} />
+                <FormSubmitButton pendingText="Syncing Zoom..." className="min-h-0 h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50">
+                  Sync now
+                </FormSubmitButton>
+              </form>
+            ) : null}
           </div>
         </div>
       </div>
@@ -318,7 +330,7 @@ function IntegrationTile({
 export default async function IntegrationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ slack?: string; gmail?: string; outlook?: string; teams?: string; jira?: string; servicenow?: string; reason?: string }>;
+  searchParams: Promise<{ slack?: string; gmail?: string; outlook?: string; teams?: string; jira?: string; servicenow?: string; zoom?: string; reason?: string }>;
 }) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
@@ -353,6 +365,7 @@ export default async function IntegrationsPage({
   const teamsNotice = oauthMessage('Microsoft Teams', query.teams, query.reason);
   const jiraNotice = oauthMessage('Jira', query.jira, query.reason);
   const serviceNowNotice = oauthMessage('ServiceNow', query.servicenow, query.reason);
+  const zoomNotice = oauthMessage('Zoom', query.zoom, query.reason);
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-10 pb-10">
@@ -360,7 +373,7 @@ export default async function IntegrationsPage({
         <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2155d9]">Integrations</p>
         <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Connect approval sources</h2>
         <p className="mt-2 max-w-2xl text-base font-semibold leading-7 text-slate-500">
-          Choose where ApprovLine should capture decisions. Slack, Gmail, Outlook, Microsoft Teams, Jira, and ServiceNow are available now; the rest are staged for rollout.
+          Choose where ApprovLine should capture decisions. Slack, Gmail, Outlook, Microsoft Teams, Jira, ServiceNow, and Zoom are available now; the rest are staged for rollout.
         </p>
       </div>
 
@@ -371,7 +384,7 @@ export default async function IntegrationsPage({
         </div>
       ) : null}
 
-      {[slackNotice, gmailNotice, outlookNotice, teamsNotice, jiraNotice, serviceNowNotice].filter(Boolean).map((notice) => (
+      {[slackNotice, gmailNotice, outlookNotice, teamsNotice, jiraNotice, serviceNowNotice, zoomNotice].filter(Boolean).map((notice) => (
         <div
           key={notice!.title}
           className={`rounded-2xl border p-4 shadow-sm ${

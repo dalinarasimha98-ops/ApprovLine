@@ -128,7 +128,22 @@ read:jira-user
 offline_access
 ```
 
-Optional future connector variables:
+Zoom OAuth must use this exact callback URL in the Zoom Marketplace app:
+
+```text
+https://your-vercel-domain.vercel.app/api/integrations/zoom/callback
+```
+
+Requested Zoom scopes are read-only only:
+
+```text
+user:read
+meeting:read
+recording:read
+report:read
+```
+
+Zoom connector variables:
 
 ```bash
 ZOOM_CLIENT_ID=

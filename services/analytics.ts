@@ -43,6 +43,7 @@ export type ExecutiveAnalytics = {
     jiraApprovals: number;
     outlookApprovals: number;
     serviceNowApprovals: number;
+    zoomApprovals: number;
   };
   playbookAi: {
     questionsAsked: number;
@@ -82,6 +83,7 @@ function sourceName(source?: string | null) {
   if (normalized.includes('jira')) return 'Jira';
   if (normalized.includes('servicenow')) return 'ServiceNow';
   if (normalized.includes('outlook')) return 'Outlook';
+  if (normalized.includes('zoom')) return 'Zoom';
   return normalized === 'unknown' ? 'Unknown' : normalized[0].toUpperCase() + normalized.slice(1);
 }
 
@@ -213,6 +215,7 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
       jiraApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Jira').length, multiplier),
       outlookApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Outlook').length, multiplier),
       serviceNowApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'ServiceNow').length, multiplier),
+      zoomApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Zoom').length, multiplier),
     },
     playbookAi: {
       questionsAsked: scale(playbookQueries.length, demoProjection ? 6 : 1),
@@ -248,6 +251,7 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
     report.integrations.gmailApprovals ||= 344;
     report.integrations.jiraApprovals ||= 68;
     report.integrations.serviceNowApprovals ||= 44;
+    report.integrations.zoomApprovals ||= 54;
   }
 
   return report;
@@ -275,6 +279,7 @@ export function analyticsCsv(report: ExecutiveAnalytics) {
     ['Jira Approvals', String(report.integrations.jiraApprovals)],
     ['Outlook Approvals', String(report.integrations.outlookApprovals)],
     ['ServiceNow Approvals', String(report.integrations.serviceNowApprovals)],
+    ['Zoom Approvals', String(report.integrations.zoomApprovals)],
     ['Playbook Questions Asked', String(report.playbookAi.questionsAsked)],
     ...report.approvals.trends.map((item) => [`Trend: ${item.name}`, String(item.count)]),
     ...report.approvals.byDepartment.map((item) => [`Department: ${item.name}`, String(item.count)]),
