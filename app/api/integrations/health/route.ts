@@ -25,6 +25,7 @@ export async function GET() {
       teamsApi: readiness.checks.teamsLastSync,
       jiraApi: readiness.checks.jiraLastSync,
       serviceNowApi: readiness.checks.serviceNowLastSync,
+      zoomApi: readiness.checks.zoomLastSync,
     },
     connectors: {
       slack: connectorStatus(Boolean(env.SLACK_CLIENT_ID && env.SLACK_CLIENT_SECRET)),

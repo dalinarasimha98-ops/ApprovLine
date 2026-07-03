@@ -14,7 +14,7 @@ type DemoApproval = {
   businessImpact: string;
   approverName: string;
   approverEmail: string;
-  sourcePlatform: 'slack' | 'gmail' | 'outlook' | 'teams' | 'jira' | 'servicenow';
+  sourcePlatform: 'slack' | 'gmail' | 'outlook' | 'teams' | 'jira' | 'servicenow' | 'zoom';
   provider: IntegrationProvider;
   channel: string;
   sourceLink: string;
@@ -357,6 +357,68 @@ const demoApprovals: DemoApproval[] = [
     conditions: 'Access expires after 4 hours.',
     receivedHoursAgo: 11,
   },
+  {
+    subject: 'Executive approval for Q4 infrastructure budget',
+    department: 'Finance',
+    category: 'Finance',
+    approvalType: 'EXPLICIT',
+    status: 'APPROVED',
+    confidence: 95,
+    riskLevel: 'medium',
+    businessImpact: 'Approves infrastructure spend discussed in an executive Zoom meeting with searchable transcript evidence.',
+    approverName: 'Finance Leadership Team',
+    approverEmail: 'finance-leadership@acme.example',
+    sourcePlatform: 'zoom',
+    provider: 'ZOOM',
+    channel: 'Zoom / Executive Budget Review',
+    sourceLink: 'https://zoom.us/rec/share/demo-executive-budget-review',
+    externalId: 'demo-zoom-executive-budget-review',
+    evidenceSnippet: 'Transcript 00:18:43 - Finance approves the Q4 infrastructure budget increase. Engineering can proceed.',
+    reasoning: 'Zoom transcript contains explicit approval language, budget context, and owner department.',
+    receivedHoursAgo: 4,
+  },
+  {
+    subject: 'Vendor contract review from procurement meeting',
+    department: 'Procurement',
+    category: 'Procurement',
+    approvalType: 'CONDITIONAL',
+    status: 'PENDING_REVIEW',
+    confidence: 92,
+    riskLevel: 'high',
+    businessImpact: 'Allows procurement to continue vendor onboarding only after Legal and CFO evidence is captured.',
+    approverName: 'Procurement Review Committee',
+    approverEmail: 'procurement-committee@acme.example',
+    sourcePlatform: 'zoom',
+    provider: 'ZOOM',
+    channel: 'Zoom / Vendor Risk Review',
+    sourceLink: 'https://zoom.us/rec/share/demo-vendor-risk-review',
+    externalId: 'demo-zoom-vendor-risk-review',
+    evidenceSnippet: 'Transcript 00:32:10 - Let’s move forward with the vendor contract provided Legal and the CFO sign off before signature.',
+    reasoning: 'Meeting transcript includes conditional approval and missing cross-functional approvers.',
+    conditions: 'Legal and CFO must sign off before signature.',
+    receivedHoursAgo: 7,
+  },
+  {
+    subject: 'Security review decision for public launch',
+    department: 'Security',
+    category: 'Security',
+    approvalType: 'REJECTION',
+    status: 'REJECTED',
+    confidence: 93,
+    riskLevel: 'critical',
+    businessImpact: 'Prevents product launch until missing security evidence is reviewed.',
+    approverName: 'Security Council',
+    approverEmail: 'security-council@acme.example',
+    sourcePlatform: 'zoom',
+    provider: 'ZOOM',
+    channel: 'Zoom / Launch Readiness Review',
+    sourceLink: 'https://zoom.us/rec/share/demo-launch-security-review',
+    externalId: 'demo-zoom-launch-security-review',
+    evidenceSnippet: 'Transcript 00:41:02 - Not approved for launch today. We need more review on the penetration test findings.',
+    reasoning: 'Zoom transcript contains direct rejection language and a clear missing evidence reason.',
+    conditions: 'Penetration test findings must be reviewed before launch approval.',
+    receivedHoursAgo: 13,
+  },
 ];
 
 function demoMetadata(extra: Record<string, unknown> = {}) {
@@ -551,6 +613,44 @@ export async function createDemoDataForOrganization(organizationId: string) {
       }),
     },
   });
+  const zoomIntegration = await prisma.integration.upsert({
+    where: {
+      organizationId_provider_externalAccount: {
+        organizationId,
+        provider: 'ZOOM',
+        externalAccount: 'Acme Demo Zoom',
+      },
+    },
+    update: {
+      status: 'CONNECTED',
+      scopes: ['user:read', 'meeting:read', 'recording:read', 'report:read'],
+      metadata: demoMetadata({
+        accountId: 'ZOOM-DEMO-ACCOUNT',
+        userId: 'ZOOM-DEMO-HOST',
+        workspace: 'Acme Demo Zoom',
+        health: 'healthy',
+        meetingsProcessed: 6,
+        transcriptsProcessed: 3,
+        approvalsFound: 3,
+      }),
+    },
+    create: {
+      organizationId,
+      provider: 'ZOOM',
+      status: 'CONNECTED',
+      externalAccount: 'Acme Demo Zoom',
+      scopes: ['user:read', 'meeting:read', 'recording:read', 'report:read'],
+      metadata: demoMetadata({
+        accountId: 'ZOOM-DEMO-ACCOUNT',
+        userId: 'ZOOM-DEMO-HOST',
+        workspace: 'Acme Demo Zoom',
+        health: 'healthy',
+        meetingsProcessed: 6,
+        transcriptsProcessed: 3,
+        approvalsFound: 3,
+      }),
+    },
+  });
 
   for (const [index, item] of demoApprovals.entries()) {
     const receivedAt = new Date(Date.now() - item.receivedHoursAgo * 60 * 60 * 1000);
@@ -561,7 +661,7 @@ export async function createDemoDataForOrganization(organizationId: string) {
       MICROSOFT_TEAMS: teamsIntegration.id,
       JIRA: jiraIntegration.id,
       SERVICENOW: serviceNowIntegration.id,
-      ZOOM: undefined,
+      ZOOM: zoomIntegration.id,
     } satisfies Partial<Record<IntegrationProvider, string | undefined>>;
     const integrationId = integrationByProvider[item.provider];
 

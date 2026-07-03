@@ -29,6 +29,9 @@ export async function GET(
   if (provider === 'servicenow') {
     return NextResponse.redirect(new URL('/api/integrations/servicenow/install', request.url));
   }
+  if (provider === 'zoom') {
+    return NextResponse.redirect(new URL('/api/integrations/zoom/install', request.url));
+  }
 
   const target = providerUrls[provider];
   if (!target) return NextResponse.json({ error: 'Unsupported provider' }, { status: 404 });

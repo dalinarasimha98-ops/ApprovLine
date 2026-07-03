@@ -37,6 +37,8 @@ export async function GET() {
       SERVICENOW_CLIENT_ID: configured(env.SERVICENOW_CLIENT_ID),
       SERVICENOW_CLIENT_SECRET: configured(env.SERVICENOW_CLIENT_SECRET),
       SERVICENOW_INSTANCE_URL: configured(env.SERVICENOW_INSTANCE_URL),
+      ZOOM_CLIENT_ID: configured(env.ZOOM_CLIENT_ID),
+      ZOOM_CLIENT_SECRET: configured(env.ZOOM_CLIENT_SECRET),
     },
   });
 }
