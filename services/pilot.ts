@@ -82,6 +82,12 @@ export const pilotFeatureFlags = [
     description: 'Enable Jira OAuth and issue evidence sync.',
     defaultEnabled: true,
   },
+  {
+    key: 'servicenow_connector',
+    label: 'ServiceNow connector',
+    description: 'Enable ServiceNow OAuth and change, CAB, procurement, and access request evidence sync.',
+    defaultEnabled: true,
+  },
 ] as const;
 
 export const pilotChecklist: Array<{ key: string; label: string; href: string; provider?: IntegrationProvider }> = [
@@ -90,6 +96,7 @@ export const pilotChecklist: Array<{ key: string; label: string; href: string; p
   { key: 'connect_outlook', label: 'Connect Outlook or Exchange', href: '/dashboard/settings/integrations', provider: 'OUTLOOK' },
   { key: 'connect_teams', label: 'Connect Microsoft Teams', href: '/dashboard/settings/integrations', provider: 'MICROSOFT_TEAMS' },
   { key: 'connect_jira', label: 'Connect Jira', href: '/dashboard/settings/integrations', provider: 'JIRA' },
+  { key: 'connect_servicenow', label: 'Connect ServiceNow', href: '/dashboard/settings/integrations', provider: 'SERVICENOW' },
   { key: 'upload_playbook', label: 'Upload first playbook', href: '/playbooks' },
   { key: 'audit_report', label: 'Generate first audit report', href: '/dashboard/export' },
 ];

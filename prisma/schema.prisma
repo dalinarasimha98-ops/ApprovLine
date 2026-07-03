@@ -20,6 +20,7 @@ enum IntegrationProvider {
   OUTLOOK
   MICROSOFT_TEAMS
   JIRA
+  SERVICENOW
   ZOOM
 }
 

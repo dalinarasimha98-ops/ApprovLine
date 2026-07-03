@@ -14,10 +14,13 @@ const reasonLabels: Record<string, string> = {
   missing_jira_site: 'Atlassian did not return a Jira site.',
   jira_integration_missing: 'Jira is not connected yet.',
   jira_database_migration_required: 'Production database needs the Jira migration. Run npm run db:deploy.',
+  missing_servicenow_instance: 'ServiceNow needs SERVICENOW_INSTANCE_URL configured.',
+  servicenow_integration_missing: 'ServiceNow is not connected yet.',
+  servicenow_database_migration_required: 'Production database needs the ServiceNow migration. Run npm run db:deploy.',
 };
 
-function messageFor(provider: 'slack' | 'gmail' | 'outlook' | 'teams' | 'jira', status: string | null, reason: string | null) {
-  const name = provider === 'slack' ? 'Slack' : provider === 'gmail' ? 'Gmail' : provider === 'outlook' ? 'Outlook' : provider === 'teams' ? 'Microsoft Teams' : 'Jira';
+function messageFor(provider: 'slack' | 'gmail' | 'outlook' | 'teams' | 'jira' | 'servicenow', status: string | null, reason: string | null) {
+  const name = provider === 'slack' ? 'Slack' : provider === 'gmail' ? 'Gmail' : provider === 'outlook' ? 'Outlook' : provider === 'teams' ? 'Microsoft Teams' : provider === 'jira' ? 'Jira' : 'ServiceNow';
   if (status === 'connected') return { tone: 'success', text: `${name} connected successfully.` };
   if (status === 'synced') return { tone: 'success', text: `${name} synced successfully.` };
   if (status === 'error') return { tone: 'error', text: reasonLabels[reason ?? ''] ?? `${name} action needs attention.` };
@@ -31,8 +34,9 @@ export function ToastOnQuery() {
   const outlook = messageFor('outlook', params.get('outlook'), params.get('reason'));
   const teams = messageFor('teams', params.get('teams'), params.get('reason'));
   const jira = messageFor('jira', params.get('jira'), params.get('reason'));
+  const serviceNow = messageFor('servicenow', params.get('servicenow'), params.get('reason'));
   const approvalRecordId = params.get('approvalRecordId');
-  const message = slack ?? gmail ?? outlook ?? teams ?? jira ?? (approvalRecordId ? { tone: 'success', text: 'Approval record created.' } : null);
+  const message = slack ?? gmail ?? outlook ?? teams ?? jira ?? serviceNow ?? (approvalRecordId ? { tone: 'success', text: 'Approval record created.' } : null);
 
   if (!message) return null;
 

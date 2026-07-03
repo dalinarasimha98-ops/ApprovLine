@@ -8,7 +8,7 @@ import { enqueueIncomingMessage } from '@/services/queue/approvalQueue';
 import { processIncomingMessage } from '@/services/ingestion/processIncomingMessage';
 
 const testIngestSchema = z.object({
-  source_platform: z.enum(['slack', 'gmail', 'teams', 'zoom']),
+  source_platform: z.enum(['slack', 'gmail', 'outlook', 'teams', 'jira', 'servicenow', 'zoom']),
   message: z.string().min(1).max(4000),
   sender_name: z.string().optional(),
   sender_email: z.string().email().optional(),

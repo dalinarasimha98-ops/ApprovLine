@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 type IntegrationCard = {
   key: string;
-  provider?: 'GMAIL' | 'OUTLOOK' | 'SLACK' | 'MICROSOFT_TEAMS' | 'JIRA' | 'ZOOM';
+  provider?: 'GMAIL' | 'OUTLOOK' | 'SLACK' | 'MICROSOFT_TEAMS' | 'JIRA' | 'SERVICENOW' | 'ZOOM';
   name: string;
   description: string;
   icon: string;
@@ -126,9 +126,23 @@ const sections: IntegrationSection[] = [
       },
     ],
   },
+  {
+    title: 'IT Service Management',
+    cards: [
+      {
+        key: 'servicenow',
+        provider: 'SERVICENOW',
+        name: 'ServiceNow',
+        description: 'Capture change, CAB, procurement, access request, and workflow approvals',
+        icon: 'S',
+        iconClass: 'bg-emerald-50 text-emerald-700',
+        href: '/api/integrations/servicenow/install',
+      },
+    ],
+  },
 ];
 
-function oauthMessage(provider: 'Slack' | 'Gmail' | 'Outlook' | 'Microsoft Teams' | 'Jira', status?: string, reason?: string) {
+function oauthMessage(provider: 'Slack' | 'Gmail' | 'Outlook' | 'Microsoft Teams' | 'Jira' | 'ServiceNow', status?: string, reason?: string) {
   if (status === 'connected') {
     return {
       tone: 'success',
@@ -157,6 +171,9 @@ function oauthMessage(provider: 'Slack' | 'Gmail' | 'Outlook' | 'Microsoft Teams
     missing_jira_site: 'Atlassian did not return a Jira site. Confirm this account has access to a Jira Cloud workspace.',
     jira_integration_missing: 'Jira is not connected for this workspace yet. Connect Jira first, then sync.',
     jira_database_migration_required: 'Jira connected at Atlassian, but ApprovLine production database needs the latest migration. Run npm run db:deploy, then reconnect Jira.',
+    missing_servicenow_instance: 'ServiceNow needs an instance URL. Add SERVICENOW_INSTANCE_URL in Vercel, for example https://your-instance.service-now.com.',
+    servicenow_integration_missing: 'ServiceNow is not connected for this workspace yet. Connect ServiceNow first, then sync.',
+    servicenow_database_migration_required: 'ServiceNow connected, but ApprovLine production database needs the ServiceNow migration. Run npm run db:deploy, then reconnect ServiceNow.',
   };
   return {
     tone: 'error',
@@ -272,6 +289,14 @@ function IntegrationTile({
                 </FormSubmitButton>
               </form>
             ) : null}
+            {card.key === 'servicenow' && connected ? (
+              <form action="/api/integrations/servicenow/sync" method="post">
+                <input type="hidden" name="integrationId" value={integration?.id ?? ''} />
+                <FormSubmitButton pendingText="Syncing ServiceNow..." className="min-h-0 h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50">
+                  Sync now
+                </FormSubmitButton>
+              </form>
+            ) : null}
           </div>
         </div>
       </div>
@@ -293,7 +318,7 @@ function IntegrationTile({
 export default async function IntegrationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ slack?: string; gmail?: string; outlook?: string; teams?: string; jira?: string; reason?: string }>;
+  searchParams: Promise<{ slack?: string; gmail?: string; outlook?: string; teams?: string; jira?: string; servicenow?: string; reason?: string }>;
 }) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
@@ -327,6 +352,7 @@ export default async function IntegrationsPage({
   const outlookNotice = oauthMessage('Outlook', query.outlook, query.reason);
   const teamsNotice = oauthMessage('Microsoft Teams', query.teams, query.reason);
   const jiraNotice = oauthMessage('Jira', query.jira, query.reason);
+  const serviceNowNotice = oauthMessage('ServiceNow', query.servicenow, query.reason);
 
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-10 pb-10">
@@ -334,7 +360,7 @@ export default async function IntegrationsPage({
         <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2155d9]">Integrations</p>
         <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Connect approval sources</h2>
         <p className="mt-2 max-w-2xl text-base font-semibold leading-7 text-slate-500">
-          Choose where ApprovLine should capture decisions. Slack, Gmail, Outlook, Microsoft Teams, and Jira are available now; the rest are staged for rollout.
+          Choose where ApprovLine should capture decisions. Slack, Gmail, Outlook, Microsoft Teams, Jira, and ServiceNow are available now; the rest are staged for rollout.
         </p>
       </div>
 
@@ -345,7 +371,7 @@ export default async function IntegrationsPage({
         </div>
       ) : null}
 
-      {[slackNotice, gmailNotice, outlookNotice, teamsNotice, jiraNotice].filter(Boolean).map((notice) => (
+      {[slackNotice, gmailNotice, outlookNotice, teamsNotice, jiraNotice, serviceNowNotice].filter(Boolean).map((notice) => (
         <div
           key={notice!.title}
           className={`rounded-2xl border p-4 shadow-sm ${

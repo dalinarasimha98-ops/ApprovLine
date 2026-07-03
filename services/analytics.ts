@@ -42,6 +42,7 @@ export type ExecutiveAnalytics = {
     teamsApprovals: number;
     jiraApprovals: number;
     outlookApprovals: number;
+    serviceNowApprovals: number;
   };
   playbookAi: {
     questionsAsked: number;
@@ -79,6 +80,7 @@ function sourceName(source?: string | null) {
   if (normalized.includes('gmail')) return 'Gmail';
   if (normalized.includes('team')) return 'Teams';
   if (normalized.includes('jira')) return 'Jira';
+  if (normalized.includes('servicenow')) return 'ServiceNow';
   if (normalized.includes('outlook')) return 'Outlook';
   return normalized === 'unknown' ? 'Unknown' : normalized[0].toUpperCase() + normalized.slice(1);
 }
@@ -210,6 +212,7 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
       teamsApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Teams').length, multiplier),
       jiraApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Jira').length, multiplier),
       outlookApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Outlook').length, multiplier),
+      serviceNowApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'ServiceNow').length, multiplier),
     },
     playbookAi: {
       questionsAsked: scale(playbookQueries.length, demoProjection ? 6 : 1),
@@ -244,6 +247,7 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
     report.integrations.slackApprovals ||= 398;
     report.integrations.gmailApprovals ||= 344;
     report.integrations.jiraApprovals ||= 68;
+    report.integrations.serviceNowApprovals ||= 44;
   }
 
   return report;
@@ -270,6 +274,7 @@ export function analyticsCsv(report: ExecutiveAnalytics) {
     ['Teams Approvals', String(report.integrations.teamsApprovals)],
     ['Jira Approvals', String(report.integrations.jiraApprovals)],
     ['Outlook Approvals', String(report.integrations.outlookApprovals)],
+    ['ServiceNow Approvals', String(report.integrations.serviceNowApprovals)],
     ['Playbook Questions Asked', String(report.playbookAi.questionsAsked)],
     ...report.approvals.trends.map((item) => [`Trend: ${item.name}`, String(item.count)]),
     ...report.approvals.byDepartment.map((item) => [`Department: ${item.name}`, String(item.count)]),

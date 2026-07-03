@@ -26,6 +26,9 @@ const envSchema = z.object({
   MICROSOFT_TENANT_ID: optionalEnvString,
   JIRA_CLIENT_ID: optionalEnvString,
   JIRA_CLIENT_SECRET: optionalEnvString,
+  SERVICENOW_CLIENT_ID: optionalEnvString,
+  SERVICENOW_CLIENT_SECRET: optionalEnvString,
+  SERVICENOW_INSTANCE_URL: optionalEnvString,
   ZOOM_CLIENT_ID: optionalEnvString,
   ZOOM_CLIENT_SECRET: optionalEnvString,
 });
