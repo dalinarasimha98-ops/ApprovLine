@@ -84,6 +84,12 @@ function sourceName(source?: string | null) {
   if (normalized.includes('servicenow')) return 'ServiceNow';
   if (normalized.includes('outlook')) return 'Outlook';
   if (normalized.includes('zoom')) return 'Zoom';
+  if (normalized.includes('sap')) return 'SAP';
+  if (normalized.includes('oracle')) return 'Oracle';
+  if (normalized.includes('coupa')) return 'Coupa';
+  if (normalized.includes('workday')) return 'Workday';
+  if (normalized.includes('salesforce')) return 'Salesforce';
+  if (normalized.includes('hubspot')) return 'HubSpot';
   return normalized === 'unknown' ? 'Unknown' : normalized[0].toUpperCase() + normalized.slice(1);
 }
 

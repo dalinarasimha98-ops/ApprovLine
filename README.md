@@ -150,6 +150,61 @@ ZOOM_CLIENT_ID=
 ZOOM_CLIENT_SECRET=
 ```
 
+## Universal Approval Gateway
+
+The Universal Approval Gateway lets enterprise systems send approval evidence into ApprovLine without a custom connector.
+
+Dashboard:
+
+```text
+/dashboard/gateway
+```
+
+Direct approval API:
+
+```text
+POST /api/v1/approvals
+```
+
+Example payload:
+
+```json
+{
+  "approver": "Sarah Chen",
+  "approver_email": "sarah.chen@company.com",
+  "decision": "Approved. Release PO 4500098842.",
+  "source_system": "sap",
+  "department": "Procurement",
+  "timestamp": "2026-07-03T10:00:00.000Z",
+  "amount": 185000,
+  "metadata": {
+    "url": "https://sap.example/po/4500098842"
+  }
+}
+```
+
+Webhook endpoint for SAP, Oracle, Coupa, Workday, Salesforce, HubSpot, and custom systems:
+
+```text
+POST /api/v1/webhooks/approvals
+```
+
+Bulk and intelligence endpoints:
+
+```text
+POST /api/v1/imports/csv
+POST /api/v1/documents/intelligence
+POST /api/v1/transcripts/intelligence
+```
+
+Tenant email forwarding format:
+
+```text
+approvals+tenant@approvline.ai
+```
+
+All gateway traffic flows through the existing classifier, risk engine, audit log, investigation center, and executive analytics.
+
 Check deployment readiness:
 
 ```bash
