@@ -12,6 +12,7 @@ const nav = [
   { href: '/dashboard/audit', label: 'Audit Logs', pending: 'Opening audit logs...' },
   { href: '/playbooks', label: 'Playbook AI', pending: 'Opening playbooks...' },
   { href: '/dashboard/settings/integrations', label: 'Integrations', pending: 'Opening integrations...' },
+  { href: '/dashboard/gateway', label: 'Universal Gateway', pending: 'Opening gateway...' },
   { href: '/dashboard/pilot', label: 'Pilot Readiness', pending: 'Opening pilot readiness...' },
   { href: '/dashboard/customer-success', label: 'Customer Success', pending: 'Opening customer success...' },
   { href: '/dashboard/settings', label: 'Settings', pending: 'Opening settings...' },
