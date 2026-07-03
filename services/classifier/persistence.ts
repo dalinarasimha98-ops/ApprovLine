@@ -39,6 +39,9 @@ function toIntegrationProvider(source?: string | null): IntegrationProvider | nu
     microsoftteams: 'MICROSOFT_TEAMS',
     jira: 'JIRA',
     atlassianjira: 'JIRA',
+    servicenow: 'SERVICENOW',
+    servicecatalog: 'SERVICENOW',
+    cabapproval: 'SERVICENOW',
     zoom: 'ZOOM',
   };
   return normalized ? map[normalized] ?? null : null;

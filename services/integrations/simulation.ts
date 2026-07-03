@@ -1,6 +1,6 @@
 import type { IncomingMessageJob } from '@/services/queue/approvalQueue';
 
-export type SimulatedSourcePlatform = 'slack' | 'gmail' | 'outlook' | 'teams' | 'jira' | 'zoom';
+export type SimulatedSourcePlatform = 'slack' | 'gmail' | 'outlook' | 'teams' | 'jira' | 'servicenow' | 'zoom';
 
 export interface SimulatedIncomingMessage {
   source_platform: SimulatedSourcePlatform;
@@ -18,6 +18,7 @@ const providerMap: Record<SimulatedSourcePlatform, IncomingMessageJob['provider'
   outlook: 'OUTLOOK',
   teams: 'MICROSOFT_TEAMS',
   jira: 'JIRA',
+  servicenow: 'SERVICENOW',
   zoom: 'ZOOM',
 };
 
@@ -49,6 +50,7 @@ export function sourcePlatformFromProvider(provider: IncomingMessageJob['provide
     OUTLOOK: 'outlook',
     MICROSOFT_TEAMS: 'teams',
     JIRA: 'jira',
+    SERVICENOW: 'servicenow',
     ZOOM: 'zoom',
   };
   return map[provider];

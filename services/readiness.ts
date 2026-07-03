@@ -55,6 +55,9 @@ export async function buildReadinessReport() {
       : { status: 'missing' as const, message: 'MICROSOFT_TENANT_ID missing; Teams OAuth will use organizations endpoint' },
     jiraClientId: envCheck('JIRA_CLIENT_ID', 'Jira client ID'),
     jiraClientSecret: envCheck('JIRA_CLIENT_SECRET', 'Jira client secret'),
+    serviceNowClientId: envCheck('SERVICENOW_CLIENT_ID', 'ServiceNow client ID'),
+    serviceNowClientSecret: envCheck('SERVICENOW_CLIENT_SECRET', 'ServiceNow client secret'),
+    serviceNowInstanceUrl: envCheck('SERVICENOW_INSTANCE_URL', 'ServiceNow instance URL'),
     gmailSyncInterval: env.GMAIL_SYNC_INTERVAL_MINUTES
       ? { status: 'ok' as const, message: `Gmail sync interval ${env.GMAIL_SYNC_INTERVAL_MINUTES} minutes` }
       : { status: 'missing' as const, message: 'GMAIL_SYNC_INTERVAL_MINUTES missing; defaults to 15 minutes' },
@@ -62,6 +65,7 @@ export async function buildReadinessReport() {
     outlookLastSync: await checkOutlookLastSync(),
     teamsLastSync: await checkTeamsLastSync(),
     jiraLastSync: await checkJiraLastSync(),
+    serviceNowLastSync: await checkServiceNowLastSync(),
     appUrl: envCheck('APP_URL', 'App URL'),
     encryptionKey: envCheck('ENCRYPTION_KEY', 'Encryption key'),
     clerkPublishableKey: envCheck('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'Clerk publishable key'),
@@ -80,6 +84,9 @@ export async function buildReadinessReport() {
     checks.microsoftClientSecret,
     checks.jiraClientId,
     checks.jiraClientSecret,
+    checks.serviceNowClientId,
+    checks.serviceNowClientSecret,
+    checks.serviceNowInstanceUrl,
     checks.appUrl,
     checks.encryptionKey,
     checks.clerkPublishableKey,
@@ -91,6 +98,30 @@ export async function buildReadinessReport() {
     checkedAt: new Date().toISOString(),
     checks,
   };
+}
+
+async function checkServiceNowLastSync(): Promise<ReadinessCheck> {
+  const databaseUrl = validateDatabaseUrl();
+  if (!databaseUrl.valid) {
+    return { status: databaseUrl.errorCode === 'DATABASE_URL_MISSING' ? 'missing' : 'error', message: databaseUrl.safeErrorMessage ?? 'DATABASE_URL invalid; cannot inspect ServiceNow sync status' };
+  }
+  try {
+    const integration = await prisma.integration.findFirst({
+      where: { provider: 'SERVICENOW' },
+      orderBy: { updatedAt: 'desc' },
+      select: { status: true, metadata: true },
+    });
+    if (!integration) return { status: 'missing', message: 'No ServiceNow integration connected yet' };
+    const metadata = integration.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {};
+    const lastSyncAt = typeof metadata.lastSyncAt === 'string' ? metadata.lastSyncAt : null;
+    const lastSyncStatus = typeof metadata.lastSyncStatus === 'string' ? metadata.lastSyncStatus : integration.status.toLowerCase();
+    return {
+      status: integration.status === 'ERROR' || integration.status === 'NEEDS_REAUTH' ? 'error' : 'ok',
+      message: lastSyncAt ? `Last ServiceNow sync ${lastSyncStatus} at ${lastSyncAt}` : `ServiceNow ${integration.status.toLowerCase()}; no sync timestamp yet`,
+    };
+  } catch (error) {
+    return { status: 'error', message: databaseErrorMessage(error, 'Unable to inspect ServiceNow sync status') };
+  }
 }
 
 async function checkJiraLastSync(): Promise<ReadinessCheck> {

@@ -26,6 +26,9 @@ export async function GET(
   if (provider === 'teams') {
     return NextResponse.redirect(new URL('/api/integrations/teams/install', request.url));
   }
+  if (provider === 'servicenow') {
+    return NextResponse.redirect(new URL('/api/integrations/servicenow/install', request.url));
+  }
 
   const target = providerUrls[provider];
   if (!target) return NextResponse.json({ error: 'Unsupported provider' }, { status: 404 });

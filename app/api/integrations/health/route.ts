@@ -24,6 +24,7 @@ export async function GET() {
       outlookApi: readiness.checks.outlookLastSync,
       teamsApi: readiness.checks.teamsLastSync,
       jiraApi: readiness.checks.jiraLastSync,
+      serviceNowApi: readiness.checks.serviceNowLastSync,
     },
     connectors: {
       slack: connectorStatus(Boolean(env.SLACK_CLIENT_ID && env.SLACK_CLIENT_SECRET)),
@@ -31,6 +32,7 @@ export async function GET() {
       outlook: connectorStatus(Boolean(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET)),
       teams: connectorStatus(Boolean(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET)),
       jira: connectorStatus(Boolean(env.JIRA_CLIENT_ID && env.JIRA_CLIENT_SECRET)),
+      servicenow: connectorStatus(Boolean(env.SERVICENOW_CLIENT_ID && env.SERVICENOW_CLIENT_SECRET && env.SERVICENOW_INSTANCE_URL)),
       zoom: connectorStatus(Boolean(env.ZOOM_CLIENT_ID && env.ZOOM_CLIENT_SECRET)),
     },
     states: ['connected', 'not_connected', 'error', 'needs_reauthentication', 'syncing'],

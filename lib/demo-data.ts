@@ -14,7 +14,7 @@ type DemoApproval = {
   businessImpact: string;
   approverName: string;
   approverEmail: string;
-  sourcePlatform: 'slack' | 'gmail' | 'outlook' | 'teams' | 'jira';
+  sourcePlatform: 'slack' | 'gmail' | 'outlook' | 'teams' | 'jira' | 'servicenow';
   provider: IntegrationProvider;
   channel: string;
   sourceLink: string;
@@ -315,6 +315,48 @@ const demoApprovals: DemoApproval[] = [
     conditions: 'Finance must confirm the revised purchase order before vendor kickoff.',
     receivedHoursAgo: 16,
   },
+  {
+    subject: 'Emergency change request for payment service failover',
+    department: 'Engineering',
+    category: 'Security',
+    approvalType: 'CONDITIONAL',
+    status: 'PENDING_REVIEW',
+    confidence: 94,
+    riskLevel: 'critical',
+    businessImpact: 'Allows a ServiceNow emergency change to protect payment availability after CAB approval evidence is attached.',
+    approverName: 'Kavya Menon',
+    approverEmail: 'kavya.menon@acme.example',
+    sourcePlatform: 'servicenow',
+    provider: 'SERVICENOW',
+    channel: 'Change Requests / CHG0042187',
+    sourceLink: 'https://acme-demo.service-now.com/nav_to.do?uri=change_request.do?sys_id=demo-chg0042187',
+    externalId: 'demo-servicenow-emergency-change',
+    evidenceSnippet: 'CAB approves CHG0042187 provided rollback evidence and monitoring owner are attached before implementation.',
+    reasoning: 'ServiceNow CAB approval is conditional because implementation depends on rollback and monitoring evidence.',
+    conditions: 'Rollback evidence and monitoring owner must be attached before implementation.',
+    receivedHoursAgo: 6,
+  },
+  {
+    subject: 'Privileged access request for production incident',
+    department: 'Security',
+    category: 'Security',
+    approvalType: 'EXPLICIT',
+    status: 'APPROVED',
+    confidence: 93,
+    riskLevel: 'high',
+    businessImpact: 'Approves time-boxed privileged access for an active production incident with audit trail.',
+    approverName: 'Owen Miller',
+    approverEmail: 'owen.miller@acme.example',
+    sourcePlatform: 'servicenow',
+    provider: 'SERVICENOW',
+    channel: 'Access Requests / RITM0098842',
+    sourceLink: 'https://acme-demo.service-now.com/nav_to.do?uri=sc_req_item.do?sys_id=demo-ritm0098842',
+    externalId: 'demo-servicenow-access-request',
+    evidenceSnippet: 'Approved for 4 hours only. Grant production database read access for incident INC0018921.',
+    reasoning: 'Explicit ServiceNow access approval includes a clear time limit and incident context.',
+    conditions: 'Access expires after 4 hours.',
+    receivedHoursAgo: 11,
+  },
 ];
 
 function demoMetadata(extra: Record<string, unknown> = {}) {
@@ -473,6 +515,42 @@ export async function createDemoDataForOrganization(organizationId: string) {
       }),
     },
   });
+  const serviceNowIntegration = await prisma.integration.upsert({
+    where: {
+      organizationId_provider_externalAccount: {
+        organizationId,
+        provider: 'SERVICENOW',
+        externalAccount: 'Acme Demo ServiceNow',
+      },
+    },
+    update: {
+      status: 'CONNECTED',
+      scopes: ['useraccount', 'openid', 'profile', 'email'],
+      metadata: demoMetadata({
+        instanceHost: 'acme-demo.service-now.com',
+        instanceUrl: 'https://acme-demo.service-now.com',
+        health: 'healthy',
+        changeRequestsProcessed: 8,
+        catalogRequestsProcessed: 14,
+        approvalsFound: 2,
+      }),
+    },
+    create: {
+      organizationId,
+      provider: 'SERVICENOW',
+      status: 'CONNECTED',
+      externalAccount: 'Acme Demo ServiceNow',
+      scopes: ['useraccount', 'openid', 'profile', 'email'],
+      metadata: demoMetadata({
+        instanceHost: 'acme-demo.service-now.com',
+        instanceUrl: 'https://acme-demo.service-now.com',
+        health: 'healthy',
+        changeRequestsProcessed: 8,
+        catalogRequestsProcessed: 14,
+        approvalsFound: 2,
+      }),
+    },
+  });
 
   for (const [index, item] of demoApprovals.entries()) {
     const receivedAt = new Date(Date.now() - item.receivedHoursAgo * 60 * 60 * 1000);
@@ -482,6 +560,7 @@ export async function createDemoDataForOrganization(organizationId: string) {
       OUTLOOK: outlookIntegration.id,
       MICROSOFT_TEAMS: teamsIntegration.id,
       JIRA: jiraIntegration.id,
+      SERVICENOW: serviceNowIntegration.id,
       ZOOM: undefined,
     } satisfies Partial<Record<IntegrationProvider, string | undefined>>;
     const integrationId = integrationByProvider[item.provider];

@@ -34,6 +34,9 @@ export async function GET() {
       MICROSOFT_TENANT_ID: configured(env.MICROSOFT_TENANT_ID),
       JIRA_CLIENT_ID: configured(env.JIRA_CLIENT_ID),
       JIRA_CLIENT_SECRET: configured(env.JIRA_CLIENT_SECRET),
+      SERVICENOW_CLIENT_ID: configured(env.SERVICENOW_CLIENT_ID),
+      SERVICENOW_CLIENT_SECRET: configured(env.SERVICENOW_CLIENT_SECRET),
+      SERVICENOW_INSTANCE_URL: configured(env.SERVICENOW_INSTANCE_URL),
     },
   });
 }
