@@ -6,6 +6,8 @@ import { recordPerformance } from '@/lib/performance';
 
 export const dynamic = 'force-dynamic';
 
+const COPILOT_TENANT_TIMEOUT_MS = 8000;
+
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant']),
   content: z.string().min(1).max(4000),
@@ -19,7 +21,7 @@ const requestSchema = z.object({
 export async function POST(request: Request) {
   const startedAt = Date.now();
   try {
-    const tenant = await getDashboardTenant(2500);
+    const tenant = await getDashboardTenant(COPILOT_TENANT_TIMEOUT_MS);
     if (tenant.status === 'unauthenticated') {
       recordPerformance('/api/copilot/query', Date.now() - startedAt, 401);
       return NextResponse.json({ error: 'Sign in to use ApprovLine Copilot.' }, { status: 401 });
