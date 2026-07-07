@@ -7,6 +7,8 @@ import { PendingLink } from '@/components/system/PendingLink';
 
 export const dynamic = 'force-dynamic';
 
+const COPILOT_TENANT_TIMEOUT_MS = 8000;
+
 export default async function CopilotPage({
   searchParams,
 }: {
@@ -15,7 +17,7 @@ export default async function CopilotPage({
   const session = await auth();
   if (!session.userId) redirect('/sign-in');
 
-  const tenant = await getDashboardTenant(2500);
+  const tenant = await getDashboardTenant(COPILOT_TENANT_TIMEOUT_MS);
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') {
     redirect('/onboarding');
   }
@@ -58,7 +60,7 @@ export default async function CopilotPage({
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm">
           <h2 className="font-black">Workspace context is delayed</h2>
           <p className="mt-1 text-sm leading-6">
-            Copilot can open, but answers may be limited until workspace readiness completes. {tenant.error}
+            Copilot can open, but answers may be limited until workspace readiness completes. {tenant.error ?? 'Workspace lookup is still warming up.'}
           </p>
           <PendingLink href="/api/debug/dashboard" pendingText="Opening diagnostics..." className="mt-3 inline-flex min-h-0 h-10 items-center rounded-lg border border-amber-300 bg-white px-3 text-sm font-black text-amber-900">
             Open diagnostics
