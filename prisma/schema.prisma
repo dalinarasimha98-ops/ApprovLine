@@ -14,6 +14,42 @@ enum Role {
   COMPLIANCE_OFFICER
 }
 
+enum PlatformRole {
+  SUPER_ADMIN
+  FOUNDER_ADMIN
+  SUPPORT_ADMIN
+}
+
+enum CustomerPlanTier {
+  FREE_TRIAL
+  STARTER
+  GROWTH
+  ENTERPRISE
+}
+
+enum CustomerAccountStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CHURNED
+}
+
+enum CustomerIntegrationConnectionState {
+  ACCESS_ENABLED
+  NOT_ENABLED
+  CONNECTED
+  DISCONNECTED
+  NEEDS_REAUTH
+  ERROR
+}
+
+enum CustomerHealthStatus {
+  HEALTHY
+  NEEDS_ATTENTION
+  AT_RISK
+  CRITICAL
+}
+
 enum IntegrationProvider {
   SLACK
   GMAIL
@@ -90,6 +126,8 @@ model Organization {
   pilotInvites      PilotInvite[]
   pilotFeedback     PilotFeedback[]
   pilotActivityLogs PilotActivityLog[]
+  customerAccount   CustomerAccount?
+  customerWorkspace CustomerWorkspace?
 }
 
 model User {
@@ -521,4 +559,155 @@ model PilotActivityLog {
 
   @@index([organizationId, createdAt])
   @@index([organizationId, action])
+}
+
+model PlatformAdmin {
+  id        String       @id @default(cuid())
+  email     String       @unique
+  role      PlatformRole @default(SUPPORT_ADMIN)
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([active, role])
+}
+
+model CustomerAccount {
+  id                  String                @id @default(cuid())
+  organizationId      String                @unique
+  companyName         String
+  domain              String                @unique
+  industry            String?
+  status              CustomerAccountStatus @default(TRIAL)
+  planTier            CustomerPlanTier      @default(FREE_TRIAL)
+  primaryAdminName    String?
+  primaryAdminEmail   String
+  dataRetentionDays   Int                   @default(365)
+  internalNotes       String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  organization        Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace           CustomerWorkspace?
+  seatAllocation      CustomerSeatAllocation?
+  featureFlags        CustomerFeatureFlag[]
+  integrationStatuses CustomerIntegrationStatus[]
+  auditLogs           FounderAuditLog[]
+  notes               CustomerNote[]
+  health              CustomerHealth?
+
+  @@index([status, planTier])
+  @@index([companyName])
+  @@index([createdAt])
+}
+
+model CustomerWorkspace {
+  id                String          @id @default(cuid())
+  customerAccountId String          @unique
+  organizationId    String          @unique
+  workspaceName     String
+  workspaceSlug     String          @unique
+  provisionedAt     DateTime        @default(now())
+  metadata          Json?
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model CustomerPlan {
+  id               String           @id @default(cuid())
+  planTier         CustomerPlanTier  @unique
+  name             String
+  description      String?
+  seatLimitDefault Int              @default(5)
+  priceLabel       String?
+  features         String[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model CustomerSeatAllocation {
+  id                String          @id @default(cuid())
+  customerAccountId String          @unique
+  purchasedSeats    Int             @default(5)
+  allocatedSeats    Int             @default(5)
+  usedSeats         Int             @default(0)
+  updatedAt         DateTime        @updatedAt
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+}
+
+model CustomerFeatureFlag {
+  id                String          @id @default(cuid())
+  customerAccountId String
+  key               String
+  enabled           Boolean         @default(false)
+  category          String?
+  updatedBy         String?
+  updatedAt         DateTime        @updatedAt
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([customerAccountId, key])
+  @@index([key, enabled])
+}
+
+model CustomerIntegrationStatus {
+  id                String                             @id @default(cuid())
+  customerAccountId String
+  provider          String
+  accessEnabled     Boolean                            @default(false)
+  connectionState   CustomerIntegrationConnectionState @default(NOT_ENABLED)
+  lastSyncAt        DateTime?
+  errorCount        Int                                @default(0)
+  eventsProcessed   Int                                @default(0)
+  metadata          Json?
+  updatedAt         DateTime                           @updatedAt
+  customerAccount   CustomerAccount                    @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([customerAccountId, provider])
+  @@index([provider, connectionState])
+}
+
+model FounderAuditLog {
+  id                String           @id @default(cuid())
+  customerAccountId String?
+  actorUserId       String?
+  actorEmail        String?
+  actorRole         String?
+  action            String
+  targetType        String
+  targetId          String?
+  metadata          Json?
+  createdAt         DateTime         @default(now())
+  customerAccount   CustomerAccount? @relation(fields: [customerAccountId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorEmail])
+  @@index([customerAccountId, createdAt])
+  @@index([action])
+}
+
+model CustomerNote {
+  id                String          @id @default(cuid())
+  customerAccountId String
+  authorEmail       String?
+  body              String
+  createdAt         DateTime        @default(now())
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+
+  @@index([customerAccountId, createdAt])
+}
+
+model CustomerHealth {
+  id                    String               @id @default(cuid())
+  customerAccountId     String               @unique
+  status                CustomerHealthStatus @default(NEEDS_ATTENTION)
+  score                 Int                  @default(50)
+  lastLoginAt           DateTime?
+  activeUsers           Int                  @default(0)
+  approvalsProcessed    Int                  @default(0)
+  integrationsConnected Int                  @default(0)
+  playbookUsage         Int                  @default(0)
+  copilotUsage          Int                  @default(0)
+  updatedAt             DateTime             @updatedAt
+  customerAccount       CustomerAccount      @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+
+  @@index([status, score])
 }
