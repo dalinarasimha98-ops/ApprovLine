@@ -4,7 +4,7 @@ import { PendingLink } from '@/components/system/PendingLink';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { getDashboardTenant } from '@/lib/auth';
 import { buildExecutiveAnalytics, type ExecutiveAnalytics } from '@/services/analytics';
-import { withTimeout } from '@/lib/performance';
+import { recordPerformance, withTimeout } from '@/lib/performance';
 
 export const dynamic = 'force-dynamic';
 
@@ -229,21 +229,35 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const query = await searchParams;
   const requestedDemo = query.demo === '1';
   let liveReport: ExecutiveAnalytics;
+  const analyticsStartedAt = Date.now();
 
   try {
     liveReport = await withTimeout(
       'executive analytics page',
       buildExecutiveAnalytics(tenant.organization.id, { demoProjection: requestedDemo }),
-      2800,
+      8500,
     );
+    recordPerformance('/analytics/executive-roi', Date.now() - analyticsStartedAt, 200);
   } catch (error) {
+    recordPerformance('/analytics/executive-roi', Date.now() - analyticsStartedAt, 504);
     return <AnalyticsErrorState message={error instanceof Error ? error.message : 'Analytics query timed out.'} />;
   }
 
   const usingEmptyDemoPreview = !requestedDemo && liveReport.approvals.total === 0;
-  const report = usingEmptyDemoPreview
-    ? await buildExecutiveAnalytics(tenant.organization.id, { demoProjection: true })
-    : liveReport;
+  let report = liveReport;
+  if (usingEmptyDemoPreview) {
+    try {
+      report = await withTimeout(
+        'executive analytics demo projection',
+        buildExecutiveAnalytics(tenant.organization.id, { demoProjection: true }),
+        8500,
+      );
+    } catch (error) {
+      recordPerformance('/analytics/demo-projection', 8500, 504);
+      console.warn('[analytics] demo projection fallback', error instanceof Error ? error.message : error);
+      report = liveReport;
+    }
+  }
   const exportSuffix = report.demoProjection ? '&demo=1' : '';
 
   return (
