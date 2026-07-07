@@ -42,11 +42,59 @@ function envList(name: string) {
     .filter(Boolean);
 }
 
-function envRoleForEmail(email: string): FounderRole | null {
+function hasEnvEmail(names: string[], email: string) {
   const normalized = email.toLowerCase();
-  if (envList('APPROVLINE_SUPER_ADMIN_EMAILS').includes(normalized)) return 'SUPER_ADMIN';
-  if (envList('APPROVLINE_FOUNDER_ADMIN_EMAILS').includes(normalized)) return 'FOUNDER_ADMIN';
-  if (envList('APPROVLINE_SUPPORT_ADMIN_EMAILS').includes(normalized)) return 'SUPPORT_ADMIN';
+  return names.some((name) => envList(name).includes(normalized));
+}
+
+function parseFounderRole(value: unknown): FounderRole | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toUpperCase();
+  if (normalized === 'SUPER_ADMIN' || normalized === 'FOUNDER_ADMIN' || normalized === 'SUPPORT_ADMIN') {
+    return normalized;
+  }
+  return null;
+}
+
+function envRoleForEmail(email: string): FounderRole | null {
+  if (
+    hasEnvEmail(
+      [
+        'APPROVLINE_SUPER_ADMIN_EMAILS',
+        'APPROVLINE_FOUNDER_EMAILS',
+        'FOUNDER_SUPER_ADMIN_EMAILS',
+        'SUPER_ADMIN_EMAILS',
+      ],
+      email,
+    )
+  ) {
+    return 'SUPER_ADMIN';
+  }
+  if (
+    hasEnvEmail(
+      [
+        'APPROVLINE_FOUNDER_ADMIN_EMAILS',
+        'APPROVLINE_ADMIN_EMAILS',
+        'FOUNDER_ADMIN_EMAILS',
+        'ADMIN_EMAILS',
+      ],
+      email,
+    )
+  ) {
+    return 'FOUNDER_ADMIN';
+  }
+  if (
+    hasEnvEmail(
+      [
+        'APPROVLINE_SUPPORT_ADMIN_EMAILS',
+        'FOUNDER_SUPPORT_ADMIN_EMAILS',
+        'SUPPORT_ADMIN_EMAILS',
+      ],
+      email,
+    )
+  ) {
+    return 'SUPPORT_ADMIN';
+  }
   return null;
 }
 
@@ -80,7 +128,12 @@ export async function getFounderAccess(): Promise<FounderAccess> {
   const email = clerkUser?.primaryEmailAddress?.emailAddress ?? clerkUser?.emailAddresses[0]?.emailAddress ?? null;
   if (!email) return { ok: false, reason: 'forbidden', email };
 
-  let role = envRoleForEmail(email);
+  let role =
+    envRoleForEmail(email) ??
+    parseFounderRole(clerkUser?.privateMetadata?.platformRole) ??
+    parseFounderRole(clerkUser?.privateMetadata?.founderRole) ??
+    parseFounderRole(clerkUser?.publicMetadata?.platformRole) ??
+    parseFounderRole(clerkUser?.publicMetadata?.founderRole);
   try {
     const dbAdmin = await prisma.platformAdmin.findUnique({ where: { email: email.toLowerCase() } });
     if (dbAdmin?.active) role = dbAdmin.role as FounderRole;
