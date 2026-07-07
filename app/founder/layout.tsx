@@ -6,6 +6,6 @@ export const dynamic = 'force-dynamic';
 
 export default async function FounderLayout({ children }: { children: ReactNode }) {
   const access = await getFounderAccess();
-  if (!access.ok) return <FounderForbidden />;
+  if (!access.ok) return <FounderForbidden email={access.email} />;
   return <FounderShell email={access.email} role={access.role}>{children}</FounderShell>;
 }

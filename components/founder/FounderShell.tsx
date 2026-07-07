@@ -74,15 +74,20 @@ export function FounderShell({
   );
 }
 
-export function FounderForbidden() {
+export function FounderForbidden({ email }: { email?: string | null }) {
   return (
     <main className="grid min-h-screen place-items-center bg-slate-50 px-6">
       <section className="max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2557dc]">Founder access required</p>
         <h1 className="mt-3 text-3xl font-black text-slate-950">This area is restricted</h1>
         <p className="mt-3 text-base font-semibold leading-7 text-slate-600">
-          Customer workspace roles cannot access the founder operations console. Ask a super admin to add your email to the platform admin allowlist.
+          Customer workspace roles cannot access the founder operations console. Add your signed-in email to a founder allowlist, then redeploy.
         </p>
+        {email ? <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm font-black text-slate-700">Signed in as: {email}</p> : null}
+        <div className="mt-4 rounded-2xl bg-slate-950 p-4 text-xs font-bold leading-6 text-slate-100">
+          APPROVLINE_SUPER_ADMIN_EMAILS={email ?? 'your-email@example.com'}<br />
+          or SUPER_ADMIN_EMAILS={email ?? 'your-email@example.com'}
+        </div>
         <Link href="/dashboard" className="mt-6 inline-flex rounded-xl bg-[#2557dc] px-5 py-3 text-sm font-black text-white">
           Return to dashboard
         </Link>

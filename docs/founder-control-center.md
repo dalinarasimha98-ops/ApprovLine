@@ -31,6 +31,23 @@ APPROVLINE_FOUNDER_ADMIN_EMAILS=ops@approvline.com
 APPROVLINE_SUPPORT_ADMIN_EMAILS=support@approvline.com
 ```
 
+The app also accepts these aliases for compatibility:
+
+```bash
+SUPER_ADMIN_EMAILS=founder@approvline.com
+FOUNDER_ADMIN_EMAILS=ops@approvline.com
+SUPPORT_ADMIN_EMAILS=support@approvline.com
+APPROVLINE_FOUNDER_EMAILS=founder@approvline.com
+```
+
+You can also set Clerk user metadata:
+
+```json
+{
+  "platformRole": "SUPER_ADMIN"
+}
+```
+
 After the founder tables are migrated, super admins can also insert rows into `PlatformAdmin`.
 
 ## Deploy database migration
