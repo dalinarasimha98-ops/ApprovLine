@@ -7,6 +7,7 @@ import { ToastOnQuery } from '@/components/system/ToastOnQuery';
 const nav = [
   { href: '/dashboard', label: 'Overview', pending: 'Opening overview...' },
   { href: '/dashboard/approvals', label: 'Approval History', pending: 'Opening approvals...' },
+  { href: '/copilot', label: 'AI Copilot', pending: 'Opening Copilot...' },
   { href: '/analytics', label: 'Executive ROI', pending: 'Opening analytics...' },
   { href: '/investigations', label: 'Investigations', pending: 'Opening investigations...' },
   { href: '/dashboard/audit', label: 'Audit Logs', pending: 'Opening audit logs...' },
