@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import type { CopilotAnswer, CopilotMessage } from '@/services/copilot/copilot';
 
 type CopilotTurn = {
@@ -31,10 +31,49 @@ function confidenceClass(confidence: number) {
   return 'bg-rose-50 text-rose-700 border-rose-100';
 }
 
+function ResponseSkeleton() {
+  return (
+    <div className="grid min-h-[236px] content-start gap-5" aria-label="Copilot is preparing an answer">
+      <div className="flex items-center justify-between gap-4">
+        <div className="grid flex-1 gap-2">
+          <div className="h-3 w-28 rounded-full bg-blue-100" />
+          <div className="h-5 w-4/5 rounded-full bg-slate-100" />
+          <div className="h-5 w-2/3 rounded-full bg-slate-100" />
+        </div>
+        <div className="h-8 w-28 rounded-full bg-emerald-50" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+          <div className="h-3 w-32 rounded-full bg-slate-200" />
+          <div className="mt-4 grid gap-3">
+            <div className="h-3 w-full rounded-full bg-slate-200" />
+            <div className="h-3 w-5/6 rounded-full bg-slate-200" />
+            <div className="h-3 w-3/4 rounded-full bg-slate-200" />
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+          <div className="h-3 w-36 rounded-full bg-slate-200" />
+          <div className="mt-4 grid gap-3">
+            <div className="h-3 w-11/12 rounded-full bg-slate-200" />
+            <div className="h-3 w-4/5 rounded-full bg-slate-200" />
+            <div className="h-3 w-2/3 rounded-full bg-slate-200" />
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="h-24 rounded-2xl border border-slate-100 bg-white" />
+        <div className="h-24 rounded-2xl border border-slate-100 bg-white" />
+      </div>
+    </div>
+  );
+}
+
 export function CopilotClient({ suggestions, initialQuestion }: CopilotClientProps) {
   const [question, setQuestion] = useState(initialQuestion ?? '');
   const [turns, setTurns] = useState<CopilotTurn[]>([]);
   const [pending, setPending] = useState(false);
+  const messageAreaRef = useRef<HTMLDivElement | null>(null);
+  const visibleSuggestions = useMemo(() => suggestions.slice(0, 9), [suggestions]);
 
   const history = useMemo<CopilotMessage[]>(() => {
     return turns.flatMap((turn) => [
@@ -43,10 +82,43 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
     ]).slice(-12);
   }, [turns]);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development' || typeof window === 'undefined') return;
+
+    const startedAt = performance.now();
+    console.info('[copilot:perf] mounted_ms', Math.round(startedAt));
+
+    let cls = 0;
+    let observer: PerformanceObserver | undefined;
+    try {
+      observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const layoutShift = entry as PerformanceEntry & { value?: number; hadRecentInput?: boolean };
+          if (!layoutShift.hadRecentInput) cls += layoutShift.value ?? 0;
+        }
+      });
+      observer.observe({ type: 'layout-shift', buffered: true });
+    } catch {
+      observer = undefined;
+    }
+
+    return () => {
+      observer?.disconnect();
+      console.info('[copilot:perf] cumulative_layout_shift', Number(cls.toFixed(4)));
+    };
+  }, []);
+
+  useEffect(() => {
+    const node = messageAreaRef.current;
+    if (!node) return;
+    node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
+  }, [turns.length, pending]);
+
   async function ask(value: string) {
     const clean = value.trim();
     if (!clean || pending) return;
 
+    const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setQuestion('');
     setPending(true);
@@ -60,6 +132,9 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error ?? 'Copilot request failed.');
+      if (process.env.NODE_ENV === 'development' && typeof performance !== 'undefined') {
+        console.info('[copilot:perf] first_response_ms', Math.round(performance.now() - startedAt));
+      }
       setTurns((current) => current.map((turn) => (turn.id === id ? { ...turn, answer: payload as CopilotAnswer } : turn)));
     } catch (error) {
       setTurns((current) =>
@@ -80,9 +155,9 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 p-4 sm:p-5">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+      <section className="grid h-[min(760px,calc(100vh-220px))] min-h-[620px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="shrink-0 border-b border-slate-100 p-4 sm:p-5">
           <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#2155d9]">Enterprise Decision Intelligence Assistant</p>
           <h2 className="mt-1.5 text-xl font-black tracking-tight text-slate-950">Ask ApprovLine anything about decisions</h2>
           <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
@@ -90,9 +165,10 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
           </p>
         </div>
 
-        <div className="grid min-h-[420px] max-h-[58vh] content-start gap-4 overflow-y-auto p-4 sm:p-5">
-          {turns.length === 0 ? (
-            <div className="grid place-items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
+        <div ref={messageAreaRef} className="min-h-0 overflow-y-auto overscroll-contain scroll-smooth p-4 sm:p-5">
+          <div className="grid min-h-full content-start gap-4">
+            {turns.length === 0 ? (
+            <div className="grid min-h-full place-items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#07111f] text-white shadow-lg shadow-slate-300/60">
                 <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
                   <path d="M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z" stroke="currentColor" strokeWidth="1.8" />
@@ -104,20 +180,17 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
                 Ask who approved a vendor, why a record is high risk, which approvals violate policy, or what evidence is missing.
               </p>
             </div>
-          ) : null}
+            ) : null}
 
-          {turns.map((turn) => (
+            {turns.map((turn) => (
             <article key={turn.id} className="grid gap-4">
               <div className="ml-auto max-w-2xl rounded-2xl bg-[#2155d9] px-4 py-3 text-sm font-bold leading-6 text-white shadow-sm shadow-blue-200">
                 {turn.question}
               </div>
 
-              <div className="max-w-4xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="min-h-[268px] max-w-4xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 {!turn.answer && !turn.error ? (
-                  <div className="flex items-center gap-3 text-sm font-bold text-slate-500">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#2155d9] border-t-transparent" />
-                    Searching approvals, evidence, policies, and audit trails...
-                  </div>
+                  <ResponseSkeleton />
                 ) : null}
 
                 {turn.error ? (
@@ -170,7 +243,7 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
                           <Link
                             key={`${source.type}-${source.id}`}
                             href={source.href}
-                            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                            className="min-h-[150px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${badgeClass(source.type)}`}>
@@ -192,10 +265,11 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
                 ) : null}
               </div>
             </article>
-          ))}
+            ))}
+          </div>
         </div>
 
-        <form onSubmit={onSubmit} className="border-t border-slate-100 p-3 sm:p-4">
+        <form onSubmit={onSubmit} className="shrink-0 border-t border-slate-100 p-3 sm:p-4">
           <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-inner sm:flex-row">
             <input
               value={question}
@@ -216,11 +290,11 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
         </form>
       </section>
 
-      <aside className="grid content-start gap-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <aside className="grid w-full content-start gap-4 xl:sticky xl:top-28 xl:w-80">
+        <div className="min-h-[360px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#2155d9]">Suggested questions</p>
           <div className="mt-3 grid gap-2">
-            {suggestions.map((item) => (
+            {visibleSuggestions.map((item) => (
               <button
                 key={item}
                 type="button"
@@ -234,7 +308,7 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-[#07111f] p-4 text-white shadow-sm">
+        <div className="min-h-[230px] rounded-2xl border border-slate-200 bg-[#07111f] p-4 text-white shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-200">Copilot coverage</p>
           <div className="mt-3 grid gap-2.5 text-sm font-semibold text-slate-300">
             {['Approvals and decisions', 'Slack, Gmail, Teams, Outlook, Jira, Zoom, ServiceNow', 'Playbook AI policies', 'Investigations and audit logs', 'Executive ROI analytics', 'Universal Gateway records'].map((item) => (
