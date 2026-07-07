@@ -31,6 +31,25 @@ function confidenceClass(confidence: number) {
   return 'bg-rose-50 text-rose-700 border-rose-100';
 }
 
+const coverageItems = [
+  'Approvals and decisions',
+  'Slack, Gmail, Teams, Outlook, Jira, Zoom, ServiceNow',
+  'Playbook AI policies',
+  'Investigations and audit logs',
+  'Executive ROI analytics',
+  'Universal Gateway records',
+];
+
+function CoverageCheckIcon() {
+  return (
+    <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+        <path d="m5 10.4 3.1 3.1L15.2 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
 function ResponseSkeleton() {
   return (
     <div className="grid min-h-[236px] content-start gap-5" aria-label="Copilot is preparing an answer">
@@ -155,8 +174,8 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
-      <section className="grid h-[min(760px,calc(100vh-220px))] min-h-[620px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_380px]">
+      <section className="grid h-[min(760px,calc(100vh-220px))] min-h-[620px] min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="shrink-0 border-b border-slate-100 p-4 sm:p-5">
           <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#2155d9]">Enterprise Decision Intelligence Assistant</p>
           <h2 className="mt-1.5 text-xl font-black tracking-tight text-slate-950">Ask ApprovLine anything about decisions</h2>
@@ -165,7 +184,7 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
           </p>
         </div>
 
-        <div ref={messageAreaRef} className="min-h-0 overflow-y-auto overscroll-contain scroll-smooth p-4 sm:p-5">
+        <div ref={messageAreaRef} className="min-h-0 min-w-0 overflow-y-auto overscroll-contain scroll-smooth p-4 sm:p-5">
           <div className="grid min-h-full content-start gap-4">
             {turns.length === 0 ? (
             <div className="grid min-h-full place-items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-center">
@@ -290,31 +309,46 @@ export function CopilotClient({ suggestions, initialQuestion }: CopilotClientPro
         </form>
       </section>
 
-      <aside className="grid w-full content-start gap-4 xl:sticky xl:top-28 xl:w-80">
-        <div className="min-h-[360px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#2155d9]">Suggested questions</p>
-          <div className="mt-3 grid gap-2">
+      <aside className="grid min-w-0 content-start gap-4 xl:sticky xl:top-28 xl:w-[360px] 2xl:w-[380px]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#2155d9]">Suggested questions</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-slate-500">Start fast with common executive and audit prompts.</p>
+              </div>
+              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-black text-[#2155d9]">{visibleSuggestions.length}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto p-4 pb-5 [scrollbar-width:thin] xl:grid xl:max-h-[500px] xl:overflow-y-auto xl:overflow-x-hidden xl:pr-3">
             {visibleSuggestions.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => void ask(item)}
                 disabled={pending}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-bold leading-5 text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-[#2155d9] disabled:cursor-wait disabled:opacity-60"
+                className="group min-h-[72px] w-[260px] shrink-0 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-left text-sm font-bold leading-5 text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-[#2155d9] hover:shadow-md disabled:cursor-wait disabled:opacity-60 xl:w-full"
               >
-                {item}
+                <span className="block whitespace-normal break-words">{item}</span>
+                <span className="mt-2 inline-flex text-[11px] font-black uppercase tracking-wide text-slate-400 group-hover:text-[#2155d9]">
+                  Ask Copilot
+                </span>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="min-h-[230px] rounded-2xl border border-slate-200 bg-[#07111f] p-4 text-white shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-200">Copilot coverage</p>
-          <div className="mt-3 grid gap-2.5 text-sm font-semibold text-slate-300">
-            {['Approvals and decisions', 'Slack, Gmail, Teams, Outlook, Jira, Zoom, ServiceNow', 'Playbook AI policies', 'Investigations and audit logs', 'Executive ROI analytics', 'Universal Gateway records'].map((item) => (
-              <div key={item} className="flex items-center gap-2">
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-blue-500/20 text-xs text-blue-200">✓</span>
-                <span>{item}</span>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-[#07111f] text-white shadow-sm">
+          <div className="border-b border-white/10 p-4">
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-200">Copilot coverage</p>
+            <p className="mt-1 text-sm font-semibold leading-5 text-slate-400">Sources Copilot can search and cite.</p>
+          </div>
+          <div className="grid gap-2.5 p-4 text-sm font-semibold text-slate-200">
+            {coverageItems.map((item) => (
+              <div key={item} className="flex min-w-0 items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3">
+                <CoverageCheckIcon />
+                <span className="min-w-0 whitespace-normal break-words leading-5">{item}</span>
               </div>
             ))}
           </div>
