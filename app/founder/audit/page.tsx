@@ -1,10 +1,20 @@
 import { FounderBadge, MigrationNotice } from '@/components/founder/FounderShell';
-import { listFounderAuditLogs } from '@/services/founder';
+import { listCustomerAccountOptions, listFounderAuditLogs } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
 
-export default async function FounderAuditPage() {
-  const result = await listFounderAuditLogs();
+export default async function FounderAuditPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const params = await searchParams;
+  const result = await listFounderAuditLogs({
+    q: params.q,
+    customerAccountId: params.customerAccountId,
+    actor: params.actor,
+    action: params.action,
+    from: params.from,
+    to: params.to,
+  });
+  const customers = await listCustomerAccountOptions();
+  const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => Boolean(entry[1])));
 
   return (
     <div className="space-y-6">
@@ -16,6 +26,21 @@ export default async function FounderAuditPage() {
           Founder provisioning, feature changes, integration access changes, support notes, and customer status changes are recorded here.
         </p>
       </section>
+
+      <form className="grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-6">
+        <input name="q" defaultValue={params.q ?? ''} placeholder="Search audit trail" className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#2557dc] lg:col-span-2" />
+        <select name="customerAccountId" defaultValue={params.customerAccountId ?? ''} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#2557dc]">
+          <option value="">All customers</option>
+          {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}
+        </select>
+        <input name="actor" defaultValue={params.actor ?? ''} placeholder="Actor email" className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#2557dc]" />
+        <input name="action" defaultValue={params.action ?? ''} placeholder="Action" className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#2557dc]" />
+        <button className="rounded-xl bg-[#2557dc] px-4 py-3 text-sm font-black text-white">Filter</button>
+        <input name="from" type="date" defaultValue={params.from ?? ''} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#2557dc]" />
+        <input name="to" type="date" defaultValue={params.to ?? ''} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none focus:border-[#2557dc]" />
+        <a href={`/api/founder/audit/export?${query.toString()}&format=csv`} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-slate-700">Export CSV</a>
+        <a href={`/api/founder/audit/export?${query.toString()}&format=json`} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-slate-700">Export JSON</a>
+      </form>
 
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
