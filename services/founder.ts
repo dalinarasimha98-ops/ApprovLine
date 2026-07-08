@@ -513,6 +513,13 @@ function normalizeManagedUserRole(value: unknown) {
   return founderManagedUserRoles.some((item) => item.key === role) ? role : 'VIEWER';
 }
 
+function optionalMetric<T>(metric: Promise<T>, fallback: T) {
+  return metric.catch((error) => {
+    console.warn('[founder] optional metric unavailable', safeError(error));
+    return fallback;
+  });
+}
+
 function healthStatusForScore(score: number) {
   if (score >= 80) return 'HEALTHY';
   if (score >= 60) return 'NEEDS_ATTENTION';
@@ -617,10 +624,10 @@ export async function buildFounderOverview(): Promise<SafeResult<{
       prisma.customerHealth.count({ where: { status: { in: ['AT_RISK', 'CRITICAL'] } } }),
       prisma.customerHealth.count({ where: { status: 'NEEDS_ATTENTION' } }),
       prisma.customerHealth.count({ where: { score: { lt: 45 } } }),
-      prisma.approvalRecord.count(),
-      prisma.integration.count({ where: { status: 'CONNECTED' } }),
-      prisma.playbookDocument.count(),
-      prisma.investigationCase.count(),
+      optionalMetric(prisma.approvalRecord.count(), 0),
+      optionalMetric(prisma.integration.count({ where: { status: 'CONNECTED' } }), 0),
+      optionalMetric(prisma.playbookDocument.count(), 0),
+      optionalMetric(prisma.investigationCase.count(), 0),
       prisma.customerAccount.findMany({
         orderBy: { createdAt: 'desc' },
         take: 6,
@@ -771,10 +778,10 @@ export async function getFounderCustomerProfile(id: string) {
     if (!customer) return { migrationRequired: false, data: null };
 
     const [approvals, auditLogs, playbooks, investigations] = await Promise.all([
-      prisma.approvalRecord.count({ where: { organizationId: customer.organizationId } }),
-      prisma.auditLog.count({ where: { organizationId: customer.organizationId } }),
-      prisma.playbookDocument.count({ where: { organizationId: customer.organizationId } }),
-      prisma.investigationCase.count({ where: { organizationId: customer.organizationId } }),
+      optionalMetric(prisma.approvalRecord.count({ where: { organizationId: customer.organizationId } }), 0),
+      optionalMetric(prisma.auditLog.count({ where: { organizationId: customer.organizationId } }), 0),
+      optionalMetric(prisma.playbookDocument.count({ where: { organizationId: customer.organizationId } }), 0),
+      optionalMetric(prisma.investigationCase.count({ where: { organizationId: customer.organizationId } }), 0),
     ]);
     await refreshCustomerHealth(customer.id).catch(() => null);
     return { migrationRequired: false, data: { customer, usage: { approvals, auditLogs, playbooks, investigations } } };
