@@ -298,6 +298,47 @@ WHERE to_regclass('public."_prisma_migrations"') IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE "migration_name" = '20260708120000_founder_hardening_v2');
 `;
 
+function splitSqlStatements(sql: string) {
+  const statements: string[] = [];
+  let current = '';
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inDollarQuote = false;
+
+  for (let index = 0; index < sql.length; index += 1) {
+    const char = sql[index];
+    const next = sql[index + 1];
+    const previous = sql[index - 1];
+    const pair = `${char}${next ?? ''}`;
+
+    if (!inSingleQuote && !inDoubleQuote && pair === '$$') {
+      inDollarQuote = !inDollarQuote;
+      current += pair;
+      index += 1;
+      continue;
+    }
+
+    if (!inDollarQuote && !inDoubleQuote && char === "'" && previous !== '\\') {
+      inSingleQuote = !inSingleQuote;
+    } else if (!inDollarQuote && !inSingleQuote && char === '"' && previous !== '\\') {
+      inDoubleQuote = !inDoubleQuote;
+    }
+
+    if (char === ';' && !inSingleQuote && !inDoubleQuote && !inDollarQuote) {
+      const statement = current.trim();
+      if (statement) statements.push(statement);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  const trailing = current.trim();
+  if (trailing) statements.push(trailing);
+  return statements;
+}
+
 function envList(name: string) {
   return (process.env[name] ?? '')
     .split(',')
@@ -393,7 +434,9 @@ async function ensureFounderStorage() {
         SELECT to_regclass('public."FounderManagedUser"')::text AS exists
       `;
       if (rows[0]?.exists) return;
-      await prisma.$executeRawUnsafe(founderStorageMigrationSql);
+      for (const statement of splitSqlStatements(founderStorageMigrationSql)) {
+        await prisma.$executeRawUnsafe(statement);
+      }
     })().catch((error) => {
       founderStorageBootstrapPromise = null;
       throw error;
