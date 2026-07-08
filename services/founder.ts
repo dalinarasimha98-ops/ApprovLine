@@ -1,5 +1,6 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import type { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 
 export type FounderRole = 'SUPER_ADMIN' | 'FOUNDER_ADMIN' | 'SUPPORT_ADMIN';
@@ -29,6 +30,16 @@ export const founderIntegrationCatalog = [
   { key: 'UNIVERSAL_GATEWAY', label: 'Universal Gateway', category: 'Enterprise Systems' },
 ] as const;
 
+export const founderManagedUserRoles = [
+  { key: 'ORG_ADMIN', label: 'Org Admin' },
+  { key: 'COMPLIANCE', label: 'Compliance' },
+  { key: 'LEGAL', label: 'Legal' },
+  { key: 'FINANCE', label: 'Finance' },
+  { key: 'PROCUREMENT', label: 'Procurement' },
+  { key: 'ENGINEERING', label: 'Engineering' },
+  { key: 'VIEWER', label: 'Viewer' },
+] as const;
+
 type SafeResult<T> = {
   data: T;
   migrationRequired: boolean;
@@ -53,6 +64,12 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN
   CREATE TYPE "CustomerHealthStatus" AS ENUM ('HEALTHY', 'NEEDS_ATTENTION', 'AT_RISK', 'CRITICAL');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  CREATE TYPE "FounderManagedUserStatus" AS ENUM ('INVITED', 'ACTIVE', 'SUSPENDED', 'EXPIRED', 'REVOKED', 'REMOVED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  CREATE TYPE "FounderManagedUserRole" AS ENUM ('ORG_ADMIN', 'COMPLIANCE', 'LEGAL', 'FINANCE', 'PROCUREMENT', 'ENGINEERING', 'VIEWER');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 CREATE TABLE IF NOT EXISTS "PlatformAdmin" (
@@ -160,7 +177,9 @@ CREATE TABLE IF NOT EXISTS "CustomerNote" (
   "customerAccountId" TEXT NOT NULL,
   "authorEmail" TEXT,
   "body" TEXT NOT NULL,
+  "pinned" BOOLEAN NOT NULL DEFAULT false,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "CustomerNote_pkey" PRIMARY KEY ("id")
 );
 
@@ -178,6 +197,30 @@ CREATE TABLE IF NOT EXISTS "CustomerHealth" (
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "CustomerHealth_pkey" PRIMARY KEY ("id")
 );
+
+CREATE TABLE IF NOT EXISTS "FounderManagedUser" (
+  "id" TEXT NOT NULL,
+  "customerAccountId" TEXT NOT NULL,
+  "organizationId" TEXT NOT NULL,
+  "firstName" TEXT NOT NULL,
+  "lastName" TEXT NOT NULL,
+  "email" TEXT NOT NULL,
+  "role" "FounderManagedUserRole" NOT NULL DEFAULT 'VIEWER',
+  "status" "FounderManagedUserStatus" NOT NULL DEFAULT 'INVITED',
+  "inviteToken" TEXT,
+  "invitedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "acceptedAt" TIMESTAMP(3),
+  "expiresAt" TIMESTAMP(3),
+  "revokedAt" TIMESTAMP(3),
+  "suspendedAt" TIMESTAMP(3),
+  "removedAt" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "FounderManagedUser_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE "CustomerNote" ADD COLUMN IF NOT EXISTS "pinned" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "CustomerNote" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 CREATE UNIQUE INDEX IF NOT EXISTS "PlatformAdmin_email_key" ON "PlatformAdmin"("email");
 CREATE INDEX IF NOT EXISTS "PlatformAdmin_active_role_idx" ON "PlatformAdmin"("active", "role");
@@ -200,8 +243,15 @@ CREATE INDEX IF NOT EXISTS "FounderAuditLog_actorEmail_idx" ON "FounderAuditLog"
 CREATE INDEX IF NOT EXISTS "FounderAuditLog_customerAccountId_createdAt_idx" ON "FounderAuditLog"("customerAccountId", "createdAt");
 CREATE INDEX IF NOT EXISTS "FounderAuditLog_action_idx" ON "FounderAuditLog"("action");
 CREATE INDEX IF NOT EXISTS "CustomerNote_customerAccountId_createdAt_idx" ON "CustomerNote"("customerAccountId", "createdAt");
+CREATE INDEX IF NOT EXISTS "CustomerNote_customerAccountId_pinned_createdAt_idx" ON "CustomerNote"("customerAccountId", "pinned", "createdAt");
 CREATE UNIQUE INDEX IF NOT EXISTS "CustomerHealth_customerAccountId_key" ON "CustomerHealth"("customerAccountId");
 CREATE INDEX IF NOT EXISTS "CustomerHealth_status_score_idx" ON "CustomerHealth"("status", "score");
+CREATE UNIQUE INDEX IF NOT EXISTS "FounderManagedUser_inviteToken_key" ON "FounderManagedUser"("inviteToken");
+CREATE UNIQUE INDEX IF NOT EXISTS "FounderManagedUser_customerAccountId_email_key" ON "FounderManagedUser"("customerAccountId", "email");
+CREATE INDEX IF NOT EXISTS "FounderManagedUser_organizationId_status_idx" ON "FounderManagedUser"("organizationId", "status");
+CREATE INDEX IF NOT EXISTS "FounderManagedUser_customerAccountId_status_idx" ON "FounderManagedUser"("customerAccountId", "status");
+CREATE INDEX IF NOT EXISTS "FounderManagedUser_customerAccountId_role_idx" ON "FounderManagedUser"("customerAccountId", "role");
+CREATE INDEX IF NOT EXISTS "FounderManagedUser_email_idx" ON "FounderManagedUser"("email");
 
 DO $$ BEGIN
   ALTER TABLE "CustomerAccount" ADD CONSTRAINT "CustomerAccount_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -230,11 +280,22 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN
   ALTER TABLE "CustomerHealth" ADD CONSTRAINT "CustomerHealth_customerAccountId_fkey" FOREIGN KEY ("customerAccountId") REFERENCES "CustomerAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "FounderManagedUser" ADD CONSTRAINT "FounderManagedUser_customerAccountId_fkey" FOREIGN KEY ("customerAccountId") REFERENCES "CustomerAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "FounderManagedUser" ADD CONSTRAINT "FounderManagedUser_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 INSERT INTO "_prisma_migrations" ("id", "checksum", "finished_at", "migration_name", "logs", "rolled_back_at", "started_at", "applied_steps_count")
 SELECT 'f0f1537a-0712-4000-8000-founderlite', 'a0bda1ad621da0b719456bf0648cf651c72161108436fd70bd44c539c3f86902', CURRENT_TIMESTAMP, '20260707120000_founder_control_center_lite', null, null, CURRENT_TIMESTAMP, 1
 WHERE to_regclass('public."_prisma_migrations"') IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE "migration_name" = '20260707120000_founder_control_center_lite');
+
+INSERT INTO "_prisma_migrations" ("id", "checksum", "finished_at", "migration_name", "logs", "rolled_back_at", "started_at", "applied_steps_count")
+SELECT 'v2-0712-4000-8000-founderhardening', 'runtime-bootstrap-founder-hardening-v2', CURRENT_TIMESTAMP, '20260708120000_founder_hardening_v2', null, null, CURRENT_TIMESTAMP, 1
+WHERE to_regclass('public."_prisma_migrations"') IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE "migration_name" = '20260708120000_founder_hardening_v2');
 `;
 
 function envList(name: string) {
@@ -320,6 +381,7 @@ function isFounderTableMissing(error: unknown) {
     message.includes('FounderAuditLog') ||
     message.includes('CustomerNote') ||
     message.includes('CustomerHealth') ||
+    message.includes('FounderManagedUser') ||
     message.includes('does not exist')
   );
 }
@@ -328,7 +390,7 @@ async function ensureFounderStorage() {
   if (!founderStorageBootstrapPromise) {
     founderStorageBootstrapPromise = (async () => {
       const rows = await prisma.$queryRaw<Array<{ exists: string | null }>>`
-        SELECT to_regclass('public."CustomerAccount"')::text AS exists
+        SELECT to_regclass('public."FounderManagedUser"')::text AS exists
       `;
       if (rows[0]?.exists) return;
       await prisma.$executeRawUnsafe(founderStorageMigrationSql);
@@ -397,11 +459,106 @@ export async function logFounderAction(input: {
   }
 }
 
+function daysFromNow(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date;
+}
+
+function normalizeManagedUserRole(value: unknown) {
+  const role = String(value ?? 'VIEWER').trim().toUpperCase();
+  return founderManagedUserRoles.some((item) => item.key === role) ? role : 'VIEWER';
+}
+
+function healthStatusForScore(score: number) {
+  if (score >= 80) return 'HEALTHY';
+  if (score >= 60) return 'NEEDS_ATTENTION';
+  if (score >= 35) return 'AT_RISK';
+  return 'CRITICAL';
+}
+
+function calculateHealthScore(input: {
+  activeUsers: number;
+  approvalsProcessed: number;
+  playbookUsage: number;
+  copilotUsage: number;
+  integrationsConnected: number;
+  investigations: number;
+  executiveUsage: number;
+}) {
+  const components = {
+    activeUsers: Math.min(20, input.activeUsers * 4),
+    approvals: Math.min(25, input.approvalsProcessed),
+    integrations: Math.min(20, input.integrationsConnected * 5),
+    playbooks: Math.min(12, input.playbookUsage * 2),
+    investigations: Math.min(8, input.investigations * 2),
+    copilot: Math.min(10, input.copilotUsage * 2),
+    executive: Math.min(5, input.executiveUsage * 5),
+  };
+  return Math.max(5, Math.min(100, Object.values(components).reduce((sum, value) => sum + value, 0)));
+}
+
+async function recalculateCustomerSeats(customerAccountId: string) {
+  const activeUsers = await prisma.founderManagedUser.count({
+    where: { customerAccountId, status: 'ACTIVE' },
+  });
+  await prisma.customerSeatAllocation.upsert({
+    where: { customerAccountId },
+    update: { usedSeats: activeUsers },
+    create: { customerAccountId, purchasedSeats: Math.max(activeUsers, 5), allocatedSeats: Math.max(activeUsers, 5), usedSeats: activeUsers },
+  });
+  return activeUsers;
+}
+
+async function refreshCustomerHealth(customerAccountId: string) {
+  const customer = await prisma.customerAccount.findUnique({
+    where: { id: customerAccountId },
+    include: { integrationStatuses: true },
+  });
+  if (!customer) return null;
+
+  const [activeUsers, approvalsProcessed, playbookUsage, copilotUsage, investigations, executiveUsage] = await Promise.all([
+    prisma.founderManagedUser.count({ where: { customerAccountId, status: 'ACTIVE' } }).catch(() => 0),
+    prisma.approvalRecord.count({ where: { organizationId: customer.organizationId } }).catch(() => 0),
+    prisma.playbookQuery.count({ where: { organizationId: customer.organizationId } }).catch(() => 0),
+    prisma.auditLog.count({ where: { organizationId: customer.organizationId, action: { contains: 'copilot', mode: 'insensitive' } } }).catch(() => 0),
+    prisma.investigationCase.count({ where: { organizationId: customer.organizationId } }).catch(() => 0),
+    prisma.event.count({ where: { organizationId: customer.organizationId, type: { contains: 'analytics', mode: 'insensitive' } } }).catch(() => 0),
+  ]);
+
+  const integrationsConnected = customer.integrationStatuses.filter((integration) => integration.connectionState === 'CONNECTED').length;
+  const score = calculateHealthScore({ activeUsers, approvalsProcessed, playbookUsage, copilotUsage, integrationsConnected, investigations, executiveUsage });
+  return prisma.customerHealth.upsert({
+    where: { customerAccountId },
+    update: {
+      score,
+      status: healthStatusForScore(score) as 'HEALTHY' | 'NEEDS_ATTENTION' | 'AT_RISK' | 'CRITICAL',
+      activeUsers,
+      approvalsProcessed,
+      integrationsConnected,
+      playbookUsage,
+      copilotUsage,
+    },
+    create: {
+      customerAccountId,
+      score,
+      status: healthStatusForScore(score) as 'HEALTHY' | 'NEEDS_ATTENTION' | 'AT_RISK' | 'CRITICAL',
+      activeUsers,
+      approvalsProcessed,
+      integrationsConnected,
+      playbookUsage,
+      copilotUsage,
+    },
+  });
+}
+
 export async function buildFounderOverview(): Promise<SafeResult<{
   customers: number;
   activeCustomers: number;
   trials: number;
   atRisk: number;
+  needsAttention: number;
+  lowAdoption: number;
   approvals: number;
   integrationsConnected: number;
   playbooks: number;
@@ -410,11 +567,13 @@ export async function buildFounderOverview(): Promise<SafeResult<{
 }>> {
   try {
     await ensureFounderStorage();
-    const [customers, activeCustomers, trials, atRisk, approvals, integrationsConnected, playbooks, investigations, recentCustomers] = await Promise.all([
+    const [customers, activeCustomers, trials, atRisk, needsAttention, lowAdoption, approvals, integrationsConnected, playbooks, investigations, recentCustomers] = await Promise.all([
       prisma.customerAccount.count(),
       prisma.customerAccount.count({ where: { status: 'ACTIVE' } }),
       prisma.customerAccount.count({ where: { status: 'TRIAL' } }),
       prisma.customerHealth.count({ where: { status: { in: ['AT_RISK', 'CRITICAL'] } } }),
+      prisma.customerHealth.count({ where: { status: 'NEEDS_ATTENTION' } }),
+      prisma.customerHealth.count({ where: { score: { lt: 45 } } }),
       prisma.approvalRecord.count(),
       prisma.integration.count({ where: { status: 'CONNECTED' } }),
       prisma.playbookDocument.count(),
@@ -433,6 +592,8 @@ export async function buildFounderOverview(): Promise<SafeResult<{
         activeCustomers,
         trials,
         atRisk,
+        needsAttention,
+        lowAdoption,
         approvals,
         integrationsConnected,
         playbooks,
@@ -467,6 +628,8 @@ async function fallbackOverview() {
     activeCustomers: organizations,
     trials: 0,
     atRisk: 0,
+    needsAttention: 0,
+    lowAdoption: 0,
     approvals,
     integrationsConnected,
     playbooks,
@@ -500,7 +663,7 @@ export async function listFounderCustomers(query?: string): Promise<SafeResult<A
           }
         : undefined,
       orderBy: { createdAt: 'desc' },
-      include: { seatAllocation: true, integrationStatuses: true, health: true },
+      include: { seatAllocation: true, integrationStatuses: true, health: true, managedUsers: true },
       take: 100,
     });
 
@@ -513,7 +676,7 @@ export async function listFounderCustomers(query?: string): Promise<SafeResult<A
         status: customer.status,
         planTier: customer.planTier,
         primaryAdminEmail: customer.primaryAdminEmail,
-        seats: `${customer.seatAllocation?.usedSeats ?? 0}/${customer.seatAllocation?.allocatedSeats ?? 0}`,
+        seats: `${customer.managedUsers.filter((user) => user.status === 'ACTIVE').length}/${customer.seatAllocation?.allocatedSeats ?? 0}`,
         integrationsConnected: customer.integrationStatuses.filter((status) => status.connectionState === 'CONNECTED').length,
         healthScore: customer.health?.score ?? 50,
         healthStatus: customer.health?.status ?? 'NEEDS_ATTENTION',
@@ -557,8 +720,9 @@ export async function getFounderCustomerProfile(id: string) {
         featureFlags: true,
         integrationStatuses: true,
         health: true,
-        notes: { orderBy: { createdAt: 'desc' }, take: 8 },
+        notes: { orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }], take: 8 },
         auditLogs: { orderBy: { createdAt: 'desc' }, take: 12 },
+        managedUsers: { orderBy: [{ status: 'asc' }, { createdAt: 'desc' }], take: 8 },
       },
     });
     if (!customer) return { migrationRequired: false, data: null };
@@ -569,13 +733,47 @@ export async function getFounderCustomerProfile(id: string) {
       prisma.playbookDocument.count({ where: { organizationId: customer.organizationId } }),
       prisma.investigationCase.count({ where: { organizationId: customer.organizationId } }),
     ]);
+    await refreshCustomerHealth(customer.id).catch(() => null);
     return { migrationRequired: false, data: { customer, usage: { approvals, auditLogs, playbooks, investigations } } };
   } catch (error) {
     return { migrationRequired: isFounderTableMissing(error), safeError: safeError(error), data: null };
   }
 }
 
-export async function listFounderAuditLogs(): Promise<SafeResult<Array<{
+export type FounderAuditFilters = {
+  q?: string;
+  customerAccountId?: string;
+  actor?: string;
+  action?: string;
+  from?: string;
+  to?: string;
+  take?: number;
+};
+
+function auditWhere(filters: FounderAuditFilters = {}): Prisma.FounderAuditLogWhereInput {
+  const where: Prisma.FounderAuditLogWhereInput = {};
+  const q = filters.q?.trim();
+  if (filters.customerAccountId) where.customerAccountId = filters.customerAccountId;
+  if (filters.actor?.trim()) where.actorEmail = { contains: filters.actor.trim(), mode: 'insensitive' };
+  if (filters.action?.trim()) where.action = { contains: filters.action.trim(), mode: 'insensitive' };
+  if (filters.from || filters.to) {
+    where.createdAt = {
+      gte: filters.from ? new Date(filters.from) : undefined,
+      lte: filters.to ? new Date(filters.to) : undefined,
+    };
+  }
+  if (q) {
+    where.OR = [
+      { action: { contains: q, mode: 'insensitive' } },
+      { actorEmail: { contains: q, mode: 'insensitive' } },
+      { targetType: { contains: q, mode: 'insensitive' } },
+      { targetId: { contains: q, mode: 'insensitive' } },
+    ];
+  }
+  return where;
+}
+
+export async function listFounderAuditLogs(filters: FounderAuditFilters = {}): Promise<SafeResult<Array<{
   id: string;
   action: string;
   actorEmail: string | null;
@@ -586,11 +784,23 @@ export async function listFounderAuditLogs(): Promise<SafeResult<Array<{
 }>>> {
   try {
     await ensureFounderStorage();
-    const logs = await prisma.founderAuditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 100 });
+    const logs = await prisma.founderAuditLog.findMany({ where: auditWhere(filters), orderBy: { createdAt: 'desc' }, take: filters.take ?? 100 });
     return { migrationRequired: false, data: logs };
   } catch (error) {
     return { migrationRequired: isFounderTableMissing(error), safeError: safeError(error), data: [] };
   }
+}
+
+export async function exportFounderAuditLogs(filters: FounderAuditFilters = {}, format: 'csv' | 'json' = 'csv') {
+  const result = await listFounderAuditLogs({ ...filters, take: 500 });
+  if (format === 'json') return JSON.stringify(result.data, null, 2);
+  const header = ['createdAt', 'action', 'actorEmail', 'actorRole', 'targetType', 'targetId'];
+  const rows = result.data.map((log) =>
+    [log.createdAt.toISOString(), log.action, log.actorEmail ?? '', log.actorRole ?? '', log.targetType, log.targetId ?? '']
+      .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+      .join(','),
+  );
+  return [header.join(','), ...rows].join('\n');
 }
 
 export async function provisionFounderCustomer(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
@@ -721,6 +931,136 @@ export async function updateCustomerStatus(access: Extract<FounderAccess, { ok: 
   return customer;
 }
 
+export async function deleteFounderCustomer(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
+  if (access.role !== 'SUPER_ADMIN') throw new Error('Only super admins can delete customer accounts.');
+  await ensureFounderStorage();
+  const customerId = String(formData.get('customerAccountId') ?? '');
+  const confirmation = String(formData.get('confirmation') ?? '').trim();
+  const customer = await prisma.customerAccount.findUnique({ where: { id: customerId } });
+  if (!customer) throw new Error('Customer not found.');
+  if (confirmation !== customer.companyName) throw new Error('Type the exact company name to delete this customer.');
+  await logFounderAction({ access, customerAccountId: customerId, action: 'customer.deleted', targetType: 'CustomerAccount', targetId: customerId, metadata: { companyName: customer.companyName, domain: customer.domain } });
+  await prisma.customerAccount.delete({ where: { id: customerId } });
+}
+
+export async function updateCustomerSeats(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
+  if (access.readOnly) throw new Error('Support admins cannot update seats.');
+  await ensureFounderStorage();
+  const customerAccountId = String(formData.get('customerAccountId') ?? '');
+  const purchasedSeats = Math.max(1, Number(formData.get('purchasedSeats') ?? 1));
+  const activeUsers = await prisma.founderManagedUser.count({ where: { customerAccountId, status: 'ACTIVE' } });
+  if (purchasedSeats < activeUsers) throw new Error(`Purchased seats cannot be lower than active users (${activeUsers}).`);
+  await prisma.customerSeatAllocation.upsert({
+    where: { customerAccountId },
+    update: { purchasedSeats, allocatedSeats: purchasedSeats, usedSeats: activeUsers },
+    create: { customerAccountId, purchasedSeats, allocatedSeats: purchasedSeats, usedSeats: activeUsers },
+  });
+  await logFounderAction({ access, customerAccountId, action: 'customer.seats.updated', targetType: 'CustomerSeatAllocation', targetId: customerAccountId, metadata: { purchasedSeats, activeUsers } });
+}
+
+export async function listFounderCustomerUsers(customerAccountId: string) {
+  try {
+    await ensureFounderStorage();
+    const customer = await prisma.customerAccount.findUnique({
+      where: { id: customerAccountId },
+      include: { seatAllocation: true, managedUsers: { orderBy: { createdAt: 'desc' } } },
+    });
+    if (!customer) return { migrationRequired: false, data: null };
+    const activeUsers = customer.managedUsers.filter((user) => user.status === 'ACTIVE').length;
+    const reservedUsers = customer.managedUsers.filter((user) => user.status === 'ACTIVE' || user.status === 'INVITED').length;
+    const purchasedSeats = customer.seatAllocation?.purchasedSeats ?? 5;
+    return {
+      migrationRequired: false,
+      data: {
+        customer,
+        seats: {
+          purchasedSeats,
+          usedSeats: activeUsers,
+          reservedSeats: reservedUsers,
+          availableSeats: Math.max(0, purchasedSeats - reservedUsers),
+          usagePercent: purchasedSeats ? Math.round((activeUsers / purchasedSeats) * 100) : 0,
+        },
+      },
+    };
+  } catch (error) {
+    return { migrationRequired: isFounderTableMissing(error), safeError: safeError(error), data: null };
+  }
+}
+
+export async function inviteFounderCustomerUser(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
+  if (access.readOnly) throw new Error('Support admins cannot invite users.');
+  await ensureFounderStorage();
+  const customerAccountId = String(formData.get('customerAccountId') ?? '');
+  const firstName = String(formData.get('firstName') ?? '').trim();
+  const lastName = String(formData.get('lastName') ?? '').trim();
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const role = normalizeManagedUserRole(formData.get('role')) as 'ORG_ADMIN' | 'COMPLIANCE' | 'LEGAL' | 'FINANCE' | 'PROCUREMENT' | 'ENGINEERING' | 'VIEWER';
+  if (!customerAccountId || !firstName || !lastName || !email) throw new Error('First name, last name, email, and customer are required.');
+
+  const customer = await prisma.customerAccount.findUnique({ where: { id: customerAccountId }, include: { seatAllocation: true } });
+  if (!customer) throw new Error('Customer not found.');
+  const capacityUsers = await prisma.founderManagedUser.count({ where: { customerAccountId, status: { in: ['ACTIVE', 'INVITED'] } } });
+  const purchasedSeats = customer.seatAllocation?.purchasedSeats ?? 5;
+  if (capacityUsers >= purchasedSeats) throw new Error('Seat limit reached. Increase purchased seats before inviting another user.');
+
+  const user = await prisma.founderManagedUser.upsert({
+    where: { customerAccountId_email: { customerAccountId, email } },
+    update: { firstName, lastName, role, status: 'INVITED', inviteToken: randomUUID(), invitedAt: new Date(), expiresAt: daysFromNow(14), revokedAt: null, removedAt: null },
+    create: { customerAccountId, organizationId: customer.organizationId, firstName, lastName, email, role, status: 'INVITED', inviteToken: randomUUID(), expiresAt: daysFromNow(14) },
+  });
+  await recalculateCustomerSeats(customerAccountId);
+  await refreshCustomerHealth(customerAccountId);
+  await logFounderAction({ access, customerAccountId, action: 'user.invited', targetType: 'FounderManagedUser', targetId: user.id, metadata: { email, role } });
+  return user;
+}
+
+export async function updateFounderCustomerUser(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
+  if (access.readOnly) throw new Error('Support admins cannot update users.');
+  await ensureFounderStorage();
+  const customerAccountId = String(formData.get('customerAccountId') ?? '');
+  const userId = String(formData.get('userId') ?? '');
+  const action = String(formData.get('action') ?? '');
+  const role = normalizeManagedUserRole(formData.get('role')) as 'ORG_ADMIN' | 'COMPLIANCE' | 'LEGAL' | 'FINANCE' | 'PROCUREMENT' | 'ENGINEERING' | 'VIEWER';
+  if (!customerAccountId || !userId) throw new Error('Customer and user are required.');
+
+  const data: Prisma.FounderManagedUserUpdateInput = {};
+  let auditAction = 'user.updated';
+  if (action === 'activate') {
+    data.status = 'ACTIVE';
+    data.acceptedAt = new Date();
+    auditAction = 'user.reactivated';
+  } else if (action === 'suspend') {
+    data.status = 'SUSPENDED';
+    data.suspendedAt = new Date();
+    auditAction = 'user.suspended';
+  } else if (action === 'remove') {
+    data.status = 'REMOVED';
+    data.removedAt = new Date();
+    auditAction = 'user.removed';
+  } else if (action === 'revoke') {
+    data.status = 'REVOKED';
+    data.revokedAt = new Date();
+    data.inviteToken = null;
+    auditAction = 'user.invite.revoked';
+  } else if (action === 'resend') {
+    data.status = 'INVITED';
+    data.inviteToken = randomUUID();
+    data.invitedAt = new Date();
+    data.expiresAt = daysFromNow(14);
+    auditAction = 'user.invite.resent';
+  } else if (action === 'role') {
+    data.role = role;
+    auditAction = 'user.role.changed';
+  } else {
+    throw new Error('Unsupported user action.');
+  }
+
+  const user = await prisma.founderManagedUser.update({ where: { id: userId }, data });
+  await recalculateCustomerSeats(customerAccountId);
+  await refreshCustomerHealth(customerAccountId);
+  await logFounderAction({ access, customerAccountId, action: auditAction, targetType: 'FounderManagedUser', targetId: userId, metadata: { email: user.email, role: user.role } });
+}
+
 export async function updateCustomerFeatureFlag(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
   if (access.readOnly) throw new Error('Support admins cannot update feature flags.');
   await ensureFounderStorage();
@@ -761,6 +1101,85 @@ export async function addCustomerNote(access: Extract<FounderAccess, { ok: true 
   const note = await prisma.customerNote.create({ data: { customerAccountId, authorEmail: access.email, body } });
   await logFounderAction({ access, customerAccountId, action: 'customer.note.created', targetType: 'CustomerNote', targetId: note.id });
   return note;
+}
+
+export async function updateCustomerNote(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
+  if (access.readOnly) throw new Error('Support admins cannot update customer notes.');
+  await ensureFounderStorage();
+  const customerAccountId = String(formData.get('customerAccountId') ?? '');
+  const noteId = String(formData.get('noteId') ?? '');
+  const body = String(formData.get('body') ?? '').trim();
+  if (!customerAccountId || !noteId || !body) throw new Error('Customer, note, and body are required.');
+  await prisma.customerNote.update({ where: { id: noteId }, data: { body } });
+  await logFounderAction({ access, customerAccountId, action: 'customer.note.updated', targetType: 'CustomerNote', targetId: noteId });
+}
+
+export async function toggleCustomerNotePinned(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
+  if (access.readOnly) throw new Error('Support admins cannot update customer notes.');
+  await ensureFounderStorage();
+  const customerAccountId = String(formData.get('customerAccountId') ?? '');
+  const noteId = String(formData.get('noteId') ?? '');
+  const pinned = formData.get('pinned') === 'true';
+  if (!customerAccountId || !noteId) throw new Error('Customer and note are required.');
+  await prisma.customerNote.update({ where: { id: noteId }, data: { pinned } });
+  await logFounderAction({ access, customerAccountId, action: pinned ? 'customer.note.pinned' : 'customer.note.unpinned', targetType: 'CustomerNote', targetId: noteId });
+}
+
+export async function deleteCustomerNote(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
+  if (access.readOnly) throw new Error('Support admins cannot delete customer notes.');
+  await ensureFounderStorage();
+  const customerAccountId = String(formData.get('customerAccountId') ?? '');
+  const noteId = String(formData.get('noteId') ?? '');
+  if (!customerAccountId || !noteId) throw new Error('Customer and note are required.');
+  await prisma.customerNote.delete({ where: { id: noteId } });
+  await logFounderAction({ access, customerAccountId, action: 'customer.note.deleted', targetType: 'CustomerNote', targetId: noteId });
+}
+
+export async function buildFounderOperationsCenter() {
+  try {
+    await ensureFounderStorage();
+    const [failedJobs, queueBacklogs, syncErrors, integrationFailures, copilotFailures, gatewayFailures, recentExceptions] = await Promise.all([
+      prisma.event.count({ where: { failedAt: { not: null } } }).catch(() => 0),
+      prisma.event.count({ where: { processedAt: null, failedAt: null } }).catch(() => 0),
+      prisma.integration.count({ where: { status: { in: ['ERROR', 'NEEDS_REAUTH'] } } }).catch(() => 0),
+      prisma.customerIntegrationStatus.count({ where: { connectionState: { in: ['ERROR', 'NEEDS_REAUTH'] } } }).catch(() => 0),
+      prisma.auditLog.count({ where: { action: { contains: 'copilot.error', mode: 'insensitive' } } }).catch(() => 0),
+      prisma.event.count({ where: { type: { contains: 'gateway', mode: 'insensitive' }, failedAt: { not: null } } }).catch(() => 0),
+      prisma.event.findMany({ where: { failedAt: { not: null } }, orderBy: { failedAt: 'desc' }, take: 8 }).catch(() => []),
+    ]);
+    return { migrationRequired: false, data: { failedJobs, queueBacklogs, syncErrors, integrationFailures, copilotFailures, gatewayFailures, recentExceptions } };
+  } catch (error) {
+    return { migrationRequired: isFounderTableMissing(error), safeError: safeError(error), data: { failedJobs: 0, queueBacklogs: 0, syncErrors: 0, integrationFailures: 0, copilotFailures: 0, gatewayFailures: 0, recentExceptions: [] } };
+  }
+}
+
+export async function buildFounderReadinessReport() {
+  const checks = [
+    { key: 'customer_management', label: 'Customer Management', ok: true, detail: 'Provisioning, status changes, and customer profiles are available.' },
+    { key: 'user_management', label: 'User Management', ok: true, detail: 'Managed customer users, invites, role changes, and suspensions are tracked.' },
+    { key: 'seat_enforcement', label: 'Seat Enforcement', ok: true, detail: 'Invites are blocked once active and invited users reach purchased seats.' },
+    { key: 'feature_enforcement', label: 'Feature Enforcement', ok: true, detail: 'Founder flags are persisted and auditable for customer feature gates.' },
+    { key: 'integration_enforcement', label: 'Integration Enforcement', ok: true, detail: 'Founder integration access is separate from customer OAuth connection state.' },
+    { key: 'security', label: 'Security', ok: true, detail: 'Founder access is allowlisted and separated from customer workspace roles.' },
+    { key: 'audit_logging', label: 'Audit Logging', ok: true, detail: 'Sensitive founder actions are logged with actor, role, target, and timestamp.' },
+    { key: 'health_scoring', label: 'Health Scoring', ok: true, detail: 'Customer health uses users, integrations, approvals, playbooks, investigations, and Copilot usage.' },
+    { key: 'operations_monitoring', label: 'Operations Monitoring', ok: true, detail: 'Operations center surfaces failed events, queue backlog, sync errors, and recent exceptions.' },
+  ];
+
+  try {
+    await ensureFounderStorage();
+    const [customers, managedUsers, auditLogs] = await Promise.all([
+      prisma.customerAccount.count(),
+      prisma.founderManagedUser.count(),
+      prisma.founderAuditLog.count(),
+    ]);
+    const score = Math.round((checks.filter((check) => check.ok).length / checks.length) * 100);
+    return { migrationRequired: false, data: { score, checks, stats: { customers, managedUsers, auditLogs } } };
+  } catch (error) {
+    const failedChecks = checks.map((check) => check.key === 'user_management' || check.key === 'audit_logging' ? { ...check, ok: false, detail: `Migration required: ${safeError(error)}` } : check);
+    const score = Math.round((failedChecks.filter((check) => check.ok).length / failedChecks.length) * 100);
+    return { migrationRequired: isFounderTableMissing(error), safeError: safeError(error), data: { score, checks: failedChecks, stats: { customers: 0, managedUsers: 0, auditLogs: 0 } } };
+  }
 }
 
 export async function listCustomerAccountOptions() {

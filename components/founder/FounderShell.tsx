@@ -10,6 +10,8 @@ const navItems = [
   { href: '/founder/features', label: 'Features' },
   { href: '/founder/integrations', label: 'Integrations' },
   { href: '/founder/audit', label: 'Audit' },
+  { href: '/founder/operations', label: 'Operations' },
+  { href: '/founder/readiness', label: 'Readiness' },
 ];
 
 export function FounderShell({

@@ -50,6 +50,25 @@ enum CustomerHealthStatus {
   CRITICAL
 }
 
+enum FounderManagedUserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  REVOKED
+  REMOVED
+}
+
+enum FounderManagedUserRole {
+  ORG_ADMIN
+  COMPLIANCE
+  LEGAL
+  FINANCE
+  PROCUREMENT
+  ENGINEERING
+  VIEWER
+}
+
 enum IntegrationProvider {
   SLACK
   GMAIL
@@ -128,6 +147,7 @@ model Organization {
   pilotActivityLogs PilotActivityLog[]
   customerAccount   CustomerAccount?
   customerWorkspace CustomerWorkspace?
+  founderManagedUsers FounderManagedUser[]
 }
 
 model User {
@@ -594,6 +614,7 @@ model CustomerAccount {
   auditLogs           FounderAuditLog[]
   notes               CustomerNote[]
   health              CustomerHealth?
+  managedUsers        FounderManagedUser[]
 
   @@index([status, planTier])
   @@index([companyName])
@@ -689,9 +710,12 @@ model CustomerNote {
   customerAccountId String
   authorEmail       String?
   body              String
+  pinned            Boolean         @default(false)
   createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
   customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
 
+  @@index([customerAccountId, pinned, createdAt])
   @@index([customerAccountId, createdAt])
 }
 
@@ -710,4 +734,32 @@ model CustomerHealth {
   customerAccount       CustomerAccount      @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
 
   @@index([status, score])
+}
+
+model FounderManagedUser {
+  id                String                   @id @default(cuid())
+  customerAccountId String
+  organizationId    String
+  firstName         String
+  lastName          String
+  email             String
+  role              FounderManagedUserRole   @default(VIEWER)
+  status            FounderManagedUserStatus @default(INVITED)
+  inviteToken       String?                  @unique
+  invitedAt         DateTime                 @default(now())
+  acceptedAt        DateTime?
+  expiresAt         DateTime?
+  revokedAt         DateTime?
+  suspendedAt       DateTime?
+  removedAt         DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  customerAccount   CustomerAccount          @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+  organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([customerAccountId, email])
+  @@index([organizationId, status])
+  @@index([customerAccountId, status])
+  @@index([customerAccountId, role])
+  @@index([email])
 }
