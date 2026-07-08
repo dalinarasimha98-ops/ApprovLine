@@ -36,6 +36,206 @@ type SafeResult<T> = {
 };
 
 const bootstrapSuperAdminEmails = ['dalinarasimha98@gmail.com'];
+let founderStorageBootstrapPromise: Promise<void> | null = null;
+
+const founderStorageMigrationSql = `
+DO $$ BEGIN
+  CREATE TYPE "PlatformRole" AS ENUM ('SUPER_ADMIN', 'FOUNDER_ADMIN', 'SUPPORT_ADMIN');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  CREATE TYPE "CustomerPlanTier" AS ENUM ('FREE_TRIAL', 'STARTER', 'GROWTH', 'ENTERPRISE');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  CREATE TYPE "CustomerAccountStatus" AS ENUM ('TRIAL', 'ACTIVE', 'SUSPENDED', 'CHURNED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  CREATE TYPE "CustomerIntegrationConnectionState" AS ENUM ('ACCESS_ENABLED', 'NOT_ENABLED', 'CONNECTED', 'DISCONNECTED', 'NEEDS_REAUTH', 'ERROR');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  CREATE TYPE "CustomerHealthStatus" AS ENUM ('HEALTHY', 'NEEDS_ATTENTION', 'AT_RISK', 'CRITICAL');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+CREATE TABLE IF NOT EXISTS "PlatformAdmin" (
+  "id" TEXT NOT NULL,
+  "email" TEXT NOT NULL,
+  "role" "PlatformRole" NOT NULL DEFAULT 'SUPPORT_ADMIN',
+  "active" BOOLEAN NOT NULL DEFAULT true,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "PlatformAdmin_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "CustomerAccount" (
+  "id" TEXT NOT NULL,
+  "organizationId" TEXT NOT NULL,
+  "companyName" TEXT NOT NULL,
+  "domain" TEXT NOT NULL,
+  "industry" TEXT,
+  "status" "CustomerAccountStatus" NOT NULL DEFAULT 'TRIAL',
+  "planTier" "CustomerPlanTier" NOT NULL DEFAULT 'FREE_TRIAL',
+  "primaryAdminName" TEXT,
+  "primaryAdminEmail" TEXT NOT NULL,
+  "dataRetentionDays" INTEGER NOT NULL DEFAULT 365,
+  "internalNotes" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "CustomerAccount_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "CustomerWorkspace" (
+  "id" TEXT NOT NULL,
+  "customerAccountId" TEXT NOT NULL,
+  "organizationId" TEXT NOT NULL,
+  "workspaceName" TEXT NOT NULL,
+  "workspaceSlug" TEXT NOT NULL,
+  "provisionedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "metadata" JSONB,
+  CONSTRAINT "CustomerWorkspace_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "CustomerPlan" (
+  "id" TEXT NOT NULL,
+  "planTier" "CustomerPlanTier" NOT NULL,
+  "name" TEXT NOT NULL,
+  "description" TEXT,
+  "seatLimitDefault" INTEGER NOT NULL DEFAULT 5,
+  "priceLabel" TEXT,
+  "features" TEXT[],
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "CustomerPlan_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "CustomerSeatAllocation" (
+  "id" TEXT NOT NULL,
+  "customerAccountId" TEXT NOT NULL,
+  "purchasedSeats" INTEGER NOT NULL DEFAULT 5,
+  "allocatedSeats" INTEGER NOT NULL DEFAULT 5,
+  "usedSeats" INTEGER NOT NULL DEFAULT 0,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "CustomerSeatAllocation_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "CustomerFeatureFlag" (
+  "id" TEXT NOT NULL,
+  "customerAccountId" TEXT NOT NULL,
+  "key" TEXT NOT NULL,
+  "enabled" BOOLEAN NOT NULL DEFAULT false,
+  "category" TEXT,
+  "updatedBy" TEXT,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "CustomerFeatureFlag_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "CustomerIntegrationStatus" (
+  "id" TEXT NOT NULL,
+  "customerAccountId" TEXT NOT NULL,
+  "provider" TEXT NOT NULL,
+  "accessEnabled" BOOLEAN NOT NULL DEFAULT false,
+  "connectionState" "CustomerIntegrationConnectionState" NOT NULL DEFAULT 'NOT_ENABLED',
+  "lastSyncAt" TIMESTAMP(3),
+  "errorCount" INTEGER NOT NULL DEFAULT 0,
+  "eventsProcessed" INTEGER NOT NULL DEFAULT 0,
+  "metadata" JSONB,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "CustomerIntegrationStatus_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "FounderAuditLog" (
+  "id" TEXT NOT NULL,
+  "customerAccountId" TEXT,
+  "actorUserId" TEXT,
+  "actorEmail" TEXT,
+  "actorRole" TEXT,
+  "action" TEXT NOT NULL,
+  "targetType" TEXT NOT NULL,
+  "targetId" TEXT,
+  "metadata" JSONB,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "FounderAuditLog_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "CustomerNote" (
+  "id" TEXT NOT NULL,
+  "customerAccountId" TEXT NOT NULL,
+  "authorEmail" TEXT,
+  "body" TEXT NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "CustomerNote_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "CustomerHealth" (
+  "id" TEXT NOT NULL,
+  "customerAccountId" TEXT NOT NULL,
+  "status" "CustomerHealthStatus" NOT NULL DEFAULT 'NEEDS_ATTENTION',
+  "score" INTEGER NOT NULL DEFAULT 50,
+  "lastLoginAt" TIMESTAMP(3),
+  "activeUsers" INTEGER NOT NULL DEFAULT 0,
+  "approvalsProcessed" INTEGER NOT NULL DEFAULT 0,
+  "integrationsConnected" INTEGER NOT NULL DEFAULT 0,
+  "playbookUsage" INTEGER NOT NULL DEFAULT 0,
+  "copilotUsage" INTEGER NOT NULL DEFAULT 0,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "CustomerHealth_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "PlatformAdmin_email_key" ON "PlatformAdmin"("email");
+CREATE INDEX IF NOT EXISTS "PlatformAdmin_active_role_idx" ON "PlatformAdmin"("active", "role");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerAccount_organizationId_key" ON "CustomerAccount"("organizationId");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerAccount_domain_key" ON "CustomerAccount"("domain");
+CREATE INDEX IF NOT EXISTS "CustomerAccount_status_planTier_idx" ON "CustomerAccount"("status", "planTier");
+CREATE INDEX IF NOT EXISTS "CustomerAccount_companyName_idx" ON "CustomerAccount"("companyName");
+CREATE INDEX IF NOT EXISTS "CustomerAccount_createdAt_idx" ON "CustomerAccount"("createdAt");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerWorkspace_customerAccountId_key" ON "CustomerWorkspace"("customerAccountId");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerWorkspace_organizationId_key" ON "CustomerWorkspace"("organizationId");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerWorkspace_workspaceSlug_key" ON "CustomerWorkspace"("workspaceSlug");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerPlan_planTier_key" ON "CustomerPlan"("planTier");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerSeatAllocation_customerAccountId_key" ON "CustomerSeatAllocation"("customerAccountId");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerFeatureFlag_customerAccountId_key_key" ON "CustomerFeatureFlag"("customerAccountId", "key");
+CREATE INDEX IF NOT EXISTS "CustomerFeatureFlag_key_enabled_idx" ON "CustomerFeatureFlag"("key", "enabled");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerIntegrationStatus_customerAccountId_provider_key" ON "CustomerIntegrationStatus"("customerAccountId", "provider");
+CREATE INDEX IF NOT EXISTS "CustomerIntegrationStatus_provider_connectionState_idx" ON "CustomerIntegrationStatus"("provider", "connectionState");
+CREATE INDEX IF NOT EXISTS "FounderAuditLog_createdAt_idx" ON "FounderAuditLog"("createdAt");
+CREATE INDEX IF NOT EXISTS "FounderAuditLog_actorEmail_idx" ON "FounderAuditLog"("actorEmail");
+CREATE INDEX IF NOT EXISTS "FounderAuditLog_customerAccountId_createdAt_idx" ON "FounderAuditLog"("customerAccountId", "createdAt");
+CREATE INDEX IF NOT EXISTS "FounderAuditLog_action_idx" ON "FounderAuditLog"("action");
+CREATE INDEX IF NOT EXISTS "CustomerNote_customerAccountId_createdAt_idx" ON "CustomerNote"("customerAccountId", "createdAt");
+CREATE UNIQUE INDEX IF NOT EXISTS "CustomerHealth_customerAccountId_key" ON "CustomerHealth"("customerAccountId");
+CREATE INDEX IF NOT EXISTS "CustomerHealth_status_score_idx" ON "CustomerHealth"("status", "score");
+
+DO $$ BEGIN
+  ALTER TABLE "CustomerAccount" ADD CONSTRAINT "CustomerAccount_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "CustomerWorkspace" ADD CONSTRAINT "CustomerWorkspace_customerAccountId_fkey" FOREIGN KEY ("customerAccountId") REFERENCES "CustomerAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "CustomerWorkspace" ADD CONSTRAINT "CustomerWorkspace_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "CustomerSeatAllocation" ADD CONSTRAINT "CustomerSeatAllocation_customerAccountId_fkey" FOREIGN KEY ("customerAccountId") REFERENCES "CustomerAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "CustomerFeatureFlag" ADD CONSTRAINT "CustomerFeatureFlag_customerAccountId_fkey" FOREIGN KEY ("customerAccountId") REFERENCES "CustomerAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "CustomerIntegrationStatus" ADD CONSTRAINT "CustomerIntegrationStatus_customerAccountId_fkey" FOREIGN KEY ("customerAccountId") REFERENCES "CustomerAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "FounderAuditLog" ADD CONSTRAINT "FounderAuditLog_customerAccountId_fkey" FOREIGN KEY ("customerAccountId") REFERENCES "CustomerAccount"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "CustomerNote" ADD CONSTRAINT "CustomerNote_customerAccountId_fkey" FOREIGN KEY ("customerAccountId") REFERENCES "CustomerAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN
+  ALTER TABLE "CustomerHealth" ADD CONSTRAINT "CustomerHealth_customerAccountId_fkey" FOREIGN KEY ("customerAccountId") REFERENCES "CustomerAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+INSERT INTO "_prisma_migrations" ("id", "checksum", "finished_at", "migration_name", "logs", "rolled_back_at", "started_at", "applied_steps_count")
+SELECT 'f0f1537a-0712-4000-8000-founderlite', 'a0bda1ad621da0b719456bf0648cf651c72161108436fd70bd44c539c3f86902', CURRENT_TIMESTAMP, '20260707120000_founder_control_center_lite', null, null, CURRENT_TIMESTAMP, 1
+WHERE to_regclass('public."_prisma_migrations"') IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE "migration_name" = '20260707120000_founder_control_center_lite');
+`;
 
 function envList(name: string) {
   return (process.env[name] ?? '')
@@ -124,6 +324,22 @@ function isFounderTableMissing(error: unknown) {
   );
 }
 
+async function ensureFounderStorage() {
+  if (!founderStorageBootstrapPromise) {
+    founderStorageBootstrapPromise = (async () => {
+      const rows = await prisma.$queryRaw<Array<{ exists: string | null }>>`
+        SELECT to_regclass('public."CustomerAccount"')::text AS exists
+      `;
+      if (rows[0]?.exists) return;
+      await prisma.$executeRawUnsafe(founderStorageMigrationSql);
+    })().catch((error) => {
+      founderStorageBootstrapPromise = null;
+      throw error;
+    });
+  }
+  return founderStorageBootstrapPromise;
+}
+
 export async function getFounderAccess(): Promise<FounderAccess> {
   const session = await auth();
   if (!session.userId) return { ok: false, reason: 'unauthenticated' };
@@ -139,6 +355,7 @@ export async function getFounderAccess(): Promise<FounderAccess> {
     parseFounderRole(clerkUser?.publicMetadata?.platformRole) ??
     parseFounderRole(clerkUser?.publicMetadata?.founderRole);
   try {
+    await ensureFounderStorage();
     const dbAdmin = await prisma.platformAdmin.findUnique({ where: { email: email.toLowerCase() } });
     if (dbAdmin?.active) role = dbAdmin.role as FounderRole;
   } catch (error) {
@@ -192,6 +409,7 @@ export async function buildFounderOverview(): Promise<SafeResult<{
   recentCustomers: Array<{ id: string; companyName: string; domain: string; status: string; planTier: string; score: number }>;
 }>> {
   try {
+    await ensureFounderStorage();
     const [customers, activeCustomers, trials, atRisk, approvals, integrationsConnected, playbooks, investigations, recentCustomers] = await Promise.all([
       prisma.customerAccount.count(),
       prisma.customerAccount.count({ where: { status: 'ACTIVE' } }),
@@ -270,6 +488,7 @@ export async function listFounderCustomers(query?: string): Promise<SafeResult<A
   healthStatus: string;
 }>>> {
   try {
+    await ensureFounderStorage();
     const customers = await prisma.customerAccount.findMany({
       where: query
         ? {
@@ -328,6 +547,7 @@ export async function listFounderCustomers(query?: string): Promise<SafeResult<A
 
 export async function getFounderCustomerProfile(id: string) {
   try {
+    await ensureFounderStorage();
     const customer = await prisma.customerAccount.findUnique({
       where: { id },
       include: {
@@ -365,6 +585,7 @@ export async function listFounderAuditLogs(): Promise<SafeResult<Array<{
   createdAt: Date;
 }>>> {
   try {
+    await ensureFounderStorage();
     const logs = await prisma.founderAuditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 100 });
     return { migrationRequired: false, data: logs };
   } catch (error) {
@@ -374,6 +595,7 @@ export async function listFounderAuditLogs(): Promise<SafeResult<Array<{
 
 export async function provisionFounderCustomer(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
   if (access.readOnly) throw new Error('Support admins cannot provision customers.');
+  await ensureFounderStorage();
 
   const companyName = String(formData.get('companyName') ?? '').trim();
   const domain = String(formData.get('domain') ?? '').trim().toLowerCase();
@@ -490,6 +712,7 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
 
 export async function updateCustomerStatus(access: Extract<FounderAccess, { ok: true }>, customerId: string, status: string) {
   if (access.readOnly) throw new Error('Support admins cannot change customer status.');
+  await ensureFounderStorage();
   const customer = await prisma.customerAccount.update({
     where: { id: customerId },
     data: { status: status as 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'CHURNED' },
@@ -500,6 +723,7 @@ export async function updateCustomerStatus(access: Extract<FounderAccess, { ok: 
 
 export async function updateCustomerFeatureFlag(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
   if (access.readOnly) throw new Error('Support admins cannot update feature flags.');
+  await ensureFounderStorage();
   const customerAccountId = String(formData.get('customerAccountId') ?? '');
   const key = String(formData.get('key') ?? '');
   const enabled = formData.get('enabled') === 'on';
@@ -515,6 +739,7 @@ export async function updateCustomerFeatureFlag(access: Extract<FounderAccess, {
 
 export async function updateCustomerIntegrationAccess(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
   if (access.readOnly) throw new Error('Support admins cannot update integration access.');
+  await ensureFounderStorage();
   const customerAccountId = String(formData.get('customerAccountId') ?? '');
   const provider = String(formData.get('provider') ?? '');
   const accessEnabled = formData.get('accessEnabled') === 'on';
@@ -529,6 +754,7 @@ export async function updateCustomerIntegrationAccess(access: Extract<FounderAcc
 
 export async function addCustomerNote(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
   if (access.readOnly) throw new Error('Support admins cannot create customer notes.');
+  await ensureFounderStorage();
   const customerAccountId = String(formData.get('customerAccountId') ?? '');
   const body = String(formData.get('body') ?? '').trim();
   if (!customerAccountId || !body) throw new Error('Customer and note are required.');
@@ -539,6 +765,7 @@ export async function addCustomerNote(access: Extract<FounderAccess, { ok: true 
 
 export async function listCustomerAccountOptions() {
   try {
+    await ensureFounderStorage();
     return await prisma.customerAccount.findMany({ orderBy: { companyName: 'asc' }, select: { id: true, companyName: true, domain: true } });
   } catch {
     return [];
