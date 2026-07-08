@@ -35,6 +35,8 @@ type SafeResult<T> = {
   safeError?: string;
 };
 
+const bootstrapSuperAdminEmails = ['dalinarasimha98@gmail.com'];
+
 function envList(name: string) {
   return (process.env[name] ?? '')
     .split(',')
@@ -57,6 +59,8 @@ function parseFounderRole(value: unknown): FounderRole | null {
 }
 
 function envRoleForEmail(email: string): FounderRole | null {
+  if (bootstrapSuperAdminEmails.includes(email.toLowerCase())) return 'SUPER_ADMIN';
+
   if (
     hasEnvEmail(
       [
