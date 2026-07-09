@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { CustomerAccountDetailsCard, type CustomerAccountDetailsActionState } from '@/components/founder/CustomerAccountDetailsCard';
 import { FounderBadge, FounderMetricCard, MigrationNotice } from '@/components/founder/FounderShell';
 import {
   addCustomerNote,
@@ -10,6 +11,7 @@ import {
   getFounderAccess,
   getFounderCustomerProfile,
   toggleCustomerNotePinned,
+  updateCustomerAccountDetails,
   updateCustomerNote,
   updateCustomerStatus,
 } from '@/services/founder';
@@ -66,6 +68,23 @@ async function deleteCustomer(formData: FormData) {
   revalidatePath('/founder/customers');
 }
 
+async function saveAccountDetails(_state: CustomerAccountDetailsActionState, formData: FormData): Promise<CustomerAccountDetailsActionState> {
+  'use server';
+  const access = await getFounderAccess();
+  if (!access.ok) return { error: 'Founder access is required to update customer details.' };
+  try {
+    await updateCustomerAccountDetails(access, formData);
+    const customerId = String(formData.get('customerAccountId') ?? '');
+    revalidatePath(`/founder/customers/${customerId}`);
+    revalidatePath('/founder/customers');
+    revalidatePath('/founder/audit');
+    return { ok: true, message: 'Customer account details updated.' };
+  } catch (error) {
+    console.error('[founder] account details update failed', error);
+    return { error: error instanceof Error ? error.message : 'Could not update customer details. Please try again.' };
+  }
+}
+
 export default async function FounderCustomerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const access = await getFounderAccess();
@@ -85,6 +104,7 @@ export default async function FounderCustomerProfilePage({ params }: { params: P
   const activeUsers = customer.managedUsers.filter((user) => user.status === 'ACTIVE').length;
   const purchasedSeats = customer.seatAllocation?.purchasedSeats ?? customer.seatAllocation?.allocatedSeats ?? 5;
   const availableSeats = Math.max(0, purchasedSeats - customer.managedUsers.filter((user) => user.status === 'ACTIVE' || user.status === 'INVITED').length);
+  const canEditAccountDetails = access.ok && (access.role === 'SUPER_ADMIN' || access.role === 'FOUNDER_ADMIN');
 
   return (
     <div className="space-y-6">
@@ -131,6 +151,25 @@ export default async function FounderCustomerProfilePage({ params }: { params: P
         <FounderMetricCard label="Audit logs" value={usage.auditLogs} detail="Customer-side evidence logs" />
         <FounderMetricCard label="Health" value={`${customer.health?.score ?? 50}/100`} detail={(customer.health?.status ?? 'NEEDS_ATTENTION').replace('_', ' ')} />
       </section>
+
+      <CustomerAccountDetailsCard
+        canEdit={canEditAccountDetails}
+        customer={{
+          id: customer.id,
+          companyName: customer.companyName,
+          domain: customer.domain,
+          industry: customer.industry,
+          planTier: customer.planTier,
+          status: customer.status,
+          seatLimit: purchasedSeats,
+          dataRetentionDays: customer.dataRetentionDays,
+          primaryAdminName: customer.primaryAdminName,
+          primaryAdminEmail: customer.primaryAdminEmail,
+          createdAt: customer.createdAt.toISOString(),
+          updatedAt: customer.updatedAt.toISOString(),
+        }}
+        saveAction={saveAccountDetails}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">

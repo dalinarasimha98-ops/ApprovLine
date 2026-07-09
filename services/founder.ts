@@ -981,6 +981,108 @@ export async function updateCustomerStatus(access: Extract<FounderAccess, { ok: 
   return customer;
 }
 
+export async function updateCustomerAccountDetails(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
+  if (access.readOnly) throw new Error('Support admins cannot update customer account details.');
+  await ensureFounderStorage();
+
+  const customerAccountId = String(formData.get('customerAccountId') ?? '').trim();
+  const companyName = String(formData.get('companyName') ?? '').trim();
+  const domain = String(formData.get('domain') ?? '').trim().toLowerCase();
+  const industryValue = String(formData.get('industry') ?? '').trim();
+  const planTier = String(formData.get('planTier') ?? 'FREE_TRIAL') as 'FREE_TRIAL' | 'STARTER' | 'GROWTH' | 'ENTERPRISE';
+  const status = String(formData.get('status') ?? 'TRIAL') as 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'CHURNED';
+  const seatLimit = Math.max(1, Number(formData.get('seatLimit') ?? 1));
+  const dataRetentionDays = Math.max(30, Number(formData.get('dataRetentionDays') ?? 365));
+  const primaryAdminNameValue = String(formData.get('primaryAdminName') ?? '').trim();
+  const primaryAdminEmail = String(formData.get('primaryAdminEmail') ?? '').trim().toLowerCase();
+
+  const validPlans = new Set(['FREE_TRIAL', 'STARTER', 'GROWTH', 'ENTERPRISE']);
+  const validStatuses = new Set(['TRIAL', 'ACTIVE', 'SUSPENDED', 'CHURNED']);
+
+  if (!customerAccountId) throw new Error('Customer account is required.');
+  if (!companyName) throw new Error('Company name is required.');
+  if (!domain || !/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(domain)) throw new Error('Enter a valid company domain.');
+  if (!primaryAdminEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(primaryAdminEmail)) throw new Error('Enter a valid primary admin email.');
+  if (!validPlans.has(planTier)) throw new Error('Choose a valid plan.');
+  if (!validStatuses.has(status)) throw new Error('Choose a valid status.');
+
+  const current = await prisma.customerAccount.findUnique({
+    where: { id: customerAccountId },
+    include: { seatAllocation: true, managedUsers: true },
+  });
+  if (!current) throw new Error('Customer account not found.');
+
+  const activeUsers = current.managedUsers.filter((user) => user.status === 'ACTIVE').length;
+  if (seatLimit < activeUsers) throw new Error(`Seat limit cannot be lower than active users (${activeUsers}).`);
+
+  const primaryAdminName = primaryAdminNameValue || null;
+  const industry = industryValue || null;
+  type AuditScalar = string | number | boolean | null;
+  const changedFields: Record<string, { from: AuditScalar; to: AuditScalar }> = {};
+  const toAuditValue = (value: unknown): AuditScalar => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+    if (value instanceof Date) return value.toISOString();
+    return String(value);
+  };
+  const compare = (field: string, from: unknown, to: unknown) => {
+    if ((from ?? null) !== (to ?? null)) {
+      changedFields[field] = { from: toAuditValue(from), to: toAuditValue(to) };
+    }
+  };
+
+  compare('companyName', current.companyName, companyName);
+  compare('domain', current.domain, domain);
+  compare('industry', current.industry, industry);
+  compare('planTier', current.planTier, planTier);
+  compare('status', current.status, status);
+  compare('seatLimit', current.seatAllocation?.purchasedSeats ?? current.seatAllocation?.allocatedSeats ?? 0, seatLimit);
+  compare('dataRetentionDays', current.dataRetentionDays, dataRetentionDays);
+  compare('primaryAdminName', current.primaryAdminName, primaryAdminName);
+  compare('primaryAdminEmail', current.primaryAdminEmail, primaryAdminEmail);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.customerAccount.update({
+      where: { id: customerAccountId },
+      data: {
+        companyName,
+        domain,
+        industry,
+        planTier,
+        status,
+        dataRetentionDays,
+        primaryAdminName,
+        primaryAdminEmail,
+      },
+    });
+
+    const workspaceSlug = slugify(domain.replace(/\..*$/, '') || companyName);
+    await tx.organization.update({
+      where: { id: current.organizationId },
+      data: { name: companyName },
+    });
+    await tx.customerWorkspace.upsert({
+      where: { customerAccountId },
+      update: { workspaceName: companyName, workspaceSlug },
+      create: { customerAccountId, organizationId: current.organizationId, workspaceName: companyName, workspaceSlug },
+    });
+    await tx.customerSeatAllocation.upsert({
+      where: { customerAccountId },
+      update: { purchasedSeats: seatLimit, allocatedSeats: seatLimit, usedSeats: activeUsers },
+      create: { customerAccountId, purchasedSeats: seatLimit, allocatedSeats: seatLimit, usedSeats: activeUsers },
+    });
+  });
+
+  await logFounderAction({
+    access,
+    customerAccountId,
+    action: 'CUSTOMER_ACCOUNT_UPDATED',
+    targetType: 'CustomerAccount',
+    targetId: customerAccountId,
+    metadata: { changedFields: changedFields as Prisma.InputJsonObject },
+  });
+}
+
 export async function deleteFounderCustomer(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
   if (access.role !== 'SUPER_ADMIN') throw new Error('Only super admins can delete customer accounts.');
   await ensureFounderStorage();

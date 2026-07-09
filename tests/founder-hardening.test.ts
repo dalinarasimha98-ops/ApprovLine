@@ -14,11 +14,27 @@ const founderService = read('services/founder.ts');
 assert.match(founderService, /founderManagedUserRoles/);
 assert.match(founderService, /inviteFounderCustomerUser/);
 assert.match(founderService, /updateFounderCustomerUser/);
+assert.match(founderService, /updateCustomerAccountDetails/);
 assert.match(founderService, /updateCustomerSeats/);
 assert.match(founderService, /exportFounderAuditLogs/);
 assert.match(founderService, /buildFounderOperationsCenter/);
 assert.match(founderService, /buildFounderReadinessReport/);
 assert.match(founderService, /Seat limit reached/);
+assert.match(founderService, /CUSTOMER_ACCOUNT_UPDATED/);
+assert.match(founderService, /changedFields/);
+
+const customerProfilePage = read('app/founder/customers/[id]/page.tsx');
+assert.match(customerProfilePage, /CustomerAccountDetailsCard/);
+assert.match(customerProfilePage, /saveAccountDetails/);
+assert.match(customerProfilePage, /canEditAccountDetails/);
+assert.match(customerProfilePage, /Customer account details updated\./);
+
+const accountDetailsCard = read('components/founder/CustomerAccountDetailsCard.tsx');
+assert.match(accountDetailsCard, /Edit Account Details/);
+assert.match(accountDetailsCard, /Save Changes/);
+assert.match(accountDetailsCard, /Cancel/);
+assert.match(accountDetailsCard, /Saving\.\.\./);
+assert.match(accountDetailsCard, /You have unsaved changes\. Discard changes\?/);
 
 const usersPage = read('app/founder/customers/[id]/users/page.tsx');
 assert.match(usersPage, /Customer User Lifecycle/);
