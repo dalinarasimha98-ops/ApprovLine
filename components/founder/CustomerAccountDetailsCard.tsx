@@ -148,7 +148,7 @@ export function CustomerAccountDetailsCard({ customer, canEdit, saveAction }: Cu
   };
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" data-testid="customer-account-details">
+    <section id="customer-account-details" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm scroll-mt-6" data-testid="customer-account-details">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">Account Details</p>
@@ -172,6 +172,12 @@ export function CustomerAccountDetailsCard({ customer, canEdit, saveAction }: Cu
           ) : null}
         </div>
       </div>
+
+      {!canEdit ? (
+        <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+          Account details are read-only for your current founder role. Super admins and founder admins can edit these fields.
+        </div>
+      ) : null}
 
       {state.ok && state.message ? (
         <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800">
