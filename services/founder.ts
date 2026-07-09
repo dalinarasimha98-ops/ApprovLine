@@ -949,16 +949,16 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
       create: { customerAccountId: customer.id, purchasedSeats: seats, allocatedSeats: seats },
     });
 
-    await Promise.all(founderFeatures.map((feature) =>
-      tx.customerFeatureFlag.upsert({
+    for (const feature of founderFeatures) {
+      await tx.customerFeatureFlag.upsert({
         where: { customerAccountId_key: { customerAccountId: customer.id, key: feature.key } },
         update: { enabled: enabledFeatureKeys.has(feature.key), category: feature.category, updatedBy: access.email },
         create: { customerAccountId: customer.id, key: feature.key, enabled: enabledFeatureKeys.has(feature.key), category: feature.category, updatedBy: access.email },
-      }),
-    ));
+      });
+    }
 
-    await Promise.all(founderIntegrationCatalog.map((integration) =>
-      tx.customerIntegrationStatus.upsert({
+    for (const integration of founderIntegrationCatalog) {
+      await tx.customerIntegrationStatus.upsert({
         where: { customerAccountId_provider: { customerAccountId: customer.id, provider: integration.key } },
         update: {
           accessEnabled: enabledIntegrationKeys.has(integration.key),
@@ -970,8 +970,8 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
           accessEnabled: enabledIntegrationKeys.has(integration.key),
           connectionState: enabledIntegrationKeys.has(integration.key) ? 'ACCESS_ENABLED' : 'NOT_ENABLED',
         },
-      }),
-    ));
+      });
+    }
 
     await tx.customerHealth.upsert({
       where: { customerAccountId: customer.id },
@@ -993,7 +993,7 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
     });
 
     return customer;
-  });
+  }, { maxWait: 10000, timeout: 20000 });
 
   return result;
 }
