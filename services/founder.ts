@@ -49,6 +49,20 @@ type SafeResult<T> = {
 const bootstrapSuperAdminEmails = ['dalinarasimha98@gmail.com'];
 let founderStorageBootstrapPromise: Promise<void> | null = null;
 
+const requiredFounderStorageTables = [
+  'PlatformAdmin',
+  'CustomerAccount',
+  'CustomerWorkspace',
+  'CustomerPlan',
+  'CustomerSeatAllocation',
+  'CustomerFeatureFlag',
+  'CustomerIntegrationStatus',
+  'FounderAuditLog',
+  'CustomerNote',
+  'CustomerHealth',
+  'FounderManagedUser',
+] as const;
+
 const founderStorageMigrationSql = `
 DO $$ BEGIN
   CREATE TYPE "PlatformRole" AS ENUM ('SUPER_ADMIN', 'FOUNDER_ADMIN', 'SUPPORT_ADMIN');
@@ -427,15 +441,28 @@ function isFounderTableMissing(error: unknown) {
   );
 }
 
+async function getMissingFounderStorageTables() {
+  const tableNames = requiredFounderStorageTables.map((table) => `public."${table}"`);
+  const rows = await prisma.$queryRaw<Array<{ table_name: string; exists: string | null }>>`
+    SELECT table_name, to_regclass(table_name)::text AS exists
+    FROM unnest(${tableNames}::text[]) AS table_name
+  `;
+  return rows.filter((row) => !row.exists).map((row) => row.table_name.replace(/^public\."|"$/g, ''));
+}
+
 async function ensureFounderStorage() {
   if (!founderStorageBootstrapPromise) {
     founderStorageBootstrapPromise = (async () => {
-      const rows = await prisma.$queryRaw<Array<{ exists: string | null }>>`
-        SELECT to_regclass('public."FounderManagedUser"')::text AS exists
-      `;
-      if (rows[0]?.exists) return;
+      const missingTables = await getMissingFounderStorageTables();
+      if (missingTables.length === 0) return;
+
       for (const statement of splitSqlStatements(founderStorageMigrationSql)) {
         await prisma.$executeRawUnsafe(statement);
+      }
+
+      const stillMissingTables = await getMissingFounderStorageTables();
+      if (stillMissingTables.length > 0) {
+        throw new Error(`Founder storage bootstrap incomplete. Missing tables: ${stillMissingTables.join(', ')}`);
       }
     })().catch((error) => {
       founderStorageBootstrapPromise = null;
