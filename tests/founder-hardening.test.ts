@@ -31,6 +31,14 @@ assert.match(customerProfilePage, /saveAccountDetails/);
 assert.match(customerProfilePage, /canEditAccountDetails/);
 assert.match(customerProfilePage, /Customer account details updated\./);
 
+const founderLayout = read('app/founder/layout.tsx');
+assert.match(founderLayout, /FounderSystemError/);
+assert.match(founderLayout, /access check failed/);
+
+const provisionPage = read('app/founder/provision/page.tsx');
+assert.match(provisionPage, /provision_failed/);
+assert.match(provisionPage, /Customer provisioning could not complete/);
+
 const accountDetailsCard = read('components/founder/CustomerAccountDetailsCard.tsx');
 assert.match(accountDetailsCard, /Edit Account Details/);
 assert.match(accountDetailsCard, /Account details are read-only for your current founder role/);

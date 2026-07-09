@@ -4,12 +4,32 @@ import { founderFeatures, founderIntegrationCatalog, getFounderAccess, provision
 
 export const dynamic = 'force-dynamic';
 
+function safeProvisionError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/postgresql:\/\/[^ ]+/g, '[database-url-redacted]').slice(0, 220);
+}
+
 async function provisionAction(formData: FormData) {
   'use server';
-  const access = await getFounderAccess();
+  const access = await getFounderAccess().catch((error) => {
+    console.error('[founder] provision access check failed', error);
+    return null;
+  });
+  if (!access) redirect('/founder/provision?error=access_check_failed');
   if (!access.ok || access.readOnly) redirect('/founder/provision?error=read_only');
-  const customer = await provisionFounderCustomer(access, formData);
+  const customer = await provisionFounderCustomer(access, formData).catch((error) => {
+    console.error('[founder] customer provisioning failed', error);
+    return null;
+  });
+  if (!customer) redirect('/founder/provision?error=provision_failed');
   redirect(`/founder/customers/${customer.id}?created=1`);
+}
+
+function provisionErrorCopy(error?: string) {
+  if (error === 'read_only') return 'Support admins cannot provision customer accounts.';
+  if (error === 'access_check_failed') return 'Founder access could not be verified. Open readiness, confirm your super admin allowlist, then try again.';
+  if (error === 'provision_failed') return 'Customer provisioning could not complete. Open founder readiness and confirm production migrations are applied.';
+  return null;
 }
 
 export default async function FounderProvisionPage({
@@ -17,9 +37,13 @@ export default async function FounderProvisionPage({
 }: {
   searchParams?: Promise<{ error?: string }>;
 }) {
-  const access = await getFounderAccess();
+  const access = await getFounderAccess().catch((error) => {
+    console.error('[founder] provision page access check failed', error);
+    return { ok: false as const, reason: 'forbidden' as const, email: null, safeError: safeProvisionError(error) };
+  });
   const params = await searchParams;
   const readOnly = !access.ok || access.readOnly;
+  const errorCopy = provisionErrorCopy(params?.error);
 
   return (
     <div className="space-y-6">
@@ -34,7 +58,12 @@ export default async function FounderProvisionPage({
           </div>
           {readOnly ? <FounderBadge tone="amber">Read only</FounderBadge> : null}
         </div>
-        {params?.error ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">Support admins cannot provision customer accounts.</p> : null}
+        {'safeError' in access ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-6 text-amber-900">
+            Founder access could not be checked safely. Safe diagnostic: {access.safeError}
+          </div>
+        ) : null}
+        {errorCopy ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">{errorCopy}</p> : null}
       </section>
 
       <form action={provisionAction} className="grid gap-6 xl:grid-cols-[1fr_0.8fr]">
