@@ -98,6 +98,29 @@ export function FounderForbidden({ email }: { email?: string | null }) {
   );
 }
 
+export function FounderSystemError({ detail }: { detail?: string }) {
+  return (
+    <main className="grid min-h-screen place-items-center bg-slate-50 px-6">
+      <section className="max-w-2xl rounded-3xl border border-amber-200 bg-white p-8 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-700">Founder console unavailable</p>
+        <h1 className="mt-3 text-3xl font-black text-slate-950">We could not load founder access safely</h1>
+        <p className="mt-3 text-base font-semibold leading-7 text-slate-600">
+          Your customer workspace is not affected. The founder operations console could not complete its access check, so ApprovLine stopped before rendering protected controls.
+        </p>
+        {detail ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900">Safe diagnostic: {detail}</p> : null}
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href="/founder/readiness" className="rounded-xl bg-[#2557dc] px-5 py-3 text-sm font-black text-white">
+            Open founder readiness
+          </Link>
+          <Link href="/health" className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">
+            Open health check
+          </Link>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export function FounderMetricCard({ label, value, detail }: { label: string; value: string | number; detail: string }) {
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
