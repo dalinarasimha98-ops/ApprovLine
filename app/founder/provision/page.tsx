@@ -19,6 +19,8 @@ async function provisionAction(formData: FormData) {
   if (!access.ok || access.readOnly) redirect('/founder/provision?error=read_only');
   const customer = await provisionFounderCustomer(access, formData).catch((error) => {
     console.error('[founder] customer provisioning failed', error);
+    const detail = encodeURIComponent(safeProvisionError(error));
+    redirect(`/founder/provision?error=provision_failed&detail=${detail}`);
     return null;
   });
   if (!customer) redirect('/founder/provision?error=provision_failed');
@@ -35,7 +37,7 @@ function provisionErrorCopy(error?: string) {
 export default async function FounderProvisionPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string; detail?: string }>;
 }) {
   const access = await getFounderAccess().catch((error) => {
     console.error('[founder] provision page access check failed', error);
@@ -63,7 +65,12 @@ export default async function FounderProvisionPage({
             Founder access could not be checked safely. Safe diagnostic: {access.safeError}
           </div>
         ) : null}
-        {errorCopy ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">{errorCopy}</p> : null}
+        {errorCopy ? (
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">
+            <p>{errorCopy}</p>
+            {params?.detail ? <p className="mt-2 text-xs leading-5 text-rose-600">Safe diagnostic: {params.detail}</p> : null}
+          </div>
+        ) : null}
       </section>
 
       <form action={provisionAction} className="grid gap-6 xl:grid-cols-[1fr_0.8fr]">
