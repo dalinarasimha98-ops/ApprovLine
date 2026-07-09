@@ -22,6 +22,8 @@ assert.match(founderService, /buildFounderReadinessReport/);
 assert.match(founderService, /Seat limit reached/);
 assert.match(founderService, /CUSTOMER_ACCOUNT_UPDATED/);
 assert.match(founderService, /changedFields/);
+assert.match(founderService, /explicitEnvRole/);
+assert.match(founderService, /dbAdmin\?\.active && !explicitEnvRole/);
 
 const customerProfilePage = read('app/founder/customers/[id]/page.tsx');
 assert.match(customerProfilePage, /CustomerAccountDetailsCard/);

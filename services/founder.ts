@@ -453,8 +453,9 @@ export async function getFounderAccess(): Promise<FounderAccess> {
   const email = clerkUser?.primaryEmailAddress?.emailAddress ?? clerkUser?.emailAddresses[0]?.emailAddress ?? null;
   if (!email) return { ok: false, reason: 'forbidden', email };
 
+  const explicitEnvRole = envRoleForEmail(email);
   let role =
-    envRoleForEmail(email) ??
+    explicitEnvRole ??
     parseFounderRole(clerkUser?.privateMetadata?.platformRole) ??
     parseFounderRole(clerkUser?.privateMetadata?.founderRole) ??
     parseFounderRole(clerkUser?.publicMetadata?.platformRole) ??
@@ -462,7 +463,7 @@ export async function getFounderAccess(): Promise<FounderAccess> {
   try {
     await ensureFounderStorage();
     const dbAdmin = await prisma.platformAdmin.findUnique({ where: { email: email.toLowerCase() } });
-    if (dbAdmin?.active) role = dbAdmin.role as FounderRole;
+    if (dbAdmin?.active && !explicitEnvRole) role = dbAdmin.role as FounderRole;
   } catch (error) {
     if (!isFounderTableMissing(error)) console.error('[founder] platform admin lookup failed', error);
   }
