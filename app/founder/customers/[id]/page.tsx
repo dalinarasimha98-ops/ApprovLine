@@ -123,6 +123,11 @@ export default async function FounderCustomerProfilePage({ params }: { params: P
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
+          {canEditAccountDetails ? (
+            <a href="#customer-account-details" className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-slate-800">
+              Edit Account Details
+            </a>
+          ) : null}
           <Link href={`/founder/customers/${customer.id}/users`} className="rounded-xl bg-[#2557dc] px-4 py-3 text-sm font-black text-white">
             Manage users and seats
           </Link>

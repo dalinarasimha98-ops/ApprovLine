@@ -33,6 +33,7 @@ assert.match(customerProfilePage, /Customer account details updated\./);
 
 const accountDetailsCard = read('components/founder/CustomerAccountDetailsCard.tsx');
 assert.match(accountDetailsCard, /Edit Account Details/);
+assert.match(accountDetailsCard, /Account details are read-only for your current founder role/);
 assert.match(accountDetailsCard, /Save Changes/);
 assert.match(accountDetailsCard, /Cancel/);
 assert.match(accountDetailsCard, /Saving\.\.\./);
