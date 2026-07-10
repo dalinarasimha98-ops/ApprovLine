@@ -2,6 +2,7 @@ import type { ApprovalRecord, AuditLog, InvestigationCase, Prisma } from '@prism
 import { prisma } from '@/lib/prisma';
 import { buildExecutiveAnalytics } from '@/services/analytics';
 import { searchPlaybookChunks } from '@/services/playbooks';
+import { memoryEntityLabels, queryMemoryGraphForCopilot } from '@/services/memory';
 import { withTimeout } from '@/lib/performance';
 
 export type CopilotMessage = {
@@ -11,7 +12,7 @@ export type CopilotMessage = {
 
 export type CopilotCitation = {
   id: string;
-  type: 'approval' | 'audit_log' | 'policy' | 'investigation' | 'analytics' | 'integration';
+  type: 'approval' | 'audit_log' | 'policy' | 'investigation' | 'analytics' | 'integration' | 'memory';
   label: string;
   href: string;
   excerpt: string;
@@ -339,6 +340,19 @@ function citationForPolicy(source: Awaited<ReturnType<typeof searchPlaybookChunk
   };
 }
 
+function citationForMemoryEntity(source: Awaited<ReturnType<typeof queryMemoryGraphForCopilot>>[number]): CopilotCitation {
+  const outgoing = source.outgoingRelationships.map((item) => `${item.relationshipType.replaceAll('_', ' ')} ${item.toEntity.title}`);
+  const incoming = source.incomingRelationships.map((item) => `${item.relationshipType.replaceAll('_', ' ')} from ${item.fromEntity.title}`);
+  return {
+    id: source.id,
+    type: 'memory',
+    label: source.title,
+    href: `/memory/${source.id}`,
+    source: `Memory Graph · ${memoryEntityLabels[source.type]}`,
+    excerpt: source.summary ?? ([...outgoing, ...incoming].slice(0, 3).join('; ') || `${memoryEntityLabels[source.type]} in the enterprise memory graph.`),
+  };
+}
+
 function answerApprover(approvals: ApprovalWithEvidence[]) {
   const approval = approvals[0];
   if (!approval) return 'I could not find a matching approval record yet.';
@@ -391,6 +405,16 @@ function evidenceLines(approvals: ApprovalWithEvidence[], audits: AuditLog[], po
   return lines.length ? lines : ['No source evidence matched the question yet.'];
 }
 
+function memoryEvidenceLines(memory: Awaited<ReturnType<typeof queryMemoryGraphForCopilot>>) {
+  return memory.slice(0, 4).map((entity) => {
+    const relationships = [
+      ...entity.outgoingRelationships.map((item) => `${item.relationshipType.replaceAll('_', ' ')} ${item.toEntity.title}`),
+      ...entity.incomingRelationships.map((item) => `${item.relationshipType.replaceAll('_', ' ')} from ${item.fromEntity.title}`),
+    ];
+    return `Memory Graph: ${entity.title} (${memoryEntityLabels[entity.type]})${relationships.length ? ` connects to ${relationships.slice(0, 2).join(' and ')}` : ''}.`;
+  });
+}
+
 function recommendedActions(intent: string, approvals: ApprovalWithEvidence[], policies: Awaited<ReturnType<typeof searchPlaybookChunks>>) {
   const actions = new Set<string>();
   if (approvals.some((approval) => approval.riskLevel === 'high' || approval.riskLevel === 'critical')) actions.add('Open the high-risk approval and review its evidence trail.');
@@ -437,9 +461,10 @@ export async function answerCopilotQuestion(input: {
 }): Promise<CopilotAnswer> {
   const question = input.question.trim();
   const intent = detectIntent(question);
-  const [approvals, policies] = await Promise.all([
+  const [approvals, policies, memory] = await Promise.all([
     retrieveApprovals(input.organizationId, question, intent),
     retrievePolicies(input.organizationId, question),
+    safe('memory graph retrieval', queryMemoryGraphForCopilot(input.organizationId, question), [] as Awaited<ReturnType<typeof queryMemoryGraphForCopilot>>, 2500),
   ]);
   const [audits, investigations, executive] = await Promise.all([
     retrieveAuditLogs(input.organizationId, approvals),
@@ -456,19 +481,27 @@ export async function answerCopilotQuestion(input: {
   if (intent === 'investigation') answer = answerInvestigation(investigations, approvals);
   if (intent === 'vendor_intelligence') answer = answerList(approvals, 'vendor-related approvals');
   if (intent === 'department_intelligence') answer = answerList(approvals, 'department-related approvals');
+  if (approvals.length === 0 && memory.length > 0) {
+    const top = memory
+      .slice(0, 4)
+      .map((entity) => `${entity.title} (${memoryEntityLabels[entity.type]}, risk ${entity.riskScore})`)
+      .join('; ');
+    answer = `I found ${memory.length} connected Memory Graph entities: ${top}. Open the cited graph nodes to inspect related approvals, risks, policies, evidence, and investigations.`;
+  }
 
   const sources = [
     ...approvals.slice(0, 6).map(citationForApproval),
     ...audits.slice(0, 4).map(citationForAudit),
     ...investigations.slice(0, 4).map(citationForInvestigation),
     ...policies.slice(0, 4).map(citationForPolicy),
+    ...memory.slice(0, 5).map(citationForMemoryEntity),
     ...(executive ? [executive.citation] : []),
   ];
 
   const relatedRecords = sources.slice(0, 6).map((source) => ({ label: source.label, href: source.href }));
   const response = {
     answer,
-    supportingEvidence: evidenceLines(approvals, audits, policies).slice(0, 7),
+    supportingEvidence: [...evidenceLines(approvals, audits, policies), ...memoryEvidenceLines(memory)].slice(0, 7),
     sources,
     confidence: confidenceFor(approvals, policies, audits),
     recommendedActions: recommendedActions(intent, approvals, policies),
@@ -486,6 +519,7 @@ export async function answerCopilotQuestion(input: {
         intent,
         confidence: response.confidence,
         sourceCount: response.sources.length,
+        memoryEntityCount: memory.length,
         historyLength: input.history?.length ?? 0,
       } as Prisma.InputJsonValue,
     },
