@@ -115,6 +115,31 @@ enum InvestigationStatus {
   CLOSED
 }
 
+enum MemoryEntityType {
+  VENDOR
+  CONTRACT
+  APPROVAL
+  APPROVER
+  DEPARTMENT
+  PROJECT
+  POLICY
+  INVESTIGATION
+  RISK
+  EMAIL
+  OUTLOOK_EMAIL
+  TEAMS_MESSAGE
+  SLACK_MESSAGE
+  ZOOM_DECISION
+  JIRA_TICKET
+  SERVICENOW_RECORD
+  GATEWAY_RECORD
+  EMPLOYEE
+  MEETING
+  TICKET
+  DECISION
+  MESSAGE
+}
+
 model Organization {
   id                String             @id @default(cuid())
   clerkOrgId        String?            @unique
@@ -148,6 +173,10 @@ model Organization {
   customerAccount   CustomerAccount?
   customerWorkspace CustomerWorkspace?
   founderManagedUsers FounderManagedUser[]
+  memoryEntities    MemoryEntity[]
+  memoryRelationships MemoryRelationship[]
+  memoryGraphEvents MemoryGraphEvent[]
+  memoryTimelineEvents MemoryTimelineEvent[]
 }
 
 model User {
@@ -762,4 +791,90 @@ model FounderManagedUser {
   @@index([customerAccountId, status])
   @@index([customerAccountId, role])
   @@index([email])
+}
+
+model MemoryEntity {
+  id              String              @id @default(cuid())
+  organizationId  String
+  type            MemoryEntityType
+  title           String
+  subtitle        String?
+  summary         String?
+  externalType    String?
+  externalId      String?
+  sourceSystem    String?
+  riskScore       Int                 @default(0)
+  metadata        Json?
+  firstSeenAt     DateTime            @default(now())
+  lastSeenAt      DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  outgoingRelationships MemoryRelationship[] @relation("MemoryRelationshipFrom")
+  incomingRelationships MemoryRelationship[] @relation("MemoryRelationshipTo")
+  graphEvents     MemoryGraphEvent[]
+  timelineEvents  MemoryTimelineEvent[]
+
+  @@unique([organizationId, type, externalId])
+  @@index([organizationId, type, updatedAt])
+  @@index([organizationId, title])
+  @@index([organizationId, riskScore])
+}
+
+model MemoryRelationship {
+  id               String       @id @default(cuid())
+  organizationId   String
+  fromEntityId     String
+  toEntityId       String
+  relationshipType String
+  confidence       Int          @default(100)
+  evidenceSnippet  String?
+  sourceSystem     String?
+  metadata         Json?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromEntity       MemoryEntity @relation("MemoryRelationshipFrom", fields: [fromEntityId], references: [id], onDelete: Cascade)
+  toEntity         MemoryEntity @relation("MemoryRelationshipTo", fields: [toEntityId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, fromEntityId, toEntityId, relationshipType])
+  @@index([organizationId, relationshipType])
+  @@index([organizationId, fromEntityId])
+  @@index([organizationId, toEntityId])
+}
+
+model MemoryGraphEvent {
+  id             String        @id @default(cuid())
+  organizationId String
+  entityId       String?
+  action         String
+  sourceSystem   String?
+  payload        Json?
+  createdAt      DateTime      @default(now())
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entity         MemoryEntity? @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action])
+  @@index([entityId])
+}
+
+model MemoryTimelineEvent {
+  id             String        @id @default(cuid())
+  organizationId String
+  entityId       String
+  title          String
+  description    String?
+  eventType      String
+  sourceSystem   String?
+  occurredAt     DateTime
+  sourceLink     String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entity         MemoryEntity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, occurredAt])
+  @@index([organizationId, eventType])
+  @@index([entityId, occurredAt])
 }
