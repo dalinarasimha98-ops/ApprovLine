@@ -1,6 +1,7 @@
 import type { MemoryEntity, MemoryEntityType, MemoryRelationship, MemoryTimelineEvent, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
+import { ensureMemoryStorage } from '@/services/memory-storage';
 
 export const memoryEntityLabels: Record<MemoryEntityType, string> = {
   VENDOR: 'Vendor',
@@ -103,6 +104,7 @@ function projectFromText(text: string) {
 }
 
 export async function upsertMemoryEntity(input: EntityInput) {
+  await ensureMemoryStorage();
   const seenAt = input.seenAt ?? new Date();
   const externalId = input.externalId ?? `${input.type}:${key(input.title)}`;
   return prisma.memoryEntity.upsert({
@@ -141,6 +143,7 @@ export async function upsertMemoryEntity(input: EntityInput) {
 
 export async function linkMemoryEntities(input: RelationshipInput) {
   if (input.fromEntityId === input.toEntityId) return null;
+  await ensureMemoryStorage();
   return prisma.memoryRelationship.upsert({
     where: {
       organizationId_fromEntityId_toEntityId_relationshipType: {
@@ -170,6 +173,7 @@ export async function linkMemoryEntities(input: RelationshipInput) {
 }
 
 export async function addMemoryTimelineEvent(input: TimelineInput) {
+  await ensureMemoryStorage();
   return prisma.memoryTimelineEvent.create({
     data: {
       organizationId: input.organizationId,
@@ -186,6 +190,7 @@ export async function addMemoryTimelineEvent(input: TimelineInput) {
 }
 
 export async function rebuildMemoryGraphForOrganization(organizationId: string) {
+  await ensureMemoryStorage();
   const [approvals, investigations, playbooks, rules, evaluations] = await Promise.all([
     prisma.approvalRecord.findMany({
       where: { organizationId },
@@ -481,11 +486,13 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
 }
 
 async function ensureMemoryGraph(organizationId: string) {
+  await ensureMemoryStorage();
   const count = await prisma.memoryEntity.count({ where: { organizationId } });
   if (count === 0) await rebuildMemoryGraphForOrganization(organizationId);
 }
 
 export async function buildMemoryDashboard(organizationId: string, query?: string) {
+  await ensureMemoryStorage();
   await withTimeout('memory graph ensure', ensureMemoryGraph(organizationId), 2500).catch((error) => {
     console.warn('[memory] graph refresh skipped', error);
   });
@@ -529,6 +536,7 @@ export async function buildMemoryDashboard(organizationId: string, query?: strin
 }
 
 export async function getMemoryEntityProfile(organizationId: string, entityId: string) {
+  await ensureMemoryStorage();
   await withTimeout('memory graph profile ensure', ensureMemoryGraph(organizationId), 2500).catch(() => null);
   return prisma.memoryEntity.findFirst({
     where: { id: entityId, organizationId },
@@ -547,6 +555,7 @@ export async function queryMemoryGraphForCopilot(organizationId: string, questio
     ?.filter((term) => term.length > 2)
     .slice(0, 8) ?? [];
   if (terms.length === 0) return [];
+  await ensureMemoryStorage();
   await withTimeout('memory graph copilot ensure', ensureMemoryGraph(organizationId), 2200).catch(() => null);
   return prisma.memoryEntity.findMany({
     where: {
