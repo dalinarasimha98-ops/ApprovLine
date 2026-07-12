@@ -227,7 +227,9 @@ export default async function TrustPage() {
   const operationalChecks = buildOperationalChecks(readiness.checks);
   const readinessCheck: ReadinessCheck = {
     status: readiness.ready ? 'ok' : 'missing',
-    message: readiness.ready ? 'All production readiness checks are passing.' : 'Some optional or required services need attention.',
+    message: readiness.ready
+      ? 'Core platform readiness is passing. Optional connector setup is tracked separately.'
+      : 'One or more core platform services need attention before production use.',
   };
 
   return (
