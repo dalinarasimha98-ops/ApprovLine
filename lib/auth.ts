@@ -109,6 +109,24 @@ export async function getDashboardTenant(timeoutMs = 3000) {
     };
   }
 
+  async function loadTenantFromCurrentState() {
+    const recovered = await Promise.race([
+      getCurrentTenant(),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`Dashboard tenant recovery timed out after ${Math.max(timeoutMs, 6000)}ms`)), Math.max(timeoutMs, 6000));
+      }),
+    ]);
+
+    return {
+      session: recovered.session,
+      user: recovered.user,
+      organization: recovered.organization,
+      status: recovered.organization.onboardedAt ? ('ready' as const) : ('onboarding_incomplete' as const),
+      error: null,
+      loadMs: Date.now() - startedAt,
+    };
+  }
+
   try {
     const userPromise = prisma.user.findUnique({
       where: { clerkUserId: session.userId },
@@ -153,6 +171,14 @@ export async function getDashboardTenant(timeoutMs = 3000) {
     };
   } catch (error) {
     console.error('[tenant] dashboard tenant lookup failed', error);
+    if (error instanceof Error && error.message.includes('Dashboard tenant lookup timed out')) {
+      try {
+        return await loadTenantFromCurrentState();
+      } catch (recoveryError) {
+        console.error('[tenant] dashboard tenant recovery failed', recoveryError);
+      }
+    }
+
     return {
       session,
       user: null,
