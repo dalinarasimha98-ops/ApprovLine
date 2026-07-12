@@ -17,6 +17,7 @@ const nav = [
   { href: '/dashboard/gateway', label: 'Universal Gateway', pending: 'Opening gateway...' },
   { href: '/dashboard/pilot', label: 'Pilot Readiness', pending: 'Opening pilot readiness...' },
   { href: '/dashboard/customer-success', label: 'Customer Success', pending: 'Opening customer success...' },
+  { href: '/trust', label: 'Security & Trust', pending: 'Opening trust center...' },
   { href: '/dashboard/settings', label: 'Settings', pending: 'Opening settings...' },
 ];
 
