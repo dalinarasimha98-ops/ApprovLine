@@ -25,8 +25,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
   return (
     <div className="min-h-screen bg-[#f5f7fb] text-[#090b12]">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-slate-200/80 bg-[#07111f] p-5 text-white shadow-[10px_0_40px_rgba(15,23,42,0.10)] lg:block">
-        <Link href="/" className="mb-7 flex items-center gap-3 rounded-xl px-2 py-2 text-xl font-black text-white">
+      <aside className="fixed inset-y-0 left-0 hidden w-72 flex-col border-r border-slate-200/80 bg-[#07111f] p-5 text-white shadow-[10px_0_40px_rgba(15,23,42,0.10)] lg:flex">
+        <Link href="/" className="mb-6 flex shrink-0 items-center gap-3 rounded-xl px-2 py-2 text-xl font-black text-white">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#2155d9] shadow-lg shadow-blue-950/30">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
               <path d="M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z" stroke="#dbe7ff" strokeWidth="1.9" />
@@ -38,12 +38,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <span className="mt-1 block text-xs font-semibold text-slate-400">Every approval. Captured. Proven.</span>
           </span>
         </Link>
-        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.06] p-3">
+        <div className="mb-4 shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] p-3">
           <p className="text-[11px] font-black uppercase tracking-[0.16em] text-blue-200">Workspace</p>
           <p className="mt-1 truncate text-sm font-black text-white">Personal Workspace</p>
           <p className="text-xs font-semibold text-slate-400">Production</p>
         </div>
-        <nav className="grid gap-2">
+        <nav className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.45)_transparent]">
+          <div className="grid gap-1.5">
           {nav.map((item) => (
             <PendingLink
               key={item.href}
@@ -54,8 +55,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               {item.label}
             </PendingLink>
           ))}
+          </div>
         </nav>
-        <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+        <div className="mt-4 shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-blue-200">Workspace status</p>
           <p className="mt-2 text-sm font-semibold text-slate-300">Read-only evidence capture activates when Slack or Gmail is connected.</p>
         </div>
