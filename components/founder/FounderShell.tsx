@@ -7,6 +7,7 @@ const navItems = [
   { href: '/founder', label: 'Command Center' },
   { href: '/founder/customers', label: 'Customers' },
   { href: '/founder/provision', label: 'Provision' },
+  { href: '/founder/demo-generator', label: 'Demo Generator' },
   { href: '/founder/features', label: 'Features' },
   { href: '/founder/integrations', label: 'Integrations' },
   { href: '/founder/audit', label: 'Audit' },
