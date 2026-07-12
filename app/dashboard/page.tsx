@@ -27,7 +27,7 @@ export default async function DashboardPage({
   const session = await auth();
   if (!session.userId) redirect('/sign-in');
 
-  const tenant = await getDashboardTenant(1500);
+  const tenant = await getDashboardTenant(8000);
   const query = await searchParams;
 
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
