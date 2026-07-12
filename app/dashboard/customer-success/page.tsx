@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getDashboardTenant } from '@/lib/auth';
+import { getCurrentTenant, getDashboardTenant, isTenantDatabaseError } from '@/lib/auth';
 import {
   buildCustomerSuccessDashboard,
   selectCustomerPlan,
@@ -21,9 +21,40 @@ function cleanString(value: FormDataEntryValue | null, fallback = '') {
   return String(value ?? fallback).trim();
 }
 
+async function getCustomerSuccessTenant() {
+  const tenant = await getDashboardTenant(8000);
+  if (tenant.organization || tenant.status !== 'error') return tenant;
+
+  try {
+    const recovered = await getCurrentTenant();
+    if (!recovered.organization.onboardedAt) {
+      return {
+        ...tenant,
+        organization: recovered.organization,
+        user: recovered.user,
+        status: 'onboarding_incomplete' as const,
+        error: null,
+      };
+    }
+
+    return {
+      ...tenant,
+      organization: recovered.organization,
+      user: recovered.user,
+      status: 'ready' as const,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      ...tenant,
+      error: isTenantDatabaseError(error) ? error.message : tenant.error,
+    };
+  }
+}
+
 async function choosePlan(formData: FormData) {
   'use server';
-  const tenant = await getDashboardTenant(2500);
+  const tenant = await getCustomerSuccessTenant();
   if (!tenant.organization || !tenant.user) redirect('/dashboard/customer-success?success=error');
   await selectCustomerPlan({
     organizationId: tenant.organization.id,
@@ -35,7 +66,7 @@ async function choosePlan(formData: FormData) {
 
 async function sendFeedback(formData: FormData) {
   'use server';
-  const tenant = await getDashboardTenant(2500);
+  const tenant = await getCustomerSuccessTenant();
   if (!tenant.organization || !tenant.user) redirect('/dashboard/customer-success?success=error');
   const title = cleanString(formData.get('title'));
   const body = cleanString(formData.get('body'));
@@ -52,7 +83,7 @@ async function sendFeedback(formData: FormData) {
 
 async function sendNps(formData: FormData) {
   'use server';
-  const tenant = await getDashboardTenant(2500);
+  const tenant = await getCustomerSuccessTenant();
   if (!tenant.organization || !tenant.user) redirect('/dashboard/customer-success?success=error');
   const score = Number(cleanString(formData.get('score'), '0'));
   await submitNpsScore({
@@ -80,7 +111,7 @@ export default async function CustomerSuccessPage({
 }: {
   searchParams: Promise<{ success?: string }>;
 }) {
-  const tenant = await getDashboardTenant(3000);
+  const tenant = await getCustomerSuccessTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization) {
