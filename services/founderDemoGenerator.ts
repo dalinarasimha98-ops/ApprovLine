@@ -650,6 +650,6 @@ export async function deleteFounderDemoWorkspace(access: FounderAccess, organiza
     customerAccountId: organization.customerAccount?.id ?? null,
     metadata: json({ demo: true, founderDemo: true, workspaceName: organization.name }),
   }).catch((error) => console.warn('[founder-demo] audit after demo delete failed', safeMessage(error)));
-  await prisma.organization.delete({ where: { id: organizationId } });
+  await prisma.$executeRaw`DELETE FROM "Organization" WHERE "id" = ${organizationId}`;
   return { deleted: true };
 }
