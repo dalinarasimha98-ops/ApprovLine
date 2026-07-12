@@ -56,6 +56,9 @@ export default async function SettingsPage() {
             <PendingLink href="/api/debug/dashboard" pendingText="Opening diagnostics..." className="rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
               Dashboard diagnostics
             </PendingLink>
+            <PendingLink href="/trust" pendingText="Opening trust center..." className="rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+              Security & Trust Center
+            </PendingLink>
           </div>
         </div>
       </div>

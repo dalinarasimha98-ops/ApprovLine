@@ -12,6 +12,7 @@ const isProtectedRoute = createRouteMatcher([
   '/copilot(.*)',
   '/analytics(.*)',
   '/investigations(.*)',
+  '/trust(.*)',
   '/founder(.*)',
   '/api/copilot(.*)',
   '/api/playbooks(.*)',
