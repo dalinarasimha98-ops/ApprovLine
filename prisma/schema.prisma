@@ -145,8 +145,25 @@ model Organization {
   clerkOrgId        String?            @unique
   name              String
   slug              String             @unique
+  companyDomain     String?
+  industry          String?
+  companySize       String?
+  country           String?
+  primaryAdminName  String?
+  primaryAdminEmail String?
   departments       String[]
   approvalCategories String[]
+  onboardingStep    Int                @default(1)
+  onboardingStatus  Json?
+  onboardingStartedAt DateTime?
+  onboardingLastSavedAt DateTime?
+  onboardingCompletedSteps String[]
+  onboardingReadinessScore Int         @default(0)
+  invitedTeamMembers Json?
+  integrationSetup  Json?
+  playbookSetup     Json?
+  copilotSetup      Json?
+  memoryGraphInitializedAt DateTime?
   onboardedAt       DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -177,6 +194,10 @@ model Organization {
   memoryRelationships MemoryRelationship[]
   memoryGraphEvents MemoryGraphEvent[]
   memoryTimelineEvents MemoryTimelineEvent[]
+
+  @@index([onboardedAt])
+  @@index([onboardingStep])
+  @@index([industry])
 }
 
 model User {
