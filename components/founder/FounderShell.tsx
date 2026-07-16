@@ -6,6 +6,7 @@ import type { FounderRole } from '@/services/founder';
 const navItems = [
   { href: '/founder', label: 'Command Center' },
   { href: '/founder/customers', label: 'Customers' },
+  { href: '/founder/pilots', label: 'Pilots' },
   { href: '/founder/provision', label: 'Provision' },
   { href: '/founder/demo-generator', label: 'Demo Generator' },
   { href: '/founder/features', label: 'Features' },
