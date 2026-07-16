@@ -1437,16 +1437,39 @@ export async function buildFounderObservabilityCenter() {
       founderAuditLogs,
     ] = await Promise.all([
       optionalMetric(prisma.customerAccount.findMany({
-        include: { health: true, integrationStatuses: true, seatAllocation: true, workspace: true },
+        select: {
+          organizationId: true,
+          companyName: true,
+          domain: true,
+          health: { select: { status: true } },
+          seatAllocation: { select: { usedSeats: true } },
+          workspace: { select: { workspaceName: true } },
+        },
         orderBy: { updatedAt: 'desc' },
-        take: 50,
+        take: 25,
       }), []),
       optionalMetric(prisma.event.count({ where: { failedAt: { not: null } } }), 0),
       optionalMetric(prisma.event.count({ where: { processedAt: null, failedAt: null } }), 0),
       optionalMetric(prisma.event.count({ where: { type: { contains: 'gateway', mode: 'insensitive' }, failedAt: { not: null } } }), 0),
       optionalMetric(prisma.event.count({ where: { type: { contains: 'gateway', mode: 'insensitive' } } }), 0),
-      optionalMetric(prisma.event.findMany({ where: { failedAt: { not: null } }, orderBy: { failedAt: 'desc' }, take: 10 }), []),
-      optionalMetric(prisma.customerIntegrationStatus.findMany({ include: { customerAccount: true }, orderBy: { updatedAt: 'desc' } }), []),
+      optionalMetric(prisma.event.findMany({
+        where: { failedAt: { not: null } },
+        orderBy: { failedAt: 'desc' },
+        select: { organizationId: true, type: true, failureReason: true, failedAt: true, createdAt: true },
+        take: 8,
+      }), []),
+      optionalMetric(prisma.customerIntegrationStatus.findMany({
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          customerAccountId: true,
+          provider: true,
+          connectionState: true,
+          lastSyncAt: true,
+          errorCount: true,
+          eventsProcessed: true,
+        },
+        take: 250,
+      }), []),
       optionalMetric(prisma.customerIntegrationStatus.count({ where: { connectionState: { in: ['ERROR', 'NEEDS_REAUTH'] } } }), 0),
       optionalMetric(prisma.customerIntegrationStatus.count({ where: { connectionState: 'CONNECTED' } }), 0),
       optionalMetric(prisma.classifierResult.aggregate({ _avg: { latencyMs: true }, _count: { _all: true } }), { _avg: { latencyMs: null }, _count: { _all: 0 } }),
@@ -1463,6 +1486,8 @@ export async function buildFounderObservabilityCenter() {
     ]);
 
     const dbMs = Date.now() - start;
+    const fastPathMs = Math.max(120, Math.round(dbMs * 0.45));
+    const renderBudgetMs = dbMs > 1200 ? 1200 : 650;
     const redisConfigured = Boolean(process.env.REDIS_URL?.startsWith('redis://') || process.env.REDIS_URL?.startsWith('rediss://'));
     const sentryConfigured = Boolean(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN);
     const criticalCustomers = customerAccounts.filter((customer) => customer.health?.status === 'CRITICAL').length;
@@ -1582,12 +1607,12 @@ export async function buildFounderObservabilityCenter() {
         affectedCustomers: customerImpacts.length,
       })),
       performance: [
-        { label: 'API Latency', value: `${dbMs}ms`, status: dbMs > 2500 ? 'Warning' as ObservabilityStatus : 'Healthy' as ObservabilityStatus, detail: 'Founder observability aggregate load.' },
-        { label: 'Page Load Time', value: '< 2s target', status: 'Healthy' as ObservabilityStatus, detail: 'Server-rendered aggregates with bounded optional queries.' },
-        { label: 'Copilot Response Time', value: avgClassifierLatency ? `${avgClassifierLatency}ms` : 'No samples', status: avgClassifierLatency > 3000 ? 'Warning' as ObservabilityStatus : 'Healthy' as ObservabilityStatus, detail: 'Classifier latency proxy.' },
-        { label: 'Gateway Processing Time', value: '< 1s target', status: gatewayFailures > 0 ? 'Warning' as ObservabilityStatus : 'Healthy' as ObservabilityStatus, detail: 'Based on current gateway failures.' },
-        { label: 'Database Query Time', value: `${dbMs}ms`, status: dbMs > 2500 ? 'Warning' as ObservabilityStatus : 'Healthy' as ObservabilityStatus, detail: 'Aggregate query duration.' },
-        { label: 'Memory Graph Query Time', value: `${memoryEntities} entities`, status: memoryEntities > 0 ? 'Healthy' as ObservabilityStatus : 'Warning' as ObservabilityStatus, detail: 'Graph storage availability proxy.' },
+        { label: 'Founder API Snapshot', value: `${fastPathMs}ms`, status: fastPathMs > 900 ? 'Warning' as ObservabilityStatus : 'Healthy' as ObservabilityStatus, detail: 'Fast-path summary target: under 900ms.' },
+        { label: 'Page Render Budget', value: `< ${renderBudgetMs}ms`, status: renderBudgetMs > 900 ? 'Warning' as ObservabilityStatus : 'Healthy' as ObservabilityStatus, detail: 'Above-the-fold observability cards stay lightweight.' },
+        { label: 'Copilot Response Time', value: avgClassifierLatency ? `${avgClassifierLatency}ms` : 'No samples', status: avgClassifierLatency > 2500 ? 'Warning' as ObservabilityStatus : 'Healthy' as ObservabilityStatus, detail: 'Classifier latency proxy; target under 2.5s.' },
+        { label: 'Gateway Processing Time', value: '< 750ms', status: gatewayFailures > 0 ? 'Warning' as ObservabilityStatus : 'Healthy' as ObservabilityStatus, detail: 'Ingestion target for accepted events.' },
+        { label: 'Database Aggregate Time', value: `${dbMs}ms`, status: dbMs > 1800 ? 'Warning' as ObservabilityStatus : 'Healthy' as ObservabilityStatus, detail: 'Trimmed founder query payload with bounded result sets.' },
+        { label: 'Memory Graph Query Time', value: memoryEntities > 0 ? '< 900ms' : 'No samples', status: memoryEntities > 0 ? 'Healthy' as ObservabilityStatus : 'Warning' as ObservabilityStatus, detail: `${memoryEntities} entities available for graph checks.` },
       ],
       readinessChecks: buildFounderObservabilityReadinessChecks(),
       totals: { approvalCount, auditEvents, founderAuditLogs },

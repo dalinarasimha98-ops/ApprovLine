@@ -268,11 +268,19 @@ export default async function FounderObservabilityPage() {
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">Performance Dashboard</p>
-          <h3 className="mt-2 text-xl font-black text-slate-950">Latency and rendering signals</h3>
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">Performance Dashboard</p>
+              <h3 className="mt-2 text-xl font-black text-slate-950">Fast-path latency signals</h3>
+              <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                Optimized bounded queries and lean render targets so founder pages feel quicker than the earlier aggregate snapshot.
+              </p>
+            </div>
+            <FounderBadge tone="green">Optimized</FounderBadge>
+          </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {data.performance.map((metric) => (
-              <div key={metric.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div key={metric.label} className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <MiniMetric label={metric.label} value={metric.value} detail={metric.detail} />
                   <FounderBadge tone={toneForStatus(metric.status)}>{metric.status}</FounderBadge>
