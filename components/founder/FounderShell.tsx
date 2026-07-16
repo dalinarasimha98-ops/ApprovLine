@@ -14,6 +14,7 @@ const navItems = [
   { href: '/founder/integrations', label: 'Integrations' },
   { href: '/founder/audit', label: 'Audit' },
   { href: '/founder/operations', label: 'Operations' },
+  { href: '/founder/observability', label: 'Observability' },
   { href: '/founder/readiness', label: 'Readiness' },
 ];
 
