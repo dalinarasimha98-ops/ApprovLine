@@ -53,6 +53,9 @@ export default async function SettingsPage() {
             <PendingLink href="/settings/onboarding" pendingText="Opening onboarding..." className="rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
               Onboarding status
             </PendingLink>
+            <PendingLink href="/settings/identity" pendingText="Opening identity center..." className="rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+              Identity Center
+            </PendingLink>
             <PendingLink href="/health" pendingText="Opening health..." className="rounded-xl border border-slate-200 px-3 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
               Service health
             </PendingLink>

@@ -210,6 +210,23 @@ export default async function FounderCustomerProfilePage({ params }: { params: P
               ))}
             </div>
           </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">Identity posture</p>
+            <h3 className="mt-2 text-xl font-black text-slate-950">SSO and access health</h3>
+            <div className="mt-4 grid gap-3">
+              {identityPosture(customer.organization.integrationSetup, customer.organization.users.length).map((item) => (
+                <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div>
+                    <p className="font-black text-slate-950">{item.label}</p>
+                    <p className="text-xs font-semibold text-slate-500">{item.detail}</p>
+                  </div>
+                  <FounderBadge tone={item.tone}>{item.value}</FounderBadge>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-xs font-semibold leading-5 text-slate-500">Founder visibility is limited to provider, SSO status, user counts, and sync health. Passwords and identity secrets are never shown.</p>
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -307,4 +324,26 @@ export default async function FounderCustomerProfilePage({ params }: { params: P
       </section>
     </div>
   );
+}
+
+function identityPosture(integrationSetup: unknown, usersSynced: number) {
+  const setup = integrationSetup && typeof integrationSetup === 'object' && !Array.isArray(integrationSetup) ? integrationSetup as Record<string, unknown> : {};
+  const identity = setup.identity && typeof setup.identity === 'object' && !Array.isArray(setup.identity) ? setup.identity as Record<string, unknown> : {};
+  const provider = typeof identity.provider === 'string' ? identity.provider : 'not_configured';
+  const status = typeof identity.status === 'string' ? identity.status : 'not_configured';
+  const providerLabel = {
+    azure_ad: 'Microsoft Entra ID',
+    okta: 'Okta',
+    google_workspace: 'Google Workspace',
+    saml: 'Generic SAML 2.0',
+    oidc: 'Generic OIDC',
+    not_configured: 'Not configured',
+  }[provider] ?? provider;
+
+  return [
+    { label: 'Identity provider', value: providerLabel, detail: 'Customer-managed enterprise identity provider.', tone: provider === 'not_configured' ? 'amber' as const : 'blue' as const },
+    { label: 'SSO status', value: status.replaceAll('_', ' '), detail: 'Configuration state for workspace SSO.', tone: status === 'connected' ? 'green' as const : 'amber' as const },
+    { label: 'Users synced', value: String(usersSynced), detail: 'Workspace users available for identity mapping.', tone: usersSynced > 0 ? 'green' as const : 'amber' as const },
+    { label: 'Sync health', value: status === 'connected' ? 'Healthy' : 'Prepared', detail: 'SCIM/group sync architecture is prepared for rollout.', tone: status === 'connected' ? 'green' as const : 'slate' as const },
+  ];
 }
