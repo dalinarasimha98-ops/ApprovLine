@@ -35,6 +35,24 @@ function healthTone(score: number) {
   return 'red';
 }
 
+function uniquePilotsByCompany(pilots: PilotListItem[]) {
+  const bestByCompany = new Map<string, PilotListItem>();
+  pilots.forEach((pilot) => {
+    const key = pilot.companyName.trim().toLowerCase();
+    const existing = bestByCompany.get(key);
+    const pilotScore = pilot.successPercent + pilot.probabilityToClose + pilot.integrationsConnected * 10;
+    const existingScore = existing ? existing.successPercent + existing.probabilityToClose + existing.integrationsConnected * 10 : -1;
+    if (!existing || pilotScore > existingScore) bestByCompany.set(key, pilot);
+  });
+  return Array.from(bestByCompany.values());
+}
+
+function securityReviewStatus(pilot: PilotListItem) {
+  if (pilot.status === 'Converted' || pilot.successPercent >= 80) return 'Completed';
+  if (pilot.integrationsConnected > 0 || pilot.approvalsCaptured > 0 || pilot.successPercent >= 35) return 'In Progress';
+  return 'Not Started';
+}
+
 function countByStatus(pilots: PilotListItem[], statuses: PilotStatus[]) {
   return pilots.filter((pilot) => statuses.includes(pilot.status)).length;
 }
@@ -144,6 +162,7 @@ export default async function FounderRevenuePage() {
   const result = await buildFounderPilotCommandCenter();
   const data = result.data;
   const pilots = data.pilots;
+  const securityReviewPilots = uniquePilotsByCompany(pilots).slice(0, 5);
   const stages = pipelineStages(pilots);
   const pipelineArr = pilots.filter((pilot) => pilot.status !== 'Converted' && pilot.status !== 'Lost').reduce((sum, pilot) => sum + pilot.expectedArr, 0);
   const totalArr = pilots.filter((pilot) => pilot.status === 'Converted').reduce((sum, pilot) => sum + pilot.expectedArr, 0);
@@ -279,18 +298,43 @@ export default async function FounderRevenuePage() {
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">Security Review Tracker</p>
           <h3 className="mt-2 text-xl font-black text-slate-950">Vendor and compliance reviews</h3>
           <div className="mt-5 space-y-3">
-            {pilots.slice(0, 5).map((pilot) => {
-              const status = pilot.integrationsConnected > 0 ? 'In Progress' : pilot.successPercent >= 70 ? 'Completed' : 'Not Started';
+            {securityReviewPilots.map((pilot) => {
+              const status = securityReviewStatus(pilot);
+              const completedItems = [
+                pilot.successPercent >= 25,
+                pilot.integrationsConnected > 0,
+                pilot.successPercent >= 55,
+                pilot.successPercent >= 80 || pilot.status === 'Converted',
+              ].filter(Boolean).length;
               return (
-                <div key={pilot.id} className="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[1fr_auto]">
+                <div key={`${pilot.companyName}-${pilot.id}`} className="grid gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-[1fr_auto]">
                   <div>
-                    <p className="font-black text-slate-950">{pilot.companyName}</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-600">Security questionnaire, vendor assessment, legal review, compliance review</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-black text-slate-950">{pilot.companyName}</p>
+                      <span className="text-xs font-black text-slate-400">Review {completedItems}/4</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {['Questionnaire', 'Vendor assessment', 'Legal review', 'Compliance review'].map((item, index) => (
+                        <span
+                          key={item}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-black ${
+                            completedItems > index ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'
+                          }`}
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                   <FounderBadge tone={status === 'Completed' ? 'green' : status === 'In Progress' ? 'amber' : 'slate'}>{status}</FounderBadge>
                 </div>
               );
             })}
+            {!securityReviewPilots.length ? (
+              <p className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">
+                No vendor reviews yet. Add a pilot or customer workspace to start tracking security, legal, and compliance reviews.
+              </p>
+            ) : null}
           </div>
         </article>
       </section>
