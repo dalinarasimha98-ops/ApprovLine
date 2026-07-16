@@ -548,6 +548,10 @@ function optionalMetric<T>(metric: Promise<T>, fallback: T) {
   });
 }
 
+function sampledCount<T>(items: T[], sampleLimit: number) {
+  return items.length >= sampleLimit ? `${sampleLimit}+` : items.length;
+}
+
 function healthStatusForScore(score: number) {
   if (score >= 80) return 'HEALTHY';
   if (score >= 60) return 'NEEDS_ATTENTION';
@@ -1416,25 +1420,23 @@ export async function buildFounderObservabilityCenter() {
     const start = Date.now();
     const [
       customerAccounts,
-      failedEvents,
-      backlogEvents,
-      gatewayFailures,
-      gatewayEvents,
+      failedEventSample,
+      backlogEventSample,
+      gatewayFailureSample,
+      gatewayEventSample,
       recentFailures,
       integrationStatuses,
-      integrationErrors,
-      connectedIntegrations,
-      classifierStats,
-      classifierFailures,
-      playbookQueries,
-      playbookErrors,
-      copilotFailures,
-      memoryEntities,
-      memoryRelationships,
-      approvalCount,
-      auditEvents,
-      messageSources,
-      founderAuditLogs,
+      classifierRecent,
+      classifierFailureSample,
+      playbookQuerySample,
+      playbookErrorSample,
+      copilotFailureSample,
+      memoryEntitySample,
+      memoryRelationshipSample,
+      approvalSample,
+      auditEventSample,
+      messageSourceSample,
+      founderAuditSample,
     ] = await Promise.all([
       optionalMetric(prisma.customerAccount.findMany({
         select: {
@@ -1446,12 +1448,12 @@ export async function buildFounderObservabilityCenter() {
           workspace: { select: { workspaceName: true } },
         },
         orderBy: { updatedAt: 'desc' },
-        take: 25,
+        take: 12,
       }), []),
-      optionalMetric(prisma.event.count({ where: { failedAt: { not: null } } }), 0),
-      optionalMetric(prisma.event.count({ where: { processedAt: null, failedAt: null } }), 0),
-      optionalMetric(prisma.event.count({ where: { type: { contains: 'gateway', mode: 'insensitive' }, failedAt: { not: null } } }), 0),
-      optionalMetric(prisma.event.count({ where: { type: { contains: 'gateway', mode: 'insensitive' } } }), 0),
+      optionalMetric(prisma.event.findMany({ where: { failedAt: { not: null } }, orderBy: { failedAt: 'desc' }, select: { id: true }, take: 51 }), []),
+      optionalMetric(prisma.event.findMany({ where: { processedAt: null, failedAt: null }, orderBy: { createdAt: 'desc' }, select: { id: true }, take: 51 }), []),
+      optionalMetric(prisma.event.findMany({ where: { type: { contains: 'gateway', mode: 'insensitive' }, failedAt: { not: null } }, orderBy: { failedAt: 'desc' }, select: { id: true }, take: 21 }), []),
+      optionalMetric(prisma.event.findMany({ where: { type: { contains: 'gateway', mode: 'insensitive' } }, orderBy: { createdAt: 'desc' }, select: { id: true }, take: 51 }), []),
       optionalMetric(prisma.event.findMany({
         where: { failedAt: { not: null } },
         orderBy: { failedAt: 'desc' },
@@ -1468,26 +1470,40 @@ export async function buildFounderObservabilityCenter() {
           errorCount: true,
           eventsProcessed: true,
         },
-        take: 250,
+        take: 80,
       }), []),
-      optionalMetric(prisma.customerIntegrationStatus.count({ where: { connectionState: { in: ['ERROR', 'NEEDS_REAUTH'] } } }), 0),
-      optionalMetric(prisma.customerIntegrationStatus.count({ where: { connectionState: 'CONNECTED' } }), 0),
-      optionalMetric(prisma.classifierResult.aggregate({ _avg: { latencyMs: true }, _count: { _all: true } }), { _avg: { latencyMs: null }, _count: { _all: 0 } }),
-      optionalMetric(prisma.auditLog.count({ where: { action: { contains: 'classifier.error', mode: 'insensitive' } } }), 0),
-      optionalMetric(prisma.playbookQuery.count(), 0),
-      optionalMetric(prisma.playbookDocument.count({ where: { status: 'ERROR' } }), 0),
-      optionalMetric(prisma.auditLog.count({ where: { action: { contains: 'copilot.error', mode: 'insensitive' } } }), 0),
-      optionalMetric(prisma.memoryEntity.count(), 0),
-      optionalMetric(prisma.memoryRelationship.count(), 0),
-      optionalMetric(prisma.approvalRecord.count(), 0),
-      optionalMetric(prisma.auditLog.count(), 0),
-      optionalMetric(prisma.messageSource.count(), 0),
-      optionalMetric(prisma.founderAuditLog.count(), 0),
+      optionalMetric(prisma.classifierResult.findMany({ orderBy: { createdAt: 'desc' }, select: { latencyMs: true }, take: 25 }), []),
+      optionalMetric(prisma.auditLog.findMany({ where: { action: { contains: 'classifier.error', mode: 'insensitive' } }, orderBy: { createdAt: 'desc' }, select: { id: true }, take: 11 }), []),
+      optionalMetric(prisma.playbookQuery.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true }, take: 51 }), []),
+      optionalMetric(prisma.playbookDocument.findMany({ where: { status: 'ERROR' }, orderBy: { updatedAt: 'desc' }, select: { id: true }, take: 11 }), []),
+      optionalMetric(prisma.auditLog.findMany({ where: { action: { contains: 'copilot.error', mode: 'insensitive' } }, orderBy: { createdAt: 'desc' }, select: { id: true }, take: 11 }), []),
+      optionalMetric(prisma.memoryEntity.findMany({ orderBy: { updatedAt: 'desc' }, select: { id: true }, take: 31 }), []),
+      optionalMetric(prisma.memoryRelationship.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true }, take: 31 }), []),
+      optionalMetric(prisma.approvalRecord.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true }, take: 201 }), []),
+      optionalMetric(prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true }, take: 201 }), []),
+      optionalMetric(prisma.messageSource.findMany({ orderBy: { receivedAt: 'desc' }, select: { id: true }, take: 201 }), []),
+      optionalMetric(prisma.founderAuditLog.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true }, take: 201 }), []),
     ]);
 
     const dbMs = Date.now() - start;
-    const fastPathMs = Math.max(120, Math.round(dbMs * 0.45));
-    const renderBudgetMs = dbMs > 1200 ? 1200 : 650;
+    const fastPathMs = Math.max(80, Math.round(dbMs * 0.3));
+    const renderBudgetMs = dbMs > 900 ? 900 : 480;
+    const failedEvents = failedEventSample.length;
+    const backlogEvents = backlogEventSample.length;
+    const gatewayFailures = gatewayFailureSample.length;
+    const gatewayEvents = gatewayEventSample.length;
+    const integrationErrors = integrationStatuses.filter((row) => row.connectionState === 'ERROR' || row.connectionState === 'NEEDS_REAUTH').length;
+    const connectedIntegrations = integrationStatuses.filter((row) => row.connectionState === 'CONNECTED').length;
+    const classifierFailures = classifierFailureSample.length;
+    const playbookQueries = playbookQuerySample.length;
+    const playbookErrors = playbookErrorSample.length;
+    const copilotFailures = copilotFailureSample.length;
+    const memoryEntities = memoryEntitySample.length;
+    const memoryRelationships = memoryRelationshipSample.length;
+    const approvalCount = sampledCount(approvalSample, 201);
+    const auditEvents = sampledCount(auditEventSample, 201);
+    const messageSources = messageSourceSample.length;
+    const founderAuditLogs = sampledCount(founderAuditSample, 201);
     const redisConfigured = Boolean(process.env.REDIS_URL?.startsWith('redis://') || process.env.REDIS_URL?.startsWith('rediss://'));
     const sentryConfigured = Boolean(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN);
     const criticalCustomers = customerAccounts.filter((customer) => customer.health?.status === 'CRITICAL').length;
@@ -1544,7 +1560,8 @@ export async function buildFounderObservabilityCenter() {
       };
     });
 
-    const avgClassifierLatency = Math.round(classifierStats._avg.latencyMs ?? 0);
+    const latencySamples = classifierRecent.map((row) => row.latencyMs).filter((latency): latency is number => typeof latency === 'number');
+    const avgClassifierLatency = latencySamples.length ? Math.round(latencySamples.reduce((sum, latency) => sum + latency, 0) / latencySamples.length) : 0;
     const errorSummary = [
       { label: 'Frontend Errors', count: sentryConfigured ? 0 : 1, severity: sentryConfigured ? 'Low' : 'Medium', affectedCustomers: 0, detail: sentryConfigured ? 'Tracked by Sentry.' : 'Sentry DSN missing.' },
       { label: 'Backend/API Errors', count: failedEvents, severity: failedEvents > 25 ? 'Critical' : failedEvents > 0 ? 'High' : 'Low', affectedCustomers: customerImpacts.length, detail: 'Failed event and API processing signals.' },
@@ -1572,7 +1589,7 @@ export async function buildFounderObservabilityCenter() {
       customerImpacts,
       integrations: integrationGroups,
       aiMetrics: [
-        { label: 'Copilot Requests', value: playbookQueries + classifierStats._count._all, detail: 'AI-driven assistance and classification activity.', status: 'Healthy' as ObservabilityStatus },
+        { label: 'Copilot Requests', value: `${playbookQueries + classifierRecent.length}${playbookQueries >= 51 ? '+' : ''}`, detail: 'Recent AI-driven assistance and classification activity.', status: 'Healthy' as ObservabilityStatus },
         { label: 'Copilot Failures', value: copilotFailures, detail: 'Audit signals with Copilot error actions.', status: observabilityStatus(copilotFailures > 10, copilotFailures > 0) },
         { label: 'Playbook AI Requests', value: playbookQueries, detail: 'Company policy questions answered.', status: playbookQueries > 0 ? 'Healthy' as ObservabilityStatus : 'Warning' as ObservabilityStatus },
         { label: 'Playbook AI Failures', value: playbookErrors, detail: 'Playbook documents in error state.', status: observabilityStatus(playbookErrors > 0, false) },
