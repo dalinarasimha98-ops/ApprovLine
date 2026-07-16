@@ -248,6 +248,9 @@ export default async function TrustPage() {
               <StatusPill label="Audit-ready" />
               <StatusPill label="Encrypted storage" />
             </div>
+            <PendingLink href="/trust/compliance" pendingText="Opening compliance hub..." className="mt-6 inline-flex min-h-0 h-11 items-center rounded-xl bg-white px-5 text-sm font-black text-[#07111f] shadow-sm transition hover:bg-blue-50">
+              Open Compliance Hub
+            </PendingLink>
           </div>
         </div>
 
