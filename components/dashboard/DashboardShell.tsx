@@ -18,6 +18,7 @@ const nav = [
   { href: '/dashboard/pilot', label: 'Pilot Readiness', pending: 'Opening pilot readiness...' },
   { href: '/dashboard/customer-success', label: 'Customer Success', pending: 'Opening customer success...' },
   { href: '/trust', label: 'Security & Trust', pending: 'Opening trust center...' },
+  { href: '/trust/compliance', label: 'Compliance Hub', pending: 'Opening compliance hub...' },
   { href: '/settings/identity', label: 'Identity Center', pending: 'Opening identity center...' },
   { href: '/dashboard/settings', label: 'Settings', pending: 'Opening settings...' },
 ];
