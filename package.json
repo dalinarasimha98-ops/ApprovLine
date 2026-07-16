@@ -19,7 +19,8 @@
     "test:slack": "tsx tests/slack-integration.test.ts",
     "test:gmail": "tsx tests/gmail-integration.test.ts",
     "test:teams": "tsx tests/teams-integration.test.ts",
-    "test:founder": "tsx tests/founder-hardening.test.ts",
+    "test:founder": "node --import tsx tests/founder-hardening.test.ts",
+    "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
     "readiness": "tsx scripts/readiness.ts",
     "gmail:sync": "tsx scripts/gmail-sync.ts",
     "worker": "tsx services/queue/worker.ts"

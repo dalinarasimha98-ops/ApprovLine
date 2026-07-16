@@ -19,6 +19,8 @@ assert.match(founderService, /updateCustomerSeats/);
 assert.match(founderService, /exportFounderAuditLogs/);
 assert.match(founderService, /buildFounderOperationsCenter/);
 assert.match(founderService, /buildFounderReadinessReport/);
+assert.match(founderService, /buildFounderTenantIsolationReport/);
+assert.match(founderService, /tenant_isolation/);
 assert.match(founderService, /Seat limit reached/);
 assert.match(founderService, /CUSTOMER_ACCOUNT_UPDATED/);
 assert.match(founderService, /changedFields/);
@@ -64,7 +66,12 @@ const readinessPage = read('app/founder/readiness/page.tsx');
 assert.match(readinessPage, /Founder Control Center v2/);
 assert.match(readinessPage, /Overall Score/);
 
+const tenantIsolationPage = read('app/founder/security/isolation/page.tsx');
+assert.match(tenantIsolationPage, /Tenant Isolation Center/);
+assert.match(tenantIsolationPage, /API Coverage/);
+
 const pkg = JSON.parse(read('package.json'));
-assert.equal(pkg.scripts['test:founder'], 'tsx tests/founder-hardening.test.ts');
+assert.equal(pkg.scripts['test:founder'], 'node --import tsx tests/founder-hardening.test.ts');
+assert.equal(pkg.scripts['test:tenant-isolation'], 'node --import tsx tests/tenant-isolation.test.ts');
 
 console.log('Validated Founder Control Center v2 hardening routes, schema, services, audit export, and test script.');

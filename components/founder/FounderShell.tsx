@@ -15,6 +15,7 @@ const navItems = [
   { href: '/founder/audit', label: 'Audit' },
   { href: '/founder/operations', label: 'Operations' },
   { href: '/founder/observability', label: 'Observability' },
+  { href: '/founder/security/isolation', label: 'Tenant Isolation' },
   { href: '/founder/readiness', label: 'Readiness' },
 ];
 

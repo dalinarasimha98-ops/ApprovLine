@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { validateDatabaseUrl } from '@/lib/env';
+import type { TenantIsolationContext } from '@/lib/tenant-isolation';
 import type { AppRole } from '@/types/rbac';
 import { canAccessRole } from '@/types/rbac';
 
@@ -196,4 +197,58 @@ export async function requireRole(requiredRole: AppRole) {
     throw new Response('Forbidden', { status: 403 });
   }
   return tenant;
+}
+
+function permissionsForRole(role: AppRole) {
+  const permissions: Record<AppRole, string[]> = {
+    ADMIN: [
+      'workspace:admin',
+      'approvals:read',
+      'approvals:write',
+      'audit:read',
+      'copilot:use',
+      'exports:create',
+      'integrations:manage',
+      'playbooks:manage',
+      'investigations:manage',
+      'memory:read',
+    ],
+    COMPLIANCE_OFFICER: [
+      'approvals:read',
+      'audit:read',
+      'copilot:use',
+      'exports:create',
+      'playbooks:read',
+      'investigations:manage',
+      'memory:read',
+    ],
+    MANAGER: [
+      'approvals:read',
+      'approvals:write',
+      'copilot:use',
+      'investigations:read',
+      'memory:read',
+    ],
+    EMPLOYEE: [
+      'approvals:read',
+      'copilot:use',
+      'memory:read',
+    ],
+  };
+
+  return permissions[role] ?? permissions.EMPLOYEE;
+}
+
+export async function resolveTenantContext(): Promise<TenantIsolationContext> {
+  const tenant = await getCurrentTenant();
+  const role = tenant.user.role as AppRole;
+
+  return {
+    authenticatedUserId: tenant.user.id,
+    organizationId: tenant.organization.id,
+    workspaceId: tenant.organization.id,
+    platformRole: role,
+    customerRole: role,
+    permissions: permissionsForRole(role),
+  };
 }
