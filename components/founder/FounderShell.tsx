@@ -28,8 +28,8 @@ export function FounderShell({
 }) {
   return (
     <main className="min-h-screen bg-[#f5f7fb] text-slate-950">
-      <aside className="fixed inset-y-0 left-0 hidden w-[286px] border-r border-slate-200 bg-[#07111f] px-5 py-6 text-white lg:block">
-        <Link href="/founder" className="flex items-center gap-3">
+      <aside className="fixed inset-y-0 left-0 hidden w-[286px] flex-col border-r border-slate-200 bg-[#07111f] px-5 py-6 text-white lg:flex">
+        <Link href="/founder" className="flex shrink-0 items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#2557dc] text-lg font-black">A</span>
           <span>
             <span className="block text-xl font-black">ApprovLine</span>
@@ -43,20 +43,25 @@ export function FounderShell({
           <p className="mt-1 break-all text-xs font-semibold text-slate-400">{email}</p>
         </div>
 
-        <nav className="mt-7 grid gap-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-xl px-4 py-3 text-sm font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav className="mt-7 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.45)_transparent]">
+          <div className="grid gap-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-xl px-4 py-3 text-sm font-bold text-slate-300 transition hover:bg-white/10 hover:text-white"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </nav>
 
-        <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4 text-xs font-semibold leading-5 text-blue-100">
-          Customer credentials stay customer-owned. Founder access only controls provisioning, feature gates, and support readiness.
+        <div className="mt-4 shrink-0 rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
+          <p className="text-[11px] font-black uppercase leading-none tracking-[0.18em] text-blue-200">Positioning</p>
+          <p className="mt-3 text-sm font-semibold leading-6 text-blue-100">
+            Customer credentials stay customer-owned. Founder access only controls provisioning, feature gates, and support readiness.
+          </p>
         </div>
       </aside>
 

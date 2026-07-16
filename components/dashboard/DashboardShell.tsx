@@ -60,8 +60,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
         <div className="mt-4 shrink-0 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-blue-200">Workspace status</p>
-          <p className="mt-2 text-sm font-semibold text-slate-300">Read-only evidence capture activates when Slack or Gmail is connected.</p>
+          <p className="text-[11px] font-black uppercase leading-none tracking-[0.18em] text-blue-200">Workspace status</p>
+          <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">
+            Read-only evidence capture activates when Slack or Gmail is connected.
+          </p>
         </div>
       </aside>
       <main className="lg:pl-72">
