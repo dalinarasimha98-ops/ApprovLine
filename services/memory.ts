@@ -1,5 +1,6 @@
 import type { MemoryEntity, MemoryEntityType, MemoryRelationship, MemoryTimelineEvent, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { assertMemoryRelationshipTenant, logTenantIsolationEvent, safeTenantIsolationMessage } from '@/lib/tenant-isolation';
 import { withTimeout } from '@/lib/performance';
 import { ensureMemoryStorage } from '@/services/memory-storage';
 
@@ -144,6 +145,37 @@ export async function upsertMemoryEntity(input: EntityInput) {
 export async function linkMemoryEntities(input: RelationshipInput) {
   if (input.fromEntityId === input.toEntityId) return null;
   await ensureMemoryStorage();
+
+  const entities = await prisma.memoryEntity.findMany({
+    where: {
+      id: { in: [input.fromEntityId, input.toEntityId] },
+    },
+    select: { id: true, organizationId: true },
+  });
+  const fromEntity = entities.find((entity) => entity.id === input.fromEntityId);
+  const toEntity = entities.find((entity) => entity.id === input.toEntityId);
+
+  try {
+    assertMemoryRelationshipTenant({
+      organizationId: input.organizationId,
+      fromEntity,
+      toEntity,
+    });
+  } catch (error) {
+    await logTenantIsolationEvent({
+      organizationId: input.organizationId,
+      action: 'security.cross_tenant_memory_relationship_rejected',
+      targetType: 'MemoryRelationship',
+      metadata: {
+        fromEntityId: input.fromEntityId,
+        toEntityId: input.toEntityId,
+        relationshipType: input.relationshipType,
+        reason: safeTenantIsolationMessage(error),
+      },
+    });
+    throw error;
+  }
+
   return prisma.memoryRelationship.upsert({
     where: {
       organizationId_fromEntityId_toEntityId_relationshipType: {
