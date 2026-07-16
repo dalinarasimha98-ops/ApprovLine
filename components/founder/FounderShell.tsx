@@ -142,7 +142,11 @@ export function FounderBadge({ children, tone = 'slate' }: { children: ReactNode
     amber: 'border-amber-200 bg-amber-50 text-amber-700',
     red: 'border-rose-200 bg-rose-50 text-rose-700',
   }[tone];
-  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-black uppercase tracking-wide ${classes}`}>{children}</span>;
+  return (
+    <span className={`inline-flex h-fit w-fit shrink-0 items-center justify-center self-start whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-black uppercase leading-none tracking-wide ${classes}`}>
+      {children}
+    </span>
+  );
 }
 
 export function MigrationNotice({ message }: { message?: string }) {

@@ -326,7 +326,9 @@ export default async function FounderRevenuePage() {
                       ))}
                     </div>
                   </div>
-                  <FounderBadge tone={status === 'Completed' ? 'green' : status === 'In Progress' ? 'amber' : 'slate'}>{status}</FounderBadge>
+                  <div className="flex justify-start sm:justify-end">
+                    <FounderBadge tone={status === 'Completed' ? 'green' : status === 'In Progress' ? 'amber' : 'slate'}>{status}</FounderBadge>
+                  </div>
                 </div>
               );
             })}
