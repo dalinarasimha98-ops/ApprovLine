@@ -143,12 +143,12 @@ export default async function FounderFeaturesPage() {
             <div className="mt-auto pt-5">
               <input type="hidden" name="key" value={feature.key} />
               <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Customer account</label>
-              <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-2 grid gap-3">
                 <select
                   name="customerAccountId"
                   required
                   disabled={readOnly || !customers.length}
-                  className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-[#2557dc] focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none transition focus:border-[#2557dc] focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                 >
                   <option value="">Select customer</option>
                   {customers.map((customer) => (
@@ -159,7 +159,7 @@ export default async function FounderFeaturesPage() {
                 </select>
                 <button
                   disabled={readOnly || !customers.length}
-                  className="min-h-11 rounded-xl bg-[#2557dc] px-5 py-2 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                  className="min-h-11 w-full rounded-xl bg-[#2557dc] px-5 py-2 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
                 >
                   Apply
                 </button>
