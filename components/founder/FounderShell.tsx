@@ -14,6 +14,7 @@ const navItems = [
   { href: '/founder/integrations', label: 'Integrations' },
   { href: '/founder/audit', label: 'Audit' },
   { href: '/founder/operations', label: 'Operations' },
+  { href: '/founder/reliability', label: 'Reliability' },
   { href: '/founder/observability', label: 'Observability' },
   { href: '/founder/security/isolation', label: 'Tenant Isolation' },
   { href: '/founder/readiness', label: 'Readiness' },
