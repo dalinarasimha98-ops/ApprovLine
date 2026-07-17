@@ -18,6 +18,7 @@ const navItems = [
   { href: '/founder/observability', label: 'Observability' },
   { href: '/founder/security/isolation', label: 'Tenant Isolation' },
   { href: '/founder/readiness', label: 'Readiness' },
+  { href: '/founder/certification', label: 'Certification' },
 ];
 
 export function FounderShell({

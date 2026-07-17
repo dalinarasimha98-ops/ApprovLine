@@ -22,6 +22,7 @@
     "test:founder": "node --import tsx tests/founder-hardening.test.ts",
     "test:reliability": "node --import tsx tests/reliability-hardening.test.ts",
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
+    "test:certification": "node --import tsx tests/production-certification.test.ts",
     "readiness": "tsx scripts/readiness.ts",
     "gmail:sync": "tsx scripts/gmail-sync.ts",
     "worker": "tsx services/queue/worker.ts"
