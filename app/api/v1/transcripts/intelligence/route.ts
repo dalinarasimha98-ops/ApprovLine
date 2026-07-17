@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
       ok: true,
       transcript: name,
       extractedDecisions: results.length,
-      approvalRecordIds: results.map((item) => item?.approval?.id).filter(Boolean),
+      backgroundJobIds: results.map((item) => item.backgroundJobId).filter(Boolean),
+      correlationIds: results.map((item) => item.correlationId),
     });
   });
 }

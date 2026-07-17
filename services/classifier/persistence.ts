@@ -3,6 +3,7 @@ import { env } from '@/config/env';
 import { prisma } from '@/lib/prisma';
 import { writeAuditLog } from '@/services/audit';
 import { CLASSIFIER_MODEL, CLASSIFIER_PROMPT_VERSION, hashClassifierInput } from '@/services/classifier/openai';
+import { completeIdempotencyRecord, failIdempotencyRecord } from '@/services/queue/reliability';
 import type { ClassifyRequest, ClassifyResponse } from '@/types/classifier';
 
 function toApprovalType(type: string): ApprovalType {
@@ -72,106 +73,184 @@ export async function persistClassificationResult(input: {
   userAgent?: string;
   sourceLink?: string;
   auditAction?: string;
+  sourceSystem?: string;
+  sourceRecordId?: string;
+  contentHash?: string;
+  correlationId?: string;
+  idempotencyKey?: string;
 }) {
   const organizationId = await resolveStorageOrganization(input.organizationId);
   if (!organizationId) return null;
 
   const sourcePlatform = input.result.source_platform ?? input.request.source;
   const provider = toIntegrationProvider(sourcePlatform);
-  const messageSourceId =
-    input.messageSourceId ??
-    (provider
-      ? (
-          await prisma.messageSource.create({
-            data: {
-              organizationId,
-              integrationId: input.integrationId,
-              provider,
-              channel: input.request.channel,
-              sender: input.result.approver_name ?? input.request.sender,
-              senderEmail: input.result.approver_email ?? input.request.sender_email ?? input.request.senderEmail,
-              rawPayload: {
-                metadata: input.request.metadata ?? {},
-                sourcePlatform,
-              } as Prisma.InputJsonValue,
+  const inputHash = hashClassifierInput(input.request);
+
+  try {
+    const existingClassifier =
+      input.idempotencyKey
+        ? await prisma.classifierResult.findUnique({
+            where: {
+              organizationId_idempotencyKey: {
+                organizationId,
+                idempotencyKey: input.idempotencyKey,
+              },
             },
-          })
-        ).id
-      : undefined);
+            include: { approvalRecord: true },
+          }).catch(() => null)
+        : null;
 
-  const approvalType = toApprovalType(input.result.approval_type);
-  const classifier = await prisma.classifierResult.create({
-    data: {
-      organizationId,
-      messageSourceId,
-      model: CLASSIFIER_MODEL,
-      promptVersion: CLASSIFIER_PROMPT_VERSION,
-      inputHash: hashClassifierInput(input.request),
-      approvalDetected: input.result.approval_detected,
-      approvalType,
-      confidence: input.result.confidence,
-      normalizedJson: input.result as unknown as Prisma.InputJsonValue,
-    },
-  });
+    if (existingClassifier) {
+      return { classifier: existingClassifier, approval: existingClassifier.approvalRecord };
+    }
 
-  if (!input.result.approval_detected) {
+    const messageSourceId =
+      input.messageSourceId ??
+      (provider
+        ? (
+            await prisma.messageSource.create({
+              data: {
+                organizationId,
+                integrationId: input.integrationId,
+                provider,
+                channel: input.request.channel,
+                sender: input.result.approver_name ?? input.request.sender,
+                senderEmail: input.result.approver_email ?? input.request.sender_email ?? input.request.senderEmail,
+                contentHash: input.contentHash,
+                correlationId: input.correlationId,
+                idempotencyKey: input.idempotencyKey,
+                rawPayload: {
+                  metadata: input.request.metadata ?? {},
+                  sourcePlatform,
+                } as Prisma.InputJsonValue,
+              },
+            })
+          ).id
+        : undefined);
+
+    const approvalType = toApprovalType(input.result.approval_type);
+    const classifier = await prisma.classifierResult.create({
+      data: {
+        organizationId,
+        messageSourceId,
+        model: CLASSIFIER_MODEL,
+        promptVersion: CLASSIFIER_PROMPT_VERSION,
+        inputHash,
+        correlationId: input.correlationId,
+        idempotencyKey: input.idempotencyKey,
+        sourceSystem: input.sourceSystem,
+        sourceRecordId: input.sourceRecordId,
+        duplicateDisposition: 'PRIMARY',
+        approvalDetected: input.result.approval_detected,
+        approvalType,
+        confidence: input.result.confidence,
+        normalizedJson: input.result as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    if (!input.result.approval_detected) {
+      if (input.idempotencyKey) {
+        await completeIdempotencyRecord({
+          organizationId,
+          key: input.idempotencyKey,
+          resourceType: 'classifier_result',
+          resourceId: classifier.id,
+          metadata: {
+            approvalDetected: false,
+            sourcePlatform,
+          },
+        });
+      }
+      await writeAuditLog({
+        organizationId,
+        action: input.auditAction ?? 'classifier_result.created',
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+        metadata: {
+          classifierResultId: classifier.id,
+          approvalDetected: false,
+          sourcePlatform,
+        },
+      });
+      return { classifier, approval: null };
+    }
+
+    const approval = await prisma.approvalRecord.create({
+      data: {
+        organizationId,
+        messageSourceId,
+        subject: input.result.subject,
+        department: input.result.department,
+        category: input.result.category,
+        approverName: input.result.approver_name,
+        approverEmail: input.result.approver_email,
+        approvalType,
+        status: toApprovalStatus(input.result.approval_type),
+        confidence: input.result.confidence,
+        riskLevel: input.result.risk_level,
+        businessImpact: input.result.business_impact,
+        reasoning: input.result.reasoning,
+        conditions: input.result.conditions,
+        sourcePlatform,
+        sourceLink: input.sourceLink,
+        evidenceSnippet: input.request.message.slice(0, 1000),
+        duplicateDisposition: 'PRIMARY',
+        sourceSystem: input.sourceSystem,
+        sourceRecordId: input.sourceRecordId,
+        contentHash: input.contentHash,
+        correlationId: input.correlationId,
+        idempotencyKey: input.idempotencyKey,
+        approvalTimestamp: input.result.approval_timestamp ? new Date(input.result.approval_timestamp) : undefined,
+        occurredAt: input.result.approval_timestamp ? new Date(input.result.approval_timestamp) : undefined,
+      },
+    });
+
+    await prisma.classifierResult.update({
+      where: { id: classifier.id },
+      data: { approvalRecordId: approval.id },
+    });
+
+    if (input.idempotencyKey) {
+      await completeIdempotencyRecord({
+        organizationId,
+        key: input.idempotencyKey,
+        resourceType: 'approval_record',
+        resourceId: approval.id,
+        metadata: {
+          classifierResultId: classifier.id,
+          sourcePlatform,
+        },
+      });
+    }
+
     await writeAuditLog({
       organizationId,
-      action: input.auditAction ?? 'classifier_result.created',
+      approvalRecordId: approval.id,
+      action: input.auditAction ?? 'approval_record.created',
       ipAddress: input.ipAddress,
       userAgent: input.userAgent,
       metadata: {
         classifierResultId: classifier.id,
-        approvalDetected: false,
+        approvalType: input.result.approval_type,
+        riskLevel: input.result.risk_level,
+        category: input.result.category,
         sourcePlatform,
       },
     });
-    return { classifier, approval: null };
+
+    return { classifier, approval };
+  } catch (error) {
+    if (input.idempotencyKey) {
+      await failIdempotencyRecord({
+        organizationId,
+        key: input.idempotencyKey,
+        failureReason: error instanceof Error ? error.message : 'Classifier persistence failed',
+        metadata: {
+          sourceSystem: input.sourceSystem,
+          sourceRecordId: input.sourceRecordId,
+        },
+      }).catch(() => null);
+    }
+    throw error;
   }
-
-  const approval = await prisma.approvalRecord.create({
-    data: {
-      organizationId,
-      messageSourceId,
-      subject: input.result.subject,
-      department: input.result.department,
-      category: input.result.category,
-      approverName: input.result.approver_name,
-      approverEmail: input.result.approver_email,
-      approvalType,
-      status: toApprovalStatus(input.result.approval_type),
-      confidence: input.result.confidence,
-      riskLevel: input.result.risk_level,
-      businessImpact: input.result.business_impact,
-      reasoning: input.result.reasoning,
-      conditions: input.result.conditions,
-      sourcePlatform,
-      sourceLink: input.sourceLink,
-      evidenceSnippet: input.request.message.slice(0, 1000),
-      approvalTimestamp: input.result.approval_timestamp ? new Date(input.result.approval_timestamp) : undefined,
-      occurredAt: input.result.approval_timestamp ? new Date(input.result.approval_timestamp) : undefined,
-    },
-  });
-
-  await prisma.classifierResult.update({
-    where: { id: classifier.id },
-    data: { approvalRecordId: approval.id },
-  });
-
-  await writeAuditLog({
-    organizationId,
-    approvalRecordId: approval.id,
-    action: input.auditAction ?? 'approval_record.created',
-    ipAddress: input.ipAddress,
-    userAgent: input.userAgent,
-    metadata: {
-      classifierResultId: classifier.id,
-      approvalType: input.result.approval_type,
-      riskLevel: input.result.risk_level,
-      category: input.result.category,
-      sourcePlatform,
-    },
-  });
-
-  return { classifier, approval };
 }

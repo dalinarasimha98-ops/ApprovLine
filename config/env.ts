@@ -31,6 +31,8 @@ const envSchema = z.object({
   SERVICENOW_INSTANCE_URL: optionalEnvString,
   ZOOM_CLIENT_ID: optionalEnvString,
   ZOOM_CLIENT_SECRET: optionalEnvString,
+  UNIVERSAL_GATEWAY_API_KEY: optionalEnvString,
+  UNIVERSAL_GATEWAY_WEBHOOK_SECRET: optionalEnvString,
 });
 
 export const env = envSchema.parse(process.env);

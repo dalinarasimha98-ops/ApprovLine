@@ -103,6 +103,32 @@ enum ApprovalStatus {
   NOT_A_DECISION
 }
 
+enum BackgroundJobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  DEAD_LETTERED
+  CANCELED
+}
+
+enum QueueFailureCategory {
+  TRANSIENT
+  PERMANENT
+  TIMEOUT
+  RATE_LIMIT
+  AUTHENTICATION
+  VALIDATION
+  UNKNOWN
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 enum SubscriptionStatus {
   TRIALING
   ACTIVE
@@ -176,6 +202,11 @@ model Organization {
   subscriptions     Subscription[]
   events            Event[]
   messageSources    MessageSource[]
+  idempotencyRecords IdempotencyRecord[]
+  backgroundJobs    BackgroundJob[]
+  deadLetterJobs    DeadLetterJob[]
+  outboxEvents      OutboxEvent[]
+  workerHeartbeats  WorkerHeartbeat[]
   playbookDocuments PlaybookDocument[]
   playbookChunks    PlaybookChunk[]
   playbookRules     PlaybookRule[]
@@ -272,9 +303,14 @@ model MessageSource {
   integrationId  String?
   provider       IntegrationProvider
   externalId     String?
+  threadId       String?
+  eventId        String?
   channel        String?
   sender         String?
   senderEmail    String?
+  contentHash    String?
+  correlationId  String?
+  idempotencyKey String?
   rawPayload     Json?
   receivedAt     DateTime            @default(now())
   organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -284,6 +320,11 @@ model MessageSource {
 
   @@index([organizationId, provider, receivedAt])
   @@index([externalId])
+  @@index([organizationId, provider, threadId])
+  @@index([organizationId, provider, eventId])
+  @@index([organizationId, contentHash])
+  @@index([organizationId, idempotencyKey])
+  @@unique([organizationId, provider, externalId])
 }
 
 model ApprovalRecord {
@@ -306,6 +347,13 @@ model ApprovalRecord {
   sourcePlatform     String?
   sourceLink         String?
   evidenceSnippet    String?
+  duplicateDisposition String?
+  duplicateReason    String?
+  sourceSystem       String?
+  sourceRecordId     String?
+  contentHash        String?
+  correlationId      String?
+  idempotencyKey     String?
   approvalTimestamp  DateTime?
   occurredAt         DateTime           @default(now())
   createdAt          DateTime           @default(now())
@@ -326,6 +374,10 @@ model ApprovalRecord {
   @@index([organizationId, riskLevel])
   @@index([organizationId, sourcePlatform])
   @@index([organizationId, approvalType])
+  @@index([organizationId, idempotencyKey])
+  @@index([organizationId, correlationId])
+  @@index([organizationId, sourceSystem, sourceRecordId])
+  @@index([organizationId, contentHash])
   @@index([organizationId, status, occurredAt])
 }
 
@@ -337,6 +389,12 @@ model ClassifierResult {
   model             String
   promptVersion     String
   inputHash         String
+  correlationId     String?
+  idempotencyKey    String?
+  sourceSystem      String?
+  sourceRecordId    String?
+  duplicateDisposition String?
+  duplicateReason   String?
   approvalDetected  Boolean
   approvalType      ApprovalType
   confidence        Int
@@ -349,6 +407,9 @@ model ClassifierResult {
 
   @@index([organizationId, createdAt])
   @@index([inputHash])
+  @@index([organizationId, idempotencyKey])
+  @@index([organizationId, correlationId])
+  @@unique([organizationId, idempotencyKey])
 }
 
 model AuditLog {
@@ -391,6 +452,10 @@ model Event {
   organizationId String
   integrationId  String?
   type           String
+  sourceSystem   String?
+  sourceRecordId String?
+  correlationId  String?
+  idempotencyKey String?
   payload        Json
   processedAt    DateTime?
   failedAt       DateTime?
@@ -400,6 +465,143 @@ model Event {
   integration    Integration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, type, createdAt])
+  @@index([organizationId, correlationId])
+  @@index([organizationId, idempotencyKey])
+  @@index([organizationId, sourceSystem, sourceRecordId])
+}
+
+model IdempotencyRecord {
+  id                String       @id @default(cuid())
+  organizationId    String
+  key               String
+  requestHash       String
+  status            String
+  correlationId     String
+  resourceType      String?
+  resourceId        String?
+  duplicateReason   String?
+  metadata          Json?
+  expiresAt         DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId, status])
+  @@index([expiresAt])
+  @@index([correlationId])
+}
+
+model BackgroundJob {
+  id                String              @id @default(cuid())
+  organizationId    String
+  queueName         String
+  jobName           String
+  jobType           String
+  correlationId     String
+  idempotencyKey    String
+  sourceSystem      String?
+  sourceRecordId    String?
+  status            BackgroundJobStatus @default(QUEUED)
+  priority          Int                 @default(50)
+  attemptNumber     Int                 @default(0)
+  maxAttempts       Int                 @default(5)
+  timeoutMs         Int                 @default(15000)
+  payload           Json
+  metadata          Json?
+  processingStartedAt DateTime?
+  lastHeartbeatAt   DateTime?
+  completedAt       DateTime?
+  failedAt          DateTime?
+  failureCategory   QueueFailureCategory?
+  failureReason     String?
+  nextRetryAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([queueName, idempotencyKey])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, jobType, status])
+  @@index([correlationId])
+  @@index([lastHeartbeatAt])
+}
+
+model DeadLetterJob {
+  id                String               @id @default(cuid())
+  organizationId    String
+  backgroundJobId   String?
+  queueName         String
+  jobName           String
+  jobType           String
+  correlationId     String
+  idempotencyKey    String
+  sourceSystem      String?
+  sourceRecordId    String?
+  attemptCount      Int
+  retryEligible     Boolean              @default(false)
+  failureCategory   QueueFailureCategory @default(UNKNOWN)
+  failureReason     String
+  redactedPayload   Json
+  metadata          Json?
+  firstFailedAt     DateTime
+  lastFailedAt      DateTime
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, failureCategory])
+  @@index([correlationId])
+  @@index([backgroundJobId])
+}
+
+model OutboxEvent {
+  id                String           @id @default(cuid())
+  organizationId    String
+  eventType         String
+  queueName         String
+  correlationId     String
+  idempotencyKey    String
+  sourceSystem      String?
+  sourceRecordId    String?
+  status            OutboxEventStatus @default(PENDING)
+  attemptCount      Int              @default(0)
+  availableAt       DateTime         @default(now())
+  payload           Json
+  metadata          Json?
+  lastAttemptAt     DateTime?
+  completedAt       DateTime?
+  failedAt          DateTime?
+  failureReason     String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([status, availableAt])
+  @@index([organizationId, status, createdAt])
+  @@index([correlationId])
+}
+
+model WorkerHeartbeat {
+  id              String       @id @default(cuid())
+  workerId        String       @unique
+  queueName       String
+  hostname        String?
+  processId       String?
+  status          String       @default("online")
+  currentJobType  String?
+  currentJobId    String?
+  metadata        Json?
+  lastSeenAt      DateTime     @default(now())
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([queueName, lastSeenAt])
+  @@index([status, lastSeenAt])
 }
 
 enum PlaybookStatus {

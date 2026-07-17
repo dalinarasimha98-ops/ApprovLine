@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { env } from '@/config/env';
 import { rateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import {
@@ -6,6 +7,7 @@ import {
   normalizeWebhookApproval,
   universalWebhookSchema,
 } from '@/services/gateway/universalGateway';
+import { verifyWebhookSignature } from '@/services/queue/reliability';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +19,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    const parsed = universalWebhookSchema.safeParse(await request.json().catch(() => null));
+    const rawBody = await request.text();
+    if (env.UNIVERSAL_GATEWAY_WEBHOOK_SECRET) {
+      const signature = request.headers.get('x-approvline-signature');
+      const verified = verifyWebhookSignature({
+        secret: env.UNIVERSAL_GATEWAY_WEBHOOK_SECRET,
+        body: rawBody,
+        signature,
+      });
+      if (!verified.ok) {
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+    }
+
+    const parsed = universalWebhookSchema.safeParse(JSON.parse(rawBody || 'null'));
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid webhook payload', details: parsed.error.flatten() }, { status: 400 });
     }
@@ -29,12 +44,18 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') ?? undefined,
     });
 
-    return NextResponse.json({
-      ok: true,
-      system: parsed.data.system,
-      classifierResultId: result?.classifier.id ?? null,
-      approvalRecordId: result?.approval?.id ?? null,
-      approvalDetected: result?.approval !== null,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        accepted: true,
+        system: parsed.data.system,
+        duplicate: result.duplicate,
+        processingMode: result.processingMode,
+        backgroundJobId: result.backgroundJobId ?? null,
+        correlationId: result.correlationId,
+        idempotencyKey: result.idempotencyKey,
+      },
+      { status: 202 },
+    );
   });
 }

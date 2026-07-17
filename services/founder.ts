@@ -1322,16 +1322,95 @@ export async function deleteCustomerNote(access: Extract<FounderAccess, { ok: tr
 export async function buildFounderOperationsCenter() {
   try {
     await ensureFounderStorage();
-    const [failedJobs, queueBacklogs, syncErrors, integrationFailures, copilotFailures, gatewayFailures, recentExceptions] = await Promise.all([
-      prisma.event.count({ where: { failedAt: { not: null } } }).catch(() => 0),
-      prisma.event.count({ where: { processedAt: null, failedAt: null } }).catch(() => 0),
+    const gatewaySystems = ['sap', 'oracle', 'coupa', 'workday', 'salesforce', 'hubspot', 'custom', 'gateway'];
+    const [failedBackgroundJobs, deadLetterJobs, queuedBackgroundJobs, processingBackgroundJobs, pendingOutboxEvents, processingOutboxEvents, syncErrors, integrationFailures, copilotFailures, gatewayOutboxFailures, gatewayDeadLetters, recentDeadLetters, recentFailedJobs, recentFailedOutboxEvents] = await Promise.all([
+      prisma.backgroundJob.count({ where: { status: 'FAILED' } }).catch(() => 0),
+      prisma.deadLetterJob.count().catch(() => 0),
+      prisma.backgroundJob.count({ where: { status: 'QUEUED' } }).catch(() => 0),
+      prisma.backgroundJob.count({ where: { status: 'PROCESSING' } }).catch(() => 0),
+      prisma.outboxEvent.count({ where: { status: 'PENDING' } }).catch(() => 0),
+      prisma.outboxEvent.count({ where: { status: 'PROCESSING' } }).catch(() => 0),
       prisma.integration.count({ where: { status: { in: ['ERROR', 'NEEDS_REAUTH'] } } }).catch(() => 0),
       prisma.customerIntegrationStatus.count({ where: { connectionState: { in: ['ERROR', 'NEEDS_REAUTH'] } } }).catch(() => 0),
       prisma.auditLog.count({ where: { action: { contains: 'copilot.error', mode: 'insensitive' } } }).catch(() => 0),
-      prisma.event.count({ where: { type: { contains: 'gateway', mode: 'insensitive' }, failedAt: { not: null } } }).catch(() => 0),
-      prisma.event.findMany({ where: { failedAt: { not: null } }, orderBy: { failedAt: 'desc' }, take: 8 }).catch(() => []),
+      prisma.outboxEvent.count({
+        where: {
+          status: 'FAILED',
+          OR: [
+            { sourceSystem: { in: gatewaySystems } },
+            { eventType: { contains: 'gateway', mode: 'insensitive' } },
+          ],
+        },
+      }).catch(() => 0),
+      prisma.deadLetterJob.count({
+        where: {
+          OR: [
+            { sourceSystem: { in: gatewaySystems } },
+            { jobType: { contains: 'gateway', mode: 'insensitive' } },
+          ],
+        },
+      }).catch(() => 0),
+      prisma.deadLetterJob.findMany({
+        orderBy: { lastFailedAt: 'desc' },
+        take: 4,
+        select: { id: true, jobType: true, failureReason: true, lastFailedAt: true, createdAt: true },
+      }).catch(() => []),
+      prisma.backgroundJob.findMany({
+        where: { status: 'FAILED' },
+        orderBy: { failedAt: 'desc' },
+        take: 4,
+        select: { id: true, jobType: true, failureReason: true, failedAt: true, createdAt: true },
+      }).catch(() => []),
+      prisma.outboxEvent.findMany({
+        where: { status: 'FAILED' },
+        orderBy: { failedAt: 'desc' },
+        take: 4,
+        select: { id: true, eventType: true, failureReason: true, failedAt: true, createdAt: true },
+      }).catch(() => []),
     ]);
-    return { migrationRequired: false, data: { failedJobs, queueBacklogs, syncErrors, integrationFailures, copilotFailures, gatewayFailures, recentExceptions } };
+
+    const recentExceptions = [
+      ...recentDeadLetters.map((job) => ({
+        id: job.id,
+        type: `Dead letter · ${job.jobType}`,
+        failureReason: job.failureReason,
+        failedAt: job.lastFailedAt,
+        createdAt: job.createdAt,
+      })),
+      ...recentFailedJobs.map((job) => ({
+        id: job.id,
+        type: `Background job · ${job.jobType}`,
+        failureReason: job.failureReason,
+        failedAt: job.failedAt,
+        createdAt: job.createdAt,
+      })),
+      ...recentFailedOutboxEvents.map((event) => ({
+        id: event.id,
+        type: `Outbox event · ${event.eventType}`,
+        failureReason: event.failureReason,
+        failedAt: event.failedAt,
+        createdAt: event.createdAt,
+      })),
+    ]
+      .sort((left, right) => {
+        const leftTime = left.failedAt?.getTime() ?? left.createdAt.getTime();
+        const rightTime = right.failedAt?.getTime() ?? right.createdAt.getTime();
+        return rightTime - leftTime;
+      })
+      .slice(0, 8);
+
+    return {
+      migrationRequired: false,
+      data: {
+        failedJobs: failedBackgroundJobs + deadLetterJobs,
+        queueBacklogs: queuedBackgroundJobs + processingBackgroundJobs + pendingOutboxEvents + processingOutboxEvents,
+        syncErrors,
+        integrationFailures,
+        copilotFailures,
+        gatewayFailures: gatewayOutboxFailures + gatewayDeadLetters,
+        recentExceptions,
+      },
+    };
   } catch (error) {
     return { migrationRequired: isFounderTableMissing(error), safeError: safeError(error), data: { failedJobs: 0, queueBacklogs: 0, syncErrors: 0, integrationFailures: 0, copilotFailures: 0, gatewayFailures: 0, recentExceptions: [] } };
   }
@@ -1356,7 +1435,9 @@ function formatRelativeTime(date?: Date | null) {
 }
 
 export function buildFounderObservabilityReadinessChecks() {
-  const sentryConfigured = Boolean(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN);
+  const sentryServerConfigured = Boolean(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN);
+  const sentryBrowserConfigured = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN);
+  const sentryConfigured = sentryServerConfigured && sentryBrowserConfigured;
   const redisConfigured = Boolean(process.env.REDIS_URL?.startsWith('redis://') || process.env.REDIS_URL?.startsWith('rediss://'));
   return [
     {
@@ -1364,8 +1445,10 @@ export function buildFounderObservabilityReadinessChecks() {
       label: 'Sentry Active',
       ok: sentryConfigured,
       detail: sentryConfigured
-        ? 'Sentry DSN is configured for frontend and backend error capture.'
-        : 'Add SENTRY_DSN or NEXT_PUBLIC_SENTRY_DSN to enable external error aggregation.',
+        ? 'Sentry SDK and DSN are configured for browser, server, and edge error capture.'
+        : sentryServerConfigured
+          ? 'Server capture is configured. Add NEXT_PUBLIC_SENTRY_DSN to enable browser error capture.'
+          : 'Add NEXT_PUBLIC_SENTRY_DSN in Vercel to enable browser, server, and edge error aggregation.',
     },
     {
       key: 'monitoring_active',

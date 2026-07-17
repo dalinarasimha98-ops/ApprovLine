@@ -60,6 +60,8 @@ export async function buildReadinessReport() {
     serviceNowInstanceUrl: envCheck('SERVICENOW_INSTANCE_URL', 'ServiceNow instance URL'),
     zoomClientId: envCheck('ZOOM_CLIENT_ID', 'Zoom client ID'),
     zoomClientSecret: envCheck('ZOOM_CLIENT_SECRET', 'Zoom client secret'),
+    universalGatewayApiKey: envCheck('UNIVERSAL_GATEWAY_API_KEY', 'Universal Gateway API key'),
+    universalGatewayWebhookSecret: envCheck('UNIVERSAL_GATEWAY_WEBHOOK_SECRET', 'Universal Gateway webhook secret'),
     gmailSyncInterval: env.GMAIL_SYNC_INTERVAL_MINUTES
       ? { status: 'ok' as const, message: `Gmail sync interval ${env.GMAIL_SYNC_INTERVAL_MINUTES} minutes` }
       : { status: 'missing' as const, message: 'GMAIL_SYNC_INTERVAL_MINUTES missing; defaults to 15 minutes' },

@@ -30,6 +30,9 @@ Copy `.env.example` to `.env.local` and set:
 - `ANTHROPIC_MODEL` - optional, defaults to `claude-sonnet-4-5`
 - `OPENAI_API_KEY` - optional fallback if Anthropic is not configured
 - `REDIS_URL`
+- `NEXT_PUBLIC_SENTRY_DSN` (recommended; enables browser, server, and edge error capture)
+- `SENTRY_DSN` (optional server-only override)
+- `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` (optional source-map uploads)
 - `ENCRYPTION_KEY` - 64 lowercase hex characters / 32 random bytes, for AES-256-GCM token encryption
 - `APP_URL` - production Vercel URL, used for OAuth redirects and health checks
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
@@ -47,6 +50,8 @@ Copy `.env.example` to `.env.local` and set:
 - `JIRA_CLIENT_SECRET`
 
 For Vercel deployments, add these under Project Settings -> Environment Variables.
+
+For Sentry, create a Next.js project in Sentry and copy its DSN into `NEXT_PUBLIC_SENTRY_DSN` for Production and Preview. A Sentry DSN is a public routing identifier, not an account password. Add `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` only when source-map uploads are required; keep the auth token server-only and sensitive. Redeploy after changing Vercel environment variables.
 GitHub Actions repository secrets are only available to GitHub Actions workflows and are not visible to the Vercel runtime.
 
 ## Vercel beta checklist

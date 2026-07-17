@@ -20,6 +20,7 @@
     "test:gmail": "tsx tests/gmail-integration.test.ts",
     "test:teams": "tsx tests/teams-integration.test.ts",
     "test:founder": "node --import tsx tests/founder-hardening.test.ts",
+    "test:reliability": "node --import tsx tests/reliability-hardening.test.ts",
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
     "readiness": "tsx scripts/readiness.ts",
     "gmail:sync": "tsx scripts/gmail-sync.ts",
@@ -28,6 +29,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.32.0",
     "@prisma/client": "^6.10.1",
+    "@sentry/nextjs": "^10.66.0",
     "bullmq": "^5.56.0",
     "ioredis": "^5.6.1",
     "next": "^15.3.4",
