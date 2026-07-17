@@ -14,23 +14,23 @@ export default async function FounderOperationsPage() {
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2557dc]">Operations Center</p>
         <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Production workflow monitor</h2>
         <p className="mt-2 max-w-3xl text-base font-semibold leading-7 text-slate-600">
-          Monitor failed jobs, queue backlog, sync failures, Copilot errors, Universal Gateway failures, and recent exceptions without exposing customer secrets.
+          Monitor background jobs, outbox backlog, sync failures, Copilot errors, Universal Gateway reliability, and recent exceptions without exposing customer secrets.
         </p>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <FounderMetricCard label="Failed jobs" value={data.failedJobs} detail="Failed event jobs" />
-        <FounderMetricCard label="Backlog" value={data.queueBacklogs} detail="Unprocessed events" />
+        <FounderMetricCard label="Failed jobs" value={data.failedJobs} detail="Failed or dead-lettered reliability jobs" />
+        <FounderMetricCard label="Backlog" value={data.queueBacklogs} detail="Queued jobs and outbox events" />
         <FounderMetricCard label="Sync errors" value={data.syncErrors} detail="Customer integrations unhealthy" />
         <FounderMetricCard label="Integration failures" value={data.integrationFailures} detail="Founder status errors" />
         <FounderMetricCard label="Copilot failures" value={data.copilotFailures} detail="AI assistant errors" />
-        <FounderMetricCard label="Gateway failures" value={data.gatewayFailures} detail="Universal Gateway failed events" />
+        <FounderMetricCard label="Gateway failures" value={data.gatewayFailures} detail="Universal Gateway outbox or dead-letter failures" />
       </section>
 
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 p-6">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">Recent Exceptions</p>
-          <h3 className="mt-2 text-xl font-black text-slate-950">Events requiring attention</h3>
+          <h3 className="mt-2 text-xl font-black text-slate-950">Reliability exceptions requiring attention</h3>
         </div>
         <div className="divide-y divide-slate-100">
           {data.recentExceptions.map((event) => (

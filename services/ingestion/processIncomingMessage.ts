@@ -3,22 +3,66 @@ import { prisma } from '@/lib/prisma';
 import { classifyWithOpenAI } from '@/services/classifier/openai';
 import { persistClassificationResult } from '@/services/classifier/persistence';
 import type { IncomingMessageJob } from '@/services/queue/approvalQueue';
+import type { StandardJobEnvelope } from '@/services/queue/jobRegistry';
+import { hashPayload } from '@/services/queue/reliability';
 import type { ClassifyResponse } from '@/types/classifier';
 
-export async function processIncomingMessage(job: IncomingMessageJob, input?: { auditAction?: string }) {
-  const messageSource = await prisma.messageSource.create({
-    data: {
-      organizationId: job.organizationId,
-      integrationId: job.integrationId,
-      provider: job.provider,
-      externalId: job.externalId,
-      channel: job.channel,
-      sender: job.sender,
-      senderEmail: job.senderEmail,
-      rawPayload: job.rawPayload as Prisma.InputJsonValue,
-      receivedAt: job.timestamp ? new Date(job.timestamp) : undefined,
-    },
+export async function processIncomingMessage(
+  job: IncomingMessageJob,
+  input?: { auditAction?: string; envelope?: StandardJobEnvelope<IncomingMessageJob> },
+) {
+  const correlationId = input?.envelope?.correlationId;
+  const idempotencyKey = input?.envelope?.idempotencyKey;
+  const sourceSystem = input?.envelope?.sourceSystem ?? job.provider.toLowerCase();
+  const sourceRecordId = input?.envelope?.sourceRecordId ?? job.externalId;
+  const contentHash = hashPayload({
+    message: job.message,
+    provider: job.provider,
+    externalId: job.externalId,
+    senderEmail: job.senderEmail,
+    timestamp: job.timestamp,
   });
+
+  const messageSourcePayload = {
+    organizationId: job.organizationId,
+    integrationId: job.integrationId,
+    provider: job.provider,
+    externalId: job.externalId,
+    threadId: job.channel,
+    eventId: job.externalId,
+    channel: job.channel,
+    sender: job.sender,
+    senderEmail: job.senderEmail,
+    contentHash,
+    correlationId,
+    idempotencyKey,
+    rawPayload: {
+      payload: job.rawPayload ?? {},
+      queue: input?.envelope
+        ? {
+            jobType: input.envelope.jobType,
+            traceId: input.envelope.traceId,
+            metadata: input.envelope.metadata ?? {},
+          }
+        : undefined,
+    } as Prisma.InputJsonValue,
+    receivedAt: job.timestamp ? new Date(job.timestamp) : undefined,
+  } satisfies Prisma.MessageSourceUncheckedCreateInput;
+
+  const messageSource =
+    job.externalId
+      ? await prisma.messageSource.upsert({
+          where: {
+            organizationId_provider_externalId: {
+              organizationId: job.organizationId,
+              provider: job.provider,
+              externalId: job.externalId,
+            },
+          },
+          update: messageSourcePayload,
+          create: messageSourcePayload,
+        })
+      : await prisma.messageSource.create({ data: messageSourcePayload });
 
   const request = {
     message: job.message,
@@ -55,6 +99,10 @@ export async function processIncomingMessage(job: IncomingMessageJob, input?: { 
           organizationId: job.organizationId,
           integrationId: job.integrationId,
           type: `${job.provider.toLowerCase()}.event.classifier_error`,
+          sourceSystem,
+          sourceRecordId,
+          correlationId,
+          idempotencyKey,
           payload: {
             provider: job.provider,
             externalId: job.externalId,
@@ -94,5 +142,10 @@ export async function processIncomingMessage(job: IncomingMessageJob, input?: { 
     result,
     sourceLink: job.sourceLink,
     auditAction: input?.auditAction ?? 'approval_record.created_from_ingestion',
+    sourceSystem,
+    sourceRecordId,
+    correlationId,
+    idempotencyKey,
+    contentHash,
   });
 }

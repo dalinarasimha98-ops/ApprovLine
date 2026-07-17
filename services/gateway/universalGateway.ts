@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { classifyWithOpenAI } from '@/services/classifier/openai';
-import { persistClassificationResult } from '@/services/classifier/persistence';
 import { writeAuditLog } from '@/services/audit';
-import type { ClassifyRequest } from '@/types/classifier';
+import { enqueueIncomingMessage, type IncomingMessageJob } from '@/services/queue/approvalQueue';
+import { buildGatewayIdempotencyKey, createCorrelationId } from '@/services/queue/reliability';
 import type { ApprovalCategory } from '@/types/classifier';
 
 const enterpriseSystems = [
@@ -43,6 +42,16 @@ export const universalWebhookSchema = z.object({
 
 export type UniversalApprovalInput = z.infer<typeof universalApprovalSchema>;
 export type UniversalWebhookInput = z.infer<typeof universalWebhookSchema>;
+
+export interface GatewayEnqueueResult {
+  accepted: true;
+  organizationId: string;
+  correlationId: string;
+  idempotencyKey: string;
+  duplicate: boolean;
+  processingMode: 'queue' | 'outbox';
+  backgroundJobId?: string;
+}
 
 export async function getGatewayOrganization(slug = 'public-demo') {
   return prisma.organization.upsert({
@@ -86,7 +95,7 @@ export async function ingestUniversalApproval(input: UniversalApprovalInput, opt
   receivedVia?: 'api' | 'webhook' | 'email' | 'csv' | 'document' | 'transcript';
   ipAddress?: string;
   userAgent?: string;
-}) {
+}): Promise<GatewayEnqueueResult> {
   const organization =
     options?.organizationId
       ? { id: options.organizationId }
@@ -95,61 +104,91 @@ export async function ingestUniversalApproval(input: UniversalApprovalInput, opt
   const normalizedSource = input.source_system.trim().toLowerCase();
   const sourceLink = metadataString(input.metadata, ['url', 'link', 'source_url', 'record_url', 'evidence_url']);
   const externalId = metadataString(input.metadata, ['id', 'external_id', 'approval_id', 'record_id']);
-
-  const request: ClassifyRequest = {
-    message: buildGatewayMessage(input),
-    source: normalizedSource,
-    sender: input.approver,
-    sender_email: input.approver_email,
+  const correlationId = createCorrelationId();
+  const idempotencyKey = buildGatewayIdempotencyKey({
+    organizationId: organization.id,
+    sourceSystem: normalizedSource,
+    sourceRecordId: externalId,
+    subject: input.subject,
+    approverEmail: input.approver_email,
     timestamp: input.timestamp,
-    metadata: {
-      ...(input.metadata ?? {}),
+    decision: buildGatewayMessage(input),
+  });
+  const provider = normalizedSource === 'teams' ? 'MICROSOFT_TEAMS' : normalizedSource.toUpperCase();
+  const gatewayProvider =
+    ['SLACK', 'GMAIL', 'OUTLOOK', 'MICROSOFT_TEAMS', 'JIRA', 'SERVICENOW', 'ZOOM'].includes(provider)
+      ? provider as IncomingMessageJob['provider']
+      : 'SERVICENOW';
+
+  const messageJob: IncomingMessageJob = {
+    organizationId: organization.id,
+    provider: gatewayProvider,
+    externalId,
+    channel: input.department ?? input.category ?? 'gateway',
+    sender: input.approver,
+    senderEmail: input.approver_email,
+    timestamp: input.timestamp,
+    message: buildGatewayMessage(input),
+    sourceLink,
+    rawPayload: {
+      ...input.metadata,
       gateway: true,
       receivedVia: options?.receivedVia ?? 'api',
       source_system: input.source_system,
       amount: input.amount,
       department: input.department,
-      category: input.category,
+      category: normalizeCategory(input.category),
       subject: input.subject,
     },
   };
-
-  const result = await classifyWithOpenAI(request);
-  const persisted = await persistClassificationResult({
-    organizationId: organization.id,
-    request,
-    result: {
-      ...result,
-      approver_name: result.approver_name ?? input.approver ?? null,
-      approver_email: result.approver_email ?? input.approver_email ?? null,
-      approval_timestamp: result.approval_timestamp ?? input.timestamp ?? null,
-      source_platform: result.source_platform ?? normalizedSource,
-      department: result.department ?? input.department ?? null,
-      category: result.category ?? normalizeCategory(input.category),
-      subject: result.subject || input.subject || `${input.source_system} approval`,
+  const enqueued = await enqueueIncomingMessage(messageJob, {
+    sourceSystem: normalizedSource,
+    sourceRecordId: externalId,
+    correlationId,
+    idempotencyKey,
+    metadata: {
+      auditAction: options?.auditAction ?? `gateway.${options?.receivedVia ?? 'api'}.processed`,
+      receivedVia: options?.receivedVia ?? 'api',
+      ipAddress: options?.ipAddress,
+      userAgent: options?.userAgent,
     },
-    sourceLink,
-    auditAction: options?.auditAction ?? `gateway.${options?.receivedVia ?? 'api'}.processed`,
-    ipAddress: options?.ipAddress,
-    userAgent: options?.userAgent,
   });
 
   await prisma.event.create({
     data: {
       organizationId: organization.id,
       type: `gateway.${options?.receivedVia ?? 'api'}.received`,
+      sourceSystem: normalizedSource,
+      sourceRecordId: externalId,
+      correlationId,
+      idempotencyKey,
       payload: {
         sourceSystem: normalizedSource,
         externalId,
-        approvalRecordId: persisted?.approval?.id ?? null,
-        classifierResultId: persisted?.classifier.id ?? null,
+        queued: enqueued.queued,
+        duplicate: enqueued.queued ? enqueued.duplicate : false,
+        processingMode: enqueued.queued ? enqueued.processingMode : 'outbox',
         metadata: input.metadata ?? {},
       } as Prisma.InputJsonValue,
-      processedAt: new Date(),
+      processedAt: enqueued.queued ? new Date() : undefined,
+      failedAt: enqueued.queued ? undefined : new Date(),
+      failureReason: enqueued.queued ? undefined : enqueued.reason,
     },
   }).catch(() => null);
 
-  return persisted;
+  if (!enqueued.queued) {
+    throw new Error(enqueued.reason);
+  }
+
+  return {
+    accepted: true,
+    organizationId: organization.id,
+    correlationId,
+    idempotencyKey,
+    duplicate: enqueued.duplicate,
+    processingMode: enqueued.processingMode,
+    backgroundJobId: enqueued.backgroundJobId,
+  };
 }
 
 export function normalizeWebhookApproval(input: UniversalWebhookInput): UniversalApprovalInput {
