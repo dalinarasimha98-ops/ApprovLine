@@ -1,98 +1,682 @@
-'use client';
+import Link from 'next/link';
+import styles from './LandingPage.module.css';
 
-import { useEffect } from 'react';
+const sources = [
+  { name: 'Slack', mark: 'S', tone: 'purple' },
+  { name: 'Microsoft Teams', mark: 'T', tone: 'indigo' },
+  { name: 'Outlook / Email', mark: 'O', tone: 'blue' },
+  { name: 'Gmail', mark: 'G', tone: 'red' },
+  { name: 'Zoom', mark: 'Z', tone: 'cyan' },
+  { name: 'Jira', mark: 'J', tone: 'royal' },
+  { name: 'ServiceNow', mark: 'N', tone: 'green' },
+  { name: 'Custom Systems', mark: '+', tone: 'slate' },
+];
 
-const landingMarkup = "<header class=\"hero\">\n    <nav class=\"nav wrap\" aria-label=\"Main navigation\">\n      <a class=\"brand\" href=\"/\" aria-label=\"ApprovLine home\">\n        <span class=\"logo\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 24 24\" fill=\"none\">\n            <path d=\"M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z\" stroke=\"#dbe7ff\" stroke-width=\"1.9\"/>\n            <path d=\"m8.8 12 2.1 2.1 4.5-5\" stroke=\"#dbe7ff\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n          </svg>\n        </span>\n        ApprovLine\n      </a>\n      <div class=\"nav-links\" aria-label=\"Section links\">\n        <a href=\"#features\">Features</a>\n        <a href=\"#how\">How it Works</a>\n        <a href=\"#integrations\">Integrations</a>\n        <a href=\"#pricing\">Pricing</a>\n      </div>\n      <div class=\"nav-actions\">\n        <a class=\"button secondary\" href=\"#classifier\">Try AI Demo</a>\n        <a class=\"button primary\" href=\"/get-started\">Get Started Free</a>\n      </div>\n    </nav>\n\n    <div id=\"top\" class=\"hero-grid wrap\">\n      <div>\n        <div class=\"eyebrow\">\n          <svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\">\n            <path d=\"M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z\" stroke=\"currentColor\" stroke-width=\"1.8\"/>\n            <path d=\"m9 12 2 2 4-5\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n          </svg>\n          Universal Approval Intelligence Platform\n        </div>\n        <h1>Every decision. <span class=\"accent\">Finally accounted for.</span></h1>\n        <p class=\"hero-copy\">ApprovLine captures, classifies, and stores every business approval across Slack, Gmail, Teams, and more, creating a unified, searchable audit trail your compliance team will love.</p>\n        <div class=\"hero-actions\">\n          <a class=\"button primary\" href=\"/get-started\">Start Free Trial <span aria-hidden=\"true\">→</span></a>\n          <a class=\"button secondary\" href=\"#how\">See How It Works</a>\n        </div>\n        <div class=\"trust-row\" aria-label=\"Trust indicators\">\n          <span><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.1\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>SOC 2 Type II</span>\n          <span><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.1\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>GDPR Ready</span>\n          <span><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.1\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>Read-Only Access</span>\n          <span><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2.1\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>Enterprise Grade</span>\n        </div>\n      </div>\n\n      <section class=\"dashboard\" aria-label=\"ApprovLine dashboard preview\">\n        <div class=\"window-bar\">\n          <div class=\"dots\" aria-hidden=\"true\">\n            <span class=\"dot red\"></span><span class=\"dot yellow\"></span><span class=\"dot green\"></span>\n          </div>\n          <span>ApprovLine Dashboard</span>\n          <span></span>\n        </div>\n        <div class=\"dash-body\">\n          <div class=\"search-row\">\n            <div class=\"search\">Search decisions...</div>\n            <div class=\"pill-tab active\">All</div>\n            <div class=\"pill-tab\">Pending</div>\n          </div>\n          <article class=\"decision\">\n            <div class=\"avatar purple\">S</div>\n            <div>\n              <strong>Sarah Chen</strong><span class=\"tag\">Explicit</span>\n              <p>Budget increase of $250K approved for Q3 marketing</p>\n              <div class=\"meter\"><span style=\"width:98%\"></span></div>\n            </div>\n            <div class=\"time\">2 min ago</div>\n          </article>\n          <article class=\"decision\">\n            <div class=\"avatar red\">G</div>\n            <div>\n              <strong>James Okafor</strong><span class=\"tag\">Explicit</span>\n              <p>Contract terms with Acme Corp signed off</p>\n              <div class=\"meter\"><span style=\"width:95%\"></span></div>\n            </div>\n            <div class=\"time\">14 min ago</div>\n          </article>\n          <article class=\"decision\">\n            <div class=\"avatar indigo\">T</div>\n            <div>\n              <strong>Priya Sharma</strong><span class=\"tag soft\">Implicit</span>\n              <p>Product launch cleared for next sprint</p>\n              <div class=\"meter\"><span style=\"width:87%\"></span></div>\n            </div>\n            <div class=\"time\">1 hr ago</div>\n          </article>\n        </div>\n        <div class=\"dash-foot\">\n          <b>3 decisions captured today</b>\n          <span>AI confidence avg: 93%</span>\n        </div>\n      </section>\n    </div>\n  </header>\n\n  <section class=\"stats\" aria-label=\"Decision audit statistics\">\n    <div class=\"stats-grid wrap\">\n      <div class=\"stat\"><strong>74%</strong><span>of business decisions leave no audit trail</span></div>\n      <div class=\"stat\"><strong>3-4 wks</strong><span>average time spent reconstructing decision histories</span></div>\n      <div class=\"stat\"><strong>$2.4M</strong><span>average cost of a missed approval dispute</span></div>\n      <div class=\"stat\"><strong>8+</strong><span>tools where decisions get lost simultaneously</span></div>\n    </div>\n  </section>\n\n  <main>\n    <section class=\"section\" aria-labelledby=\"problem-title\">\n      <div class=\"wrap\">\n        <div class=\"section-head\">\n          <div class=\"label problem\">The Problem</div>\n          <h2 id=\"problem-title\">Decisions happen everywhere.<br>Records exist nowhere.</h2>\n          <p>Modern teams use 8+ tools simultaneously. Every critical approval disappears into threads, inboxes, and call recordings, until something goes wrong.</p>\n        </div>\n        <div class=\"cards-4\">\n          <article class=\"card\">\n            <div class=\"icon-tile purple\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z\" stroke=\"currentColor\"/></svg></div>\n            <h3>CFO approves in Slack</h3>\n            <p>Budget increase agreed in a thread, then buried under 500 messages.</p>\n          </article>\n          <article class=\"card\">\n            <div class=\"icon-tile red\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M4 6h16v12H4z\" stroke=\"currentColor\"/><path d=\"m4 7 8 6 8-6\" stroke=\"currentColor\"/></svg></div>\n            <h3>Legal signs off over email</h3>\n            <p>Contract terms confirmed in an email chain nobody can find six months later.</p>\n          </article>\n          <article class=\"card\">\n            <div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M15 10.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4.5l6 4.5v-12l-6 4.5Z\" stroke=\"currentColor\"/></svg></div>\n            <h3>Product gets a thumbs-up on Zoom</h3>\n            <p>Verbal go-ahead on a call. No record. No proof. No trail.</p>\n          </article>\n          <article class=\"card\">\n            <div class=\"icon-tile orange\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M10.3 4.4 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.4a2 2 0 0 0-3.4 0Z\" stroke=\"currentColor\"/><path d=\"M12 9v4M12 17h.01\" stroke=\"currentColor\" stroke-linecap=\"round\"/></svg></div>\n            <h3>Auditor asks: who approved this?</h3>\n            <p>3 weeks of manual reconstruction. Fines. Disputes. Damaged trust.</p>\n          </article>\n        </div>\n        <div class=\"gap-note\"><b>The gap ApprovLine fills:</b> No tool today captures approvals passively, across all tools, with AI classification, and presents them as a unified auditable timeline.</div>\n      </div>\n    </section>\n\n    <section id=\"how\" class=\"section soft\" aria-labelledby=\"how-title\">\n      <div class=\"wrap\">\n        <div class=\"section-head\">\n          <div class=\"label\">How It Works</div>\n          <h2 id=\"how-title\">Set up once. Capture everything.</h2>\n          <p>ApprovLine works invisibly in the background, no new habits, no forms to fill, no behavior change required from your team.</p>\n        </div>\n        <div class=\"steps\">\n          <article class=\"card step\">\n            <div class=\"step-top\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1\" stroke=\"currentColor\"/><path d=\"M14 11a5 5 0 0 0-7.1 0l-2 2A5 5 0 1 0 12 20.1l1.1-1.1\" stroke=\"currentColor\"/></svg></div><span class=\"number\">01</span></div>\n            <h3>Connect your tools</h3>\n            <p>Link Gmail, Slack, Teams, and more in under 15 minutes. Read-only OAuth, so we never write or modify your messages.</p>\n          </article>\n          <article class=\"card step\">\n            <div class=\"step-top\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M12 4a3 3 0 0 0-3 3v10a3 3 0 0 0 6 0V7a3 3 0 0 0-3-3Z\" stroke=\"currentColor\"/><path d=\"M7 8a3 3 0 0 0 0 6M17 8a3 3 0 0 1 0 6M8 19a4 4 0 0 0 8 0\" stroke=\"currentColor\"/></svg></div><span class=\"number\">02</span></div>\n            <h3>AI classifies approvals</h3>\n            <p>Every message is analyzed by our AI engine. Explicit, implicit, and conditional approvals are detected with a confidence score.</p>\n          </article>\n          <article class=\"card step\">\n            <div class=\"step-top\"><div class=\"icon-tile green\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M4 7c0-2 3.6-3.5 8-3.5S20 5 20 7s-3.6 3.5-8 3.5S4 9 4 7Z\" stroke=\"currentColor\"/><path d=\"M4 7v10c0 2 3.6 3.5 8 3.5s8-1.5 8-3.5V7M4 12c0 2 3.6 3.5 8 3.5s8-1.5 8-3.5\" stroke=\"currentColor\"/></svg></div><span class=\"number\">03</span></div>\n            <h3>Decision records created</h3>\n            <p>Each approval becomes a structured record: who, what, when, where, evidence, and a link back to the original thread.</p>\n          </article>\n          <article class=\"card step\">\n            <div class=\"step-top\"><div class=\"icon-tile yellow\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z\" stroke=\"currentColor\"/></svg></div><span class=\"number\">04</span></div>\n            <h3>Search and export anytime</h3>\n            <p>Real-time unified dashboard with full-text search. Export your complete audit log as PDF or CSV in seconds.</p>\n          </article>\n        </div>\n      </div>\n    </section>\n\n    <section id=\"features\" class=\"section\" aria-labelledby=\"features-title\">\n      <div class=\"wrap\">\n        <div class=\"section-head\">\n          <div class=\"label\">Features</div>\n          <h2 id=\"features-title\">Everything compliance teams need</h2>\n          <p>Built to the standards that legal and audit teams require, from day one.</p>\n        </div>\n        <div class=\"features-grid\">\n          <article class=\"card feature-card\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z\" stroke=\"currentColor\"/><path d=\"m9 12 2 2 4-5\" stroke=\"currentColor\"/></svg></div><span class=\"mini-tag\">Core</span><h3>AI Approval Classifier</h3><p>Detects explicit, implicit, conditional approvals, and rejections. 95%+ accuracy with confidence scoring.</p></article>\n          <article class=\"card feature-card\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><circle cx=\"11\" cy=\"11\" r=\"7\" stroke=\"currentColor\"/><path d=\"m20 20-3.5-3.5\" stroke=\"currentColor\" stroke-linecap=\"round\"/></svg></div><span class=\"mini-tag\">Core</span><h3>Full-Text Search</h3><p>Search by keyword, person, date range, source, or topic across your entire decision history instantly.</p></article>\n          <article class=\"card feature-card\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M7 3h7l4 4v14H7z\" stroke=\"currentColor\"/><path d=\"M14 3v5h5M12 12v5M9.5 14.5 12 17l2.5-2.5\" stroke=\"currentColor\"/></svg></div><span class=\"mini-tag green\">Compliance</span><h3>Audit Export</h3><p>Export your complete decision log as PDF or CSV, formatted for compliance and legal review with timestamps.</p></article>\n          <article class=\"card feature-card\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><circle cx=\"12\" cy=\"12\" r=\"8\" stroke=\"currentColor\"/><path d=\"M12 8v5l3 2\" stroke=\"currentColor\" stroke-linecap=\"round\"/></svg></div><span class=\"mini-tag\">Core</span><h3>Decision Timeline</h3><p>A real-time, chronological feed of every captured approval, with expandable evidence and context.</p></article>\n          <article class=\"card feature-card\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M6 10V8a6 6 0 1 1 12 0v2M5 10h14v10H5z\" stroke=\"currentColor\"/></svg></div><span class=\"mini-tag yellow\">Security</span><h3>Read-Only by Design</h3><p>ApprovLine never writes, posts, or modifies messages in any connected tool. Privacy by principle.</p></article>\n          <article class=\"card feature-card\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"m13 2-9 12h7l-1 8 9-12h-7l1-8Z\" stroke=\"currentColor\" stroke-linejoin=\"round\"/></svg></div><span class=\"mini-tag purple\">Onboarding</span><h3>15-Minute Setup</h3><p>Connect your first tool and see captured decisions in under 15 minutes. No engineers required.</p></article>\n          <article class=\"card feature-card\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z\" stroke=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"2.5\" stroke=\"currentColor\"/></svg></div><span class=\"mini-tag\">Quality</span><h3>Pending Review Queue</h3><p>Low-confidence detections are routed to a human review queue so nothing important is missed.</p></article>\n          <article class=\"card feature-card\"><div class=\"icon-tile\"><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M5 19V5M10 19v-7M15 19V9M20 19v-4M3 19h19\" stroke=\"currentColor\" stroke-linecap=\"round\"/></svg></div><span class=\"mini-tag\">Intelligence</span><h3>Approval Analytics</h3><p>Dashboards showing approval velocity, bottlenecks, and patterns across your organization.</p></article>\n        </div>\n      </div>\n    </section>\n\n    <section id=\"integrations\" class=\"section soft\" aria-labelledby=\"integrations-title\">\n      <div class=\"wrap\">\n        <div class=\"section-head\">\n          <div class=\"label\">Integrations</div>\n          <h2 id=\"integrations-title\">Works where your team already works</h2>\n          <p>Connect every tool your organization uses. ApprovLine reads passively, zero disruption to your existing workflows.</p>\n        </div>\n        <div class=\"integrations-grid\">\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#ef4338\">G</span><strong>Gmail</strong><span>Full thread access</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#57165f\">S</span><strong>Slack</strong><span>Channels &amp; DMs</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#0b82c8\">O</span><strong>Outlook</strong><span>Microsoft 365</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#6263aa\">T</span><strong>Teams</strong><span>Via Graph API</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#2f91f3\">Z</span><strong>Zoom</strong><span>Meeting transcripts</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#f06467\">A</span><strong>Asana</strong><span>Task approvals</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#0a63c9\">J</span><strong>Jira</strong><span>Issue transitions</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#000\">N</span><strong>Notion</strong><span>Page comments</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#ff3e62\">M</span><strong>Monday</strong><span>Board approvals</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#26c967\">W</span><strong>WhatsApp</strong><span>Business API</span></div>\n          <div class=\"integration\"><span class=\"app-icon\" style=\"background:#6e7584\">+</span><strong>Manual</strong><span>Direct entry</span></div>\n          <div class=\"integration outline-soon\"><span class=\"app-icon\" style=\"background:#dfe7ff;color:#2155d9\">...</span><strong>More soon</strong><span>Phase 2</span></div>\n        </div>\n        <p class=\"integration-note\">All integrations use read-only OAuth scopes. ApprovLine never writes to your tools.</p>\n      </div>\n    </section>\n\n    <section id=\"pricing\" class=\"section\" aria-labelledby=\"pricing-title\">\n      <div class=\"wrap\">\n        <div class=\"section-head\">\n          <div class=\"label\">Pricing</div>\n          <h2 id=\"pricing-title\">Simple, transparent pricing</h2>\n          <p>14-day free trial on all plans. No credit card required.</p>\n        </div>\n        <div class=\"pricing-grid\">\n          <article class=\"price-card\">\n            <div class=\"plan-name\">Starter</div>\n            <div class=\"price\">$49<small>/mo</small></div>\n            <p class=\"plan-desc\">For small teams getting started</p>\n            <div class=\"users\">Up to 5 users</div>\n            <ul class=\"checks\">\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Gmail + Slack connectors</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>90-day decision history</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>AI approval classifier</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Decision timeline dashboard</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Full-text search</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Manual decision entry</li>\n            </ul>\n            <a class=\"button light-button\" href=\"/get-started\">Start Free Trial <span aria-hidden=\"true\">→</span></a>\n          </article>\n          <article class=\"price-card popular\">\n            <div class=\"popular-badge\">Most Popular</div>\n            <div class=\"plan-name\">Pro</div>\n            <div class=\"price\">$199<small>/mo</small></div>\n            <p class=\"plan-desc\">Most popular, for growing compliance teams</p>\n            <div class=\"users\">Up to 25 users</div>\n            <ul class=\"checks\">\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>All sources (Gmail, Slack, Teams, Outlook)</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Unlimited decision history</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>PDF + CSV audit export</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Pending review queue</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Approval analytics</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Priority support</li>\n            </ul>\n            <a class=\"button primary\" href=\"/get-started\">Start Free Trial <span aria-hidden=\"true\">→</span></a>\n          </article>\n          <article class=\"price-card\">\n            <div class=\"plan-name\">Business</div>\n            <div class=\"price\">$499<small>/mo</small></div>\n            <p class=\"plan-desc\">For regulated teams with advanced needs</p>\n            <div class=\"users\">Up to 100 users</div>\n            <ul class=\"checks\">\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>All Pro features</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>SSO (SAML / OIDC)</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Role-based access control</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Custom data retention</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Zoom + Asana + Jira integrations</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Dedicated onboarding</li>\n            </ul>\n            <a class=\"button light-button\" href=\"/get-started\">Start Free Trial <span aria-hidden=\"true\">→</span></a>\n          </article>\n          <article class=\"price-card\">\n            <div class=\"plan-name\">Enterprise</div>\n            <div class=\"price\">Custom</div>\n            <p class=\"plan-desc\">For large regulated organizations</p>\n            <div class=\"users\">Unlimited users</div>\n            <ul class=\"checks\">\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>All Business features</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>SSO + SCIM provisioning</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Custom integrations</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Data residency options</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>SLA + dedicated CSM</li>\n              <li><svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M20 6 9 17l-5-5\" stroke=\"currentColor\" stroke-width=\"2\"/></svg>Custom audit formats</li>\n            </ul>\n            <a class=\"button light-button\" href=\"/get-started\">Contact Sales <span aria-hidden=\"true\">→</span></a>\n          </article>\n        </div>\n      </div>\n    </section>\n\n    <section id=\"classifier\" class=\"section soft\" aria-labelledby=\"classifier-title\">\n      <div class=\"wrap\">\n        <div class=\"section-head\">\n          <div class=\"label\">AI Demo</div>\n          <h2 id=\"classifier-title\">Test approval detection live</h2>\n          <p>Paste a Slack, email, or meeting note snippet and ApprovLine will classify whether it contains an approval decision.</p>\n        </div>\n        <div class=\"classifier-panel\">\n          <div class=\"classifier-input\">\n            <textarea id=\"messageInput\" aria-label=\"Message to classify\">Approved. Please move forward with the Q3 marketing budget increase to $250K and use the revised contract terms Sarah shared yesterday.</textarea>\n            <div class=\"classifier-controls\">\n              <select id=\"sourceInput\" class=\"select\" aria-label=\"Message source\">\n                <option>Slack</option>\n                <option>Email</option>\n                <option>Teams</option>\n                <option>Zoom</option>\n              </select>\n              <button class=\"primary\" id=\"classifyButton\" type=\"button\">Classify Message</button>\n            </div>\n            <p class=\"status-line\">Requires `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in Vercel environment variables.</p>\n          </div>\n          <div class=\"classifier-output\">\n            <div id=\"classifierResult\" class=\"result-box\"><b>Ready.</b>\nPaste a business message and run the classifier.</div>\n          </div>\n        </div>\n      </div>\n    </section>\n\n    <section id=\"waitlist\" class=\"cta-wrap\" aria-labelledby=\"cta-title\">\n      <div class=\"cta\">\n        <div class=\"logo\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z\" stroke=\"#dbe7ff\" stroke-width=\"1.7\"/><path d=\"m8.8 12 2.1 2.1 4.5-5\" stroke=\"#dbe7ff\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>\n        </div>\n        <h2 id=\"cta-title\">Ready to make every decision accountable?</h2>\n        <p>Start your free 14-day trial. Connect your first tool in 15 minutes. No credit card required.</p>\n        <form class=\"waitlist-form\" id=\"waitlistForm\" action=\"/get-started\">\n          <input id=\"emailInput\" type=\"email\" placeholder=\"you@company.com\" aria-label=\"Work email\" required>\n          <button class=\"button primary\" type=\"submit\">Join Waitlist <span aria-hidden=\"true\">→</span></button>\n        </form>\n        <div class=\"form-message\" id=\"formMessage\" role=\"status\"></div>\n        <div class=\"cta-actions\">\n          <a class=\"button secondary\" href=\"#classifier\">Try AI Demo</a>\n          <a class=\"button secondary\" href=\"/get-started\">Book a Demo</a>\n        </div>\n        <div class=\"fine-print\">No credit card required • 14-day free trial • Cancel anytime</div>\n      </div>\n    </section>\n  </main>\n\n  <footer>\n    <div class=\"wrap\">\n      <div class=\"footer-grid\">\n        <div class=\"footer-brand\">\n          <a class=\"brand\" href=\"/\">\n            <span class=\"logo\" aria-hidden=\"true\">\n              <svg viewBox=\"0 0 24 24\" fill=\"none\"><path d=\"M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z\" stroke=\"#dbe7ff\" stroke-width=\"1.9\"/><path d=\"m8.8 12 2.1 2.1 4.5-5\" stroke=\"#dbe7ff\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>\n            </span>\n            ApprovLine\n          </a>\n          <p>Every decision. Finally accounted for.</p>\n          <div class=\"badges\"><span>SOC 2</span><span>GDPR</span><span>CCPA</span></div>\n        </div>\n        <div class=\"footer-col\"><h4>Product</h4><a href=\"#features\">Features</a><a href=\"#integrations\">Integrations</a><a href=\"#pricing\">Pricing</a><a href=\"/\">Changelog</a></div>\n        <div class=\"footer-col\"><h4>Company</h4><a href=\"/\">About</a><a href=\"/\">Blog</a><a href=\"/\">Careers</a><a href=\"/\">Press</a></div>\n        <div class=\"footer-col\"><h4>Legal</h4><a href=\"/\">Privacy Policy</a><a href=\"/\">Terms of Service</a><a href=\"/\">GDPR</a><a href=\"/\">Security</a></div>\n        <div class=\"footer-col\"><h4>Support</h4><a href=\"/\">Documentation</a><a href=\"/\">Status</a><a href=\"/\">Contact</a><a href=\"/\">Book a Demo</a></div>\n      </div>\n      <div class=\"footer-bottom\">\n        <span>© 2026 ApprovLine. All rights reserved.</span>\n        <span>Built for compliance teams who demand accountability.</span>\n      </div>\n    </div>\n  </footer>";
+const intelligenceLayers = [
+  { name: 'Playbook AI', icon: 'PB' },
+  { name: 'Investigation Center', icon: 'IC' },
+  { name: 'Memory Graph', icon: 'MG' },
+  { name: 'Executive Analytics', icon: 'EA' },
+  { name: 'AI Copilot', icon: 'AI' },
+];
+
+const systems = [
+  {
+    title: 'Approval Intelligence',
+    copy: 'Detect approvals automatically across every enterprise channel.',
+    href: '/approvals',
+    visual: 'approval',
+  },
+  {
+    title: 'Playbook AI',
+    copy: 'Validate every decision against company policy and playbooks.',
+    href: '/playbooks',
+    visual: 'playbook',
+  },
+  {
+    title: 'Investigation Center',
+    copy: 'Investigate high-risk decisions with all context in one place.',
+    href: '/investigations',
+    visual: 'investigation',
+  },
+  {
+    title: 'Memory Graph',
+    copy: 'Connect people, approvals, vendors, contracts, and risks.',
+    href: '/memory',
+    visual: 'memory',
+  },
+  {
+    title: 'AI Copilot',
+    copy: 'Ask questions, get evidence, and make better decisions faster.',
+    href: '/copilot',
+    visual: 'copilot',
+  },
+  {
+    title: 'Universal Gateway',
+    copy: 'Capture approvals from any system with one universal gateway.',
+    href: '/dashboard/gateway',
+    visual: 'gateway',
+  },
+];
+
+const trustItems = [
+  ['Read-Only Access', 'We never take action. Always read-only, always safe.'],
+  ['SSO & Identity', 'Enterprise SSO with Microsoft, Okta, Google, and SAML.'],
+  ['Tenant Isolation', 'Data isolation for every organization and workspace.'],
+  ['Audit Logging', 'A complete log for every action, change, and event.'],
+  ['Encryption', 'Data encrypted in transit and at rest.'],
+  ['99.9% Reliability', 'Operational readiness for enterprise workloads.'],
+];
+
+const pricing = [
+  {
+    name: 'Starter',
+    note: 'For small teams exploring approval intelligence.',
+    features: ['Core system capture', 'AI approval detection', 'Limited Memory Graph', 'Standard support'],
+    cta: 'Start Pilot',
+    href: '/get-started',
+  },
+  {
+    name: 'Growth',
+    note: 'For organizations operationalizing decision intelligence.',
+    features: ['Full approval capture', 'Advanced AI understanding', 'Investigation Center', 'Priority support'],
+    cta: 'Book Demo',
+    href: '/get-started',
+    featured: true,
+  },
+  {
+    name: 'Enterprise',
+    note: 'For large organizations with complex controls.',
+    features: ['Full AI Copilot', 'Complete Memory Graph', 'Advanced Playbook AI', 'Custom integrations and SLA'],
+    cta: 'Book Enterprise Demo',
+    href: '/get-started',
+  },
+];
+
+function BrandMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <span className={compact ? styles.brandMarkCompact : styles.brandMark} aria-hidden="true">
+      <span />
+      <span />
+    </span>
+  );
+}
+
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
+  return <p className={styles.sectionEyebrow}>{children}</p>;
+}
+
+function ArrowIcon() {
+  return (
+    <svg viewBox="0 0 18 18" aria-hidden="true">
+      <path d="M3 9h11M10 5l4 4-4 4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 18 18" aria-hidden="true">
+      <path d="m4 9 3 3 7-7" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ArchitectureVisual() {
+  return (
+    <div className={styles.architecture} aria-label="ApprovLine approval intelligence architecture">
+      <div className={styles.archGrid} aria-hidden="true" />
+      <section className={styles.sourcePanel}>
+        <span className={styles.panelLabel}>Sources</span>
+        {sources.map((source, index) => (
+          <div className={styles.sourceRow} key={source.name} style={{ '--row': index } as React.CSSProperties}>
+            <span className={`${styles.sourceMark} ${styles[source.tone]}`}>{source.mark}</span>
+            <span>{source.name}</span>
+            <i />
+          </div>
+        ))}
+      </section>
+
+      <div className={styles.engineWrap}>
+        <div className={styles.enginePulse} />
+        <div className={styles.engineCard}>
+          <BrandMark />
+          <strong>Approval<br />Intelligence<br />Engine</strong>
+        </div>
+      </div>
+
+      <section className={styles.layerPanel}>
+        <span className={styles.panelLabel}>Intelligence Layer</span>
+        {intelligenceLayers.map((layer, index) => (
+          <div className={styles.layerRow} key={layer.name} style={{ '--row': index } as React.CSSProperties}>
+            <i />
+            <span className={styles.layerIcon}>{layer.icon}</span>
+            <span>{layer.name}</span>
+          </div>
+        ))}
+      </section>
+
+      <svg className={styles.archLines} viewBox="0 0 620 420" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="sourceLine" x1="0" x2="1">
+            <stop stopColor="#2089ff" />
+            <stop offset="1" stopColor="#8a5cff" />
+          </linearGradient>
+          <linearGradient id="layerLine" x1="0" x2="1">
+            <stop stopColor="#8a5cff" />
+            <stop offset="1" stopColor="#5d8cff" />
+          </linearGradient>
+        </defs>
+        {[78, 116, 154, 192, 230, 268, 306, 344].map((y, index) => (
+          <path key={`s-${y}`} d={`M144 ${y} C205 ${y}, 190 ${120 + index * 25}, 266 ${120 + index * 25}`} stroke="url(#sourceLine)" />
+        ))}
+        {[92, 150, 208, 266, 324].map((y, index) => (
+          <path key={`l-${y}`} d={`M354 ${120 + index * 46} C430 ${120 + index * 46}, 410 ${y}, 478 ${y}`} stroke="url(#layerLine)" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function ProductMiniVisual({ type }: { type: string }) {
+  if (type === 'memory') {
+    return (
+      <div className={`${styles.productMini} ${styles.miniGraph}`} aria-hidden="true">
+        <span className={styles.graphCenter}>M</span>
+        {['V', 'C', 'A', 'P', 'R'].map((label, index) => (
+          <span key={label} className={styles.graphNode} style={{ '--node': index } as React.CSSProperties}>{label}</span>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === 'copilot') {
+    return (
+      <div className={`${styles.productMini} ${styles.miniCopilot}`} aria-hidden="true">
+        <span>Who approved Vendor Alpha?</span>
+        <i />
+        <i />
+        <b>3 verified sources</b>
+      </div>
+    );
+  }
+
+  if (type === 'gateway') {
+    return (
+      <div className={`${styles.productMini} ${styles.miniGateway}`} aria-hidden="true">
+        <div><span>POST</span><i /></div>
+        <div><span>CSV</span><i /></div>
+        <div><span>DOC</span><i /></div>
+      </div>
+    );
+  }
+
+  if (type === 'investigation') {
+    return (
+      <div className={`${styles.productMini} ${styles.miniInvestigation}`} aria-hidden="true">
+        <div><i /><span /></div>
+        <div><i /><span /></div>
+        <div><i /><span /></div>
+        <b>High risk</b>
+      </div>
+    );
+  }
+
+  if (type === 'playbook') {
+    return (
+      <div className={`${styles.productMini} ${styles.miniPlaybook}`} aria-hidden="true">
+        <div><span>Procurement Policy</span><b>96%</b></div>
+        <div><span>Legal Review</span><b>Ready</b></div>
+        <div><span>Security Standard</span><b>92%</b></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${styles.productMini} ${styles.miniApproval}`} aria-hidden="true">
+      <div><span>Captured</span><b>24,531</b></div>
+      <div className={styles.miniBars}><i /><i /><i /><i /><i /></div>
+      <small>+12.4% this month</small>
+    </div>
+  );
+}
+
+function DashboardPreview() {
+  const approvals = [
+    ['Vendor onboarding - Acme Corp', 'Sarah Johnson', 'Slack', 'Medium', '2m ago'],
+    ['Contract renewal - Globex', 'Mike Chen', 'Email', 'Low', '15m ago'],
+    ['Budget increase - Project Phoenix', 'Priya Patel', 'Teams', 'High', '31m ago'],
+    ['Access request - New system', 'David Kim', 'Jira', 'Low', '45m ago'],
+    ['Policy exception - Marketing', 'Lisa Thompson', 'Slack', 'Medium', '1h ago'],
+  ];
+
+  return (
+    <div className={styles.dashboardPreview}>
+      <aside className={styles.previewSidebar}>
+        <div className={styles.previewLogo}><BrandMark compact /><span>ApprovLine</span></div>
+        {['Overview', 'Approvals', 'Playbook AI', 'Investigations', 'Memory Graph', 'AI Copilot', 'Reports', 'Settings'].map((item, index) => (
+          <span className={index === 0 ? styles.previewActive : ''} key={item}><i />{item}</span>
+        ))}
+        <div className={styles.previewUser}><b>JC</b><span>Jane Cooper<small>Admin</small></span></div>
+      </aside>
+      <main className={styles.previewMain}>
+        <div className={styles.previewTopbar}>
+          <div><small>Approval Intelligence</small><strong>Overview</strong></div>
+          <div className={styles.previewTopActions}><span>⌕</span><span>◐</span><b>JC</b></div>
+        </div>
+        <div className={styles.kpiGrid}>
+          {[
+            ['Approvals Captured', '24,531', '+12.4%'],
+            ['Missing Sign-Offs', '312', '+8.1%'],
+            ['Policy Violations', '128', '-3.2%'],
+            ['Risks Detected', '78', '+5.4%'],
+          ].map(([label, value, trend]) => (
+            <div key={label}><span>{label}</span><strong>{value}</strong><small>{trend}</small></div>
+          ))}
+        </div>
+        <section className={styles.approvalTablePreview}>
+          <div className={styles.tableTitle}><strong>Recent Approvals</strong><span>View all</span></div>
+          <div className={styles.tableHead}><span>Approval</span><span>Approver</span><span>Source</span><span>Risk</span><span>Time</span></div>
+          {approvals.map((approval) => (
+            <div className={styles.tableRow} key={approval[0]}>
+              <span>{approval[0]}</span><span>{approval[1]}</span><span>{approval[2]}</span>
+              <span className={approval[3] === 'High' ? styles.riskHigh : approval[3] === 'Medium' ? styles.riskMedium : styles.riskLow}>{approval[3]}</span>
+              <span>{approval[4]}</span>
+            </div>
+          ))}
+        </section>
+      </main>
+    </div>
+  );
+}
 
 export function LandingPage() {
-  useEffect(() => {
-    const waitlistForm = document.getElementById('waitlistForm') as HTMLFormElement | null;
-    const emailInput = document.getElementById('emailInput') as HTMLInputElement | null;
-    const formMessage = document.getElementById('formMessage');
-    const classifyButton = document.getElementById('classifyButton') as HTMLButtonElement | null;
-    const classifierResult = document.getElementById('classifierResult');
-    const messageInput = document.getElementById('messageInput') as HTMLTextAreaElement | null;
-    const sourceInput = document.getElementById('sourceInput') as HTMLSelectElement | null;
-    const navActions = document.querySelector('.nav-actions');
+  return (
+    <div className={styles.page}>
+      <header className={styles.siteHeader}>
+        <div className={styles.navShell}>
+          <Link className={styles.brand} href="/" aria-label="ApprovLine home">
+            <BrandMark />
+            <span>ApprovLine</span>
+          </Link>
+          <nav className={styles.mainNav} aria-label="Primary navigation">
+            <a href="#platform">Platform <span>⌄</span></a>
+            <a href="#systems">Solutions <span>⌄</span></a>
+            <a href="#resources">Resources <span>⌄</span></a>
+            <a href="#company">Company <span>⌄</span></a>
+            <a href="#pricing">Pricing</a>
+          </nav>
+          <div className={styles.navActions}>
+            <Link className={styles.signIn} href="/sign-in">Sign In</Link>
+            <Link className={styles.outlineButton} href="/get-started">Start Pilot</Link>
+            <Link className={styles.primaryButton} href="/get-started">Book Demo</Link>
+          </div>
+        </div>
+      </header>
 
-    if (navActions && !document.querySelector('.auth-nav-signin')) {
-      const signInLink = document.createElement('a');
-      signInLink.className = 'button secondary auth-nav-signin';
-      signInLink.href = '/sign-in';
-      signInLink.textContent = 'Sign In';
-      navActions.insertBefore(signInLink, navActions.lastElementChild);
-    }
+      <main>
+        <section className={styles.hero}>
+          <div className={styles.heroGlow} aria-hidden="true" />
+          <div className={styles.heroShell}>
+            <div className={styles.heroCopy}>
+              <SectionEyebrow>The Approval Intelligence Platform</SectionEyebrow>
+              <h1>Every Approval.<br />Every Decision.<br /><em>One Source of Truth.</em></h1>
+              <p>Capture approvals across Slack, Microsoft Teams, email, Jira, Zoom, ServiceNow, and enterprise systems. Validate every decision against company policy and create an audit-ready intelligence layer for your business.</p>
+              <div className={styles.heroActions}>
+                <Link className={styles.primaryButtonLarge} href="/get-started">Book Enterprise Demo <ArrowIcon /></Link>
+                <a className={styles.outlineButtonLarge} href="#platform">Explore Platform <ArrowIcon /></a>
+              </div>
+              <div className={styles.heroTrust}>
+                {['SOC 2 Ready', 'ISO 27001 Aligned', 'GDPR Ready', 'Enterprise Security'].map((item) => (
+                  <span key={item}><i><CheckIcon /></i>{item}</span>
+                ))}
+              </div>
+            </div>
+            <ArchitectureVisual />
+          </div>
+        </section>
 
-    const handleWaitlistSubmit = (event: SubmitEvent) => {
-      event.preventDefault();
-      if (!emailInput || !formMessage) return;
-      const email = emailInput.value.trim();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        formMessage.textContent = 'Enter a valid work email.';
-        formMessage.style.color = '#fecaca';
-        return;
-      }
-      const signups = JSON.parse(localStorage.getItem('approvline_waitlist') || '[]') as string[];
-      if (!signups.includes(email)) signups.push(email);
-      localStorage.setItem('approvline_waitlist', JSON.stringify(signups));
-      emailInput.value = '';
-      formMessage.textContent = "You're on the list. We'll be in touch soon.";
-      formMessage.style.color = '#b7f7c8';
-      window.location.href = '/get-started';
-    };
+        <section className={styles.logoWall} aria-label="Trusted by enterprise teams">
+          <span className={styles.logoWallLabel}>Built for enterprise teams</span>
+          <div>
+            {['Procurement', 'Legal', 'Finance', 'Security', 'Compliance', 'Operations'].map((team) => <strong key={team}>{team}</strong>)}
+          </div>
+        </section>
 
-    const handleClassify = async () => {
-      if (!classifyButton || !classifierResult || !messageInput || !sourceInput) return;
-      const message = messageInput.value.trim();
-      if (!message) {
-        classifierResult.innerHTML = '<b>Add a message first.</b>';
-        return;
-      }
+        <section className={styles.problemSection} id="platform">
+          <div className={styles.sectionShell}>
+            <div className={styles.sectionHeading}>
+              <SectionEyebrow>The Enterprise Blind Spot</SectionEyebrow>
+              <h2>Approvals are everywhere.<br />Accountability is nowhere.</h2>
+              <p>Most enterprise decisions happen outside formal workflows. When scrutiny arrives, teams spend days reconstructing who approved what.</p>
+            </div>
+            <div className={styles.problemSplit}>
+              <div className={styles.disconnectedPanel}>
+                <div className={styles.panelTop}><span>Disconnected activity</span><b>6 sources</b></div>
+                {[
+                  ['Slack', 'Looks good. Move forward.', '12:42'],
+                  ['Teams', 'Finance has signed off.', '13:18'],
+                  ['Email', 'Approved subject to legal review.', '14:06'],
+                  ['Zoom', 'Let us proceed with the vendor.', '15:31'],
+                  ['Jira', 'Status changed to Approved', '16:02'],
+                ].map(([source, message, time], index) => (
+                  <div className={styles.messageFragment} key={source}>
+                    <span className={`${styles.sourceMark} ${styles[['purple', 'indigo', 'red', 'cyan', 'royal'][index]]}`}>{source[0]}</span>
+                    <div><b>{source}</b><p>{message}</p></div><small>{time}</small>
+                  </div>
+                ))}
+                <div className={styles.disconnectedLabel}>No shared context. No audit trail.</div>
+              </div>
+              <div className={styles.unifiedTimeline}>
+                <div className={styles.panelTop}><span>ApprovLine unified timeline</span><b className={styles.liveBadge}>Live</b></div>
+                {[
+                  ['Request created', 'Vendor Alpha onboarding', '09:14'],
+                  ['Finance approved', 'Priya Patel · Microsoft Teams', '13:18'],
+                  ['Legal condition added', 'Contract terms · Outlook', '14:06'],
+                  ['Decision validated', 'PROC-3.2 · 96% confidence', '14:07'],
+                  ['Audit evidence ready', 'Complete approval chain', '14:08'],
+                ].map(([title, note, time], index) => (
+                  <div className={styles.timelineRow} key={title}>
+                    <i className={index === 4 ? styles.timelineDone : ''} />
+                    <div><b>{title}</b><p>{note}</p></div><small>{time}</small>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
 
-      classifyButton.textContent = 'Classifying...';
-      classifyButton.disabled = true;
-      classifierResult.textContent = 'Analyzing message...';
+        <section className={styles.processSection}>
+          <div className={styles.sectionShell}>
+            <div className={styles.centerHeading}>
+              <SectionEyebrow>How Intelligence Is Built</SectionEyebrow>
+              <h2>The Approval Intelligence Platform</h2>
+              <p>One continuous system turns fragmented activity into connected, explainable enterprise intelligence.</p>
+            </div>
+            <div className={styles.processGrid}>
+              {[
+                ['01', 'Capture', 'Collect approvals from communication systems, tickets, meetings, contracts, and documents.'],
+                ['02', 'Understand', 'AI identifies approvals, rejections, conditions, risk, approvers, and policy context.'],
+                ['03', 'Connect', 'Memory Graph links decisions, contracts, vendors, investigations, policies, and evidence.'],
+                ['04', 'Explain', 'Copilot answers questions and produces audit-ready evidence instantly.'],
+              ].map(([number, title, copy]) => (
+                <article key={number}>
+                  <div className={styles.processIcon}><span>{number}</span><i /></div>
+                  <h3>{title}</h3><p>{copy}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
 
-      try {
-        const response = await fetch('/api/classify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, source: sourceInput.value }),
-        });
-        const raw = await response.text();
-        let data: any;
-        try {
-          data = raw ? JSON.parse(raw) : {};
-        } catch {
-          data = { error: raw || 'Unexpected server response' };
-        }
-        if (!response.ok) throw new Error(data.error || 'Classification failed');
-        classifierResult.innerHTML =
-          `<b>Approval detected:</b> ${data.approval_detected ? 'Yes' : 'No'}\n` +
-          `<b>Type:</b> ${data.approval_type}\n` +
-          `<b>Confidence:</b> ${data.confidence}%\n` +
-          `<b>Approver:</b> ${data.approver || 'Unknown'}\n` +
-          `<b>Subject:</b> ${data.subject}\n` +
-          `<b>Department:</b> ${data.department || 'Unknown'}\n` +
-          `<b>Conditions:</b> ${data.conditions || 'None'}\n\n` +
-          `<b>Reasoning:</b> ${data.reasoning}`;
-      } catch (error) {
-        classifierResult.innerHTML =
-          `<b>Demo unavailable.</b>\n${error instanceof Error ? error.message : 'Unknown error'}\n\nAdd ANTHROPIC_API_KEY or OPENAI_API_KEY in Vercel Project Settings > Environment Variables. GitHub Actions secrets are not available to Vercel runtime.`;
-      } finally {
-        classifyButton.textContent = 'Classify Message';
-        classifyButton.disabled = false;
-      }
-    };
+        <section className={styles.systemsSection} id="systems">
+          <div className={styles.sectionShell}>
+            <div className={styles.centerHeading}>
+              <SectionEyebrow>One Connected Operating Layer</SectionEyebrow>
+              <h2>One platform. Six enterprise systems.</h2>
+              <p>Move from isolated approvals to a complete decision intelligence system.</p>
+            </div>
+            <div className={styles.systemGrid}>
+              {systems.map((system) => (
+                <article className={styles.systemCard} key={system.title}>
+                  <ProductMiniVisual type={system.visual} />
+                  <h3>{system.title}</h3>
+                  <p>{system.copy}</p>
+                  <Link href={system.href}>Learn more <ArrowIcon /></Link>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
 
-    waitlistForm?.addEventListener('submit', handleWaitlistSubmit as EventListener);
-    classifyButton?.addEventListener('click', handleClassify);
+        <section className={styles.productProofSection}>
+          <div className={styles.productProofShell}>
+            <DashboardPreview />
+            <div className={styles.productProofCopy}>
+              <SectionEyebrow>Approval Intelligence</SectionEyebrow>
+              <h2>Turn approval activity into business intelligence.</h2>
+              <p>ApprovLine continuously monitors enterprise decision activity and builds a searchable, contextual, and audit-ready approval ledger.</p>
+              <ul>
+                {['Real-time approval capture', 'AI-powered classification', 'Risk and policy validation', 'Complete evidence trail'].map((item) => (
+                  <li key={item}><CheckIcon />{item}</li>
+                ))}
+              </ul>
+              <Link className={styles.outlineButtonLarge} href="/approvals">Explore Approval Intelligence <ArrowIcon /></Link>
+            </div>
+          </div>
+        </section>
 
-    return () => {
-      waitlistForm?.removeEventListener('submit', handleWaitlistSubmit as EventListener);
-      classifyButton?.removeEventListener('click', handleClassify);
-    };
-  }, []);
+        <section className={styles.graphSection}>
+          <div className={styles.sectionShell}>
+            <div className={styles.graphCopy}>
+              <SectionEyebrow>Enterprise Memory Graph</SectionEyebrow>
+              <h2>Every decision connected.</h2>
+              <p>The Memory Graph transforms isolated records into connected enterprise intelligence across vendors, contracts, approvals, policies, investigations, and risks.</p>
+              <div className={styles.graphStats}>
+                <span><strong>29K+</strong>Connected entities</span>
+                <span><strong>84K+</strong>Verified relationships</span>
+                <span><strong>&lt; 1 sec</strong>Evidence retrieval</span>
+              </div>
+              <Link className={styles.textLink} href="/memory">Explore Memory Graph <ArrowIcon /></Link>
+            </div>
+            <div className={styles.largeGraph} aria-label="Connected enterprise decision graph">
+              <span className={styles.largeGraphCenter}>Approval<br />#24-531</span>
+              {[
+                ['Vendor Alpha', 'Vendor'], ['MSA-2026', 'Contract'], ['Sarah J.', 'Approver'],
+                ['PROC-3.2', 'Policy'], ['INV-017', 'Investigation'], ['High', 'Risk'],
+              ].map(([label, type], index) => (
+                <div className={styles.largeGraphNode} key={label} style={{ '--node': index } as React.CSSProperties}>
+                  <i>{type[0]}</i><span>{label}<small>{type}</small></span>
+                </div>
+              ))}
+              <svg viewBox="0 0 600 420" preserveAspectRatio="none" aria-hidden="true">
+                {[0, 1, 2, 3, 4, 5].map((index) => (
+                  <line key={index} x1="300" y1="210" x2={[90, 270, 500, 520, 260, 75][index]} y2={[70, 45, 95, 320, 375, 315][index]} />
+                ))}
+              </svg>
+            </div>
+          </div>
+        </section>
 
-  return <div dangerouslySetInnerHTML={{ __html: landingMarkup }} />;
+        <section className={styles.copilotSection}>
+          <div className={styles.sectionShell}>
+            <div className={styles.centerHeading}>
+              <SectionEyebrow>Evidence, Not Guesswork</SectionEyebrow>
+              <h2>Ask questions. Get evidence.</h2>
+              <p>Copilot works across your approval ledger, policies, investigations, and Memory Graph.</p>
+            </div>
+            <div className={styles.copilotWindow}>
+              <aside>
+                <div className={styles.previewLogo}><BrandMark compact /><span>AI Copilot</span></div>
+                <b>Suggested</b>
+                {['Who approved Vendor Alpha?', 'Show high-risk approvals', 'Which approvals violated policy?', 'Project Phoenix risks'].map((question, index) => (
+                  <span className={index === 0 ? styles.copilotActive : ''} key={question}>{question}</span>
+                ))}
+              </aside>
+              <main>
+                <div className={styles.userQuestion}>Who approved Vendor Alpha and what policy applied?</div>
+                <div className={styles.copilotAnswer}>
+                  <span className={styles.aiAvatar}>A</span>
+                  <div>
+                    <b>Vendor Alpha was approved by Sarah Johnson (Procurement) and Priya Patel (Finance).</b>
+                    <p>The decision was validated against Procurement Policy PROC-3.2. Legal approval remains conditional on the final MSA terms.</p>
+                    <div className={styles.citationRow}>
+                      <span>1 Slack message</span><span>2 Outlook email</span><span>3 PROC-3.2</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.copilotInput}><span>Ask ApprovLine Copilot...</span><b>↑</b></div>
+              </main>
+              <section className={styles.evidenceDrawer}>
+                <span>Verified evidence</span>
+                <strong>3 sources</strong>
+                <div><b>Slack approval</b><small>Sarah Johnson · 14:06</small></div>
+                <div><b>Finance sign-off</b><small>Priya Patel · 14:18</small></div>
+                <div><b>Policy reference</b><small>PROC-3.2 · current</small></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.trustSection}>
+          <div className={styles.sectionShell}>
+            <div className={styles.centerHeading}>
+              <SectionEyebrow>Security Is The Architecture</SectionEyebrow>
+              <h2>Built for enterprise trust.</h2>
+              <p>Security, identity, isolation, and auditability are part of every ApprovLine workflow.</p>
+            </div>
+            <div className={styles.trustGrid}>
+              {trustItems.map(([title, copy], index) => (
+                <article key={title}>
+                  <span className={styles.trustIcon}>{String(index + 1).padStart(2, '0')}</span>
+                  <div><h3>{title}</h3><p>{copy}</p></div>
+                  <b>Verified</b>
+                </article>
+              ))}
+            </div>
+            <div className={styles.trustAction}>
+              <span><i><CheckIcon /></i>Read-only by design</span>
+              <span><i><CheckIcon /></i>Enterprise identity controls</span>
+              <span><i><CheckIcon /></i>Complete auditability</span>
+              <Link href="/trust">Open Security &amp; Trust Center <ArrowIcon /></Link>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.integrationSection}>
+          <div className={styles.sectionShell}>
+            <div className={styles.centerHeading}>
+              <SectionEyebrow>Zero Workflow Migration</SectionEyebrow>
+              <h2>Works with the systems you already use.</h2>
+              <p>Connect your enterprise stack with read-only access and no disruption to existing workflows.</p>
+            </div>
+            <div className={styles.integrationWall}>
+              {[...sources, { name: 'Universal Gateway', mark: 'U', tone: 'violet' }].map((source) => (
+                <div key={source.name}><span className={`${styles.sourceMark} ${styles[source.tone]}`}>{source.mark}</span><b>{source.name}</b><small>Read-only</small></div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.roiSection}>
+          <div className={styles.sectionShell}>
+            <div className={styles.roiHeader}>
+              <div><SectionEyebrow>Executive ROI</SectionEyebrow><h2>From approval activity to business value.</h2></div>
+              <Link className={styles.outlineButtonLarge} href="/analytics">View Executive Analytics <ArrowIcon /></Link>
+            </div>
+            <div className={styles.roiGrid}>
+              {[
+                ['Approvals captured', '24,531', '+12.4%'],
+                ['Missing sign-offs', '312', 'Detected'],
+                ['Policy violations', '128', '-3.2%'],
+                ['Risks identified', '78', '+5.4%'],
+                ['Evidence generated', '18.4K', 'Audit ready'],
+                ['Time saved', '1,240h', 'This quarter'],
+              ].map(([label, value, note], index) => (
+                <article key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small><i style={{ '--bar': `${42 + index * 9}%` } as React.CSSProperties} /></article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.setupSection}>
+          <div className={styles.sectionShell}>
+            <div className={styles.setupCopy}>
+              <SectionEyebrow>Fast Enterprise Deployment</SectionEyebrow>
+              <h2>Live in less than 15 minutes.</h2>
+              <p>No implementation project. No custom engineering. No workflow disruption.</p>
+              <Link className={styles.primaryButtonLarge} href="/get-started">Start Pilot Program <ArrowIcon /></Link>
+            </div>
+            <div className={styles.setupSteps}>
+              {['Connect systems', 'Upload policies', 'Invite your team', 'Capture approvals', 'Generate insights'].map((step, index) => (
+                <div key={step}><span>{index + 1}</span><b>{step}</b><small>{index === 0 ? 'Read-only OAuth' : index === 1 ? 'AI extracts rules' : index === 2 ? 'Role-based access' : index === 3 ? 'Automatic detection' : 'Evidence and ROI'}</small></div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.readinessSection}>
+          <div className={styles.sectionShell}>
+            <div className={styles.centerHeading}>
+              <SectionEyebrow>Operationally Critical By Design</SectionEyebrow>
+              <h2>Built for modern enterprise operations.</h2>
+            </div>
+            <div className={styles.readinessGrid}>
+              {[
+                ['Observability', 'Healthy', '99.99%'], ['Reliability', 'Certified', 'A'], ['Backup Recovery', 'Verified', 'RPO'],
+                ['Security Validation', 'Passing', '100'], ['Identity Management', 'Ready', 'SSO'], ['Pilot Readiness', 'Complete', '10/10'],
+              ].map(([title, status, score]) => (
+                <article key={title}><div><span>{score}</span><i /></div><h3>{title}</h3><p>{status}</p></article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.pricingSection} id="pricing">
+          <div className={styles.sectionShell}>
+            <div className={styles.centerHeading}>
+              <SectionEyebrow>Enterprise Pricing</SectionEyebrow>
+              <h2>Scale approval intelligence with confidence.</h2>
+              <p>Flexible plans built around your systems, approval volume, and operational needs.</p>
+            </div>
+            <div className={styles.pricingGrid}>
+              {pricing.map((plan) => (
+                <article className={plan.featured ? styles.featuredPlan : ''} key={plan.name}>
+                  {plan.featured && <span className={styles.planLabel}>Most Popular</span>}
+                  <h3>{plan.name}</h3><p>{plan.note}</p>
+                  <strong>Custom</strong><small>Contact sales</small>
+                  <ul>{plan.features.map((feature) => <li key={feature}><CheckIcon />{feature}</li>)}</ul>
+                  <Link className={plan.featured ? styles.primaryButtonLarge : styles.outlineButtonLarge} href={plan.href}>{plan.cta} <ArrowIcon /></Link>
+                </article>
+              ))}
+            </div>
+            <p className={styles.pricingNote}>All plans include enterprise-grade security, encryption, tenant isolation, and compliance controls.</p>
+          </div>
+        </section>
+
+        <section className={styles.proofPlaceholder} id="resources">
+          <div className={styles.sectionShell}>
+            <div className={styles.proofIntro}>
+              <SectionEyebrow>Customer Outcomes</SectionEyebrow>
+              <h2>Designed for the teams who carry decision risk.</h2>
+              <p>Legal, security, procurement, finance, compliance, and operations share one verified decision record.</p>
+            </div>
+            <div className={styles.proofCards}>
+              {[
+                ['Procurement', 'Reconstruct vendor approval chains in seconds, not weeks.'],
+                ['Legal', 'Connect contracts, approvals, conditions, and evidence.'],
+                ['Compliance', 'Turn every decision into audit-ready proof.'],
+              ].map(([team, copy]) => <article key={team}><span>Coming next</span><h3>{team} success story</h3><p>{copy}</p></article>)}
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.finalCta} id="company">
+          <div className={styles.finalCtaShell}>
+            <div><SectionEyebrow>The Intelligence Layer For Every Decision</SectionEyebrow><h2>Stop chasing approvals.<br />Start understanding decisions.</h2><p>Turn approval chaos into trusted, actionable enterprise intelligence.</p></div>
+            <div className={styles.finalCtaActions}>
+              <Link className={styles.primaryButtonLarge} href="/get-started">Book Enterprise Demo <ArrowIcon /></Link>
+              <Link className={styles.outlineButtonLarge} href="/get-started">Start Pilot Program <ArrowIcon /></Link>
+              <span><CheckIcon />No credit card required</span><span><CheckIcon />Setup in 15 minutes</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className={styles.footer}>
+        <div className={styles.footerShell}>
+          <div className={styles.footerBrand}>
+            <Link className={styles.brand} href="/"><BrandMark /><span>ApprovLine</span></Link>
+            <p>The Approval Intelligence Platform for modern enterprises.</p>
+            <span>Read-only. Explainable. Audit-ready.</span>
+          </div>
+          <div><h3>Platform</h3><Link href="/approvals">Approval Intelligence</Link><Link href="/playbooks">Playbook AI</Link><Link href="/investigations">Investigation Center</Link><Link href="/memory">Memory Graph</Link><Link href="/copilot">AI Copilot</Link></div>
+          <div><h3>Solutions</h3><a href="#systems">Procurement</a><a href="#systems">Compliance</a><a href="#systems">Legal Operations</a><a href="#systems">Security</a><a href="#systems">Risk Management</a></div>
+          <div><h3>Resources</h3><Link href="/trust">Trust Center</Link><Link href="/trust/compliance">Compliance</Link><Link href="/health">System Health</Link><Link href="/analytics">Executive Analytics</Link><a href="mailto:sales@approvline.com">Contact</a></div>
+          <div><h3>Company</h3><a href="mailto:sales@approvline.com">About</a><a href="mailto:sales@approvline.com">Careers</a><a href="mailto:sales@approvline.com">Partners</a><Link href="/get-started">Book a Demo</Link></div>
+        </div>
+        <div className={styles.footerBottom}><span>© 2026 ApprovLine. All rights reserved.</span><div><a href="#">Privacy Policy</a><a href="#">Terms of Service</a></div></div>
+      </footer>
+    </div>
+  );
 }
