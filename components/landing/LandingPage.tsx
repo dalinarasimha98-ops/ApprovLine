@@ -746,11 +746,11 @@ export function LandingPage() {
             <span>Read-only. Explainable. Audit-ready.</span>
           </div>
           <div><h3>Platform</h3><Link href="/approvals">Approval Intelligence</Link><Link href="/playbooks">Playbook AI</Link><Link href="/investigations">Investigation Center</Link><Link href="/memory">Memory Graph</Link><Link href="/copilot">AI Copilot</Link></div>
-          <div><h3>Solutions</h3><a href="#systems">Legal</a><a href="#systems">Security</a><a href="#systems">Procurement</a><a href="#systems">Finance</a><a href="#systems">Compliance</a><a href="#engineering">Engineering</a><a href="#systems">Operations</a></div>
-          <div><h3>Resources</h3><Link href="/trust">Trust Center</Link><Link href="/trust/compliance">Compliance</Link><Link href="/health">System Health</Link><Link href="/analytics">Executive Analytics</Link><a href="mailto:sales@approvline.com">Contact</a></div>
-          <div><h3>Company</h3><a href="mailto:sales@approvline.com">About</a><a href="mailto:sales@approvline.com">Careers</a><a href="mailto:sales@approvline.com">Partners</a><Link href="/get-started">Book a Demo</Link></div>
+          <div><h3>Solutions</h3><Link href="/solutions/legal">Legal</Link><Link href="/solutions/security">Security</Link><Link href="/solutions/procurement">Procurement</Link><Link href="/solutions/finance">Finance</Link><Link href="/solutions/compliance">Compliance</Link><Link href="/solutions/engineering">Engineering</Link><Link href="/solutions/operations">Operations</Link></div>
+          <div><h3>Resources</h3><Link href="/resources/trust-center">Trust Center</Link><Link href="/resources/compliance">Compliance</Link><Link href="/resources/system-health">System Health</Link><Link href="/resources/executive-analytics">Executive Analytics</Link><Link href="/contact">Contact</Link></div>
+          <div><h3>Company</h3><Link href="/company/about">About</Link><Link href="/company/careers">Careers</Link><Link href="/company/partners">Partners</Link><Link href="/book-demo">Book a Demo</Link></div>
         </div>
-        <div className={styles.footerBottom}><span>© 2026 ApprovLine. All rights reserved.</span><div><a href="#">Privacy Policy</a><a href="#">Terms of Service</a></div></div>
+        <div className={styles.footerBottom}><span>© 2026 ApprovLine. All rights reserved.</span><div><Link href="/resources/privacy">Privacy Policy</Link><Link href="/resources/terms">Terms of Service</Link></div></div>
       </footer>
     </div>
   );
