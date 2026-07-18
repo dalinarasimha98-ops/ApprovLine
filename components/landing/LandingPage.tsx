@@ -1,23 +1,42 @@
 import Link from 'next/link';
 import styles from './LandingPage.module.css';
 
-const sources = [
+const businessSources = [
   { name: 'Slack', mark: 'S', tone: 'purple' },
   { name: 'Microsoft Teams', mark: 'T', tone: 'indigo' },
-  { name: 'Outlook / Email', mark: 'O', tone: 'blue' },
+  { name: 'Outlook', mark: 'O', tone: 'blue' },
   { name: 'Gmail', mark: 'G', tone: 'red' },
   { name: 'Zoom', mark: 'Z', tone: 'cyan' },
+];
+
+const engineeringSources = [
+  { name: 'GitHub', mark: 'GH', tone: 'slate' },
+  { name: 'GitLab', mark: 'GL', tone: 'orange' },
+  { name: 'Azure DevOps', mark: 'AZ', tone: 'blue' },
+  { name: 'Jenkins', mark: 'JK', tone: 'red' },
+  { name: 'Kubernetes', mark: 'K8', tone: 'royal' },
   { name: 'Jira', mark: 'J', tone: 'royal' },
   { name: 'ServiceNow', mark: 'N', tone: 'green' },
-  { name: 'Custom Systems', mark: '+', tone: 'slate' },
 ];
+
+const sources = [...businessSources, ...engineeringSources];
 
 const intelligenceLayers = [
   { name: 'Playbook AI', icon: 'PB' },
   { name: 'Investigation Center', icon: 'IC' },
-  { name: 'Memory Graph', icon: 'MG' },
+  { name: 'Enterprise Memory Graph', icon: 'MG' },
   { name: 'Executive Analytics', icon: 'EA' },
   { name: 'AI Copilot', icon: 'AI' },
+  { name: 'Universal Approval Gateway', icon: 'UG' },
+];
+
+const engineeringUseCases = [
+  ['DA', 'Deployment Approval Intelligence', 'Capture release decisions, sign-offs, conditions, and owners across the deployment lifecycle.'],
+  ['CM', 'Change Management Visibility', 'Connect infrastructure and application changes to the people, evidence, and policies that authorized them.'],
+  ['PR', 'Pull Request Decision Tracking', 'Preserve review approvals, requested changes, merge decisions, and engineering accountability.'],
+  ['IG', 'Infrastructure Governance', 'Create an auditable record for cloud, Kubernetes, network, and privileged infrastructure decisions.'],
+  ['SE', 'Security Exception Tracking', 'Track accepted risk, compensating controls, expiration dates, and required security approvers.'],
+  ['RA', 'Production Release Audit Trail', 'Link release approvals, change tickets, incidents, and deployment evidence in one timeline.'],
 ];
 
 const systems = [
@@ -71,26 +90,41 @@ const trustItems = [
 const pricing = [
   {
     name: 'Starter',
-    note: 'For small teams exploring approval intelligence.',
-    features: ['Core system capture', 'AI approval detection', 'Limited Memory Graph', 'Standard support'],
-    cta: 'Start Pilot',
+    price: '$199',
+    cadence: '/month',
+    note: 'For focused teams building a reliable approval record.',
+    features: ['Up to 10 users', '2 connected systems', 'AI approval classification', 'Searchable approval timeline', 'CSV exports', 'Standard support'],
+    cta: 'Start Free Trial',
     href: '/get-started',
   },
   {
     name: 'Growth',
-    note: 'For organizations operationalizing decision intelligence.',
-    features: ['Full approval capture', 'Advanced AI understanding', 'Investigation Center', 'Priority support'],
+    price: '$499',
+    cadence: '/month',
+    note: 'For organizations operationalizing approval intelligence.',
+    features: ['Up to 50 users', '8 connected systems', 'Playbook AI compliance', 'Investigation Center', 'Executive analytics', 'Priority support'],
     cta: 'Book Demo',
     href: '/get-started',
     featured: true,
   },
   {
     name: 'Enterprise',
-    note: 'For large organizations with complex controls.',
-    features: ['Full AI Copilot', 'Complete Memory Graph', 'Advanced Playbook AI', 'Custom integrations and SLA'],
-    cta: 'Book Enterprise Demo',
-    href: '/get-started',
+    price: 'Custom',
+    cadence: 'Pricing',
+    note: 'For regulated enterprises with complex governance.',
+    features: ['Unlimited users and systems', 'Enterprise Memory Graph', 'Advanced AI Copilot', 'SSO and identity controls', 'Custom retention and integrations', 'Dedicated success and SLA'],
+    cta: 'Contact Sales',
+    href: 'mailto:sales@approvline.com',
   },
+];
+
+const pricingTrust = [
+  'Enterprise-grade encryption',
+  'Tenant isolation',
+  'Complete audit logging',
+  'SOC 2-ready architecture',
+  'No hidden fees',
+  'Cancel anytime for Starter & Growth',
 ];
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
@@ -123,16 +157,26 @@ function CheckIcon() {
 }
 
 function ArchitectureVisual() {
+  const sourceGroups = [
+    { label: 'Business systems', items: businessSources },
+    { label: 'Engineering systems', items: engineeringSources },
+  ];
+
   return (
     <div className={styles.architecture} aria-label="ApprovLine approval intelligence architecture">
       <div className={styles.archGrid} aria-hidden="true" />
       <section className={styles.sourcePanel}>
-        <span className={styles.panelLabel}>Sources</span>
-        {sources.map((source, index) => (
-          <div className={styles.sourceRow} key={source.name} style={{ '--row': index } as React.CSSProperties}>
-            <span className={`${styles.sourceMark} ${styles[source.tone]}`}>{source.mark}</span>
-            <span>{source.name}</span>
-            <i />
+        <span className={styles.panelLabel}>Enterprise Sources</span>
+        {sourceGroups.map((group) => (
+          <div className={styles.sourceGroup} key={group.label}>
+            <b>{group.label}</b>
+            {group.items.map((source) => (
+              <div className={styles.sourceRow} key={source.name}>
+                <span className={`${styles.sourceMark} ${styles[source.tone]}`}>{source.mark}</span>
+                <span>{source.name}</span>
+                <i />
+              </div>
+            ))}
           </div>
         ))}
       </section>
@@ -156,7 +200,7 @@ function ArchitectureVisual() {
         ))}
       </section>
 
-      <svg className={styles.archLines} viewBox="0 0 620 420" preserveAspectRatio="none" aria-hidden="true">
+      <svg className={styles.archLines} viewBox="0 0 620 520" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <linearGradient id="sourceLine" x1="0" x2="1">
             <stop stopColor="#2089ff" />
@@ -167,11 +211,11 @@ function ArchitectureVisual() {
             <stop offset="1" stopColor="#5d8cff" />
           </linearGradient>
         </defs>
-        {[78, 116, 154, 192, 230, 268, 306, 344].map((y, index) => (
-          <path key={`s-${y}`} d={`M144 ${y} C205 ${y}, 190 ${120 + index * 25}, 266 ${120 + index * 25}`} stroke="url(#sourceLine)" />
+        {[56, 86, 116, 146, 176, 236, 266, 296, 326, 356, 386, 416].map((y, index) => (
+          <path key={`s-${y}`} d={`M144 ${y} C210 ${y}, 195 ${160 + index * 18}, 266 ${160 + index * 18}`} stroke="url(#sourceLine)" />
         ))}
-        {[92, 150, 208, 266, 324].map((y, index) => (
-          <path key={`l-${y}`} d={`M354 ${120 + index * 46} C430 ${120 + index * 46}, 410 ${y}, 478 ${y}`} stroke="url(#layerLine)" />
+        {[86, 156, 226, 296, 366, 436].map((y, index) => (
+          <path key={`l-${y}`} d={`M354 ${155 + index * 42} C430 ${155 + index * 42}, 410 ${y}, 478 ${y}`} stroke="url(#layerLine)" />
         ))}
       </svg>
     </div>
@@ -321,7 +365,11 @@ export function LandingPage() {
             <div className={styles.heroCopy}>
               <SectionEyebrow>The Approval Intelligence Platform</SectionEyebrow>
               <h1>Every Approval.<br />Every Decision.<br /><em>One Source of Truth.</em></h1>
-              <p>Capture approvals across Slack, Microsoft Teams, email, Jira, Zoom, ServiceNow, and enterprise systems. Validate every decision against company policy and create an audit-ready intelligence layer for your business.</p>
+              <p>Capture, understand, and explain approvals across business and engineering. ApprovLine connects vendor decisions and contract sign-offs with infrastructure changes, production deployments, pull request reviews, security exceptions, and release approvals in one audit-ready intelligence layer.</p>
+              <div className={styles.heroSignals} aria-label="Approval intelligence coverage">
+                <span><b>Business</b> Vendor, finance, procurement, and contract approvals</span>
+                <span><b>Engineering</b> Deployments, change requests, releases, and architecture reviews</span>
+              </div>
               <div className={styles.heroActions}>
                 <Link className={styles.primaryButtonLarge} href="/get-started">Book Enterprise Demo <ArrowIcon /></Link>
                 <a className={styles.outlineButtonLarge} href="#platform">Explore Platform <ArrowIcon /></a>
@@ -339,7 +387,7 @@ export function LandingPage() {
         <section className={styles.logoWall} aria-label="Trusted by enterprise teams">
           <span className={styles.logoWallLabel}>Built for enterprise teams</span>
           <div>
-            {['Procurement', 'Legal', 'Finance', 'Security', 'Compliance', 'Operations'].map((team) => <strong key={team}>{team}</strong>)}
+            {['Legal', 'Security', 'Procurement', 'Finance', 'Compliance', 'Engineering', 'Operations'].map((team) => <strong key={team}>{team}</strong>)}
           </div>
         </section>
 
@@ -409,6 +457,31 @@ export function LandingPage() {
           </div>
         </section>
 
+        <section className={styles.engineeringSection} id="engineering">
+          <div className={styles.sectionShell}>
+            <div className={styles.engineeringHeader}>
+              <div>
+                <SectionEyebrow>Engineering Approval Intelligence</SectionEyebrow>
+                <h2>Built for modern engineering organizations.</h2>
+              </div>
+              <p>Engineering decisions carry operational, security, and compliance risk. ApprovLine connects the approval evidence behind every production change without forcing teams into a new workflow.</p>
+            </div>
+            <div className={styles.engineeringGrid}>
+              {engineeringUseCases.map(([icon, title, copy], index) => (
+                <article key={title}>
+                  <div className={styles.engineeringCardTop}>
+                    <span>{icon}</span>
+                    <small>{String(index + 1).padStart(2, '0')}</small>
+                  </div>
+                  <h3>{title}</h3>
+                  <p>{copy}</p>
+                  <div className={styles.engineeringEvidence}><i />Evidence connected</div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className={styles.systemsSection} id="systems">
           <div className={styles.sectionShell}>
             <div className={styles.centerHeading}>
@@ -434,8 +507,8 @@ export function LandingPage() {
             <DashboardPreview />
             <div className={styles.productProofCopy}>
               <SectionEyebrow>Approval Intelligence</SectionEyebrow>
-              <h2>Turn approval activity into business intelligence.</h2>
-              <p>ApprovLine continuously monitors enterprise decision activity and builds a searchable, contextual, and audit-ready approval ledger.</p>
+              <h2>Turn approval activity into enterprise intelligence.</h2>
+              <p>ApprovLine continuously monitors business and engineering decision activity and builds a searchable, contextual, and audit-ready approval ledger.</p>
               <ul>
                 {['Real-time approval capture', 'AI-powered classification', 'Risk and policy validation', 'Complete evidence trail'].map((item) => (
                   <li key={item}><CheckIcon />{item}</li>
@@ -624,13 +697,15 @@ export function LandingPage() {
                 <article className={plan.featured ? styles.featuredPlan : ''} key={plan.name}>
                   {plan.featured && <span className={styles.planLabel}>Most Popular</span>}
                   <h3>{plan.name}</h3><p>{plan.note}</p>
-                  <strong>Custom</strong><small>Contact sales</small>
+                  <div className={styles.planPrice}><strong>{plan.price}</strong><small>{plan.cadence}</small></div>
                   <ul>{plan.features.map((feature) => <li key={feature}><CheckIcon />{feature}</li>)}</ul>
                   <Link className={plan.featured ? styles.primaryButtonLarge : styles.outlineButtonLarge} href={plan.href}>{plan.cta} <ArrowIcon /></Link>
                 </article>
               ))}
             </div>
-            <p className={styles.pricingNote}>All plans include enterprise-grade security, encryption, tenant isolation, and compliance controls.</p>
+            <div className={styles.pricingTrust} aria-label="Pricing trust and security">
+              {pricingTrust.map((item) => <span key={item}><CheckIcon />{item}</span>)}
+            </div>
           </div>
         </section>
 
@@ -639,14 +714,14 @@ export function LandingPage() {
             <div className={styles.proofIntro}>
               <SectionEyebrow>Customer Outcomes</SectionEyebrow>
               <h2>Designed for the teams who carry decision risk.</h2>
-              <p>Legal, security, procurement, finance, compliance, and operations share one verified decision record.</p>
+              <p>Legal, Security, Procurement, Finance, Compliance, Engineering, and Operations share one verified decision record.</p>
             </div>
             <div className={styles.proofCards}>
               {[
                 ['Procurement', 'Reconstruct vendor approval chains in seconds, not weeks.'],
-                ['Legal', 'Connect contracts, approvals, conditions, and evidence.'],
+                ['Engineering', 'Connect deployments, change requests, reviews, and release evidence.'],
                 ['Compliance', 'Turn every decision into audit-ready proof.'],
-              ].map(([team, copy]) => <article key={team}><span>Coming next</span><h3>{team} success story</h3><p>{copy}</p></article>)}
+              ].map(([team, copy]) => <article key={team}><span>Built for enterprise</span><h3>{team} intelligence</h3><p>{copy}</p></article>)}
             </div>
           </div>
         </section>
@@ -671,7 +746,7 @@ export function LandingPage() {
             <span>Read-only. Explainable. Audit-ready.</span>
           </div>
           <div><h3>Platform</h3><Link href="/approvals">Approval Intelligence</Link><Link href="/playbooks">Playbook AI</Link><Link href="/investigations">Investigation Center</Link><Link href="/memory">Memory Graph</Link><Link href="/copilot">AI Copilot</Link></div>
-          <div><h3>Solutions</h3><a href="#systems">Procurement</a><a href="#systems">Compliance</a><a href="#systems">Legal Operations</a><a href="#systems">Security</a><a href="#systems">Risk Management</a></div>
+          <div><h3>Solutions</h3><a href="#systems">Legal</a><a href="#systems">Security</a><a href="#systems">Procurement</a><a href="#systems">Finance</a><a href="#systems">Compliance</a><a href="#engineering">Engineering</a><a href="#systems">Operations</a></div>
           <div><h3>Resources</h3><Link href="/trust">Trust Center</Link><Link href="/trust/compliance">Compliance</Link><Link href="/health">System Health</Link><Link href="/analytics">Executive Analytics</Link><a href="mailto:sales@approvline.com">Contact</a></div>
           <div><h3>Company</h3><a href="mailto:sales@approvline.com">About</a><a href="mailto:sales@approvline.com">Careers</a><a href="mailto:sales@approvline.com">Partners</a><Link href="/get-started">Book a Demo</Link></div>
         </div>
