@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { requireRole } from '@/lib/auth';
 import { measure } from '@/lib/performance';
 import { prisma } from '@/lib/prisma';
-import { syncAllOutlookIntegrations, syncOutlookIntegration } from '@/services/integrations/outlook';
+import { syncOutlookIntegration } from '@/services/integrations/outlook';
 
 async function readSyncInput(request: NextRequest) {
   const contentType = request.headers.get('content-type') ?? '';
@@ -113,7 +113,18 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return measure('GET /api/integrations/outlook/sync', async () => {
-    await requireRole('ADMIN');
-    return NextResponse.json({ ok: true, results: await syncAllOutlookIntegrations() });
+    const tenant = await requireRole('ADMIN');
+    const integrations = await prisma.integration.findMany({
+      where: {
+        organizationId: tenant.organization.id,
+        provider: 'OUTLOOK',
+        status: { in: ['CONNECTED', 'SYNCING'] },
+      },
+    });
+    const results = [];
+    for (const integration of integrations) {
+      results.push({ integrationId: integration.id, result: await syncOutlookIntegration(integration) });
+    }
+    return NextResponse.json({ ok: true, results });
   });
 }

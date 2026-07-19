@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimit } from '@/lib/rate-limit';
+import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
+import { authorizeGatewayRequest } from '@/lib/gateway-auth';
 import { ingestGatewayArtifact } from '@/services/gateway/universalGateway';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   return measure('POST /api/v1/transcripts/intelligence', async () => {
+    const authorization = authorizeGatewayRequest(request);
+    if (!authorization.ok) {
+      return NextResponse.json({ error: authorization.error }, { status: authorization.status });
+    }
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const limit = rateLimit(`gateway-transcript:${ip}`, 60, 60_000);
+    const limit = await distributedRateLimit(`gateway-transcript:${ip}`, 60, 60_000);
     if (!limit.allowed) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
@@ -25,6 +30,9 @@ export async function POST(request: NextRequest) {
       sourceSystem = String(form.get('source_system') ?? sourceSystem);
       tenantSlug = form.get('tenant_slug') ? String(form.get('tenant_slug')) : undefined;
       if (file instanceof File) {
+        if (file.size > 10 * 1024 * 1024) {
+          return NextResponse.json({ error: 'Transcript must be 10 MB or smaller.' }, { status: 413 });
+        }
         name = file.name;
         content = await file.text();
       } else {

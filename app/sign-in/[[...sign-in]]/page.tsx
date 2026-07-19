@@ -4,6 +4,24 @@ import { AuthShell } from '@/components/auth/AuthShell';
 import { clerkAuthAppearance } from '@/components/auth/clerkAppearance';
 
 export default function SignInPage() {
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return (
+      <AuthShell
+        cardTitle="Authentication is not configured"
+        cardSubtitle="Add NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to this environment before signing in."
+        footer={
+          <Link href="/" className="auth-link">
+            Return to ApprovLine
+          </Link>
+        }
+      >
+        <div className="auth-configuration-notice" role="alert">
+          Sign-in is temporarily unavailable in this environment.
+        </div>
+      </AuthShell>
+    );
+  }
+
   return (
     <AuthShell
       cardTitle="Sign in"

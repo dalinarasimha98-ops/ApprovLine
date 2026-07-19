@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
 import { getCurrentTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { rateLimit } from '@/lib/rate-limit';
+import { distributedRateLimit } from '@/lib/rate-limit';
 
 const searchSchema = z.object({
   q: z.string().optional(),
@@ -27,7 +27,7 @@ function contains(value: string | undefined) {
 
 export async function GET(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  const limit = rateLimit(`approval-search:${ip}`, 120, 60_000);
+  const limit = await distributedRateLimit(`approval-search:${ip}`, 120, 60_000);
   if (!limit.allowed) {
     return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
   }

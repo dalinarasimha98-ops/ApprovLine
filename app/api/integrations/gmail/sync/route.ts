@@ -3,7 +3,7 @@ import { requireRole } from '@/lib/auth';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { measure } from '@/lib/performance';
-import { syncAllGmailIntegrations, syncGmailIntegration } from '@/services/integrations/gmail';
+import { syncGmailIntegration } from '@/services/integrations/gmail';
 
 async function readSyncInput(request: NextRequest) {
   const contentType = request.headers.get('content-type') ?? '';
@@ -106,7 +106,18 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return measure('GET /api/integrations/gmail/sync', async () => {
-  await requireRole('ADMIN');
-  return NextResponse.json({ ok: true, results: await syncAllGmailIntegrations() });
+  const tenant = await requireRole('ADMIN');
+  const integrations = await prisma.integration.findMany({
+    where: {
+      organizationId: tenant.organization.id,
+      provider: 'GMAIL',
+      status: { in: ['CONNECTED', 'SYNCING'] },
+    },
+  });
+  const results = [];
+  for (const integration of integrations) {
+    results.push({ integrationId: integration.id, result: await syncGmailIntegration(integration) });
+  }
+  return NextResponse.json({ ok: true, results });
   });
 }

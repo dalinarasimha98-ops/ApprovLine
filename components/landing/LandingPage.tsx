@@ -104,7 +104,7 @@ const pricing = [
     note: 'For organizations operationalizing approval intelligence.',
     features: ['Up to 50 users', '8 connected systems', 'Playbook AI compliance', 'Investigation Center', 'Executive analytics', 'Priority support'],
     cta: 'Book Demo',
-    href: '/get-started',
+    href: '/book-demo',
     featured: true,
   },
   {
@@ -353,7 +353,24 @@ export function LandingPage() {
           <div className={styles.navActions}>
             <Link className={styles.signIn} href="/sign-in">Sign In</Link>
             <Link className={styles.outlineButton} href="/get-started">Start Pilot</Link>
-            <Link className={styles.primaryButton} href="/get-started">Book Demo</Link>
+            <Link className={styles.primaryButton} href="/book-demo">Book Demo</Link>
+            <details className={styles.mobileMenu}>
+              <summary aria-label="Open navigation menu">
+                <span aria-hidden="true" />
+                <span aria-hidden="true" />
+                <span aria-hidden="true" />
+              </summary>
+              <nav aria-label="Mobile navigation">
+                <a href="#platform">Platform</a>
+                <a href="#systems">Solutions</a>
+                <a href="#resources">Resources</a>
+                <a href="#company">Company</a>
+                <a href="#pricing">Pricing</a>
+                <Link href="/sign-in">Sign In</Link>
+                <Link href="/get-started">Start Pilot</Link>
+                <Link href="/book-demo">Book Demo</Link>
+              </nav>
+            </details>
           </div>
         </div>
       </header>
@@ -371,7 +388,7 @@ export function LandingPage() {
                 <span><b>Engineering</b> Deployments, change requests, releases, and architecture reviews</span>
               </div>
               <div className={styles.heroActions}>
-                <Link className={styles.primaryButtonLarge} href="/get-started">Book Enterprise Demo <ArrowIcon /></Link>
+                <Link className={styles.primaryButtonLarge} href="/book-demo">Book Enterprise Demo <ArrowIcon /></Link>
                 <a className={styles.outlineButtonLarge} href="#platform">Explore Platform <ArrowIcon /></a>
               </div>
               <div className={styles.heroTrust}>
@@ -730,7 +747,7 @@ export function LandingPage() {
           <div className={styles.finalCtaShell}>
             <div><SectionEyebrow>The Intelligence Layer For Every Decision</SectionEyebrow><h2>Stop chasing approvals.<br />Start understanding decisions.</h2><p>Turn approval chaos into trusted, actionable enterprise intelligence.</p></div>
             <div className={styles.finalCtaActions}>
-              <Link className={styles.primaryButtonLarge} href="/get-started">Book Enterprise Demo <ArrowIcon /></Link>
+              <Link className={styles.primaryButtonLarge} href="/book-demo">Book Enterprise Demo <ArrowIcon /></Link>
               <Link className={styles.outlineButtonLarge} href="/get-started">Start Pilot Program <ArrowIcon /></Link>
               <span><CheckIcon />No credit card required</span><span><CheckIcon />Setup in 15 minutes</span>
             </div>

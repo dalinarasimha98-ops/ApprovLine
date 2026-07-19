@@ -5,7 +5,7 @@ import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
 import { writeAuditLog } from '@/services/audit';
-import { buildReadinessReport, type ReadinessStatus } from '@/services/readiness';
+import { buildReadinessReport } from '@/services/readiness';
 
 export const dynamic = 'force-dynamic';
 
@@ -159,12 +159,6 @@ function toneForLabel(label: string): Tone {
   if (['In Progress', 'Future', 'Missing', 'Needs Review'].includes(label)) return 'warning';
   if (['Blocked', 'Error', 'Failed'].includes(label)) return 'error';
   return 'neutral';
-}
-
-function toneForReadiness(status: ReadinessStatus): Tone {
-  if (status === 'ok') return 'ok';
-  if (status === 'error') return 'error';
-  return 'warning';
 }
 
 function statusClass(tone: Tone) {

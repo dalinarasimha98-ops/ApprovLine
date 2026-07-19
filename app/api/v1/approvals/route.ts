@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { env } from '@/config/env';
-import { rateLimit } from '@/lib/rate-limit';
+import { authorizeGatewayRequest } from '@/lib/gateway-auth';
+import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import { ingestUniversalApproval, universalApprovalSchema } from '@/services/gateway/universalGateway';
 
@@ -9,18 +9,14 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   return measure('POST /api/v1/approvals', async () => {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const limit = rateLimit(`gateway-api:${ip}`, 120, 60_000);
+    const limit = await distributedRateLimit(`gateway-api:${ip}`, 120, 60_000);
     if (!limit.allowed) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    if (env.UNIVERSAL_GATEWAY_API_KEY) {
-      const authHeader = request.headers.get('authorization') ?? '';
-      const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
-      const apiKey = request.headers.get('x-api-key') ?? bearerToken;
-      if (!apiKey || apiKey !== env.UNIVERSAL_GATEWAY_API_KEY) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    const authorization = authorizeGatewayRequest(request);
+    if (!authorization.ok) {
+      return NextResponse.json({ error: authorization.error }, { status: authorization.status });
     }
 
     const parsed = universalApprovalSchema.safeParse(await request.json().catch(() => null));

@@ -54,6 +54,38 @@
 .mainNav a:hover { color: #fff; }
 .mainNav a span { color: #72819b; font-size: 12px; }
 .navActions { display: flex; align-items: center; gap: 10px; }
+.mobileMenu { position: relative; display: none; }
+.mobileMenu summary {
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(185, 198, 225, 0.38);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+  list-style: none;
+}
+.mobileMenu summary::-webkit-details-marker { display: none; }
+.mobileMenu summary > span { display: block; width: 17px; height: 2px; border-radius: 2px; background: #e8edfa; }
+.mobileMenu[open] summary { border-color: rgba(153, 169, 255, 0.72); background: rgba(91, 111, 255, 0.12); }
+.mobileMenu nav {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  display: grid;
+  width: min(320px, calc(100vw - 28px));
+  padding: 10px;
+  border: 1px solid rgba(138, 162, 204, 0.28);
+  border-radius: 8px;
+  background: rgba(5, 14, 29, 0.98);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+}
+.mobileMenu nav a { min-height: 44px; padding: 12px 14px; border-radius: 5px; color: #dfe6f3; font-size: 13px; font-weight: 700; }
+.mobileMenu nav a:hover, .mobileMenu nav a:focus-visible { color: #fff; background: rgba(91, 111, 255, 0.14); outline: none; }
+.mobileMenu nav a:nth-last-child(-n+2) { margin-top: 5px; text-align: center; background: rgba(91, 111, 255, 0.14); }
 .signIn { padding: 10px 13px; color: #d9e0ed; font-size: 13px; font-weight: 650; }
 .primaryButton, .outlineButton, .primaryButtonLarge, .outlineButtonLarge {
   display: inline-flex;
@@ -243,6 +275,8 @@
 
 @media (max-width: 1024px) {
   .mainNav { display: none; }
+  .navActions > .signIn, .navActions > .outlineButton, .navActions > .primaryButton { display: none; }
+  .mobileMenu { display: block; }
   .hero { min-height: auto; }
   .heroShell { grid-template-columns: 1fr; padding-top: 80px; }
   .heroCopy { max-width: 760px; }
@@ -270,8 +304,6 @@
   .navShell, .heroShell, .sectionShell, .productProofShell, .finalCtaShell, .footerShell, .footerBottom { width: min(100% - 28px, 640px); }
   .siteHeader { height: 62px; }
   .brand { font-size: 17px; }.brandMark { width: 27px; height: 27px; }
-  .signIn, .outlineButton { display: none; }
-  .navActions .primaryButton { min-height: 36px; padding: 0 13px; font-size: 11px; }
   .heroShell { padding: 62px 0 42px; }
   .hero h1 { font-size: clamp(42px, 12vw, 58px); }
   .heroCopy > p:not(.sectionEyebrow) { font-size: 15px; }

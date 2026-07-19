@@ -1,5 +1,6 @@
 import type { CustomerAccount, CustomerHealth, CustomerIntegrationStatus, CustomerSeatAllocation, FounderManagedUser } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { csvCell } from '@/lib/csv';
 
 export type PilotStatus = 'Prospect' | 'Demo Scheduled' | 'Pilot Active' | 'Pilot At Risk' | 'Pilot Completed' | 'Converted' | 'Lost';
 export type PilotHealthLabel = 'Healthy' | 'Needs Attention' | 'At Risk' | 'Critical';
@@ -400,10 +401,6 @@ export async function getFounderPilotProfile(customerAccountId: string): Promise
   } catch (error) {
     return { data: null, migrationRequired: missingFounderStorage(error), safeError: safeError(error) };
   }
-}
-
-function csvCell(value: unknown) {
-  return `"${String(value ?? '').replaceAll('"', '""')}"`;
 }
 
 function escapePdfText(value: string) {

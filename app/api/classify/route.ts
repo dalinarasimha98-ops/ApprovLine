@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentTenant } from '@/lib/auth';
-import { rateLimit } from '@/lib/rate-limit';
+import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import { classifyWithOpenAI } from '@/services/classifier/openai';
 import { persistClassificationResult } from '@/services/classifier/persistence';
@@ -24,7 +24,7 @@ const classifyRequestSchema = z.object({
 export async function POST(request: NextRequest) {
   return measure('POST /api/classify', async () => {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  const limit = rateLimit(`classify:${ip}`, 30, 60_000);
+  const limit = await distributedRateLimit(`classify:${ip}`, 30, 60_000);
   if (!limit.allowed) {
     return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
   }

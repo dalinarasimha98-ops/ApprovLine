@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { csvCell } from '@/lib/csv';
 
 type NamedCount = {
   name: string;
@@ -293,7 +294,7 @@ export function analyticsCsv(report: ExecutiveAnalytics) {
     ...report.playbookAi.mostReferencedPolicies.map((item) => [`Referenced Policy: ${item.name}`, String(item.count)]),
   ];
 
-  return rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(',')).join('\n');
+  return rows.map((row) => row.map(csvCell).join(',')).join('\n');
 }
 
 function escapePdfText(value: string) {
