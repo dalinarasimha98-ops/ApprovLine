@@ -111,7 +111,22 @@ export function validateDatabaseUrl(): DatabaseUrlValidation {
 export function normalizeDatabaseUrlForPrisma() {
   const validation = validateDatabaseUrl();
   if (validation.valid && validation.normalized) {
-    process.env.DATABASE_URL = validation.normalized;
+    let normalized = validation.normalized;
+
+    // Vercel functions must use Supabase's transaction pooler. Session mode
+    // has a small shared client cap and can exhaust it during concurrent SSR.
+    if (process.env.VERCEL === '1') {
+      const url = new URL(normalized);
+      if (url.hostname.endsWith('.pooler.supabase.com')) {
+        url.port = '6543';
+        url.searchParams.set('pgbouncer', 'true');
+        url.searchParams.set('connection_limit', '1');
+        url.searchParams.set('sslmode', 'require');
+        normalized = url.toString();
+      }
+    }
+
+    process.env.DATABASE_URL = normalized;
   }
   return validation;
 }
