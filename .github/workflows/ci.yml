@@ -11,8 +11,6 @@ jobs:
     timeout-minutes: 20
     env:
       DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/approvline
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci
-      CLERK_SECRET_KEY: sk_test_ci
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     steps:
       - uses: actions/checkout@v4
