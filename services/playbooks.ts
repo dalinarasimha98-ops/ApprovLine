@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 import OpenAI from "openai";
 import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/config/env";
 import type { ApprovalRecord, PlaybookRule, Prisma } from "@prisma/client";
@@ -73,6 +72,7 @@ export async function extractPlaybookText(file: File) {
   }
 
   if (extension === "pdf") {
+    const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: buffer });
     try {
       const result = await parser.getText();

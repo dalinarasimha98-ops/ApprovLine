@@ -55,4 +55,26 @@ assert.match(migration, /CREATE TABLE IF NOT EXISTS "DeadLetterJob"/);
 assert.match(migration, /CREATE TABLE IF NOT EXISTS "OutboxEvent"/);
 assert.match(migration, /CREATE TABLE IF NOT EXISTS "WorkerHeartbeat"/);
 
-console.log('Validated Week 3 reliability hardening wiring, registry coverage, founder operations sourcing, and migration presence.');
+const repairMigration = read('prisma/migrations/20260719170000_repair_reliability_columns/migration.sql');
+for (const table of ['MessageSource', 'ApprovalRecord', 'ClassifierResult', 'Event']) {
+  assert.match(repairMigration, new RegExp(`ALTER TABLE "${table}"`));
+}
+for (const column of [
+  'duplicateDisposition',
+  'duplicateReason',
+  'sourceSystem',
+  'sourceRecordId',
+  'contentHash',
+  'correlationId',
+  'idempotencyKey',
+]) {
+  assert.match(repairMigration, new RegExp(`ADD COLUMN IF NOT EXISTS "${column}"`));
+}
+assert.match(repairMigration, /MessageSource_organizationId_provider_externalId_key/);
+assert.match(repairMigration, /ClassifierResult_organizationId_idempotencyKey_key/);
+
+const playbooks = read('services/playbooks.ts');
+assert.doesNotMatch(playbooks, /^import .* from ["']pdf-parse["'];/m);
+assert.match(playbooks, /await import\(["']pdf-parse["']\)/);
+
+console.log('Validated Week 3 reliability hardening wiring, schema-drift repair, and lazy server-side PDF parsing.');
