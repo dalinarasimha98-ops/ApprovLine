@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
+import { getSafeEvidenceUrl } from '@/lib/evidence-links';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
 
@@ -30,6 +31,28 @@ function InfoCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function ApprovalLoadError({ id }: { id: string }) {
+  return (
+    <DashboardShell>
+      <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">Approval temporarily unavailable</p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950">We could not load this approval yet</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          The approval exists in your workspace, but its evidence lookup did not complete in time. Retry without losing your place.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <PendingLink href={`/approvals/${id}`} pendingText="Retrying..." className="inline-flex h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white">
+            Retry approval
+          </PendingLink>
+          <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700">
+            Back to approvals
+          </PendingLink>
+        </div>
+      </section>
+    </DashboardShell>
+  );
+}
+
 export default async function ApprovalDetailPage({ params }: ApprovalDetailPageProps) {
   const { id } = await params;
   const tenant = await getDashboardTenant(4000);
@@ -37,7 +60,7 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization) redirect('/dashboard');
 
-  const approval = await withTimeout(
+  const approvalResult = await withTimeout(
     'approval detail lookup',
     prisma.approvalRecord.findFirst({
       where: { id, organizationId: tenant.organization.id },
@@ -48,10 +71,19 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
         complianceEvaluations: { include: { rule: true }, orderBy: { createdAt: 'desc' }, take: 3 },
       },
     }),
-    1200,
-  ).catch(() => null);
+    5000,
+  ).then(
+    (approval) => ({ status: 'ok' as const, approval }),
+    () => ({ status: 'error' as const, approval: null }),
+  );
+
+  if (approvalResult.status === 'error') return <ApprovalLoadError id={id} />;
+
+  const approval = approvalResult.approval;
 
   if (!approval) notFound();
+
+  const evidenceUrl = getSafeEvidenceUrl(approval.sourceLink);
 
   return (
     <DashboardShell>
@@ -107,10 +139,14 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
                 ) : (
                   <p className="rounded-2xl border border-dashed border-slate-200 p-4 font-semibold text-slate-500">No evidence snippet captured yet.</p>
                 )}
-                {approval.sourceLink ? (
-                  <a href={approval.sourceLink} className="inline-flex w-fit min-h-0 h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+                {evidenceUrl ? (
+                  <a href={evidenceUrl} target="_blank" rel="noreferrer" className="inline-flex w-fit min-h-0 h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
                     Open original source
                   </a>
+                ) : approval.sourceLink ? (
+                  <p className="w-fit rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800">
+                    Demo evidence is stored in ApprovLine; no external source page is available.
+                  </p>
                 ) : null}
               </div>
             </div>

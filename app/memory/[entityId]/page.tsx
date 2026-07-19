@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
+import { getSafeEvidenceUrl } from '@/lib/evidence-links';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
 import { getMemoryEntityProfile, memoryEntityLabels } from '@/services/memory';
@@ -142,7 +143,10 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#2155d9]">Timeline View</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Chronological history</h2>
           <div className="mt-6 grid gap-4">
-            {entity.timelineEvents.map((event) => (
+            {entity.timelineEvents.map((event) => {
+              const evidenceUrl = getSafeEvidenceUrl(event.sourceLink);
+
+              return (
               <div key={event.id} className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[160px_1fr]">
                 <div>
                   <p className="text-sm font-black text-slate-950">{dateText(event.occurredAt)}</p>
@@ -151,14 +155,15 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
                 <div>
                   <p className="text-sm font-black text-slate-950">{event.title}</p>
                   {event.description ? <p className="mt-1 text-sm leading-6 text-slate-600">{event.description}</p> : null}
-                  {event.sourceLink ? (
-                    <a href={event.sourceLink} className="mt-2 inline-flex text-xs font-black uppercase tracking-wide text-[#2155d9]">
+                  {evidenceUrl ? (
+                    <a href={evidenceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-black uppercase tracking-wide text-[#2155d9]">
                       Open evidence
                     </a>
                   ) : null}
                 </div>
               </div>
-            ))}
+              );
+            })}
             {entity.timelineEvents.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500">Timeline events will appear as approvals, investigations, policies, and evidence are linked.</p>
             ) : null}
