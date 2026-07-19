@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { csvCell } from '@/lib/csv';
 
 function contains(value: string | null) {
   return value ? { contains: value, mode: 'insensitive' as const } : undefined;
@@ -75,6 +76,7 @@ export async function GET(request: NextRequest) {
     where,
     orderBy: { createdAt: 'desc' },
     include: { messageSource: true },
+    take: 10_000,
   });
 
   if (format === 'json') {
@@ -154,7 +156,7 @@ export async function GET(request: NextRequest) {
   }
 
   const csv = [header, ...rows]
-    .map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(','))
+    .map((row) => row.map(csvCell).join(','))
     .join('\n');
 
   return new NextResponse(csv, {

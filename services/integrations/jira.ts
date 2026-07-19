@@ -137,9 +137,13 @@ export function verifyJiraState(state: string): JiraStatePayload | null {
   if (actual.length !== expectedBuffer.length) return null;
   if (!crypto.timingSafeEqual(actual, expectedBuffer)) return null;
 
-  const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as JiraStatePayload;
-  if (Date.now() - payload.createdAt > 10 * 60_000) return null;
-  return payload;
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as JiraStatePayload;
+    if (!Number.isFinite(payload.createdAt) || Date.now() - payload.createdAt > 10 * 60_000) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 export function jiraRedirectUri(requestUrl: string) {

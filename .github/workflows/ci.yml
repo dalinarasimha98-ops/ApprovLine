@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/approvline
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ci
+      CLERK_SECRET_KEY: sk_test_ci
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run check
+      - run: npm run test:production-hardening
+      - run: npm run test:founder
+      - run: npm run test:reliability
+      - run: npm run test:tenant-isolation
+      - run: npm run test:certification
+      - run: npm run build
+      - run: npm audit --audit-level=high

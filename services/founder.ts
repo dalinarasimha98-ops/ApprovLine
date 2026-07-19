@@ -2,6 +2,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
+import { csvCell } from '@/lib/csv';
 
 export type FounderRole = 'SUPER_ADMIN' | 'FOUNDER_ADMIN' | 'SUPPORT_ADMIN';
 
@@ -879,7 +880,7 @@ export async function exportFounderAuditLogs(filters: FounderAuditFilters = {}, 
   const header = ['createdAt', 'action', 'actorEmail', 'actorRole', 'targetType', 'targetId'];
   const rows = result.data.map((log) =>
     [log.createdAt.toISOString(), log.action, log.actorEmail ?? '', log.actorRole ?? '', log.targetType, log.targetId ?? '']
-      .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+      .map(csvCell)
       .join(','),
   );
   return [header.join(','), ...rows].join('\n');

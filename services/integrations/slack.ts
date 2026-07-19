@@ -34,13 +34,17 @@ export function verifySlackState(state: string) {
   if (signatureBuffer.length !== expectedBuffer.length) return null;
   if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) return null;
 
-  const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as {
-    organizationId: string;
-    userId: string;
-    createdAt: number;
-  };
-  if (Date.now() - payload.createdAt > 10 * 60_000) return null;
-  return payload;
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as {
+      organizationId: string;
+      userId: string;
+      createdAt: number;
+    };
+    if (!Number.isFinite(payload.createdAt) || Date.now() - payload.createdAt > 10 * 60_000) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 export function slackRedirectUri(requestUrl: string) {

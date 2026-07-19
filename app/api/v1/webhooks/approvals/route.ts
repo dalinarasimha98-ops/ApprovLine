@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { env } from '@/config/env';
-import { rateLimit } from '@/lib/rate-limit';
+import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import {
   ingestUniversalApproval,
@@ -14,12 +14,15 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   return measure('POST /api/v1/webhooks/approvals', async () => {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const limit = rateLimit(`gateway-webhook:${ip}`, 240, 60_000);
+    const limit = await distributedRateLimit(`gateway-webhook:${ip}`, 240, 60_000);
     if (!limit.allowed) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
     const rawBody = await request.text();
+    if (!env.UNIVERSAL_GATEWAY_WEBHOOK_SECRET && process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Universal Gateway webhook is not configured.' }, { status: 503 });
+    }
     if (env.UNIVERSAL_GATEWAY_WEBHOOK_SECRET) {
       const signature = request.headers.get('x-approvline-signature');
       const verified = verifyWebhookSignature({

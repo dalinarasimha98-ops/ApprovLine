@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { requireRole } from '@/lib/auth';
 import { measure } from '@/lib/performance';
 import { prisma } from '@/lib/prisma';
-import { syncAllTeamsIntegrations, syncTeamsIntegration } from '@/services/integrations/teams';
+import { syncTeamsIntegration } from '@/services/integrations/teams';
 
 async function readSyncInput(request: NextRequest) {
   const contentType = request.headers.get('content-type') ?? '';
@@ -115,7 +115,18 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return measure('GET /api/integrations/teams/sync', async () => {
-    await requireRole('ADMIN');
-    return NextResponse.json({ ok: true, results: await syncAllTeamsIntegrations() });
+    const tenant = await requireRole('ADMIN');
+    const integrations = await prisma.integration.findMany({
+      where: {
+        organizationId: tenant.organization.id,
+        provider: 'MICROSOFT_TEAMS',
+        status: { in: ['CONNECTED', 'SYNCING'] },
+      },
+    });
+    const results = [];
+    for (const integration of integrations) {
+      results.push({ integrationId: integration.id, result: await syncTeamsIntegration(integration) });
+    }
+    return NextResponse.json({ ok: true, results });
   });
 }

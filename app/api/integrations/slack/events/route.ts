@@ -18,6 +18,10 @@ function eventSummary(payload: Record<string, unknown>, event: Record<string, un
   };
 }
 
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
 async function writeSlackEvent(input: {
   organizationId: string;
   integrationId?: string;
@@ -53,7 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid Slack signature' }, { status: 401 });
   }
 
-  let payload: Record<string, any>;
+  let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(rawBody);
   } catch {
@@ -64,8 +68,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ challenge: payload.challenge });
   }
 
-  const event = payload.event ?? {};
-  const teamId = payload.team_id ?? payload.authorizations?.[0]?.team_id ?? event.team;
+  const event = (payload.event && typeof payload.event === 'object' ? payload.event : {}) as Record<string, unknown>;
+  const authorizations = Array.isArray(payload.authorizations)
+    ? (payload.authorizations as Array<{ team_id?: string }>)
+    : [];
+  const teamId = optionalString(payload.team_id) ?? authorizations[0]?.team_id ?? optionalString(event.team);
   let integration;
   try {
     integration = await resolveIntegrationTenant('SLACK', teamId);
@@ -87,7 +94,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (
-    !event.text ||
+    typeof event.text !== 'string' || !event.text ||
     event.bot_id ||
     event.bot_profile ||
     event.subtype === 'bot_message' ||
@@ -107,8 +114,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, skipped: true });
   }
 
-  const channel = event.channel;
-  const messageTs = event.ts;
+  const channel = optionalString(event.channel);
+  const messageTs = optionalString(event.ts);
+  const eventId = optionalString(payload.event_id);
+  const clientMessageId = optionalString(event.client_msg_id);
+  const userId = optionalString(event.user);
+  const userProfile = event.user_profile && typeof event.user_profile === 'object'
+    ? event.user_profile as Record<string, unknown>
+    : {};
+  const senderName = optionalString(userProfile.real_name) ?? userId;
+  const senderEmail = optionalString(userProfile.email);
   const sourceLink = slackMessageLink(teamId, channel, messageTs);
 
   await prisma.integration.update({
@@ -118,7 +133,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         ...(integration.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {}),
         lastEventAt: new Date().toISOString(),
-        lastSlackEventId: payload.event_id,
+        lastSlackEventId: eventId ?? null,
       },
     },
   });
@@ -127,10 +142,10 @@ export async function POST(request: NextRequest) {
     organizationId: integration.organizationId,
     integrationId: integration.id,
     provider: 'SLACK',
-    externalId: payload.event_id ?? event.client_msg_id ?? messageTs,
+    externalId: eventId ?? clientMessageId ?? messageTs,
     channel,
-    sender: event.user_profile?.real_name ?? event.user,
-    senderEmail: event.user_profile?.email,
+    sender: senderName,
+    senderEmail,
     timestamp: messageTs ? new Date(Number(messageTs.split('.')[0]) * 1000).toISOString() : undefined,
     message: event.text,
     sourceLink,
@@ -141,9 +156,9 @@ export async function POST(request: NextRequest) {
         channel,
         channelName: event.channel_name ?? channel,
         messageTs,
-        senderUserId: event.user,
-        senderName: event.user_profile?.real_name,
-        senderEmail: event.user_profile?.email,
+        senderUserId: userId,
+        senderName,
+        senderEmail,
         sourceLink,
       },
     },

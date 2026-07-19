@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { rateLimit } from '@/lib/rate-limit';
+import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import { buildSimulationJob } from '@/services/integrations/simulation';
 import { enqueueIncomingMessage } from '@/services/queue/approvalQueue';
@@ -13,11 +13,11 @@ const testIngestSchema = z.object({
   sender_name: z.string().optional(),
   sender_email: z.string().email().optional(),
   timestamp: z.string().datetime().optional(),
-  organization_slug: z.string().optional(),
   process_inline: z.boolean().default(true),
 });
 
-async function getDemoOrganization(slug = 'public-demo') {
+async function getDemoOrganization() {
+  const slug = 'public-demo';
   return prisma.organization.upsert({
     where: { slug },
     update: {},
@@ -31,7 +31,7 @@ async function getDemoOrganization(slug = 'public-demo') {
 export async function POST(request: NextRequest) {
   return measure('POST /api/ingest/test', async () => {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  const limit = rateLimit(`ingest-test:${ip}`, 60, 60_000);
+  const limit = await distributedRateLimit(`ingest-test:${ip}`, 60, 60_000);
   if (!limit.allowed) {
     return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
   }
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid ingestion payload', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const organization = await getDemoOrganization(parsed.data.organization_slug);
+  const organization = await getDemoOrganization();
   const job = buildSimulationJob(organization.id, parsed.data);
   let queueStatus: 'queued' | 'queue_unavailable' = 'queued';
   let jobId: string | undefined;

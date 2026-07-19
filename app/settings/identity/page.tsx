@@ -7,7 +7,6 @@ import {
   revokeIdentitySession,
   saveIdentityConfiguration,
   testIdentityConnection,
-  type IdentityDashboardData,
   type IdentityProviderCard,
 } from '@/services/identity';
 
@@ -21,7 +20,7 @@ async function saveIdentity(formData: FormData) {
   await saveIdentityConfiguration(tenant, formData);
 }
 
-async function testConnection(_formData: FormData) {
+async function testConnection() {
   'use server';
   const tenant = await getDashboardTenant(8000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');

@@ -32,8 +32,12 @@ async function timed<T>(label: string, fn: () => Promise<T>, timeoutMs = 1500): 
 }
 
 function publicStatus<T extends CheckStatus & { result?: unknown }>(status: T): CheckStatus {
-  const { result: _result, ...safe } = status;
-  return safe;
+  return {
+    status: status.status,
+    ms: status.ms,
+    message: status.message,
+    count: status.count,
+  };
 }
 
 function slowestOperation(checks: Record<string, CheckStatus>) {

@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimit } from '@/lib/rate-limit';
+import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
+import { authorizeGatewayRequest } from '@/lib/gateway-auth';
 import { ingestGatewayArtifact } from '@/services/gateway/universalGateway';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   return measure('POST /api/v1/imports/csv', async () => {
+    const authorization = authorizeGatewayRequest(request);
+    if (!authorization.ok) {
+      return NextResponse.json({ error: authorization.error }, { status: authorization.status });
+    }
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const limit = rateLimit(`gateway-csv:${ip}`, 30, 60_000);
+    const limit = await distributedRateLimit(`gateway-csv:${ip}`, 30, 60_000);
     if (!limit.allowed) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
@@ -20,6 +25,9 @@ export async function POST(request: NextRequest) {
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: 'CSV file is required as form field `file`.' }, { status: 400 });
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: 'CSV file must be 5 MB or smaller.' }, { status: 413 });
     }
 
     const content = await file.text();

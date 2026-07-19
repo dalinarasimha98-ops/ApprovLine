@@ -167,64 +167,64 @@ enum MemoryEntityType {
 }
 
 model Organization {
-  id                String             @id @default(cuid())
-  clerkOrgId        String?            @unique
-  name              String
-  slug              String             @unique
-  companyDomain     String?
-  industry          String?
-  companySize       String?
-  country           String?
-  primaryAdminName  String?
-  primaryAdminEmail String?
-  departments       String[]
-  approvalCategories String[]
-  onboardingStep    Int                @default(1)
-  onboardingStatus  Json?
-  onboardingStartedAt DateTime?
-  onboardingLastSavedAt DateTime?
+  id                       String                         @id @default(cuid())
+  clerkOrgId               String?                        @unique
+  name                     String
+  slug                     String                         @unique
+  companyDomain            String?
+  industry                 String?
+  companySize              String?
+  country                  String?
+  primaryAdminName         String?
+  primaryAdminEmail        String?
+  departments              String[]
+  approvalCategories       String[]
+  onboardingStep           Int                            @default(1)
+  onboardingStatus         Json?
+  onboardingStartedAt      DateTime?
+  onboardingLastSavedAt    DateTime?
   onboardingCompletedSteps String[]
-  onboardingReadinessScore Int         @default(0)
-  invitedTeamMembers Json?
-  integrationSetup  Json?
-  playbookSetup     Json?
-  copilotSetup      Json?
+  onboardingReadinessScore Int                            @default(0)
+  invitedTeamMembers       Json?
+  integrationSetup         Json?
+  playbookSetup            Json?
+  copilotSetup             Json?
   memoryGraphInitializedAt DateTime?
-  onboardedAt       DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  users             User[]
-  teams             Team[]
-  integrations      Integration[]
-  approvalRecords   ApprovalRecord[]
-  auditLogs         AuditLog[]
-  classifierResults ClassifierResult[]
-  subscriptions     Subscription[]
-  events            Event[]
-  messageSources    MessageSource[]
-  idempotencyRecords IdempotencyRecord[]
-  backgroundJobs    BackgroundJob[]
-  deadLetterJobs    DeadLetterJob[]
-  outboxEvents      OutboxEvent[]
-  workerHeartbeats  WorkerHeartbeat[]
-  playbookDocuments PlaybookDocument[]
-  playbookChunks    PlaybookChunk[]
-  playbookRules     PlaybookRule[]
-  playbookQueries   PlaybookQuery[]
-  complianceEvaluations ApprovalComplianceEvaluation[]
-  investigations    InvestigationCase[]
-  investigationNotes InvestigationNote[]
-  featureFlags      FeatureFlag[]
-  pilotInvites      PilotInvite[]
-  pilotFeedback     PilotFeedback[]
-  pilotActivityLogs PilotActivityLog[]
-  customerAccount   CustomerAccount?
-  customerWorkspace CustomerWorkspace?
-  founderManagedUsers FounderManagedUser[]
-  memoryEntities    MemoryEntity[]
-  memoryRelationships MemoryRelationship[]
-  memoryGraphEvents MemoryGraphEvent[]
-  memoryTimelineEvents MemoryTimelineEvent[]
+  onboardedAt              DateTime?
+  createdAt                DateTime                       @default(now())
+  updatedAt                DateTime                       @updatedAt
+  users                    User[]
+  teams                    Team[]
+  integrations             Integration[]
+  approvalRecords          ApprovalRecord[]
+  auditLogs                AuditLog[]
+  classifierResults        ClassifierResult[]
+  subscriptions            Subscription[]
+  events                   Event[]
+  messageSources           MessageSource[]
+  idempotencyRecords       IdempotencyRecord[]
+  backgroundJobs           BackgroundJob[]
+  deadLetterJobs           DeadLetterJob[]
+  outboxEvents             OutboxEvent[]
+  workerHeartbeats         WorkerHeartbeat[]
+  playbookDocuments        PlaybookDocument[]
+  playbookChunks           PlaybookChunk[]
+  playbookRules            PlaybookRule[]
+  playbookQueries          PlaybookQuery[]
+  complianceEvaluations    ApprovalComplianceEvaluation[]
+  investigations           InvestigationCase[]
+  investigationNotes       InvestigationNote[]
+  featureFlags             FeatureFlag[]
+  pilotInvites             PilotInvite[]
+  pilotFeedback            PilotFeedback[]
+  pilotActivityLogs        PilotActivityLog[]
+  customerAccount          CustomerAccount?
+  customerWorkspace        CustomerWorkspace?
+  founderManagedUsers      FounderManagedUser[]
+  memoryEntities           MemoryEntity[]
+  memoryRelationships      MemoryRelationship[]
+  memoryGraphEvents        MemoryGraphEvent[]
+  memoryTimelineEvents     MemoryTimelineEvent[]
 
   @@index([onboardedAt])
   @@index([onboardingStep])
@@ -232,23 +232,23 @@ model Organization {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  organizationId String
-  clerkUserId    String         @unique
-  email          String
-  name           String?
-  role           Role           @default(EMPLOYEE)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  teams          TeamMember[]
-  approvals      ApprovalRecord[] @relation("ApprovalApprover")
-  auditLogs      AuditLog[]
-  investigationNotes InvestigationNote[]
-  pilotInvites    PilotInvite[] @relation("PilotInviteInviter")
-  pilotFeedback   PilotFeedback[]
-  pilotActivityLogs PilotActivityLog[]
-  featureFlagsUpdated FeatureFlag[] @relation("FeatureFlagUpdater")
+  id                  String              @id @default(cuid())
+  organizationId      String
+  clerkUserId         String              @unique
+  email               String
+  name                String?
+  role                Role                @default(EMPLOYEE)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  organization        Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teams               TeamMember[]
+  approvals           ApprovalRecord[]    @relation("ApprovalApprover")
+  auditLogs           AuditLog[]
+  investigationNotes  InvestigationNote[]
+  pilotInvites        PilotInvite[]       @relation("PilotInviteInviter")
+  pilotFeedback       PilotFeedback[]
+  pilotActivityLogs   PilotActivityLog[]
+  featureFlagsUpdated FeatureFlag[]       @relation("FeatureFlagUpdater")
 
   @@index([organizationId, role])
   @@index([email])
@@ -279,17 +279,17 @@ model TeamMember {
 }
 
 model Integration {
-  id              String             @id @default(cuid())
+  id              String              @id @default(cuid())
   organizationId  String
   provider        IntegrationProvider
-  status          IntegrationStatus  @default(CONNECTED)
+  status          IntegrationStatus   @default(CONNECTED)
   externalAccount String?
   scopes          String[]
   encryptedTokens Json?
   metadata        Json?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   messageSources  MessageSource[]
   events          Event[]
 
@@ -298,72 +298,72 @@ model Integration {
 }
 
 model MessageSource {
-  id             String              @id @default(cuid())
-  organizationId String
-  integrationId  String?
-  provider       IntegrationProvider
-  externalId     String?
-  threadId       String?
-  eventId        String?
-  channel        String?
-  sender         String?
-  senderEmail    String?
-  contentHash    String?
-  correlationId  String?
-  idempotencyKey String?
-  rawPayload     Json?
-  receivedAt     DateTime            @default(now())
-  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  integration    Integration?        @relation(fields: [integrationId], references: [id], onDelete: SetNull)
-  approvalRecords ApprovalRecord[]
+  id                String              @id @default(cuid())
+  organizationId    String
+  integrationId     String?
+  provider          IntegrationProvider
+  externalId        String?
+  threadId          String?
+  eventId           String?
+  channel           String?
+  sender            String?
+  senderEmail       String?
+  contentHash       String?
+  correlationId     String?
+  idempotencyKey    String?
+  rawPayload        Json?
+  receivedAt        DateTime            @default(now())
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integration       Integration?        @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  approvalRecords   ApprovalRecord[]
   classifierResults ClassifierResult[]
 
+  @@unique([organizationId, provider, externalId])
   @@index([organizationId, provider, receivedAt])
   @@index([externalId])
   @@index([organizationId, provider, threadId])
   @@index([organizationId, provider, eventId])
   @@index([organizationId, contentHash])
   @@index([organizationId, idempotencyKey])
-  @@unique([organizationId, provider, externalId])
 }
 
 model ApprovalRecord {
-  id                 String             @id @default(cuid())
-  organizationId     String
-  messageSourceId    String?
-  approverUserId     String?
-  approverName       String?
-  approverEmail      String?
-  subject            String
-  department         String?
-  category           String?
-  approvalType       ApprovalType
-  status             ApprovalStatus
-  confidence         Int
-  riskLevel          String?
-  businessImpact     String?
-  reasoning          String
-  conditions         String?
-  sourcePlatform     String?
-  sourceLink         String?
-  evidenceSnippet    String?
-  duplicateDisposition String?
-  duplicateReason    String?
-  sourceSystem       String?
-  sourceRecordId     String?
-  contentHash        String?
-  correlationId      String?
-  idempotencyKey     String?
-  approvalTimestamp  DateTime?
-  occurredAt         DateTime           @default(now())
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  messageSource      MessageSource?     @relation(fields: [messageSourceId], references: [id], onDelete: SetNull)
-  approverUser       User?              @relation("ApprovalApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
-  classifierResults  ClassifierResult[]
-  auditLogs          AuditLog[]
-  investigations     InvestigationApproval[]
+  id                    String                         @id @default(cuid())
+  organizationId        String
+  messageSourceId       String?
+  approverUserId        String?
+  approverName          String?
+  approverEmail         String?
+  subject               String
+  department            String?
+  category              String?
+  approvalType          ApprovalType
+  status                ApprovalStatus
+  confidence            Int
+  riskLevel             String?
+  businessImpact        String?
+  reasoning             String
+  conditions            String?
+  sourcePlatform        String?
+  sourceLink            String?
+  evidenceSnippet       String?
+  duplicateDisposition  String?
+  duplicateReason       String?
+  sourceSystem          String?
+  sourceRecordId        String?
+  contentHash           String?
+  correlationId         String?
+  idempotencyKey        String?
+  approvalTimestamp     DateTime?
+  occurredAt            DateTime                       @default(now())
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  organization          Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messageSource         MessageSource?                 @relation(fields: [messageSourceId], references: [id], onDelete: SetNull)
+  approverUser          User?                          @relation("ApprovalApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  classifierResults     ClassifierResult[]
+  auditLogs             AuditLog[]
+  investigations        InvestigationApproval[]
   complianceEvaluations ApprovalComplianceEvaluation[]
 
   @@index([organizationId, occurredAt])
@@ -382,34 +382,34 @@ model ApprovalRecord {
 }
 
 model ClassifierResult {
-  id                String          @id @default(cuid())
-  organizationId    String
-  messageSourceId   String?
-  approvalRecordId  String?
-  model             String
-  promptVersion     String
-  inputHash         String
-  correlationId     String?
-  idempotencyKey    String?
-  sourceSystem      String?
-  sourceRecordId    String?
+  id                   String          @id @default(cuid())
+  organizationId       String
+  messageSourceId      String?
+  approvalRecordId     String?
+  model                String
+  promptVersion        String
+  inputHash            String
+  correlationId        String?
+  idempotencyKey       String?
+  sourceSystem         String?
+  sourceRecordId       String?
   duplicateDisposition String?
-  duplicateReason   String?
-  approvalDetected  Boolean
-  approvalType      ApprovalType
-  confidence        Int
-  normalizedJson    Json
-  latencyMs         Int?
-  createdAt         DateTime        @default(now())
-  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  messageSource     MessageSource?  @relation(fields: [messageSourceId], references: [id], onDelete: SetNull)
-  approvalRecord    ApprovalRecord? @relation(fields: [approvalRecordId], references: [id], onDelete: SetNull)
+  duplicateReason      String?
+  approvalDetected     Boolean
+  approvalType         ApprovalType
+  confidence           Int
+  normalizedJson       Json
+  latencyMs            Int?
+  createdAt            DateTime        @default(now())
+  organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messageSource        MessageSource?  @relation(fields: [messageSourceId], references: [id], onDelete: SetNull)
+  approvalRecord       ApprovalRecord? @relation(fields: [approvalRecordId], references: [id], onDelete: SetNull)
 
+  @@unique([organizationId, idempotencyKey])
   @@index([organizationId, createdAt])
   @@index([inputHash])
   @@index([organizationId, idempotencyKey])
   @@index([organizationId, correlationId])
-  @@unique([organizationId, idempotencyKey])
 }
 
 model AuditLog {
@@ -432,19 +432,49 @@ model AuditLog {
 }
 
 model Subscription {
-  id             String             @id @default(cuid())
-  organizationId String
-  stripeCustomerId String?
+  id                   String             @id @default(cuid())
+  organizationId       String
+  stripeCustomerId     String?
   stripeSubscriptionId String?
-  plan           String
-  status         SubscriptionStatus
-  seats          Int                @default(1)
-  currentPeriodEnd DateTime?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan                 String
+  status               SubscriptionStatus
+  seats                Int                @default(1)
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, status])
+}
+
+model PublicLeadSubmission {
+  id                 String   @id @default(cuid())
+  kind               String
+  firstName          String
+  lastName           String
+  email              String
+  company            String
+  companySize        String?
+  industry           String?
+  department         String?
+  tools              String?
+  interest           String?
+  topic              String?
+  message            String
+  consent            Boolean  @default(false)
+  idempotencyKey     String   @unique
+  duplicateKey       String   @unique
+  sourcePath         String?
+  notificationStatus String   @default("PENDING")
+  providerReference  String?
+  ipHash             String?
+  userAgent          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([kind, createdAt])
+  @@index([email, createdAt])
+  @@index([notificationStatus, createdAt])
 }
 
 model Event {
@@ -471,20 +501,20 @@ model Event {
 }
 
 model IdempotencyRecord {
-  id                String       @id @default(cuid())
-  organizationId    String
-  key               String
-  requestHash       String
-  status            String
-  correlationId     String
-  resourceType      String?
-  resourceId        String?
-  duplicateReason   String?
-  metadata          Json?
-  expiresAt         DateTime?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id              String       @id @default(cuid())
+  organizationId  String
+  key             String
+  requestHash     String
+  status          String
+  correlationId   String
+  resourceType    String?
+  resourceId      String?
+  duplicateReason String?
+  metadata        Json?
+  expiresAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, key])
   @@index([organizationId, status])
@@ -493,32 +523,32 @@ model IdempotencyRecord {
 }
 
 model BackgroundJob {
-  id                String              @id @default(cuid())
-  organizationId    String
-  queueName         String
-  jobName           String
-  jobType           String
-  correlationId     String
-  idempotencyKey    String
-  sourceSystem      String?
-  sourceRecordId    String?
-  status            BackgroundJobStatus @default(QUEUED)
-  priority          Int                 @default(50)
-  attemptNumber     Int                 @default(0)
-  maxAttempts       Int                 @default(5)
-  timeoutMs         Int                 @default(15000)
-  payload           Json
-  metadata          Json?
+  id                  String                @id @default(cuid())
+  organizationId      String
+  queueName           String
+  jobName             String
+  jobType             String
+  correlationId       String
+  idempotencyKey      String
+  sourceSystem        String?
+  sourceRecordId      String?
+  status              BackgroundJobStatus   @default(QUEUED)
+  priority            Int                   @default(50)
+  attemptNumber       Int                   @default(0)
+  maxAttempts         Int                   @default(5)
+  timeoutMs           Int                   @default(15000)
+  payload             Json
+  metadata            Json?
   processingStartedAt DateTime?
-  lastHeartbeatAt   DateTime?
-  completedAt       DateTime?
-  failedAt          DateTime?
-  failureCategory   QueueFailureCategory?
-  failureReason     String?
-  nextRetryAt       DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lastHeartbeatAt     DateTime?
+  completedAt         DateTime?
+  failedAt            DateTime?
+  failureCategory     QueueFailureCategory?
+  failureReason       String?
+  nextRetryAt         DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  organization        Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([queueName, idempotencyKey])
   @@index([organizationId, status, createdAt])
@@ -528,27 +558,27 @@ model BackgroundJob {
 }
 
 model DeadLetterJob {
-  id                String               @id @default(cuid())
-  organizationId    String
-  backgroundJobId   String?
-  queueName         String
-  jobName           String
-  jobType           String
-  correlationId     String
-  idempotencyKey    String
-  sourceSystem      String?
-  sourceRecordId    String?
-  attemptCount      Int
-  retryEligible     Boolean              @default(false)
-  failureCategory   QueueFailureCategory @default(UNKNOWN)
-  failureReason     String
-  redactedPayload   Json
-  metadata          Json?
-  firstFailedAt     DateTime
-  lastFailedAt      DateTime
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id              String               @id @default(cuid())
+  organizationId  String
+  backgroundJobId String?
+  queueName       String
+  jobName         String
+  jobType         String
+  correlationId   String
+  idempotencyKey  String
+  sourceSystem    String?
+  sourceRecordId  String?
+  attemptCount    Int
+  retryEligible   Boolean              @default(false)
+  failureCategory QueueFailureCategory @default(UNKNOWN)
+  failureReason   String
+  redactedPayload Json
+  metadata        Json?
+  firstFailedAt   DateTime
+  lastFailedAt    DateTime
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
   @@index([organizationId, failureCategory])
@@ -557,26 +587,26 @@ model DeadLetterJob {
 }
 
 model OutboxEvent {
-  id                String           @id @default(cuid())
-  organizationId    String
-  eventType         String
-  queueName         String
-  correlationId     String
-  idempotencyKey    String
-  sourceSystem      String?
-  sourceRecordId    String?
-  status            OutboxEventStatus @default(PENDING)
-  attemptCount      Int              @default(0)
-  availableAt       DateTime         @default(now())
-  payload           Json
-  metadata          Json?
-  lastAttemptAt     DateTime?
-  completedAt       DateTime?
-  failedAt          DateTime?
-  failureReason     String?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id             String            @id @default(cuid())
+  organizationId String
+  eventType      String
+  queueName      String
+  correlationId  String
+  idempotencyKey String
+  sourceSystem   String?
+  sourceRecordId String?
+  status         OutboxEventStatus @default(PENDING)
+  attemptCount   Int               @default(0)
+  availableAt    DateTime          @default(now())
+  payload        Json
+  metadata       Json?
+  lastAttemptAt  DateTime?
+  completedAt    DateTime?
+  failedAt       DateTime?
+  failureReason  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, idempotencyKey])
   @@index([status, availableAt])
@@ -585,20 +615,20 @@ model OutboxEvent {
 }
 
 model WorkerHeartbeat {
-  id              String       @id @default(cuid())
-  workerId        String       @unique
-  queueName       String
-  hostname        String?
-  processId       String?
-  status          String       @default("online")
-  currentJobType  String?
-  currentJobId    String?
-  metadata        Json?
-  lastSeenAt      DateTime     @default(now())
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  organizationId  String?
-  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  id             String        @id @default(cuid())
+  workerId       String        @unique
+  queueName      String
+  hostname       String?
+  processId      String?
+  status         String        @default("online")
+  currentJobType String?
+  currentJobId   String?
+  metadata       Json?
+  lastSeenAt     DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   @@index([queueName, lastSeenAt])
   @@index([status, lastSeenAt])
@@ -651,7 +681,7 @@ model PlaybookChunk {
 }
 
 model PlaybookRule {
-  id                  String       @id @default(cuid())
+  id                  String                         @id @default(cuid())
   organizationId      String
   documentId          String
   category            String
@@ -663,12 +693,12 @@ model PlaybookRule {
   spendingLimit       Int?
   riskTriggers        String[]
   evidenceRequired    String[]
-  severity            String       @default("medium")
+  severity            String                         @default("medium")
   sourceSection       String?
   sourceExcerpt       String
-  createdAt           DateTime     @default(now())
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  document            PlaybookDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt           DateTime                       @default(now())
+  organization        Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  document            PlaybookDocument               @relation(fields: [documentId], references: [id], onDelete: Cascade)
   evaluations         ApprovalComplianceEvaluation[]
 
   @@index([organizationId, category])
@@ -677,24 +707,24 @@ model PlaybookRule {
 }
 
 model ApprovalComplianceEvaluation {
-  id                   String          @id @default(cuid())
-  organizationId       String
-  approvalRecordId     String
-  ruleId               String?
-  status               String
-  score                Int
-  severity             String
-  missingApprovers     String[]
-  missingDepartments   String[]
+  id                     String         @id @default(cuid())
+  organizationId         String
+  approvalRecordId       String
+  ruleId                 String?
+  status                 String
+  score                  Int
+  severity               String
+  missingApprovers       String[]
+  missingDepartments     String[]
   missingEscalationSteps String[]
-  missingEvidence      String[]
-  triggeredRule        String?
-  explanation          String
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
-  organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  approvalRecord       ApprovalRecord  @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
-  rule                 PlaybookRule?   @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  missingEvidence        String[]
+  triggeredRule          String?
+  explanation            String
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  organization           Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approvalRecord         ApprovalRecord @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
+  rule                   PlaybookRule?  @relation(fields: [ruleId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status, createdAt])
   @@index([organizationId, severity])
@@ -739,12 +769,12 @@ model InvestigationCase {
 }
 
 model InvestigationApproval {
-  id              String            @id @default(cuid())
-  investigationId String
+  id               String            @id @default(cuid())
+  investigationId  String
   approvalRecordId String
-  createdAt       DateTime          @default(now())
-  investigation   InvestigationCase @relation(fields: [investigationId], references: [id], onDelete: Cascade)
-  approvalRecord  ApprovalRecord    @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  investigation    InvestigationCase @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  approvalRecord   ApprovalRecord    @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
 
   @@unique([investigationId, approvalRecordId])
   @@index([approvalRecordId])
@@ -782,17 +812,17 @@ model FeatureFlag {
 }
 
 model PilotInvite {
-  id              String       @id @default(cuid())
-  organizationId  String
-  inviterUserId   String?
-  email           String
-  role            Role         @default(EMPLOYEE)
-  status          String       @default("pending")
-  invitedAt       DateTime     @default(now())
-  acceptedAt      DateTime?
-  metadata        Json?
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  inviterUser     User?        @relation("PilotInviteInviter", fields: [inviterUserId], references: [id], onDelete: SetNull)
+  id             String       @id @default(cuid())
+  organizationId String
+  inviterUserId  String?
+  email          String
+  role           Role         @default(EMPLOYEE)
+  status         String       @default("pending")
+  invitedAt      DateTime     @default(now())
+  acceptedAt     DateTime?
+  metadata       Json?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviterUser    User?        @relation("PilotInviteInviter", fields: [inviterUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status, invitedAt])
   @@index([email])
@@ -845,20 +875,20 @@ model PlatformAdmin {
 }
 
 model CustomerAccount {
-  id                  String                @id @default(cuid())
-  organizationId      String                @unique
+  id                  String                      @id @default(cuid())
+  organizationId      String                      @unique
   companyName         String
-  domain              String                @unique
+  domain              String                      @unique
   industry            String?
-  status              CustomerAccountStatus @default(TRIAL)
-  planTier            CustomerPlanTier      @default(FREE_TRIAL)
+  status              CustomerAccountStatus       @default(TRIAL)
+  planTier            CustomerPlanTier            @default(FREE_TRIAL)
   primaryAdminName    String?
   primaryAdminEmail   String
-  dataRetentionDays   Int                   @default(365)
+  dataRetentionDays   Int                         @default(365)
   internalNotes       String?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  organization        Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   workspace           CustomerWorkspace?
   seatAllocation      CustomerSeatAllocation?
   featureFlags        CustomerFeatureFlag[]
@@ -887,7 +917,7 @@ model CustomerWorkspace {
 
 model CustomerPlan {
   id               String           @id @default(cuid())
-  planTier         CustomerPlanTier  @unique
+  planTier         CustomerPlanTier @unique
   name             String
   description      String?
   seatLimitDefault Int              @default(5)
@@ -1017,26 +1047,26 @@ model FounderManagedUser {
 }
 
 model MemoryEntity {
-  id              String              @id @default(cuid())
-  organizationId  String
-  type            MemoryEntityType
-  title           String
-  subtitle        String?
-  summary         String?
-  externalType    String?
-  externalId      String?
-  sourceSystem    String?
-  riskScore       Int                 @default(0)
-  metadata        Json?
-  firstSeenAt     DateTime            @default(now())
-  lastSeenAt      DateTime            @default(now())
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  outgoingRelationships MemoryRelationship[] @relation("MemoryRelationshipFrom")
-  incomingRelationships MemoryRelationship[] @relation("MemoryRelationshipTo")
-  graphEvents     MemoryGraphEvent[]
-  timelineEvents  MemoryTimelineEvent[]
+  id                    String                @id @default(cuid())
+  organizationId        String
+  type                  MemoryEntityType
+  title                 String
+  subtitle              String?
+  summary               String?
+  externalType          String?
+  externalId            String?
+  sourceSystem          String?
+  riskScore             Int                   @default(0)
+  metadata              Json?
+  firstSeenAt           DateTime              @default(now())
+  lastSeenAt            DateTime              @default(now())
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  organization          Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  outgoingRelationships MemoryRelationship[]  @relation("MemoryRelationshipFrom")
+  incomingRelationships MemoryRelationship[]  @relation("MemoryRelationshipTo")
+  graphEvents           MemoryGraphEvent[]
+  timelineEvents        MemoryTimelineEvent[]
 
   @@unique([organizationId, type, externalId])
   @@index([organizationId, type, updatedAt])
@@ -1083,7 +1113,7 @@ model MemoryGraphEvent {
 }
 
 model MemoryTimelineEvent {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   entityId       String
   title          String
@@ -1093,9 +1123,9 @@ model MemoryTimelineEvent {
   occurredAt     DateTime
   sourceLink     String?
   metadata       Json?
-  createdAt      DateTime      @default(now())
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  entity         MemoryEntity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entity         MemoryEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, occurredAt])
   @@index([organizationId, eventType])

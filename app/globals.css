@@ -1155,6 +1155,18 @@
       text-decoration: underline;
     }
 
+    .auth-configuration-notice {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.5;
+    }
+
     @media (max-width: 860px) {
       .auth-page {
         place-items: start center;

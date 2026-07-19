@@ -16,7 +16,11 @@ export async function GET(request: NextRequest) {
 
   const tenant = await getCurrentTenant();
   const statePayload = verifySlackState(state);
-  if (!statePayload || statePayload.organizationId !== tenant.organization.id) {
+  if (
+    !statePayload ||
+    statePayload.organizationId !== tenant.organization.id ||
+    statePayload.userId !== tenant.user.id
+  ) {
     await writeAuditLog({
       organizationId: tenant.organization.id,
       actorUserId: tenant.user.id,
