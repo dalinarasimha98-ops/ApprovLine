@@ -1,5 +1,6 @@
 import type { ApprovalRecord } from '@prisma/client';
 import { PendingLink } from '@/components/system/PendingLink';
+import { getSafeEvidenceUrl } from '@/lib/evidence-links';
 
 function riskClass(risk?: string | null) {
   if (risk === 'high') return 'bg-rose-50 text-rose-700 border-rose-100';
@@ -51,8 +52,11 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalRecord[] }) {
           </tr>
         </thead>
         <tbody>
-          {approvals.map((approval) => (
-            <tr key={approval.id} className="border-t border-slate-100 align-top transition hover:bg-slate-50/80">
+          {approvals.map((approval) => {
+            const evidenceUrl = getSafeEvidenceUrl(approval.sourceLink);
+
+            return (
+              <tr key={approval.id} className="border-t border-slate-100 align-top transition hover:bg-slate-50/80">
               <td className="max-w-[300px] px-4 py-4">
                 <details>
                   <summary className="cursor-pointer list-none font-black text-slate-950">
@@ -92,10 +96,14 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalRecord[] }) {
               </td>
               <td className="px-4 py-3 text-slate-500">{approval.createdAt.toLocaleDateString()}</td>
               <td className="px-4 py-3">
-                {approval.sourceLink ? (
-                  <a href={approval.sourceLink} className="text-xs font-black text-[#2155d9] hover:underline">
+                {evidenceUrl ? (
+                  <a href={evidenceUrl} target="_blank" rel="noreferrer" className="text-xs font-black text-[#2155d9] hover:underline">
                     Open source
                   </a>
+                ) : approval.sourceLink ? (
+                  <span className="text-xs font-semibold text-slate-400" title="Demo and placeholder evidence does not link to an external system">
+                    Demo evidence
+                  </span>
                 ) : (
                   <span className="text-xs font-semibold text-slate-400">No link</span>
                 )}
@@ -105,8 +113,9 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalRecord[] }) {
                   View Full Approval
                 </PendingLink>
               </td>
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       </div>
