@@ -24,6 +24,9 @@ function databaseUrlHint() {
     if (url.hostname.startsWith('db.') && url.hostname.endsWith('.supabase.co') && url.port === '5432') {
       return ' DATABASE_URL points to the Supabase direct host on port 5432. On Vercel, use the Supabase Prisma/ORM pooler connection string instead, typically a pooler.supabase.com host, because the direct host can be unreachable from Vercel.';
     }
+    if (url.hostname.endsWith('.pooler.supabase.com') && url.port === '5432') {
+      return ' DATABASE_URL points to Supabase session mode on port 5432, which can exhaust the shared client limit on Vercel. Use transaction mode on port 6543 with pgbouncer=true and connection_limit=1.';
+    }
   } catch {
     return ' DATABASE_URL is not a valid URL.';
   }
