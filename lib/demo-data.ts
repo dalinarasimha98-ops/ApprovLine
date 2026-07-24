@@ -662,6 +662,7 @@ export async function createDemoDataForOrganization(organizationId: string) {
       JIRA: jiraIntegration.id,
       SERVICENOW: serviceNowIntegration.id,
       ZOOM: zoomIntegration.id,
+      CUSTOM: undefined,
     } satisfies Partial<Record<IntegrationProvider, string | undefined>>;
     const integrationId = integrationByProvider[item.provider];
 

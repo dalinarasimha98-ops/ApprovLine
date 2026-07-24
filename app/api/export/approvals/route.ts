@@ -3,6 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
+import { reportApprovalFailure } from '@/lib/approval-observability';
+import { withTimeout } from '@/lib/performance';
 
 function contains(value: string | null) {
   return value ? { contains: value, mode: 'insensitive' as const } : undefined;
@@ -50,20 +52,25 @@ function createSimplePdf(lines: string[]) {
 export async function GET(request: NextRequest) {
   const tenant = await getDashboardTenant(3000);
   if (tenant.status === 'unauthenticated') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Your session expired. Sign in again.' }, { status: 401 });
   }
   if (!tenant.organization) {
-    return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+    return NextResponse.json({ error: 'Workspace access could not be confirmed. Please retry.' }, { status: 503 });
   }
   const { organization } = tenant;
   const params = request.nextUrl.searchParams;
+  const approvalId = params.get('approvalId');
   const format = params.get('format') ?? 'csv';
+  if (!['csv', 'json', 'pdf'].includes(format)) {
+    return NextResponse.json({ error: 'Choose PDF, JSON, or CSV format.' }, { status: 400 });
+  }
   const occurredAt: Prisma.DateTimeFilter = {};
   if (params.get('from')) occurredAt.gte = new Date(params.get('from') as string);
   if (params.get('to')) occurredAt.lte = new Date(params.get('to') as string);
 
   const where: Prisma.ApprovalRecordWhereInput = {
     organizationId: organization.id,
+    ...(approvalId ? { id: approvalId } : {}),
     ...(params.get('sourcePlatform') ? { sourcePlatform: contains(params.get('sourcePlatform')) } : {}),
     ...(params.get('approver') ? { approverName: contains(params.get('approver')) } : {}),
     ...(params.get('category') ? { category: contains(params.get('category')) } : {}),
@@ -72,12 +79,51 @@ export async function GET(request: NextRequest) {
     ...(params.get('from') || params.get('to') ? { occurredAt } : {}),
   };
 
-  const approvals = await prisma.approvalRecord.findMany({
-    where,
-    orderBy: { createdAt: 'desc' },
-    include: { messageSource: true },
-    take: 10_000,
-  });
+  let approvals;
+  try {
+    approvals = await withTimeout(
+      'approval export query',
+      prisma.approvalRecord.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          messageSource: true,
+          manualDetail: {
+            include: { recorder: { select: { name: true, email: true } } },
+          },
+          evidenceAssociations: {
+            select: {
+              origin: true,
+              status: true,
+              confidence: true,
+              sourceTimestamp: true,
+            },
+          },
+        },
+        take: approvalId ? 1 : 10_000,
+      }),
+      10_000,
+    );
+  } catch (error) {
+    const correlationId = reportApprovalFailure(error, {
+      action: `export_${format}`,
+      approvalId: approvalId ?? undefined,
+      organizationId: organization.id,
+      userId: tenant.session.userId,
+    });
+    return NextResponse.json({ error: 'Approval export could not be prepared. Please retry.', reference: correlationId }, { status: 503 });
+  }
+
+  if (approvalId && approvals.length === 0) {
+    reportApprovalFailure(new Error('Approval export record missing'), {
+      action: `export_${format}`,
+      approvalId,
+      organizationId: organization.id,
+      userId: tenant.session.userId,
+      reason: 'Approval was deleted or does not belong to this tenant.',
+    });
+    return NextResponse.json({ error: 'Approval export is unavailable or has been deleted.' }, { status: 404 });
+  }
 
   if (format === 'json') {
     return new NextResponse(JSON.stringify({ approvals }, jsonReplacer, 2), {
@@ -107,6 +153,12 @@ export async function GET(request: NextRequest) {
     'Message Sender',
     'Approval Timestamp',
     'Created At',
+    'Evidence Origin',
+    'Verification Status',
+    'Recorder',
+    'Communication Channel',
+    'Evidence Associations',
+    'Human Verified Evidence',
   ];
   const rows = approvals.map((item) => [
     item.messageSource?.externalId?.startsWith('demo-') || item.sourceLink?.includes('TDEMO') || item.sourceLink?.includes('demo-') ? 'Yes' : 'No',
@@ -127,6 +179,12 @@ export async function GET(request: NextRequest) {
     item.messageSource?.sender ?? '',
     item.approvalTimestamp?.toISOString() ?? '',
     item.createdAt.toISOString(),
+    item.manualDetail?.kind === 'VERBAL' ? 'VERBAL_APPROVAL' : item.manualDetail ? 'MANUAL_ENTRY' : 'AUTOMATIC_CAPTURE',
+    item.manualDetail?.verificationStatus ?? 'AUTOMATICALLY_CAPTURED',
+    item.manualDetail ? (item.manualDetail.recorder.name ?? item.manualDetail.recorder.email) : '',
+    item.manualDetail?.communicationChannel ?? '',
+    String(item.evidenceAssociations.length),
+    String(item.evidenceAssociations.filter((association) => association.status === 'CONFIRMED').length),
   ]);
 
   if (format === 'pdf') {
@@ -144,6 +202,8 @@ export async function GET(request: NextRequest) {
           item.messageSource?.externalId?.startsWith('demo-') || item.sourceLink?.includes('TDEMO') || item.sourceLink?.includes('demo-') ? 'Yes' : 'No'
         }`,
         `   Evidence: ${item.evidenceSnippet ?? 'No evidence snippet'}`,
+        `   Origin: ${item.manualDetail?.kind === 'VERBAL' ? 'Verbal approval' : item.manualDetail ? 'Manual entry' : 'Automatic capture'} | Verification: ${item.manualDetail?.verificationStatus ?? 'Automatically captured'}`,
+        `   Supporting evidence: ${item.evidenceAssociations.length} linked/suggested | Human verified: ${item.evidenceAssociations.filter((association) => association.status === 'CONFIRMED').length}`,
         '',
       ]),
     ];

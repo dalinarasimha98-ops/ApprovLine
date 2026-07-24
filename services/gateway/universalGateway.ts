@@ -123,7 +123,37 @@ export async function ingestUniversalApproval(input: UniversalApprovalInput, opt
   const messageJob: IncomingMessageJob = {
     organizationId: organization.id,
     provider: gatewayProvider,
+    providerKey: normalizedSource,
+    providerEventType: `${options?.receivedVia ?? 'api'}.approval.received`,
     externalId,
+    objectType: options?.receivedVia === 'document'
+      ? 'document'
+      : options?.receivedVia === 'transcript'
+        ? 'transcript'
+        : 'approval',
+    objectId: externalId,
+    threadId: metadataString(input.metadata, ['thread_id', 'conversation_id', 'case_id']),
+    parentId: metadataString(input.metadata, ['parent_id', 'request_id']),
+    relatedIds: [
+      metadataString(input.metadata, ['contract_id']),
+      metadataString(input.metadata, ['ticket_id']),
+      metadataString(input.metadata, ['project_id']),
+      metadataString(input.metadata, ['vendor_id']),
+    ].filter((value): value is string => Boolean(value)),
+    participants: input.approver || input.approver_email
+      ? [{ name: input.approver, email: input.approver_email, role: 'approver' }]
+      : [],
+    links: sourceLink ? [{ type: 'source', name: input.source_system, url: sourceLink }] : [],
+    metadata: {
+      gateway: true,
+      receivedVia: options?.receivedVia ?? 'api',
+      sourceSystem: normalizedSource,
+      amount: input.amount,
+      department: input.department,
+      category: normalizeCategory(input.category),
+      subject: input.subject,
+      ...(input.metadata ?? {}),
+    },
     channel: input.department ?? input.category ?? 'gateway',
     sender: input.approver,
     senderEmail: input.approver_email,

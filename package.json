@@ -24,6 +24,9 @@
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
     "test:certification": "node --import tsx tests/production-certification.test.ts",
     "test:production-hardening": "node --import tsx tests/production-hardening.test.ts",
+    "test:manual-approvals": "node --import tsx tests/manual-approvals.test.ts",
+    "test:evidence": "node --import tsx tests/evidence-platform.test.ts",
+    "test:e2e:approvals": "playwright test tests/e2e/approval-timeline.spec.ts",
     "readiness": "tsx scripts/readiness.ts",
     "gmail:sync": "tsx scripts/gmail-sync.ts",
     "worker": "tsx services/queue/worker.ts"
@@ -44,6 +47,7 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^24.0.7",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

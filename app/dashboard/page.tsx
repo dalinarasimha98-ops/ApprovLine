@@ -146,6 +146,14 @@ export default async function DashboardPage({
                   </div>
                   <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-black uppercase text-[#2155d9]">{approval.confidence}%</span>
                 </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening approval..." className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:border-blue-200 hover:text-[#2155d9]">
+                    View Full Approval
+                  </PendingLink>
+                  <PendingLink href={`/approvals/${approval.id}/source`} pendingText="Opening source..." className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:border-blue-200 hover:text-[#2155d9]">
+                    Open Source
+                  </PendingLink>
+                </div>
               </div>
             )) : (
               <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center">
