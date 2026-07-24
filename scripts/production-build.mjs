@@ -32,6 +32,11 @@ if (process.env.REDIS_URL) {
   }
 }
 
-console.log('Skipping database migrations during build. Run npm run db:deploy separately when deploying schema changes.');
+if (process.env.APPLY_MIGRATIONS_ON_BUILD === 'true') {
+  console.log('APPLY_MIGRATIONS_ON_BUILD is enabled. Applying production database migrations before build.');
+  run(bin('prisma'), ['migrate', 'deploy']);
+} else {
+  console.log('Skipping database migrations during build. Run npm run db:deploy separately when deploying schema changes.');
+}
 run(bin('prisma'), ['generate']);
 run(bin('next'), ['build']);
