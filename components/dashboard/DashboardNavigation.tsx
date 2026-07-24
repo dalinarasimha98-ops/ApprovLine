@@ -50,16 +50,22 @@ const items: NavigationItem[] = [
 
 export function DashboardNavigation({ mobile = false }: { mobile?: boolean }) {
   const pathname = usePathname();
+  const activeHref = items
+    .filter(({ href }) => {
+      const route = href.split('?')[0];
+      return route === '/dashboard' ? pathname === route : pathname === route || pathname.startsWith(`${route}/`);
+    })
+    .sort((a, b) => b.href.split('?')[0].length - a.href.split('?')[0].length)[0]?.href;
 
   if (mobile) {
     return (
       <nav className="flex gap-2 overflow-x-auto pb-1">
-        {items.slice(0, 10).map(({ href, label, icon: Icon }) => (
+        {items.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
             className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-md border px-3 text-xs font-semibold ${
-              pathname === href
+              activeHref === href
                 ? 'border-blue-500/50 bg-blue-500/15 text-blue-200'
                 : 'border-white/10 bg-white/[0.04] text-slate-300'
             }`}
@@ -76,7 +82,7 @@ export function DashboardNavigation({ mobile = false }: { mobile?: boolean }) {
     <nav className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-color:rgba(71,85,105,.65)_transparent] [scrollbar-width:thin]">
       <div className="grid gap-0.5">
         {items.map(({ href, label, icon: Icon, badge }) => {
-          const active = href === '/dashboard' ? pathname === href : pathname.startsWith(href.split('?')[0]);
+          const active = activeHref === href;
           return (
             <Link
               key={href}

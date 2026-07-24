@@ -113,7 +113,7 @@ export default async function ApprovalsPage({
           </div>
         </div>
       </div>
-      <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-4">
+      <form id="filters" className="scroll-mt-32 grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-4">
         {[
           ['q', 'Search approvals'],
           ['employee', 'Approver'],
