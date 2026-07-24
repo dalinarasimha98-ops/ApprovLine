@@ -6,6 +6,12 @@ import type { IncomingMessageJob } from '@/services/queue/approvalQueue';
 import type { StandardJobEnvelope } from '@/services/queue/jobRegistry';
 import { hashPayload } from '@/services/queue/reliability';
 import type { ClassifyResponse } from '@/types/classifier';
+import {
+  captureCanonicalEvidence,
+  completeCanonicalEvidence,
+  failCanonicalEvidence,
+  runEvidenceSidecar,
+} from '@/services/evidence/pipeline';
 
 export async function processIncomingMessage(
   job: IncomingMessageJob,
@@ -22,6 +28,40 @@ export async function processIncomingMessage(
     senderEmail: job.senderEmail,
     timestamp: job.timestamp,
   });
+  const providerKey = job.providerKey ?? job.provider.toLowerCase();
+  const canonicalCapture = await runEvidenceSidecar(
+    () => captureCanonicalEvidence(job.organizationId, {
+      providerKey,
+      providerEventType: job.providerEventType ?? 'message.received',
+      eventTimestamp: job.timestamp ?? new Date().toISOString(),
+      externalEventId: job.externalId,
+      actor: job.sender || job.senderEmail
+        ? { name: job.sender, email: job.senderEmail }
+        : undefined,
+      object: {
+        type: job.objectType ?? 'message',
+        id: job.objectId ?? job.externalId,
+        url: job.sourceLink,
+      },
+      threadId: job.threadId ?? job.channel,
+      parentId: job.parentId,
+      relatedIds: job.relatedIds ?? [],
+      participants: job.participants ?? [],
+      attachments: job.attachments ?? [],
+      links: job.links ?? (job.sourceLink ? [{ type: 'source', url: job.sourceLink }] : []),
+      content: job.message,
+      metadata: {
+        channel: job.channel,
+        sourceSystem,
+        sourceRecordId,
+        ...(job.metadata ?? {}),
+      },
+      rawPayload: job.rawPayload,
+      confidence: 100,
+      correlationId,
+    }),
+    'capture',
+  );
 
   const messageSourcePayload = {
     organizationId: job.organizationId,
@@ -114,6 +154,19 @@ export async function processIncomingMessage(
         },
       }).catch(() => null);
     }
+    if (canonicalCapture) {
+      await runEvidenceSidecar(
+        () => failCanonicalEvidence({
+          organizationId: job.organizationId,
+          eventId: canonicalCapture.eventId,
+          providerKey,
+          correlationId: canonicalCapture.correlationId,
+          stage: 'CLASSIFICATION',
+          error,
+        }),
+        'classification-failure',
+      );
+    }
     throw error;
   }
   if (job.integrationId) {
@@ -134,7 +187,7 @@ export async function processIncomingMessage(
     }).catch(() => null);
   }
 
-  return persistClassificationResult({
+  const persistence = await persistClassificationResult({
     organizationId: job.organizationId,
     integrationId: job.integrationId,
     messageSourceId: messageSource.id,
@@ -148,4 +201,11 @@ export async function processIncomingMessage(
     idempotencyKey,
     contentHash,
   });
+  if (canonicalCapture && !canonicalCapture.duplicate) {
+    await runEvidenceSidecar(
+      () => completeCanonicalEvidence(job.organizationId, canonicalCapture.eventId, persistence),
+      'correlation',
+    );
+  }
+  return persistence;
 }

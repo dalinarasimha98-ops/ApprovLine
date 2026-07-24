@@ -4,6 +4,7 @@ import { ApprovalTable } from '@/components/dashboard/ApprovalTable';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import { withTimeout } from '@/lib/performance';
+import { reportApprovalFailure } from '@/lib/approval-observability';
 import type { Prisma } from '@prisma/client';
 import { redirect } from 'next/navigation';
 
@@ -39,6 +40,7 @@ export default async function ApprovalsPage({
   if (filters.to) occurredAt.lte = new Date(filters.to);
   let approvals: Awaited<ReturnType<typeof prisma.approvalRecord.findMany>> = [];
   let loadError: string | null = null;
+  let loadErrorReference: string | null = null;
   let loadNotice: string | null = null;
 
   try {
@@ -74,10 +76,15 @@ export default async function ApprovalsPage({
     console.info(`[dashboard] approvals query finished in ${Date.now() - startedAt}ms`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to load approvals.';
+    loadErrorReference = reportApprovalFailure(error, {
+      action: 'approval_history_query',
+      organizationId: tenant.organization?.id,
+      userId: tenant.session.userId,
+    });
     if (isQueryTimeout(message)) {
-      loadNotice = 'Approval records are taking longer than expected. The page is available now, and you can retry or generate demo data while the database warms up.';
+      loadNotice = 'Approval records are taking longer than expected. The page is available now, and you can retry or generate demo data while the service recovers.';
     } else {
-      loadError = message;
+      loadError = 'Approval records could not be retrieved. Retry the request or check workspace readiness.';
     }
     console.error(`[dashboard] approvals query failed after ${Date.now() - startedAt}ms`, error);
   }
@@ -91,6 +98,9 @@ export default async function ApprovalsPage({
           <p className="mt-2 text-sm leading-6 text-slate-600">Search and filter every captured approval record across Slack, Gmail, and future connectors.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <PendingLink href="/approvals/manual" pendingText="Opening recorder..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+            Record manual approval
+          </PendingLink>
           <PendingLink href="/api/export/approvals?format=csv" pendingText="Preparing CSV..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">
             Export CSV
           </PendingLink>
@@ -134,8 +144,8 @@ export default async function ApprovalsPage({
       </form>
       {loadNotice ? (
         <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 text-blue-950 shadow-sm">
-          <h3 className="font-black">Approval history is still warming up</h3>
-          <p className="mt-1 text-sm leading-6">{loadNotice}</p>
+          <h3 className="font-black">Approval records are taking longer than expected</h3>
+          <p className="mt-1 text-sm leading-6">The page stopped waiting so you are never left on a permanent loading screen. {loadNotice}</p>
           <PendingLink href="/dashboard/approvals" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200">
             Retry
           </PendingLink>
@@ -146,6 +156,7 @@ export default async function ApprovalsPage({
           <h3 className="font-black">Unable to load approvals</h3>
           <p className="mt-1 text-sm">The approval records query returned an error. Your dashboard shell is still available.</p>
           <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs font-semibold">{loadError}</p>
+          {loadErrorReference ? <p className="mt-2 text-xs font-bold text-amber-800">Reference: {loadErrorReference}</p> : null}
           <PendingLink href="/dashboard/approvals" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200">
             Retry
           </PendingLink>
@@ -158,11 +169,11 @@ export default async function ApprovalsPage({
               <h3 className="text-lg font-black text-slate-950">No approval records yet</h3>
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">Connect Slack or Gmail to start capturing approvals, or generate sample records for a quick demo.</p>
             </div>
-            <form action="/api/demo/seed" method="post">
+            <div className="flex flex-wrap gap-2"><PendingLink href="/approvals/manual" pendingText="Opening recorder..." className="inline-flex h-11 items-center rounded-lg border border-blue-200 bg-white px-5 text-sm font-bold text-[#2155d9]">Record manual approval</PendingLink><form action="/api/demo/seed" method="post">
               <FormSubmitButton pendingText="Generating..." className="min-h-0 h-11 rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200">
                 Generate demo data
               </FormSubmitButton>
-            </form>
+            </form></div>
           </div>
         </div>
       ) : null}

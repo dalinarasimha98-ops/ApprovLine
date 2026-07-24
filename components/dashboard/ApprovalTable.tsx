@@ -1,6 +1,5 @@
 import type { ApprovalRecord } from '@prisma/client';
 import { PendingLink } from '@/components/system/PendingLink';
-import { getSafeEvidenceUrl } from '@/lib/evidence-links';
 
 function riskClass(risk?: string | null) {
   if (risk === 'high') return 'bg-rose-50 text-rose-700 border-rose-100';
@@ -53,8 +52,6 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalRecord[] }) {
         </thead>
         <tbody>
           {approvals.map((approval) => {
-            const evidenceUrl = getSafeEvidenceUrl(approval.sourceLink);
-
             return (
               <tr key={approval.id} className="border-t border-slate-100 align-top transition hover:bg-slate-50/80">
               <td className="max-w-[300px] px-4 py-4">
@@ -96,17 +93,9 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalRecord[] }) {
               </td>
               <td className="px-4 py-3 text-slate-500">{approval.createdAt.toLocaleDateString()}</td>
               <td className="px-4 py-3">
-                {evidenceUrl ? (
-                  <a href={evidenceUrl} target="_blank" rel="noreferrer" className="text-xs font-black text-[#2155d9] hover:underline">
-                    Open source
-                  </a>
-                ) : approval.sourceLink ? (
-                  <span className="text-xs font-semibold text-slate-400" title="Demo and placeholder evidence does not link to an external system">
-                    Demo evidence
-                  </span>
-                ) : (
-                  <span className="text-xs font-semibold text-slate-400">No link</span>
-                )}
+                <PendingLink href={`/approvals/${approval.id}/source`} pendingText="Opening..." className="text-xs font-black text-[#2155d9] hover:underline">
+                  Open source
+                </PendingLink>
               </td>
               <td className="px-4 py-3">
                 <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening..." className="text-xs font-black text-[#2155d9] hover:underline">

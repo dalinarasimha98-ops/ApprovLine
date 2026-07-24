@@ -15,7 +15,7 @@ import {
 export interface IncomingMessageJob {
   organizationId: string;
   integrationId?: string;
-  provider: 'SLACK' | 'GMAIL' | 'OUTLOOK' | 'MICROSOFT_TEAMS' | 'JIRA' | 'SERVICENOW' | 'ZOOM';
+  provider: 'SLACK' | 'GMAIL' | 'OUTLOOK' | 'MICROSOFT_TEAMS' | 'JIRA' | 'SERVICENOW' | 'ZOOM' | 'CUSTOM';
   externalId?: string;
   channel?: string;
   sender?: string;
@@ -24,6 +24,17 @@ export interface IncomingMessageJob {
   message: string;
   sourceLink?: string;
   rawPayload?: unknown;
+  providerKey?: string;
+  providerEventType?: string;
+  objectType?: string;
+  objectId?: string;
+  threadId?: string;
+  parentId?: string;
+  relatedIds?: string[];
+  participants?: Array<{ id?: string; name?: string; email?: string; role?: string }>;
+  attachments?: Array<{ id?: string; type?: string; name?: string; url?: string; metadata?: Record<string, unknown> }>;
+  links?: Array<{ id?: string; type?: string; name?: string; url?: string; metadata?: Record<string, unknown> }>;
+  metadata?: Record<string, unknown>;
 }
 
 export const approvalQueueName = 'approval-classification';

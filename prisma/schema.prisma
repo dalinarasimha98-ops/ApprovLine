@@ -77,6 +77,7 @@ enum IntegrationProvider {
   JIRA
   SERVICENOW
   ZOOM
+  CUSTOM
 }
 
 enum IntegrationStatus {
@@ -101,6 +102,68 @@ enum ApprovalStatus {
   PENDING_REVIEW
   REJECTED
   NOT_A_DECISION
+}
+
+enum ManualApprovalKind {
+  VERBAL
+  MANUAL
+}
+
+enum ManualApprovalVerificationStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED_BY_APPROVER
+  DISPUTED
+  SUPERSEDED
+}
+
+enum ApprovalEvidenceOrigin {
+  AUTOMATIC_CAPTURE
+  MANUAL_ENTRY
+  VERBAL_APPROVAL
+  APPROVER_CONFIRMATION
+  AI_SUGGESTION
+  HUMAN_VERIFIED
+}
+
+enum EvidenceAssociationStatus {
+  SUGGESTED
+  CONFIRMED
+  REJECTED
+}
+
+enum EvidenceEventStatus {
+  RECEIVED
+  QUEUED
+  PROCESSING
+  CLASSIFIED
+  CORRELATED
+  COMPLETED
+  RETRY_PENDING
+  DEAD_LETTER
+  IGNORED_DUPLICATE
+}
+
+enum UnifiedEvidenceMemberStatus {
+  AUTO_LINKED
+  SUGGESTED
+  HUMAN_VERIFIED
+  REJECTED
+}
+
+enum EvidenceProviderConnectionStatus {
+  CONNECTED
+  SYNCING
+  DEGRADED
+  ERROR
+  REAUTH_REQUIRED
+  DISCONNECTED
+}
+
+enum ApprovalConfirmationDecision {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CORRECTED
 }
 
 enum BackgroundJobStatus {
@@ -225,6 +288,15 @@ model Organization {
   memoryRelationships      MemoryRelationship[]
   memoryGraphEvents        MemoryGraphEvent[]
   memoryTimelineEvents     MemoryTimelineEvent[]
+  manualApprovalDetails    ManualApprovalDetail[]
+  manualApprovalVersions   ManualApprovalVersion[]
+  evidenceAssociations     ApprovalEvidenceAssociation[]
+  approvalConfirmations    ApprovalConfirmationRequest[]
+  evidenceConnections      EvidenceProviderConnection[]
+  canonicalEvidenceEvents  CanonicalEvidenceEvent[]
+  unifiedEvidenceRecords   UnifiedEvidenceRecord[]
+  evidenceProviderHealth   EvidenceProviderHealth[]
+  evidenceFailures         EvidenceProcessingFailure[]
 
   @@index([onboardedAt])
   @@index([onboardingStep])
@@ -232,23 +304,29 @@ model Organization {
 }
 
 model User {
-  id                  String              @id @default(cuid())
-  organizationId      String
-  clerkUserId         String              @unique
-  email               String
-  name                String?
-  role                Role                @default(EMPLOYEE)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  organization        Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  teams               TeamMember[]
-  approvals           ApprovalRecord[]    @relation("ApprovalApprover")
-  auditLogs           AuditLog[]
-  investigationNotes  InvestigationNote[]
-  pilotInvites        PilotInvite[]       @relation("PilotInviteInviter")
-  pilotFeedback       PilotFeedback[]
-  pilotActivityLogs   PilotActivityLog[]
-  featureFlagsUpdated FeatureFlag[]       @relation("FeatureFlagUpdater")
+  id                             String                        @id @default(cuid())
+  organizationId                 String
+  clerkUserId                    String                        @unique
+  email                          String
+  name                           String?
+  role                           Role                          @default(EMPLOYEE)
+  createdAt                      DateTime                      @default(now())
+  updatedAt                      DateTime                      @updatedAt
+  organization                   Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teams                          TeamMember[]
+  approvals                      ApprovalRecord[]              @relation("ApprovalApprover")
+  auditLogs                      AuditLog[]
+  investigationNotes             InvestigationNote[]
+  pilotInvites                   PilotInvite[]                 @relation("PilotInviteInviter")
+  pilotFeedback                  PilotFeedback[]
+  pilotActivityLogs              PilotActivityLog[]
+  featureFlagsUpdated            FeatureFlag[]                 @relation("FeatureFlagUpdater")
+  recordedManualApprovals        ManualApprovalDetail[]        @relation("ManualApprovalRecorder")
+  verifiedManualApprovals        ManualApprovalDetail[]        @relation("ManualApprovalSecondVerifier")
+  manualApprovalVersions         ManualApprovalVersion[]       @relation("ManualApprovalVersionActor")
+  verifiedEvidenceAssociations   ApprovalEvidenceAssociation[] @relation("EvidenceAssociationVerifier")
+  rejectedEvidenceAssociations   ApprovalEvidenceAssociation[] @relation("EvidenceAssociationRejecter")
+  requestedApprovalConfirmations ApprovalConfirmationRequest[] @relation("ApprovalConfirmationRequester")
 
   @@index([organizationId, role])
   @@index([email])
@@ -298,25 +376,26 @@ model Integration {
 }
 
 model MessageSource {
-  id                String              @id @default(cuid())
-  organizationId    String
-  integrationId     String?
-  provider          IntegrationProvider
-  externalId        String?
-  threadId          String?
-  eventId           String?
-  channel           String?
-  sender            String?
-  senderEmail       String?
-  contentHash       String?
-  correlationId     String?
-  idempotencyKey    String?
-  rawPayload        Json?
-  receivedAt        DateTime            @default(now())
-  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  integration       Integration?        @relation(fields: [integrationId], references: [id], onDelete: SetNull)
-  approvalRecords   ApprovalRecord[]
-  classifierResults ClassifierResult[]
+  id                   String                        @id @default(cuid())
+  organizationId       String
+  integrationId        String?
+  provider             IntegrationProvider
+  externalId           String?
+  threadId             String?
+  eventId              String?
+  channel              String?
+  sender               String?
+  senderEmail          String?
+  contentHash          String?
+  correlationId        String?
+  idempotencyKey       String?
+  rawPayload           Json?
+  receivedAt           DateTime                      @default(now())
+  organization         Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  integration          Integration?                  @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  approvalRecords      ApprovalRecord[]
+  classifierResults    ClassifierResult[]
+  evidenceAssociations ApprovalEvidenceAssociation[]
 
   @@unique([organizationId, provider, externalId])
   @@index([organizationId, provider, receivedAt])
@@ -328,43 +407,49 @@ model MessageSource {
 }
 
 model ApprovalRecord {
-  id                    String                         @id @default(cuid())
-  organizationId        String
-  messageSourceId       String?
-  approverUserId        String?
-  approverName          String?
-  approverEmail         String?
-  subject               String
-  department            String?
-  category              String?
-  approvalType          ApprovalType
-  status                ApprovalStatus
-  confidence            Int
-  riskLevel             String?
-  businessImpact        String?
-  reasoning             String
-  conditions            String?
-  sourcePlatform        String?
-  sourceLink            String?
-  evidenceSnippet       String?
-  duplicateDisposition  String?
-  duplicateReason       String?
-  sourceSystem          String?
-  sourceRecordId        String?
-  contentHash           String?
-  correlationId         String?
-  idempotencyKey        String?
-  approvalTimestamp     DateTime?
-  occurredAt            DateTime                       @default(now())
-  createdAt             DateTime                       @default(now())
-  updatedAt             DateTime                       @updatedAt
-  organization          Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  messageSource         MessageSource?                 @relation(fields: [messageSourceId], references: [id], onDelete: SetNull)
-  approverUser          User?                          @relation("ApprovalApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
-  classifierResults     ClassifierResult[]
-  auditLogs             AuditLog[]
-  investigations        InvestigationApproval[]
-  complianceEvaluations ApprovalComplianceEvaluation[]
+  id                      String                         @id @default(cuid())
+  organizationId          String
+  messageSourceId         String?
+  approverUserId          String?
+  approverName            String?
+  approverEmail           String?
+  subject                 String
+  department              String?
+  category                String?
+  approvalType            ApprovalType
+  status                  ApprovalStatus
+  confidence              Int
+  riskLevel               String?
+  businessImpact          String?
+  reasoning               String
+  conditions              String?
+  sourcePlatform          String?
+  sourceLink              String?
+  evidenceSnippet         String?
+  duplicateDisposition    String?
+  duplicateReason         String?
+  sourceSystem            String?
+  sourceRecordId          String?
+  contentHash             String?
+  correlationId           String?
+  idempotencyKey          String?
+  approvalTimestamp       DateTime?
+  occurredAt              DateTime                       @default(now())
+  createdAt               DateTime                       @default(now())
+  updatedAt               DateTime                       @updatedAt
+  organization            Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messageSource           MessageSource?                 @relation(fields: [messageSourceId], references: [id], onDelete: SetNull)
+  approverUser            User?                          @relation("ApprovalApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  classifierResults       ClassifierResult[]
+  auditLogs               AuditLog[]
+  investigations          InvestigationApproval[]
+  complianceEvaluations   ApprovalComplianceEvaluation[]
+  manualDetail            ManualApprovalDetail?
+  manualVersions          ManualApprovalVersion[]
+  evidenceAssociations    ApprovalEvidenceAssociation[]
+  confirmationRequests    ApprovalConfirmationRequest[]
+  canonicalEvidenceEvents CanonicalEvidenceEvent[]
+  unifiedEvidenceRecords  UnifiedEvidenceRecord[]        @relation("UnifiedEvidencePrimaryApproval")
 
   @@index([organizationId, occurredAt])
   @@index([organizationId, department])
@@ -379,6 +464,288 @@ model ApprovalRecord {
   @@index([organizationId, sourceSystem, sourceRecordId])
   @@index([organizationId, contentHash])
   @@index([organizationId, status, occurredAt])
+}
+
+model EvidenceProviderConnection {
+  id                   String                           @id @default(cuid())
+  organizationId       String
+  providerKey          String
+  displayName          String
+  category             String
+  status               EvidenceProviderConnectionStatus @default(DISCONNECTED)
+  authenticationType   String?
+  scopes               String[]
+  encryptedCredentials Json?
+  configuration        Json?
+  connectedAt          DateTime?
+  disconnectedAt       DateTime?
+  lastSyncAt           DateTime?
+  createdAt            DateTime                         @default(now())
+  updatedAt            DateTime                         @updatedAt
+  organization         Organization                     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  canonicalEvents      CanonicalEvidenceEvent[]
+  health               EvidenceProviderHealth?
+
+  @@unique([organizationId, providerKey])
+  @@index([organizationId, status])
+  @@index([providerKey, status])
+}
+
+model CanonicalEvidenceEvent {
+  id                  String                      @id @default(cuid())
+  organizationId      String
+  connectionId        String?
+  approvalRecordId    String?
+  unifiedRecordId     String?
+  providerKey         String
+  providerEventType   String
+  occurredAt          DateTime
+  receivedAt          DateTime                    @default(now())
+  actorId             String?
+  actorName           String?
+  actorEmail          String?
+  tenantExternalId    String?
+  objectType          String
+  objectId            String?
+  threadId            String?
+  parentId            String?
+  relatedIds          String[]
+  participants        Json?
+  attachments         Json?
+  links               Json?
+  content             String?
+  metadata            Json?
+  encryptedRawPayload String?
+  evidenceHash        String
+  correlationId       String
+  correlationKeys     String[]
+  confidence          Int                         @default(100)
+  status              EvidenceEventStatus         @default(RECEIVED)
+  processingAttempts  Int                         @default(0)
+  lastError           String?
+  lastProcessedAt     DateTime?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connection          EvidenceProviderConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  approvalRecord      ApprovalRecord?             @relation(fields: [approvalRecordId], references: [id], onDelete: SetNull)
+  unifiedRecord       UnifiedEvidenceRecord?      @relation(fields: [unifiedRecordId], references: [id], onDelete: SetNull)
+  memberships         UnifiedEvidenceMember[]
+  failures            EvidenceProcessingFailure[]
+
+  @@unique([organizationId, providerKey, evidenceHash])
+  @@index([organizationId, occurredAt])
+  @@index([organizationId, providerKey, occurredAt])
+  @@index([organizationId, objectType, objectId])
+  @@index([organizationId, threadId])
+  @@index([organizationId, correlationId])
+  @@index([organizationId, status, receivedAt])
+}
+
+model UnifiedEvidenceRecord {
+  id                 String                   @id @default(cuid())
+  organizationId     String
+  primaryApprovalId  String?
+  subject            String
+  decision           String?
+  outcome            String?
+  category           String?
+  department         String?
+  approverName       String?
+  approverEmail      String?
+  amount             Decimal?                 @db.Decimal(18, 2)
+  currency           String?
+  riskLevel          String?
+  confidence         Int                      @default(0)
+  verificationStatus String                   @default("UNVERIFIED")
+  sourceCount        Int                      @default(1)
+  evidenceCount      Int                      @default(1)
+  firstSeenAt        DateTime
+  lastSeenAt         DateTime
+  metadata           Json?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  primaryApproval    ApprovalRecord?          @relation("UnifiedEvidencePrimaryApproval", fields: [primaryApprovalId], references: [id], onDelete: SetNull)
+  events             CanonicalEvidenceEvent[]
+  members            UnifiedEvidenceMember[]
+
+  @@index([organizationId, lastSeenAt])
+  @@index([organizationId, subject])
+  @@index([organizationId, riskLevel])
+  @@index([organizationId, department])
+}
+
+model UnifiedEvidenceMember {
+  id               String                      @id @default(cuid())
+  unifiedRecordId  String
+  eventId          String
+  status           UnifiedEvidenceMemberStatus @default(SUGGESTED)
+  matchConfidence  Int
+  matchingReasons  String[]
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+  unifiedRecord    UnifiedEvidenceRecord       @relation(fields: [unifiedRecordId], references: [id], onDelete: Cascade)
+  event            CanonicalEvidenceEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([unifiedRecordId, eventId])
+  @@index([eventId, status])
+  @@index([unifiedRecordId, status])
+}
+
+model EvidenceProviderHealth {
+  id                   String                           @id @default(cuid())
+  organizationId       String
+  connectionId         String?                          @unique
+  providerKey          String
+  status               EvidenceProviderConnectionStatus @default(DISCONNECTED)
+  authenticationStatus String?
+  credentialExpiresAt  DateTime?
+  rateLimitRemaining   Int?
+  latencyMs            Int?
+  webhookStatus        String?
+  syncStatus           String?
+  lastEventAt          DateTime?
+  lastSuccessfulSyncAt DateTime?
+  consecutiveFailures  Int                              @default(0)
+  nextRetryAt          DateTime?
+  lastErrorCode        String?
+  lastErrorMessage     String?
+  metadata             Json?
+  checkedAt            DateTime                         @default(now())
+  createdAt            DateTime                         @default(now())
+  updatedAt            DateTime                         @updatedAt
+  organization         Organization                     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connection           EvidenceProviderConnection?      @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, providerKey])
+  @@index([organizationId, status, checkedAt])
+}
+
+model EvidenceProcessingFailure {
+  id             String                  @id @default(cuid())
+  organizationId String
+  eventId        String?
+  providerKey    String
+  stage          String
+  attemptNumber  Int                     @default(1)
+  retryable      Boolean                 @default(true)
+  reason         String
+  errorCode      String?
+  correlationId  String
+  nextRetryAt    DateTime?
+  resolvedAt     DateTime?
+  metadata       Json?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event          CanonicalEvidenceEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, resolvedAt, createdAt])
+  @@index([organizationId, providerKey, stage])
+  @@index([correlationId])
+}
+
+model ManualApprovalDetail {
+  id                     String                           @id @default(cuid())
+  organizationId         String
+  approvalRecordId       String                           @unique
+  kind                   ManualApprovalKind
+  approverRole           String
+  communicationChannel   String
+  location               String?
+  recorderUserId         String
+  businessContext        String
+  relatedEntityType      String?
+  relatedEntityId        String?
+  supportingNotes        String?
+  verificationStatus     ManualApprovalVerificationStatus @default(PENDING_CONFIRMATION)
+  confidenceLevel        Int                              @default(50)
+  secondPersonRequired   Boolean                          @default(false)
+  secondVerifierUserId   String?
+  secondVerifiedAt       DateTime?
+  secondVerificationNote String?
+  currentVersion         Int                              @default(1)
+  createdAt              DateTime                         @default(now())
+  updatedAt              DateTime                         @updatedAt
+  organization           Organization                     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approvalRecord         ApprovalRecord                   @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
+  recorder               User                             @relation("ManualApprovalRecorder", fields: [recorderUserId], references: [id], onDelete: Restrict)
+  secondVerifier         User?                            @relation("ManualApprovalSecondVerifier", fields: [secondVerifierUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, verificationStatus])
+  @@index([organizationId, relatedEntityType, relatedEntityId])
+}
+
+model ManualApprovalVersion {
+  id               String         @id @default(cuid())
+  organizationId   String
+  approvalRecordId String
+  version          Int
+  snapshot         Json
+  previousValues   Json?
+  changeReason     String
+  actorUserId      String
+  createdAt        DateTime       @default(now())
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approvalRecord   ApprovalRecord @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
+  actorUser        User           @relation("ManualApprovalVersionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@unique([approvalRecordId, version])
+  @@index([organizationId, createdAt])
+}
+
+model ApprovalEvidenceAssociation {
+  id                String                    @id @default(cuid())
+  organizationId    String
+  approvalRecordId  String
+  messageSourceId   String
+  origin            ApprovalEvidenceOrigin    @default(AI_SUGGESTION)
+  status            EvidenceAssociationStatus @default(SUGGESTED)
+  confidence        Int
+  matchingReasons   String[]
+  immutableSnapshot Json
+  sourceTimestamp   DateTime
+  verifiedByUserId  String?
+  verifiedAt        DateTime?
+  rejectedByUserId  String?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  organization      Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approvalRecord    ApprovalRecord            @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
+  messageSource     MessageSource             @relation(fields: [messageSourceId], references: [id], onDelete: Restrict)
+  verifiedByUser    User?                     @relation("EvidenceAssociationVerifier", fields: [verifiedByUserId], references: [id], onDelete: SetNull)
+  rejectedByUser    User?                     @relation("EvidenceAssociationRejecter", fields: [rejectedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([approvalRecordId, messageSourceId])
+  @@index([organizationId, status, createdAt])
+}
+
+model ApprovalConfirmationRequest {
+  id                String                       @id @default(cuid())
+  organizationId    String
+  approvalRecordId  String
+  tokenHash         String                       @unique
+  approverName      String
+  approverEmail     String
+  decision          ApprovalConfirmationDecision @default(PENDING)
+  requestedByUserId String
+  expiresAt         DateTime
+  respondedAt       DateTime?
+  responseNote      String?
+  correction        Json?
+  immutableResponse Json?
+  createdAt         DateTime                     @default(now())
+  organization      Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approvalRecord    ApprovalRecord               @relation(fields: [approvalRecordId], references: [id], onDelete: Cascade)
+  requestedByUser   User                         @relation("ApprovalConfirmationRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, approvalRecordId, createdAt])
+  @@index([expiresAt, decision])
 }
 
 model ClassifierResult {
