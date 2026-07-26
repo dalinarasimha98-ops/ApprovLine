@@ -7,9 +7,9 @@ Scope: Universal Evidence Capture platform, unified evidence records, gateway in
 
 ApprovLine's Universal Evidence Capture platform is architecturally strong and passed the available automated validation suite for evidence normalization, manual approval controls, ingestion mappings, connector readiness, tenant isolation, reliability, TypeScript checks, security audit policy, and production build.
 
-Production readiness score: 86 / 100
+Production readiness score: 88 / 100
 
-Recommendation: Ready for controlled enterprise pilots and guided beta demos. Not yet certified for unrestricted enterprise production until live connector smoke tests, authenticated browser E2E, first-class GitLab and Azure DevOps provider support, and real load testing are completed.
+Recommendation: Ready for controlled enterprise pilots and guided beta demos. Not yet certified for unrestricted enterprise production until live connector smoke tests, authenticated browser E2E, Sentry release/source-map upload, and real production-scale load testing are completed.
 
 ## Validation Boundary
 
@@ -63,6 +63,8 @@ First-class catalog coverage verified:
 - HubSpot
 - Ironclad
 - GitHub
+- GitLab
+- Azure DevOps
 - Asana
 - Monday.com
 - API
@@ -74,10 +76,8 @@ First-class catalog coverage verified:
 
 Coverage gaps:
 
-- GitLab is not currently a first-class provider catalog entry.
-- Azure DevOps is not currently a first-class provider catalog entry.
-
-Both can still enter through the Universal Gateway, SDK, webhook, API, or custom provider path, but they are not yet dedicated source cards/connectors.
+- GitLab and Azure DevOps are now first-class evidence provider catalog entries, but they do not yet have dedicated OAuth/sync connector routes.
+- GitLab and Azure DevOps can enter through the Universal Gateway, SDK, webhook, API, or custom provider path today. Dedicated native connectors still require implementation and live certification before they should be sold as native integrations.
 
 ## Workflow Certification
 
@@ -267,35 +267,34 @@ Performance caveats:
 | Architecture completeness | 92 | Strong universal evidence, gateway, memory graph, manual approval, and audit architecture. |
 | Automated validation | 95 | Core suites passed. |
 | Security and tenant isolation | 90 | Tenant isolation and RBAC passed; Sentry release upload remains incomplete. |
-| Integration readiness | 82 | Major connectors validated by harnesses; GitLab/Azure DevOps first-class provider gaps remain. |
+| Integration readiness | 85 | Major connectors validated by harnesses; GitLab/Azure DevOps are first-class evidence providers, but dedicated native connectors still need live certification. |
 | UI readiness | 78 | Build passes, but authenticated browser E2E was skipped. |
 | Performance readiness | 78 | Lightweight tests are fast; production-scale load remains unverified. |
 
-Overall: 86 / 100
+Overall: 88 / 100
 
 ## Unresolved Issues
 
-1. GitLab and Azure DevOps should be added as first-class provider catalog entries if they are part of the enterprise sales promise.
-2. Authenticated browser E2E must run with a production-like session:
+1. Authenticated browser E2E must run with a production-like session:
    - `E2E_BASE_URL=https://www.approvline.com`
    - `E2E_STORAGE_STATE=/absolute/path/to/storage-state.json`
    - `E2E_APPROVAL_ID=<real approval id>`
-3. Live OAuth and webhook smoke tests should be completed for every active connector.
-4. Sentry release/source map upload should be enabled with a Sentry auth token.
-5. Load testing should validate 100,000+ evidence records, concurrent ingestion, queue backlog recovery, and timeline rendering.
-6. Real customer playbooks should be tested for policy extraction accuracy before unrestricted production usage.
+2. Live OAuth and webhook smoke tests should be completed for every active connector.
+3. Sentry release/source map upload should be enabled with a Sentry auth token.
+4. Load testing should validate 100,000+ evidence records, concurrent ingestion, queue backlog recovery, and timeline rendering.
+5. Real customer playbooks should be tested for policy extraction accuracy before unrestricted production usage.
+6. Dedicated GitLab and Azure DevOps OAuth/sync connectors should be implemented and certified before positioning them as native integrations rather than Universal Gateway/SDK sources.
 
 ## Certification Decision
 
 ApprovLine Universal Evidence Capture is ready for controlled enterprise pilots, customer demos, and guided beta deployments.
 
-It is not yet certified for unrestricted enterprise production because live connector tests, authenticated browser E2E, first-class GitLab/Azure DevOps source coverage, and production-scale load validation are still required.
+It is not yet certified for unrestricted enterprise production because live connector tests, authenticated browser E2E, Sentry release/source-map certification, and production-scale load validation are still required.
 
 Recommended next release gate:
 
-1. Add GitLab and Azure DevOps provider catalog entries.
-2. Run authenticated browser E2E against production.
-3. Run live connector smoke tests.
-4. Enable Sentry release/source map upload.
-5. Run production-scale gateway and evidence timeline load tests.
-
+1. Run authenticated browser E2E against production.
+2. Run live connector smoke tests.
+3. Enable Sentry release/source map upload.
+4. Run production-scale gateway and evidence timeline load tests.
+5. Run GitLab and Azure DevOps Universal Gateway/SDK smoke tests, or implement dedicated OAuth connectors before selling them as native integrations.

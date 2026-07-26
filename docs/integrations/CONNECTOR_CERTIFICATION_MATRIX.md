@@ -13,8 +13,8 @@ Certification requires provider evidence; route presence alone is not certificat
 | Zoom | OAuth, callback, webhook and transcript sync | Implemented; awaiting live certification | Recording/transcript scopes, signed webhook, reconnect |
 | Universal Gateway | API, webhook, CSV, document and transcript routes | Implemented with conditions | Tenant credentials, distributed quota and replay suite |
 | GitHub | No connector route | Planned | Implementation and provider certification |
-| GitLab | No connector route | Planned | Implementation and provider certification |
-| Azure DevOps | No connector route | Planned | Implementation and provider certification |
+| GitLab | First-class evidence provider catalog entry; no dedicated connector route | Provider manifest implemented; awaiting gateway/SDK smoke certification | Universal Gateway or SDK ingest using `gitlab`, sample merge request evidence, duplicate handling, tenant isolation |
+| Azure DevOps | First-class evidence provider catalog entry; no dedicated connector route | Provider manifest implemented; awaiting gateway/SDK smoke certification | Universal Gateway or SDK ingest using `azure_devops`, sample work item/PR evidence, duplicate handling, tenant isolation |
 | Jenkins | No connector route | Planned | Implementation and provider certification |
 | Kubernetes | No connector route | Planned | Implementation and provider certification |
 
