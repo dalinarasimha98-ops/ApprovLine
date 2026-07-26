@@ -3,7 +3,10 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
 import { evidenceProviderCatalog } from '@/services/evidence/provider-catalog';
-import { searchUnifiedEvidence } from '@/services/evidence/records';
+import {
+  getLatestUnifiedEvidenceRecordId,
+  searchUnifiedEvidence,
+} from '@/services/evidence/records';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +73,12 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
     redirect('/onboarding');
   }
   if (!tenant.organization) redirect('/dashboard');
+
+  const isDefaultLanding = !params.q && !params.provider && !params.risk && !params.page;
+  if (isDefaultLanding) {
+    const latestRecordId = await getLatestUnifiedEvidenceRecordId(tenant.organization.id);
+    if (latestRecordId) redirect(`/evidence/${latestRecordId}`);
+  }
 
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
   let data: Awaited<ReturnType<typeof searchUnifiedEvidence>> | null = null;
