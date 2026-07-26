@@ -29,4 +29,4 @@ jobs:
       - run: npm run test:tenant-isolation
       - run: npm run test:certification
       - run: npm run build
-      - run: npm audit --audit-level=high
+      - run: npm run audit:ci

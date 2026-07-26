@@ -8,6 +8,7 @@
     "build": "node scripts/production-build.mjs",
     "start": "next start",
     "lint": "eslint .",
+    "audit:ci": "node scripts/audit-ci.mjs",
     "check": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -45,6 +46,7 @@
     "prisma": "^6.10.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "sharp": "0.35.3",
     "zod": "^3.25.67"
   },
   "devDependencies": {
