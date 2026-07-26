@@ -96,6 +96,166 @@ export async function getUnifiedEvidenceDetail(organizationId: string, id: strin
   });
 }
 
+export async function getUnifiedEvidenceExperience(
+  organizationId: string,
+  id: string,
+  eventLimit = 40,
+) {
+  const take = Math.min(100, Math.max(1, eventLimit));
+  const record = await prisma.unifiedEvidenceRecord.findFirst({
+    where: { id, organizationId },
+    include: {
+      primaryApproval: true,
+      events: {
+        select: publicEventSelect,
+        orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
+        take: take + 1,
+      },
+      members: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  });
+  if (!record) return null;
+
+  const hasMoreEvents = record.events.length > take;
+  const events = record.events.slice(0, take);
+  const eventIds = new Set(events.map((event) => event.id));
+  const [providerCounts, connections, latestEvent] = await Promise.all([
+    prisma.canonicalEvidenceEvent.groupBy({
+      by: ['providerKey'],
+      where: { organizationId, unifiedRecordId: id },
+      _count: { _all: true },
+      _max: { occurredAt: true },
+    }),
+    prisma.evidenceProviderConnection.findMany({
+      where: { organizationId },
+      select: {
+        providerKey: true,
+        displayName: true,
+        status: true,
+        lastSyncAt: true,
+        health: {
+          select: {
+            status: true,
+            latencyMs: true,
+            syncStatus: true,
+            lastEventAt: true,
+            lastSuccessfulSyncAt: true,
+            consecutiveFailures: true,
+            lastErrorCode: true,
+            lastErrorMessage: true,
+            checkedAt: true,
+          },
+        },
+      },
+    }),
+    prisma.canonicalEvidenceEvent.findFirst({
+      where: { organizationId, unifiedRecordId: id },
+      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      select: { id: true },
+    }),
+  ]);
+  const connectionByProvider = new Map(
+    connections.map((connection) => [connection.providerKey, connection]),
+  );
+
+  return {
+    ...record,
+    events,
+    members: record.members.filter(
+      (member) => eventIds.has(member.eventId) || member.status === 'SUGGESTED',
+    ),
+    eventPage: {
+      hasMore: hasMoreEvents,
+      cursor: events.at(-1)?.id ?? null,
+      limit: take,
+    },
+    liveCursor: latestEvent?.id ?? null,
+    providers: providerCounts.map((provider) => ({
+      providerKey: provider.providerKey,
+      eventCount: provider._count._all,
+      latestEventAt: provider._max.occurredAt,
+      connection: connectionByProvider.get(provider.providerKey) ?? null,
+    })),
+  };
+}
+
+export async function getUnifiedEvidenceEventPage(input: {
+  organizationId: string;
+  recordId: string;
+  cursor?: string | null;
+  limit?: number;
+}) {
+  const limit = Math.min(100, Math.max(1, input.limit ?? 40));
+  let after:
+    | {
+        occurredAt: Date;
+        id: string;
+      }
+    | undefined;
+
+  if (input.cursor) {
+    const cursorEvent = await prisma.canonicalEvidenceEvent.findFirst({
+      where: {
+        id: input.cursor,
+        organizationId: input.organizationId,
+        unifiedRecordId: input.recordId,
+      },
+      select: { id: true, occurredAt: true },
+    });
+    if (!cursorEvent) throw new Error('The evidence timeline cursor is no longer valid.');
+    after = cursorEvent;
+  }
+
+  const events = await prisma.canonicalEvidenceEvent.findMany({
+    where: {
+      organizationId: input.organizationId,
+      unifiedRecordId: input.recordId,
+      ...(after
+        ? {
+            OR: [
+              { occurredAt: { gt: after.occurredAt } },
+              { occurredAt: after.occurredAt, id: { gt: after.id } },
+            ],
+          }
+        : {}),
+    },
+    select: {
+      ...publicEventSelect,
+      memberships: {
+        where: { unifiedRecordId: input.recordId },
+        select: {
+          id: true,
+          status: true,
+          matchConfidence: true,
+          matchingReasons: true,
+          reviewedAt: true,
+        },
+        take: 1,
+      },
+    },
+    orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
+    take: limit + 1,
+  });
+
+  const hasMore = events.length > limit;
+  const page = events.slice(0, limit).map((event) => ({
+    ...event,
+    membership: event.memberships[0] ?? null,
+    memberships: undefined,
+  }));
+
+  return {
+    events: page,
+    page: {
+      hasMore,
+      cursor: page.at(-1)?.id ?? input.cursor ?? null,
+      limit,
+    },
+  };
+}
+
 export async function reviewEvidenceSuggestion(input: {
   organizationId: string;
   memberId: string;

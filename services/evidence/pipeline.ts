@@ -1,7 +1,6 @@
 import type {
   ApprovalRecord,
   ClassifierResult,
-  EvidenceEventStatus,
   Prisma,
   UnifiedEvidenceMemberStatus,
 } from '@prisma/client';
