@@ -27,6 +27,7 @@
     "test:production-hardening": "node --import tsx tests/production-hardening.test.ts",
     "test:manual-approvals": "node --import tsx tests/manual-approvals.test.ts",
     "test:evidence": "node --import tsx tests/evidence-platform.test.ts",
+    "test:approval-records": "node --import tsx tests/approval-records-dashboard.test.ts",
     "test:e2e:approvals": "playwright test tests/e2e/approval-timeline.spec.ts",
     "readiness": "tsx scripts/readiness.ts",
     "gmail:sync": "tsx scripts/gmail-sync.ts",

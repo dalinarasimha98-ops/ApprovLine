@@ -1,5 +1,23 @@
-import type { ApprovalRecord } from '@prisma/client';
 import { PendingLink } from '@/components/system/PendingLink';
+
+export type ApprovalTableRecord = {
+  id: string;
+  subject: string;
+  sourceLink: string | null;
+  reasoning: string;
+  conditions: string | null;
+  businessImpact: string | null;
+  evidenceSnippet: string | null;
+  approverName: string | null;
+  approverEmail: string | null;
+  department: string | null;
+  category: string | null;
+  riskLevel: string | null;
+  sourcePlatform: string | null;
+  confidence: number;
+  status: string;
+  createdAt: Date;
+};
 
 function riskClass(risk?: string | null) {
   if (risk === 'high') return 'bg-rose-50 text-rose-700 border-rose-100';
@@ -13,7 +31,7 @@ function statusClass(status: string) {
   return 'bg-emerald-50 text-emerald-700';
 }
 
-export function ApprovalTable({ approvals }: { approvals: ApprovalRecord[] }) {
+export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] }) {
   if (approvals.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white/90 p-10 text-center shadow-sm">
