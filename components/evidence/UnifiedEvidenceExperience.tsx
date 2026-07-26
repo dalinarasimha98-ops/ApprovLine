@@ -34,6 +34,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type JsonValue = unknown;
@@ -244,6 +245,999 @@ function dateOnly(value: string) {
   );
 }
 
+export function UnifiedEvidenceExperience({ initialData }: { initialData: UnifiedEvidenceData }) {
+  const [events, setEvents] = useState<EvidenceEvent[]>(initialData.events);
+  const [page, setPage] = useState(initialData.eventPage);
+  const [liveCursor, setLiveCursor] = useState(initialData.liveCursor);
+  const [activeTab, setActiveTab] = useState<TimelineTab>('timeline');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [providerFilter, setProviderFilter] = useState('all');
+  const [groupBy, setGroupBy] = useState<'none' | 'source' | 'day'>('none');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [newEvidenceCount, setNewEvidenceCount] = useState(0);
+  const [providerDrawer, setProviderDrawer] = useState<EvidenceProvider | null>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const metadata = useMemo(() => recordValue(initialData.metadata), [initialData.metadata]);
+  const attachments = useMemo(() => attachmentItems(events), [events]);
+  const related = useMemo(() => relatedItems(events), [events]);
+  const evidenceHash = events[0]?.evidenceHash ?? String(metadata.evidenceHash ?? initialData.id);
+
+  const providers = useMemo(() => {
+    const providerMap = new Map(initialData.providers.map((provider) => [provider.providerKey, provider]));
+    for (const event of events) {
+      if (!providerMap.has(event.providerKey)) {
+        providerMap.set(event.providerKey, {
+          providerKey: event.providerKey,
+          eventCount: events.filter((candidate) => candidate.providerKey === event.providerKey).length,
+          latestEventAt: event.occurredAt,
+        });
+      }
+    }
+    return Array.from(providerMap.values()).sort((left, right) => right.eventCount - left.eventCount);
+  }, [events, initialData.providers]);
+
+  const copyText = useCallback(
+    async (value: string, label: string) => {
+      try {
+        await navigator.clipboard.writeText(value);
+        setToast(`${label} copied`);
+      } catch {
+        setToast(`Could not copy ${label.toLowerCase()}`);
+      }
+    },
+    [],
+  );
+
+  const exportRecord = useCallback(() => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      record: initialData,
+      events,
+      providers,
+      attachments,
+      related,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${initialData.id}-unified-evidence.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setToast('Unified evidence export started');
+  }, [attachments, events, initialData, providers, related]);
+
+  const fetchEvents = useCallback(
+    async (cursor: string | null | undefined, mode: 'append' | 'replace' | 'poll') => {
+      const response = await fetch(
+        `/api/evidence/records/${encodeURIComponent(initialData.id)}/events?limit=40${
+          cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''
+        }`,
+        { cache: 'no-store' },
+      );
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? 'Unable to load evidence events.');
+      }
+
+      const payload = (await response.json()) as {
+        events: EvidenceEvent[];
+        page: { hasMore: boolean; cursor?: string | null; limit: number };
+        liveCursor?: string | null;
+      };
+
+      setEvents((current) => {
+        if (mode === 'replace') {
+          return payload.events;
+        }
+
+        const existing = new Set(current.map((event) => event.id));
+        const nextEvents = payload.events.filter((event) => !existing.has(event.id));
+        if (mode === 'poll' && nextEvents.length > 0) {
+          setNewEvidenceCount((value) => value + nextEvents.length);
+          return [...nextEvents, ...current].sort(
+            (left, right) => new Date(left.occurredAt).getTime() - new Date(right.occurredAt).getTime(),
+          );
+        }
+
+        return [...current, ...nextEvents].sort(
+          (left, right) => new Date(left.occurredAt).getTime() - new Date(right.occurredAt).getTime(),
+        );
+      });
+      setPage(payload.page);
+      setLiveCursor(payload.liveCursor ?? null);
+    },
+    [initialData.id],
+  );
+
+  const refreshTimeline = useCallback(async () => {
+    setRefreshing(true);
+    setLoadError(null);
+    try {
+      await fetchEvents(null, 'replace');
+      setToast('Evidence timeline refreshed');
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to refresh evidence.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchEvents]);
+
+  const loadMore = useCallback(async () => {
+    if (!page.hasMore || loadingMore) return;
+    setLoadingMore(true);
+    setLoadError(null);
+    try {
+      await fetchEvents(page.cursor, 'append');
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to load more evidence.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [fetchEvents, loadingMore, page.cursor, page.hasMore]);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !page.hasMore) return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        void loadMore();
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loadMore, page.hasMore]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (!liveCursor) return;
+      void fetchEvents(liveCursor, 'poll').catch(() => undefined);
+    }, 15000);
+    return () => window.clearInterval(interval);
+  }, [fetchEvents, liveCursor]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = window.setTimeout(() => setToast(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const filteredEvents = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return events.filter((event) => {
+      if (providerFilter !== 'all' && event.providerKey !== providerFilter) return false;
+      if (!normalizedQuery) return true;
+      const searchable = [
+        providerInfo(event.providerKey).label,
+        event.content,
+        event.actorName,
+        event.actorEmail,
+        event.threadId,
+        event.objectId,
+        event.objectType,
+        eventStatus(event, eventMembership(event, initialData.members)),
+        ...(event.relatedIds ?? []),
+        ...(event.correlationKeys ?? []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return searchable.includes(normalizedQuery);
+    });
+  }, [events, initialData.members, providerFilter, query]);
+
+  const groupedEvents = useMemo(() => {
+    if (groupBy === 'none') return [{ key: 'All evidence', label: 'Complete Timeline of All Mentions', events: filteredEvents }];
+    const buckets = new Map<string, EvidenceEvent[]>();
+    for (const event of filteredEvents) {
+      const key = groupBy === 'source' ? providerInfo(event.providerKey).label : dateOnly(event.occurredAt);
+      buckets.set(key, [...(buckets.get(key) ?? []), event]);
+    }
+    return Array.from(buckets.entries()).map(([key, value]) => ({ key, label: key, events: value }));
+  }, [filteredEvents, groupBy]);
+
+  const participants = useMemo(() => {
+    const people = new Map<string, { name: string; email?: string | null; role: string; events: number }>();
+    for (const event of events) {
+      const name = event.actorName ?? event.actorEmail ?? 'Unknown participant';
+      const key = event.actorEmail ?? name;
+      const current = people.get(key);
+      people.set(key, {
+        name,
+        email: event.actorEmail,
+        role: event.actorId ?? providerInfo(event.providerKey).label,
+        events: (current?.events ?? 0) + 1,
+      });
+    }
+    return Array.from(people.values()).sort((left, right) => right.events - left.events);
+  }, [events]);
+
+  const confidenceReasons = useMemo(() => {
+    const reasons = new Set<string>();
+    for (const event of events) {
+      const membership = eventMembership(event, initialData.members);
+      for (const reason of membership?.matchingReasons ?? []) reasons.add(reason);
+      for (const key of event.correlationKeys ?? []) reasons.add(`Shared key: ${key}`);
+    }
+    return Array.from(reasons).slice(0, 6);
+  }, [events, initialData.members]);
+
+  const status = initialData.outcome ?? initialData.verificationStatus ?? 'captured';
+  const primaryApprover = initialData.approverName ?? initialData.approverEmail ?? 'Unknown approver';
+  const policyStatus =
+    typeof metadata.complianceStatus === 'string' ? metadata.complianceStatus : initialData.riskLevel === 'high' ? 'Review required' : 'Compliant';
+  const retention = typeof metadata.retention === 'string' ? metadata.retention : 'Workspace policy';
+  const createdBy = typeof metadata.createdBy === 'string' ? metadata.createdBy : 'ApprovLine';
+  const classificationVersion =
+    typeof metadata.classificationVersion === 'string' ? metadata.classificationVersion : 'Current classifier';
+
+  return (
+    <div className="min-h-screen bg-[#030813] px-3 py-3 text-slate-100 sm:px-4 lg:px-5">
+      <div className="mx-auto max-w-[1720px]">
+        <div className="mb-3 flex min-h-12 flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+            <Link href="/evidence" className="transition hover:text-white">
+              Unified Evidence
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5" />
+            <span className="text-slate-200">{initialData.id}</span>
+          </div>
+
+          <div className="order-3 flex min-w-full flex-1 items-center rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 shadow-[0_0_0_1px_rgba(37,99,235,0.08)] lg:order-none lg:mx-auto lg:min-w-0 lg:max-w-xl">
+            <Search className="h-4 w-4 text-slate-500" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search approvals, people, decisions, tickets..."
+              className="min-w-0 flex-1 bg-transparent px-3 text-xs text-slate-200 outline-none placeholder:text-slate-500"
+              aria-label="Search unified evidence"
+            />
+            <span className="rounded-md border border-white/10 bg-black/20 px-1.5 py-0.5 text-[10px] text-slate-500">K</span>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.08] px-3 py-1.5 text-[11px] font-semibold text-emerald-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.8)]" />
+              Live Capture
+            </span>
+            <button
+              type="button"
+              onClick={() => setToast('Notifications are routed through workspace alerts.')}
+              className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08]"
+              aria-label="Notifications"
+            >
+              <Activity className="h-4 w-4" />
+              {newEvidenceCount > 0 ? (
+                <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 text-[9px] font-bold text-white">{newEvidenceCount}</span>
+              ) : null}
+            </button>
+            <div className="hidden items-center gap-2 sm:flex">
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-violet-600 text-sm font-bold text-white">D</div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-white">Dali Narasimha</p>
+                <p className="text-[9px] font-bold uppercase tracking-wide text-violet-300">Super admin</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {newEvidenceCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              setNewEvidenceCount(0);
+              void refreshTimeline();
+            }}
+            className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/[0.09] px-4 py-2 text-xs font-bold text-blue-200 transition hover:bg-blue-500/[0.14]"
+          >
+            <Sparkles className="h-4 w-4" />
+            New evidence detected. Refresh timeline.
+          </button>
+        ) : null}
+
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+          <main className="min-w-0 space-y-4">
+            <section className="overflow-hidden rounded-2xl border border-blue-300/15 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.20),transparent_42%),linear-gradient(145deg,rgba(9,18,34,0.98),rgba(3,8,19,0.98))] shadow-[0_18px_80px_rgba(0,0,0,0.35)]">
+              <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex min-w-0 gap-4">
+                  <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-emerald-300/25 bg-emerald-400/[0.08] text-emerald-300 shadow-[0_0_32px_rgba(52,211,153,0.16)]">
+                    <ShieldCheck className="h-10 w-10" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[0.10] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-300">
+                        {initialData.confidence >= 90 ? 'High confidence' : 'Evidence confidence'}
+                      </span>
+                      <span className="text-xs text-slate-500">ID: {initialData.id}</span>
+                      <button
+                        type="button"
+                        onClick={() => void copyText(initialData.id, 'Decision ID')}
+                        className="grid h-6 w-6 place-items-center rounded-md border border-white/10 text-slate-400 transition hover:text-white"
+                        aria-label="Copy decision ID"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <h1 className="mt-2 truncate text-2xl font-black tracking-tight text-white sm:text-3xl">
+                      {initialData.subject}
+                    </h1>
+                    <p className="mt-1 text-sm font-medium text-slate-400">
+                      {initialData.decision ?? initialData.primaryApproval?.title ?? 'Unified decision record'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 rounded-2xl border border-white/[0.08] bg-black/15 p-4">
+                  <Metric label="Sources" value={String(providers.length || initialData.sourceCount)} accent="text-blue-300" />
+                  <Metric label="Mentions" value={String(events.length || initialData.evidenceCount)} accent="text-blue-300" />
+                  <div className="min-w-[116px]">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Confidence Score</p>
+                    <div className="mt-1 flex items-center gap-3">
+                      <span className="text-2xl font-black text-emerald-300">{initialData.confidence}%</span>
+                      <div className="h-10 w-10 rounded-full border-[6px] border-emerald-400 border-l-emerald-400/20" />
+                    </div>
+                    <p className="mt-1 text-[10px] text-slate-500">AI confidence</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid border-t border-white/[0.08] bg-[#061323]/70 sm:grid-cols-2 lg:grid-cols-7">
+                {[
+                  ['Status', titleCase(status), 'text-emerald-300'],
+                  ['Amount', amountText(initialData.amount, initialData.currency), 'text-white'],
+                  ['Decision Type', titleCase(initialData.primaryApproval?.approvalType ?? initialData.category ?? 'Approval'), 'text-white'],
+                  ['Approver', primaryApprover, 'text-white'],
+                  ['Department', initialData.department ?? 'Unassigned', 'text-white'],
+                  ['First Seen', dateTime(initialData.firstSeenAt), 'text-white'],
+                  ['Last Updated', dateTime(initialData.lastSeenAt), 'text-white'],
+                ].map(([label, value, tone]) => (
+                  <div key={label} className="min-w-0 border-b border-r border-white/[0.07] px-4 py-3 last:border-r-0 lg:border-b-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+                    <p className={`mt-1 truncate text-sm font-bold ${tone}`} title={value}>{value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="overflow-hidden rounded-2xl border border-blue-300/15 bg-[#071321]/95 shadow-[0_18px_80px_rgba(0,0,0,0.26)]">
+              <div className="flex items-center gap-1 overflow-x-auto border-b border-white/[0.08] px-3">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`shrink-0 border-b-2 px-4 py-4 text-xs font-bold transition ${
+                      activeTab === tab.id
+                        ? 'border-blue-400 text-white'
+                        : 'border-transparent text-slate-500 hover:text-slate-200'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {activeTab === 'timeline' ? (
+                <div className="p-4">
+                  <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <h2 className="text-base font-black text-white">
+                        Complete Timeline of All Mentions <span className="font-medium text-slate-500">(Chronological)</span>
+                      </h2>
+                      <p className="mt-1 text-xs text-slate-500">Every source mention is immutable, searchable, and expandable.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <select
+                        value={providerFilter}
+                        onChange={(event) => setProviderFilter(event.target.value)}
+                        className="h-10 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-semibold text-slate-200 outline-none"
+                        aria-label="Filter by source"
+                      >
+                        <option value="all">All sources</option>
+                        {providers.map((provider) => (
+                          <option key={provider.providerKey} value={provider.providerKey}>{providerInfo(provider.providerKey).label}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={groupBy}
+                        onChange={(event) => setGroupBy(event.target.value as 'none' | 'source' | 'day')}
+                        className="h-10 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-semibold text-slate-200 outline-none"
+                        aria-label="Group evidence"
+                      >
+                        <option value="none">Group by: None</option>
+                        <option value="source">Group by: Source</option>
+                        <option value="day">Group by: Day</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => void refreshTimeline()}
+                        disabled={refreshing}
+                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-slate-200 transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
+
+                  {loadError ? (
+                    <div className="mb-4 rounded-xl border border-amber-300/25 bg-amber-300/[0.08] p-4">
+                      <p className="text-sm font-bold text-amber-200">Evidence timeline is temporarily delayed</p>
+                      <p className="mt-1 text-xs leading-5 text-amber-100/70">{loadError}</p>
+                      <button
+                        type="button"
+                        onClick={() => void refreshTimeline()}
+                        className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white"
+                      >
+                        Retry timeline
+                      </button>
+                    </div>
+                  ) : null}
+
+                  <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#03101e]">
+                    {filteredEvents.length === 0 ? (
+                      <EmptyPanel
+                        title="No evidence matched"
+                        text="Adjust filters or search terms. The underlying record stays intact and auditable."
+                      />
+                    ) : (
+                      groupedEvents.map((group) => (
+                        <div key={group.key}>
+                          {groupBy !== 'none' ? (
+                            <div className="border-b border-white/[0.08] bg-white/[0.025] px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                              {group.label}
+                            </div>
+                          ) : null}
+                          {group.events.map((event) => {
+                            const membership = eventMembership(event, initialData.members);
+                            const info = providerInfo(event.providerKey);
+                            const statusLabel = eventStatus(event, membership);
+                            const expanded = expandedId === event.id;
+                            const sourceUrl = eventSourceUrl(event);
+                            return (
+                              <article key={event.id} className="border-b border-white/[0.07] last:border-b-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedId(expanded ? null : event.id)}
+                                  className="grid w-full grid-cols-[92px_minmax(150px,220px)_minmax(0,1fr)] items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.035] lg:grid-cols-[104px_minmax(180px,230px)_minmax(0,1fr)_170px_210px]"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <span className="mt-1 h-2.5 w-2.5 rounded-full" style={{ backgroundColor: info.color }} />
+                                    <div>
+                                      <p className="text-xs font-bold text-blue-300">{timeOnly(event.occurredAt)}</p>
+                                      <p className="text-[11px] text-slate-500">{dateOnly(event.occurredAt)}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex min-w-0 items-center gap-3">
+                                    <ProviderMark providerKey={event.providerKey} />
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-bold text-white">{info.label}</p>
+                                      <p className="truncate text-[11px] text-slate-500">{event.threadId ?? event.objectType}</p>
+                                    </div>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="line-clamp-2 text-sm font-medium leading-5 text-slate-200">{event.content ?? event.objectId ?? 'Evidence captured without body text.'}</p>
+                                    <p className="mt-1 truncate text-[11px] text-slate-500">{event.objectId ?? event.providerEventType}</p>
+                                  </div>
+                                  <div className="hidden min-w-0 items-center gap-2 lg:flex">
+                                    <UserRound className="h-4 w-4 shrink-0 text-slate-600" />
+                                    <div className="min-w-0">
+                                      <p className="truncate text-xs font-bold text-slate-200">{event.actorName ?? 'Unknown actor'}</p>
+                                      <p className="truncate text-[10px] text-slate-500">{event.actorEmail ?? event.actorId ?? 'Source actor'}</p>
+                                    </div>
+                                  </div>
+                                  <div className="hidden items-center justify-end gap-2 lg:flex">
+                                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${statusTone(statusLabel)}`}>
+                                      {titleCase(statusLabel)}
+                                    </span>
+                                    <span className="rounded-full border border-blue-400/15 bg-blue-500/[0.12] px-2.5 py-1 text-[10px] font-bold text-blue-300">
+                                      {Math.round(event.confidence)}%
+                                    </span>
+                                    {expanded ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronRight className="h-4 w-4 text-slate-500" />}
+                                  </div>
+                                </button>
+
+                                {expanded ? (
+                                  <div className="grid gap-3 border-t border-white/[0.07] bg-[#020a15] px-4 py-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)]">
+                                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+                                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Original evidence</p>
+                                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{event.content ?? 'No body text was stored for this source event.'}</p>
+                                      <div className="mt-4 flex flex-wrap gap-2">
+                                        {sourceUrl ? (
+                                          <a
+                                            href={sourceUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-2 rounded-lg border border-blue-400/20 bg-blue-500/[0.10] px-3 py-2 text-xs font-bold text-blue-200"
+                                          >
+                                            <ExternalLink className="h-4 w-4" />
+                                            Open source
+                                          </a>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-500">
+                                            <LockKeyhole className="h-4 w-4" />
+                                            Source link unavailable
+                                          </span>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => void copyText(event.evidenceHash, 'Evidence hash')}
+                                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-slate-300"
+                                        >
+                                          <Fingerprint className="h-4 w-4" />
+                                          Copy hash
+                                        </button>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                      <FlagshipMetadata label="Provider event" value={event.providerEventType} />
+                                      <FlagshipMetadata label="Correlation ID" value={event.correlationId} />
+                                      <FlagshipMetadata label="Evidence hash" value={event.evidenceHash} />
+                                      <FlagshipMetadata label="Matching reasons" value={(membership?.matchingReasons ?? event.correlationKeys ?? []).join(', ') || 'No reasons recorded'} />
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </article>
+                            );
+                          })}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div ref={sentinelRef} className="mt-4 flex justify-center">
+                    {page.hasMore ? (
+                      <button
+                        type="button"
+                        onClick={() => void loadMore()}
+                        disabled={loadingMore}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-60"
+                      >
+                        {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
+                        Load more evidence
+                      </button>
+                    ) : (
+                      <span className="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-slate-500">
+                        Complete evidence window loaded
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <FlagshipTabPanel
+                  tab={activeTab}
+                  initialData={initialData}
+                  events={events}
+                  providers={providers}
+                  attachments={attachments}
+                  related={related}
+                  participants={participants}
+                  confidenceReasons={confidenceReasons}
+                  onProviderOpen={setProviderDrawer}
+                />
+              )}
+            </section>
+
+            <footer className="grid overflow-hidden rounded-2xl border border-blue-300/15 bg-[#071321]/95 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+              {[
+                { icon: AlertTriangle, label: 'Decision Impact', value: initialData.primaryApproval?.businessImpact ?? 'Not assessed', helper: initialData.riskLevel === 'high' ? 'Review required' : 'Financial impact', color: 'text-rose-300' },
+                { icon: ShieldCheck, label: 'Policy Check', value: policyStatus, helper: 'Policy analysis attached', color: 'text-emerald-300' },
+                { icon: Activity, label: 'Risk Level', value: titleCase(initialData.riskLevel ?? 'low'), helper: 'Evidence-based risk', color: 'text-emerald-300' },
+                { icon: Archive, label: 'Retention', value: retention, helper: 'Workspace retention', color: 'text-amber-300' },
+                { icon: LockKeyhole, label: 'Evidence Locked', value: 'Yes', helper: 'Tamper-proof', color: 'text-emerald-300' },
+                { icon: UserRound, label: 'Created By', value: createdBy, helper: dateTime(initialData.createdAt), color: 'text-slate-200' },
+                { icon: Fingerprint, label: 'AI Model Version', value: classificationVersion, helper: 'Classification version', color: 'text-violet-300' },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} className="min-w-0 border-b border-r border-white/[0.07] p-4 last:border-r-0 lg:border-b-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
+                    <p className={`mt-2 flex items-center gap-2 truncate text-sm font-black ${item.color}`}>
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{item.value}</span>
+                    </p>
+                    <p className="mt-1 truncate text-[11px] text-slate-500">{item.helper}</p>
+                  </div>
+                );
+              })}
+            </footer>
+          </main>
+
+          <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+            <FlagshipSideCard title="AI Summary" action="View AI Reasoning" onAction={() => setActiveTab('analysis')}>
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span>Powered by Playbook AI</span>
+                <span>{initialData.confidence}% confidence</span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-300">
+                The system observed {events.length} mentions across {providers.length || initialData.sourceCount} tools and clustered them into one unified approval decision.
+              </p>
+              <div className="mt-4 space-y-2">
+                {(confidenceReasons.length ? confidenceReasons : [
+                  `Same decision: ${initialData.subject}`,
+                  `Same approver: ${primaryApprover}`,
+                  `Same context: ${initialData.department ?? 'workspace decision'}`,
+                ]).slice(0, 5).map((reason) => (
+                  <div key={reason} className="flex gap-2 text-xs leading-5 text-slate-300">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                    <span>{reason}</span>
+                  </div>
+                ))}
+              </div>
+            </FlagshipSideCard>
+
+            <FlagshipSideCard title={`Source Platforms (${providers.length || initialData.sourceCount})`}>
+              <div className="grid grid-cols-4 gap-2">
+                {providers.length > 0 ? providers.slice(0, 12).map((provider) => (
+                  <button
+                    key={provider.providerKey}
+                    type="button"
+                    onClick={() => setProviderDrawer(provider)}
+                    className="rounded-xl border border-white/[0.08] bg-white/[0.035] p-2 text-center transition hover:border-blue-300/30 hover:bg-blue-500/[0.08]"
+                  >
+                    <ProviderMark providerKey={provider.providerKey} />
+                    <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{providerInfo(provider.providerKey).label}</p>
+                  </button>
+                )) : (
+                  <div className="col-span-4 rounded-xl border border-dashed border-white/10 p-4 text-xs text-slate-500">No source platforms reported yet.</div>
+                )}
+              </div>
+            </FlagshipSideCard>
+
+            <FlagshipSideCard title={`Supporting Evidence (${attachments.length})`} action="View all" onAction={() => setActiveTab('supporting')}>
+              <div className="space-y-2">
+                {attachments.length > 0 ? attachments.slice(0, 4).map((attachment) => (
+                  <FlagshipAttachmentRow key={attachment.id} attachment={attachment} />
+                )) : (
+                  <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-slate-500">No supporting documents are linked yet.</p>
+                )}
+                {attachments.length > 4 ? <p className="text-center text-xs font-semibold text-slate-500">+{attachments.length - 4} more files</p> : null}
+              </div>
+            </FlagshipSideCard>
+
+            <FlagshipSideCard title={`Related Records (${related.length})`} action="View all" onAction={() => setActiveTab('related')}>
+              <div className="space-y-2">
+                {related.length > 0 ? related.slice(0, 4).map((item) => (
+                  <div key={item.id} className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+                    <ProviderMark providerKey={item.providerKey} size="sm" />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-slate-200">{item.label}</p>
+                      <p className="truncate text-[11px] text-slate-500">{titleCase(item.type)} - {providerInfo(item.providerKey).label}</p>
+                    </div>
+                  </div>
+                )) : (
+                  <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-slate-500">No related records have been confirmed.</p>
+                )}
+              </div>
+            </FlagshipSideCard>
+          </aside>
+        </div>
+
+        <div className="fixed right-4 top-16 z-40 flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-slate-200 shadow-xl transition hover:bg-white/[0.08]">
+            <ArrowDownToLine className="h-4 w-4" /> Export
+          </button>
+          <button type="button" onClick={() => void copyText(window.location.href, 'Share link')} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-slate-200 shadow-xl transition hover:bg-white/[0.08]">
+            <Share2 className="h-4 w-4" /> Share
+          </button>
+          <Link href={`/audit-logs?evidence=${encodeURIComponent(initialData.id)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-slate-200 shadow-xl transition hover:bg-white/[0.08]">
+            <History className="h-4 w-4" /> Audit Log
+          </Link>
+          <div className="relative">
+            <button type="button" onClick={() => setActionsOpen((value) => !value)} className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white shadow-xl transition hover:bg-blue-500">
+              Actions <ChevronDown className="h-4 w-4" />
+            </button>
+            {actionsOpen ? (
+              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-[#081525] p-2 shadow-2xl">
+                <button type="button" onClick={() => void copyText(initialData.id, 'Decision ID')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-200 hover:bg-white/[0.06]">Copy decision ID</button>
+                <button type="button" onClick={() => void copyText(evidenceHash, 'Evidence hash')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-200 hover:bg-white/[0.06]">Copy evidence hash</button>
+                <button type="button" onClick={() => void refreshTimeline()} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-200 hover:bg-white/[0.06]">Refresh timeline</button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {toast ? (
+          <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-[#081525] px-4 py-2 text-xs font-bold text-slate-100 shadow-2xl">
+            {toast}
+          </div>
+        ) : null}
+
+        {providerDrawer ? (
+          <FlagshipProviderDrawer provider={providerDrawer} onClose={() => setProviderDrawer(null)} />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function FlagshipMetadata({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 break-words text-xs leading-5 text-slate-300">{value}</p>
+    </div>
+  );
+}
+
+function FlagshipSideCard({
+  title,
+  action,
+  onAction,
+  children,
+}: {
+  title: string;
+  action?: string;
+  onAction?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-blue-300/15 bg-[#071321]/95 p-4 shadow-[0_18px_80px_rgba(0,0,0,0.26)]">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-black text-white">{title}</h2>
+        {action ? (
+          <button type="button" onClick={onAction} className="text-xs font-bold text-blue-300 transition hover:text-blue-200">
+            {action} →
+          </button>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function FlagshipAttachmentRow({ attachment }: { attachment: AttachmentItem }) {
+  const url = safeUrl(attachment.url);
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-blue-300/15 bg-blue-500/[0.12] text-blue-300">
+        <FileText className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-bold text-slate-200">{attachment.name}</p>
+        <p className="truncate text-[11px] text-slate-500">{providerInfo(attachment.providerKey).label} - {attachment.type ?? 'Evidence file'}</p>
+      </div>
+      {url ? (
+        <a href={url} target="_blank" rel="noreferrer" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white" aria-label={`Open ${attachment.name}`}>
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      ) : (
+        <LockKeyhole className="h-4 w-4 text-slate-600" />
+      )}
+    </div>
+  );
+}
+
+function FlagshipTabPanel({
+  tab,
+  initialData,
+  events,
+  providers,
+  attachments,
+  related,
+  participants,
+  confidenceReasons,
+  onProviderOpen,
+}: {
+  tab: TimelineTab;
+  initialData: UnifiedEvidenceData;
+  events: EvidenceEvent[];
+  providers: EvidenceProvider[];
+  attachments: AttachmentItem[];
+  related: RelatedItem[];
+  participants: Array<{ name: string; email?: string | null; role: string; events: number }>;
+  confidenceReasons: string[];
+  onProviderOpen: (provider: EvidenceProvider) => void;
+}) {
+  if (tab === 'analysis') {
+    return (
+      <div className="grid gap-4 p-4 lg:grid-cols-2">
+        <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+          <h2 className="text-lg font-black text-white">AI Correlation Reasoning</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            ApprovLine clustered this decision from source evidence, matching actor, subject, department, references, and time proximity. Reasoning is derived from captured evidence only.
+          </p>
+          <div className="mt-4 space-y-2">
+            {(confidenceReasons.length ? confidenceReasons : ['No explicit matching reasons were stored for this record.']).map((reason) => (
+              <div key={reason} className="flex gap-2 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3 text-sm text-slate-300">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                {reason}
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+          <h2 className="text-lg font-black text-white">Confidence Breakdown</h2>
+          {[
+            ['Overall confidence', `${initialData.confidence}%`],
+            ['Sources analyzed', String(providers.length || initialData.sourceCount)],
+            ['Evidence mentions', String(events.length || initialData.evidenceCount)],
+            ['Risk level', titleCase(initialData.riskLevel ?? 'Not assessed')],
+            ['Verification status', titleCase(initialData.verificationStatus)],
+          ].map(([label, value]) => (
+            <div key={label} className="mt-3 flex items-center justify-between rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+              <span className="text-xs font-semibold text-slate-500">{label}</span>
+              <span className="text-sm font-black text-slate-100">{value}</span>
+            </div>
+          ))}
+        </section>
+      </div>
+    );
+  }
+
+  if (tab === 'details') {
+    return (
+      <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+        {[
+          ['Decision title', initialData.subject],
+          ['Decision summary', initialData.decision ?? 'No decision summary recorded'],
+          ['Outcome', titleCase(initialData.outcome ?? 'Captured')],
+          ['Category', titleCase(initialData.category ?? 'Uncategorized')],
+          ['Department', initialData.department ?? 'Unassigned'],
+          ['Approver', initialData.approverName ?? initialData.approverEmail ?? 'Unknown'],
+          ['Amount', amountText(initialData.amount, initialData.currency)],
+          ['First captured', dateTime(initialData.firstSeenAt)],
+          ['Last updated', dateTime(initialData.lastSeenAt)],
+        ].map(([label, value]) => (
+          <FlagshipMetadata key={label} label={label} value={value} />
+        ))}
+      </div>
+    );
+  }
+
+  if (tab === 'participants') {
+    return (
+      <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+        {participants.length > 0 ? participants.map((person) => (
+          <div key={`${person.name}-${person.email ?? person.role}`} className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-blue-500/15 text-sm font-black text-blue-200">
+                {person.name.slice(0, 1).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-white">{person.name}</p>
+                <p className="truncate text-xs text-slate-500">{person.email ?? person.role}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs font-bold text-slate-400">{person.events} evidence events</p>
+          </div>
+        )) : <EmptyPanel title="No participants captured" text="Participants will appear when source events include actor metadata." />}
+      </div>
+    );
+  }
+
+  if (tab === 'supporting') {
+    return (
+      <div className="grid gap-3 p-4 md:grid-cols-2">
+        {attachments.length > 0 ? attachments.map((attachment) => <FlagshipAttachmentRow key={attachment.id} attachment={attachment} />) : (
+          <EmptyPanel title="No supporting evidence attached" text="Documents, transcripts, screenshots, contracts, and source files will appear here once linked." />
+        )}
+      </div>
+    );
+  }
+
+  if (tab === 'related') {
+    return (
+      <div className="grid gap-3 p-4 md:grid-cols-2">
+        {related.length > 0 ? related.map((item) => (
+          <div key={item.id} className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+            <div className="flex items-center gap-3">
+              <ProviderMark providerKey={item.providerKey} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-white">{item.label}</p>
+                <p className="truncate text-xs text-slate-500">{titleCase(item.type)} - {providerInfo(item.providerKey).label}</p>
+              </div>
+            </div>
+          </div>
+        )) : <EmptyPanel title="No related records confirmed" text="Contracts, tickets, PRs, invoices, and Memory Graph relationships will appear here when linked." />}
+      </div>
+    );
+  }
+
+  if (tab === 'audit') {
+    return (
+      <div className="p-4">
+        <div className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+          <h2 className="text-lg font-black text-white">Immutable Audit Trail</h2>
+          <div className="mt-4 space-y-3">
+            {[
+              ['Record created', dateTime(initialData.createdAt), 'Unified evidence record initialized.'],
+              ['Evidence locked', dateTime(initialData.updatedAt), `Hash: ${events[0]?.evidenceHash ?? initialData.id}`],
+              ['Correlation version', dateTime(initialData.updatedAt), 'Current production correlation engine.'],
+            ].map(([title, time, detail]) => (
+              <div key={title} className="flex gap-3 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+                <CircleDot className="mt-1 h-4 w-4 shrink-0 text-blue-300" />
+                <div>
+                  <p className="text-sm font-bold text-white">{title}</p>
+                  <p className="text-xs text-slate-500">{time}</p>
+                  <p className="mt-1 text-xs text-slate-400">{detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {providers.map((provider) => (
+          <button key={provider.providerKey} type="button" onClick={() => onProviderOpen(provider)} className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4 text-left transition hover:border-blue-300/30">
+            <div className="flex items-center gap-3">
+              <ProviderMark providerKey={provider.providerKey} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-white">{providerInfo(provider.providerKey).label}</p>
+                <p className="truncate text-xs text-slate-500">{titleCase(provider.connection?.status ?? 'Evidence received')}</p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-slate-400">{provider.eventCount} events. Latest: {dateTime(provider.latestEventAt)}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FlagshipProviderDrawer({ provider, onClose }: { provider: EvidenceProvider; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onMouseDown={onClose}>
+      <aside className="absolute inset-y-0 right-0 w-full max-w-md overflow-y-auto border-l border-white/10 bg-[#06101f] p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <ProviderMark providerKey={provider.providerKey} size="lg" />
+            <div>
+              <h2 className="text-lg font-black text-white">{providerInfo(provider.providerKey).label}</h2>
+              <p className="text-xs text-slate-500">Connector diagnostics</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="mt-6 grid gap-3">
+          {[
+            ['Connection', titleCase(provider.connection?.status ?? 'Evidence received')],
+            ['Health', titleCase(provider.connection?.health?.status ?? 'Not reported')],
+            ['Events in record', String(provider.eventCount)],
+            ['Latest event', dateTime(provider.latestEventAt)],
+            ['Latest sync', dateTime(provider.connection?.lastSyncAt)],
+            ['Latency', provider.connection?.health?.latencyMs != null ? `${provider.connection.health.latencyMs}ms` : 'Not reported'],
+            ['Consecutive failures', String(provider.connection?.health?.consecutiveFailures ?? 0)],
+          ].map(([label, value]) => (
+            <div key={label} className="flex items-center justify-between gap-4 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+              <span className="text-xs font-semibold text-slate-500">{label}</span>
+              <span className="text-right text-xs font-black text-slate-200">{value}</span>
+            </div>
+          ))}
+        </div>
+        {provider.connection?.health?.lastErrorMessage ? (
+          <div className="mt-4 rounded-lg border border-rose-400/20 bg-rose-400/[0.07] p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-rose-300">Latest connector error</p>
+            <p className="mt-2 text-xs leading-5 text-rose-200/70">{provider.connection.health.lastErrorMessage}</p>
+          </div>
+        ) : null}
+        <div className="mt-6 rounded-lg border border-white/[0.07] bg-[#020a15] p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Security boundary</p>
+          <p className="mt-2 text-xs leading-6 text-slate-400">
+            Connector diagnostics expose health and mapping metadata only. Encrypted credentials and raw source payloads are never returned to this client.
+          </p>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 function amountText(amount?: string | null, currency?: string | null) {
   if (!amount) return 'Not captured';
   const numeric = Number(amount);
@@ -402,12 +1396,13 @@ function Metric({
 }: {
   label: string;
   value: string | number;
-  accent?: boolean;
+  accent?: boolean | string;
 }) {
+  const accentClass = typeof accent === 'string' ? accent : accent ? 'text-emerald-300' : 'text-slate-100';
   return (
     <div className="min-w-[88px] border-l border-white/[0.08] px-4 first:border-l-0">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-1 text-lg font-bold ${accent ? 'text-emerald-300' : 'text-slate-100'}`}>
+      <p className={`mt-1 text-lg font-bold ${accentClass}`}>
         {value}
       </p>
     </div>
@@ -426,7 +1421,7 @@ function EmptyPanel({ title, text }: { title: string; text: string }) {
   );
 }
 
-export function UnifiedEvidenceExperience({ initialData }: { initialData: UnifiedEvidenceData }) {
+export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: UnifiedEvidenceData }) {
   const [events, setEvents] = useState(initialData.events);
   const [page, setPage] = useState(initialData.eventPage);
   const [liveCursor, setLiveCursor] = useState(initialData.liveCursor);
