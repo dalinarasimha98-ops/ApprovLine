@@ -36,6 +36,8 @@ export const evidenceProviderCatalog: EvidenceProviderManifest[] = [
   provider('hubspot', 'HubSpot', 'BUSINESS_SYSTEM'),
   provider('ironclad', 'Ironclad', 'BUSINESS_SYSTEM'),
   provider('github', 'GitHub', 'BUSINESS_SYSTEM'),
+  provider('gitlab', 'GitLab', 'BUSINESS_SYSTEM'),
+  provider('azure_devops', 'Azure DevOps', 'BUSINESS_SYSTEM'),
   provider('asana', 'Asana', 'BUSINESS_SYSTEM'),
   provider('monday', 'Monday.com', 'BUSINESS_SYSTEM'),
   provider('api', 'Universal API', 'CUSTOM', 'API_KEY'),

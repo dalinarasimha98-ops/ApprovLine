@@ -12,6 +12,15 @@ test('provider catalog is read-only and future-provider compatible', async () =>
   assert.ok(evidenceProviderCatalog.length >= 20);
   assert.ok(evidenceProviderCatalog.every((provider) => provider.readOnly));
 
+  const providerMap = new Map(evidenceProviderCatalog.map((provider) => [provider.key, provider]));
+  for (const key of ['gitlab', 'azure_devops']) {
+    const manifest = providerMap.get(key);
+    assert.ok(manifest, `${key} provider should be registered as a first-class source`);
+    assert.equal(manifest?.category, 'BUSINESS_SYSTEM');
+    assert.equal(manifest?.authenticationType, 'OAUTH2');
+    assert.equal(manifest?.readOnly, true);
+  }
+
   const custom = getEvidenceProviderManifest('Example ERP');
   assert.equal(custom.key, 'example_erp');
   assert.equal(custom.category, 'CUSTOM');
