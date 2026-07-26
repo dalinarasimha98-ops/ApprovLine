@@ -12,7 +12,13 @@ import {
   WorkspaceSwitcherLink,
 } from '@/components/dashboard/DashboardHeaderControls';
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({
+  children,
+  immersive = false,
+}: {
+  children: React.ReactNode;
+  immersive?: boolean;
+}) {
   const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
   return (
     <div className="min-h-screen bg-[#030b18] text-slate-100">
@@ -47,9 +53,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="mt-3 lg:hidden"><DashboardNavigation mobile /></div>
         </header>
-        <div className="grid gap-4 p-3 sm:p-4 xl:p-5">
-          <DashboardFilterLinks />
-          <RedisWarningBanner />
+        <div className={immersive ? 'p-3 sm:p-4 xl:p-5' : 'grid gap-4 p-3 sm:p-4 xl:p-5'}>
+          {immersive ? null : <DashboardFilterLinks />}
+          {immersive ? null : <RedisWarningBanner />}
           <ToastOnQuery />
           {children}
         </div>
