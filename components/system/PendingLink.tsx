@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 type PendingLinkProps = {
@@ -15,23 +15,34 @@ type PendingLinkProps = {
 export function PendingLink({ href, children, pendingText = 'Redirecting...', className, prefetch }: PendingLinkProps) {
   const [pending, setPending] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     setPending(false);
   }, [pathname]);
 
-  const targetPath = href.startsWith('http') ? href : href.split('?')[0];
+  const isExternal = href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:');
+  const targetPath = isExternal ? href : href.split('?')[0];
   const isCurrentPage = targetPath === pathname;
+  const shouldPrefetch = prefetch ?? !isExternal;
+
+  const primeRoute = () => {
+    if (!isExternal) router.prefetch(href);
+  };
+
+  const markPending = () => {
+    if (!isCurrentPage && !isExternal) setPending(true);
+  };
 
   return (
     <Link
       href={href}
-      prefetch={prefetch ?? true}
+      prefetch={shouldPrefetch}
       aria-disabled={pending}
-      onClick={() => {
-        if (!isCurrentPage) setPending(true);
-      }}
-      className={`${className ?? ''} ${pending ? 'pointer-events-none opacity-80' : ''}`}
+      onMouseEnter={primeRoute}
+      onPointerDown={markPending}
+      onClick={markPending}
+      className={`${className ?? ''} ${pending ? 'opacity-80' : ''}`}
     >
       {pending ? (
         <>
