@@ -77,6 +77,16 @@ export async function searchUnifiedEvidence(input: {
   };
 }
 
+export async function getLatestUnifiedEvidenceRecordId(organizationId: string) {
+  const record = await prisma.unifiedEvidenceRecord.findFirst({
+    where: { organizationId },
+    orderBy: [{ lastSeenAt: 'desc' }, { updatedAt: 'desc' }, { id: 'asc' }],
+    select: { id: true },
+  });
+
+  return record?.id ?? null;
+}
+
 export async function getUnifiedEvidenceDetail(organizationId: string, id: string) {
   return prisma.unifiedEvidenceRecord.findFirst({
     where: { id, organizationId },
