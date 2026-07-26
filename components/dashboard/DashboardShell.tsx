@@ -34,7 +34,13 @@ export function DashboardShell({
         <div className="mt-3 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.035] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Workspace plan</p>
           <p className="mt-1 text-xs font-semibold text-slate-200">Manage billing and usage</p>
-          <Link href="/dashboard/customer-success" className="mt-2 block text-[10px] font-semibold text-blue-300 hover:text-blue-200">Open plan settings</Link>
+          <PendingLink
+            href="/dashboard/customer-success"
+            pendingText="Opening plan..."
+            className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold text-blue-300 hover:text-blue-200"
+          >
+            Open plan settings
+          </PendingLink>
         </div>
       </aside>
       <main className="lg:pl-[248px]">
