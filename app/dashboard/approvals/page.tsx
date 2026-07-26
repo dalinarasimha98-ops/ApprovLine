@@ -1,18 +1,12 @@
-import { prisma } from '@/lib/prisma';
 import { getDashboardTenant } from '@/lib/auth';
 import { ApprovalTable } from '@/components/dashboard/ApprovalTable';
+import type { ApprovalTableRecord } from '@/components/dashboard/ApprovalTable';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
-import { withTimeout } from '@/lib/performance';
-import { reportApprovalFailure } from '@/lib/approval-observability';
-import type { Prisma } from '@prisma/client';
+import { loadDashboardApprovalRecords } from '@/lib/approvalRecords';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
-
-function isQueryTimeout(message: string) {
-  return message.toLowerCase().includes('timed out');
-}
 
 export default async function ApprovalsPage({
   searchParams,
@@ -35,57 +29,29 @@ export default async function ApprovalsPage({
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   const filters = await searchParams;
-  const occurredAt: Prisma.DateTimeFilter = {};
-  if (filters.from) occurredAt.gte = new Date(filters.from);
-  if (filters.to) occurredAt.lte = new Date(filters.to);
-  let approvals: Awaited<ReturnType<typeof prisma.approvalRecord.findMany>> = [];
+  let approvals: ApprovalTableRecord[] = [];
   let loadError: string | null = null;
   let loadErrorReference: string | null = null;
-  let loadNotice: string | null = null;
+  let cacheNotice: string | null = null;
 
   try {
     if (!tenant.organization) throw new Error(tenant.error ?? 'Workspace unavailable.');
     console.info('[dashboard] approvals query start');
-    approvals = await withTimeout(
-      'dashboard approvals query',
-      prisma.approvalRecord.findMany({
-        where: {
-          organizationId: tenant.organization.id,
-          ...(filters.department ? { department: { contains: filters.department, mode: 'insensitive' } } : {}),
-          ...(filters.employee ? { approverName: { contains: filters.employee, mode: 'insensitive' } } : {}),
-          ...(filters.sourcePlatform ? { sourcePlatform: { contains: filters.sourcePlatform, mode: 'insensitive' } } : {}),
-          ...(filters.category ? { category: { contains: filters.category, mode: 'insensitive' } } : {}),
-          ...(filters.riskLevel ? { riskLevel: filters.riskLevel.toLowerCase() } : {}),
-          ...(filters.approvalType ? { approvalType: filters.approvalType.toUpperCase() as Prisma.EnumApprovalTypeFilter['equals'] } : {}),
-          ...(filters.from || filters.to ? { occurredAt } : {}),
-          ...(filters.q
-            ? {
-                OR: [
-                  { subject: { contains: filters.q, mode: 'insensitive' } },
-                  { reasoning: { contains: filters.q, mode: 'insensitive' } },
-                  { evidenceSnippet: { contains: filters.q, mode: 'insensitive' } },
-                ],
-              }
-            : {}),
-        },
-        orderBy: { occurredAt: 'desc' },
-        take: 50,
-      }),
-      5000,
-    );
+    const result = await loadDashboardApprovalRecords({
+      organizationId: tenant.organization.id,
+      userId: tenant.session.userId,
+      ...filters,
+    });
+
+    approvals = result.records;
+    if (result.degraded && result.source === 'cache') cacheNotice = result.message ?? 'Showing recently loaded approval records.';
+    if (result.degraded && result.source === 'empty') {
+      loadErrorReference = result.reference ?? null;
+      cacheNotice = 'Approval records are still usable, but live database results are delayed. Showing the empty state instead of blocking the page.';
+    }
     console.info(`[dashboard] approvals query finished in ${Date.now() - startedAt}ms`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unable to load approvals.';
-    loadErrorReference = reportApprovalFailure(error, {
-      action: 'approval_history_query',
-      organizationId: tenant.organization?.id,
-      userId: tenant.session.userId,
-    });
-    if (isQueryTimeout(message)) {
-      loadNotice = 'Approval records are taking longer than expected. The page is available now, and you can retry or generate demo data while the service recovers.';
-    } else {
-      loadError = 'Approval records could not be retrieved. Retry the request or check workspace readiness.';
-    }
+    loadError = error instanceof Error ? error.message : 'Workspace unavailable.';
     console.error(`[dashboard] approvals query failed after ${Date.now() - startedAt}ms`, error);
   }
 
@@ -142,13 +108,18 @@ export default async function ApprovalsPage({
           </FormSubmitButton>
         </div>
       </form>
-      {loadNotice ? (
-        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 text-blue-950 shadow-sm">
-          <h3 className="font-black">Approval records are taking longer than expected</h3>
-          <p className="mt-1 text-sm leading-6">The page stopped waiting so you are never left on a permanent loading screen. {loadNotice}</p>
-          <PendingLink href="/dashboard/approvals" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white shadow-sm shadow-blue-200">
-            Retry
-          </PendingLink>
+      {cacheNotice ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <h3 className="text-sm font-black text-slate-950">Approval records are recovering</h3>
+              <p className="mt-1 text-sm leading-6">{cacheNotice}</p>
+              {loadErrorReference ? <p className="mt-1 text-xs font-bold text-slate-400">Reference: {loadErrorReference}</p> : null}
+            </div>
+            <PendingLink href="/dashboard/approvals" pendingText="Retrying..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+              Retry
+            </PendingLink>
+          </div>
         </div>
       ) : null}
       {loadError ? (
