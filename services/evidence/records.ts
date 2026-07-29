@@ -51,22 +51,20 @@ export async function searchUnifiedEvidence(input: {
       { category: { contains: input.query, mode: 'insensitive' } },
     ] : undefined,
   };
-  const [records, total] = await prisma.$transaction([
-    prisma.unifiedEvidenceRecord.findMany({
-      where,
-      orderBy: { lastSeenAt: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      include: {
-        events: {
-          select: { providerKey: true },
-          distinct: ['providerKey'],
-        },
-        _count: { select: { events: true, members: true } },
+  const records = await prisma.unifiedEvidenceRecord.findMany({
+    where,
+    orderBy: { lastSeenAt: 'desc' },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    include: {
+      events: {
+        select: { providerKey: true },
+        distinct: ['providerKey'],
       },
-    }),
-    prisma.unifiedEvidenceRecord.count({ where }),
-  ]);
+      _count: { select: { events: true, members: true } },
+    },
+  });
+  const total = await prisma.unifiedEvidenceRecord.count({ where });
   return {
     records: records.map((record) => ({
       ...record,
@@ -95,12 +93,14 @@ export async function getUnifiedEvidenceDetail(organizationId: string, id: strin
       events: {
         select: publicEventSelect,
         orderBy: { occurredAt: 'asc' },
+        take: 101,
       },
       members: {
         include: {
           event: { select: publicEventSelect },
         },
         orderBy: { createdAt: 'asc' },
+        take: 101,
       },
     },
   });
@@ -123,6 +123,7 @@ export async function getUnifiedEvidenceExperience(
       },
       members: {
         orderBy: { createdAt: 'asc' },
+        take: take + 1,
       },
     },
   });
@@ -131,41 +132,39 @@ export async function getUnifiedEvidenceExperience(
   const hasMoreEvents = record.events.length > take;
   const events = record.events.slice(0, take);
   const eventIds = new Set(events.map((event) => event.id));
-  const [providerCounts, connections, latestEvent] = await Promise.all([
-    prisma.canonicalEvidenceEvent.groupBy({
-      by: ['providerKey'],
-      where: { organizationId, unifiedRecordId: id },
-      _count: { _all: true },
-      _max: { occurredAt: true },
-    }),
-    prisma.evidenceProviderConnection.findMany({
-      where: { organizationId },
-      select: {
-        providerKey: true,
-        displayName: true,
-        status: true,
-        lastSyncAt: true,
-        health: {
-          select: {
-            status: true,
-            latencyMs: true,
-            syncStatus: true,
-            lastEventAt: true,
-            lastSuccessfulSyncAt: true,
-            consecutiveFailures: true,
-            lastErrorCode: true,
-            lastErrorMessage: true,
-            checkedAt: true,
-          },
+  const providerCounts = await prisma.canonicalEvidenceEvent.groupBy({
+    by: ['providerKey'],
+    where: { organizationId, unifiedRecordId: id },
+    _count: { _all: true },
+    _max: { occurredAt: true },
+  });
+  const connections = await prisma.evidenceProviderConnection.findMany({
+    where: { organizationId },
+    select: {
+      providerKey: true,
+      displayName: true,
+      status: true,
+      lastSyncAt: true,
+      health: {
+        select: {
+          status: true,
+          latencyMs: true,
+          syncStatus: true,
+          lastEventAt: true,
+          lastSuccessfulSyncAt: true,
+          consecutiveFailures: true,
+          lastErrorCode: true,
+          lastErrorMessage: true,
+          checkedAt: true,
         },
       },
-    }),
-    prisma.canonicalEvidenceEvent.findFirst({
-      where: { organizationId, unifiedRecordId: id },
-      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
-      select: { id: true },
-    }),
-  ]);
+    },
+  });
+  const latestEvent = await prisma.canonicalEvidenceEvent.findFirst({
+    where: { organizationId, unifiedRecordId: id },
+    orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+    select: { id: true },
+  });
   const connectionByProvider = new Map(
     connections.map((connection) => [connection.providerKey, connection]),
   );
@@ -317,16 +316,14 @@ export async function reviewEvidenceSuggestion(input: {
           lastProcessedAt: new Date(),
         },
       });
-      const [eventCount, providerRows] = await Promise.all([
-        tx.canonicalEvidenceEvent.count({
-          where: { organizationId: input.organizationId, unifiedRecordId: member.unifiedRecordId },
-        }),
-        tx.canonicalEvidenceEvent.findMany({
-          where: { organizationId: input.organizationId, unifiedRecordId: member.unifiedRecordId },
-          select: { providerKey: true },
-          distinct: ['providerKey'],
-        }),
-      ]);
+      const eventCount = await tx.canonicalEvidenceEvent.count({
+        where: { organizationId: input.organizationId, unifiedRecordId: member.unifiedRecordId },
+      });
+      const providerRows = await tx.canonicalEvidenceEvent.findMany({
+        where: { organizationId: input.organizationId, unifiedRecordId: member.unifiedRecordId },
+        select: { providerKey: true },
+        distinct: ['providerKey'],
+      });
       await tx.unifiedEvidenceRecord.update({
         where: { id: member.unifiedRecordId },
         data: {

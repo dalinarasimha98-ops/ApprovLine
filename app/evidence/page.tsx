@@ -74,27 +74,34 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
   }
   if (!tenant.organization) redirect('/dashboard');
 
+  let error: string | null = null;
   const isDefaultLanding = !params.q && !params.provider && !params.risk && !params.page;
   if (isDefaultLanding) {
-    const latestRecordId = await getLatestUnifiedEvidenceRecordId(tenant.organization.id);
+    let latestRecordId: string | null = null;
+    try {
+      latestRecordId = await getLatestUnifiedEvidenceRecordId(tenant.organization.id);
+    } catch (cause) {
+      error = safeError(cause);
+    }
     if (latestRecordId) redirect(`/evidence/${latestRecordId}`);
   }
 
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
   let data: Awaited<ReturnType<typeof searchUnifiedEvidence>> | null = null;
-  let error: string | null = null;
 
-  try {
-    data = await searchUnifiedEvidence({
-      organizationId: tenant.organization.id,
-      query: params.q?.trim() || undefined,
-      providerKey: params.provider || undefined,
-      riskLevel: params.risk || undefined,
-      page,
-      pageSize: 25,
-    });
-  } catch (cause) {
-    error = safeError(cause);
+  if (!error) {
+    try {
+      data = await searchUnifiedEvidence({
+        organizationId: tenant.organization.id,
+        query: params.q?.trim() || undefined,
+        providerKey: params.provider || undefined,
+        riskLevel: params.risk || undefined,
+        page,
+        pageSize: 25,
+      });
+    } catch (cause) {
+      error = safeError(cause);
+    }
   }
 
   const records = data?.records ?? [];

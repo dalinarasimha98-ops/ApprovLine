@@ -12,11 +12,29 @@ export async function GET(request: NextRequest) {
 
   const format = request.nextUrl.searchParams.get('format') ?? 'csv';
   const demoProjection = request.nextUrl.searchParams.get('demo') === '1';
-  const report = await withTimeout(
-    'executive analytics export',
-    buildExecutiveAnalytics(tenant.organization.id, { demoProjection }),
-    2800,
-  );
+  let report;
+  try {
+    report = await withTimeout(
+      'executive analytics export',
+      buildExecutiveAnalytics(tenant.organization.id, { demoProjection }),
+      8000,
+    );
+  } catch (error) {
+    console.warn(
+      '[analytics-export] report generation unavailable',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+    return NextResponse.json(
+      { error: 'Executive analytics export is temporarily unavailable. Please retry.' },
+      {
+        status: 503,
+        headers: {
+          'Cache-Control': 'no-store',
+          'Retry-After': '3',
+        },
+      },
+    );
+  }
 
   if (format === 'pdf') {
     return new NextResponse(analyticsPdf(report), {
