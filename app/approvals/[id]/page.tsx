@@ -82,7 +82,7 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
     prisma.approvalRecord.findFirst({
       where: { id, organizationId: tenant.organization.id },
       include: {
-        auditLogs: { orderBy: { createdAt: 'desc' }, take: 20 },
+        auditLogs: { orderBy: { createdAt: 'desc' }, take: 12 },
         classifierResults: { orderBy: { createdAt: 'desc' }, take: 3 },
         messageSource: true,
         complianceEvaluations: { include: { rule: true }, orderBy: { createdAt: 'desc' }, take: 3 },
@@ -96,11 +96,12 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
         manualVersions: {
           include: { actorUser: { select: { name: true, email: true } } },
           orderBy: { version: 'desc' },
-          take: 20,
+          take: 10,
         },
         evidenceAssociations: {
           include: { messageSource: true },
           orderBy: { sourceTimestamp: 'asc' },
+          take: 50,
         },
         confirmationRequests: {
           include: { requestedByUser: { select: { name: true, email: true } } },
@@ -109,7 +110,7 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
         },
       },
     }),
-    5000,
+    8000,
   ).then(
     (approval) => ({ status: 'ok' as const, approval }),
     (error: unknown) => ({ status: 'error' as const, approval: null, error }),

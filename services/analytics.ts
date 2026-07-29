@@ -105,25 +105,41 @@ function extractMissingEvidence(answer: unknown) {
 }
 
 export async function buildExecutiveAnalytics(organizationId: string, options: AnalyticsOptions = {}): Promise<ExecutiveAnalytics> {
-  const [approvals, integrations, playbookQueries, chunks] = await Promise.all([
-    prisma.approvalRecord.findMany({
+  // Keep these reads sequential. Production uses a deliberately small Prisma
+  // pool, so parallel aggregate reads compete for the same connection.
+  const approvals = await prisma.approvalRecord.findMany({
+    where: { organizationId },
+    select: {
+      approvalType: true,
+      riskLevel: true,
+      status: true,
+      evidenceSnippet: true,
+      sourceLink: true,
+      approverName: true,
+      sourcePlatform: true,
+      approvalTimestamp: true,
+      subject: true,
+      reasoning: true,
+      confidence: true,
+      department: true,
+      category: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 500,
+  });
+  const integrationCount = await prisma.integration.count({ where: { organizationId } });
+  const playbookQueries = await prisma.playbookQuery.findMany({
       where: { organizationId },
-      include: { messageSource: true },
+      select: { sourceChunkIds: true, answer: true },
       orderBy: { createdAt: 'desc' },
-      take: 1000,
-    }),
-    prisma.integration.findMany({ where: { organizationId } }),
-    prisma.playbookQuery.findMany({
+      take: 150,
+    }).catch(() => []);
+  const chunks = await prisma.playbookChunk.findMany({
       where: { organizationId },
-      orderBy: { createdAt: 'desc' },
-      take: 300,
-    }).catch(() => []),
-    prisma.playbookChunk.findMany({
-      where: { organizationId },
-      include: { document: true },
-      take: 500,
-    }).catch(() => []),
-  ]);
+      select: { id: true, document: { select: { name: true } } },
+      take: 250,
+    }).catch(() => []);
 
   const demoProjection = Boolean(options.demoProjection);
   const multiplier = demoProjection ? Math.max(1, Math.ceil(742 / Math.max(approvals.length, 8))) : 1;
@@ -253,7 +269,7 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
         : [],
   };
 
-  if (integrations.length === 0 && demoProjection) {
+  if (integrationCount === 0 && demoProjection) {
     report.integrations.slackApprovals ||= 398;
     report.integrations.gmailApprovals ||= 344;
     report.integrations.jiraApprovals ||= 68;

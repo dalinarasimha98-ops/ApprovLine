@@ -24,9 +24,31 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
     'approval source lookup',
     prisma.approvalRecord.findFirst({
       where: { id, organizationId: tenant.organization.id },
-      include: { messageSource: true },
+      select: {
+        subject: true,
+        sourceLink: true,
+        sourcePlatform: true,
+        approvalTimestamp: true,
+        occurredAt: true,
+        evidenceSnippet: true,
+        reasoning: true,
+        conditions: true,
+        approverName: true,
+        approverEmail: true,
+        confidence: true,
+        riskLevel: true,
+        messageSource: {
+          select: {
+            provider: true,
+            channel: true,
+            sender: true,
+            senderEmail: true,
+            receivedAt: true,
+          },
+        },
+      },
     }),
-    5000,
+    7000,
   ).then(
     (approval) => ({ approval, error: null as unknown }),
     (error: unknown) => ({ approval: null, error }),
@@ -128,4 +150,3 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
     </DashboardShell>
   );
 }
-
