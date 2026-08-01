@@ -5,7 +5,7 @@ import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
 import { writeAuditLog } from '@/services/audit';
-import { buildReadinessReport } from '@/services/readiness';
+import { buildComplianceReadinessReport } from '@/services/readiness';
 
 export const dynamic = 'force-dynamic';
 
@@ -217,12 +217,12 @@ async function submitSecurityRequest(formData: FormData) {
 }
 
 export default async function ComplianceHubPage() {
-  const tenant = await getDashboardTenant(1500);
+  const tenant = await getDashboardTenant(5000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization || !tenant.user) redirect('/onboarding');
 
-  const readiness = await buildReadinessReport();
+  const readiness = await buildComplianceReadinessReport();
   const checks = readiness.checks;
   const copilotReady = checks.anthropic?.status === 'ok' || checks.openai?.status === 'ok';
   const identityReady = checks.clerkSecretKey?.status === 'ok' && checks.clerkPublishableKey?.status === 'ok';
