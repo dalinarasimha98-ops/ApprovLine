@@ -96,6 +96,50 @@ export async function buildReadinessReport() {
   };
 }
 
+/**
+ * Lightweight readiness snapshot for pages that explain platform posture.
+ * Connector sync history and Redis are intentionally excluded so an optional
+ * dependency can never prevent the Compliance Hub from rendering.
+ */
+export async function buildComplianceReadinessReport() {
+  const postgresql = await Promise.race<ReadinessCheck>([
+    checkPostgres(),
+    new Promise((resolve) => {
+      setTimeout(
+        () => resolve({ status: 'error', message: 'Database readiness check timed out; compliance content remains available.' }),
+        1200,
+      );
+    }),
+  ]);
+  const checks = {
+    postgresql,
+    openai: envCheck('OPENAI_API_KEY', 'OpenAI API key'),
+    anthropic: envCheck('ANTHROPIC_API_KEY', 'Anthropic API key'),
+    slackClientId: envCheck('SLACK_CLIENT_ID', 'Slack client ID'),
+    googleClientId: envCheck('GOOGLE_CLIENT_ID', 'Google client ID'),
+    microsoftClientId: envCheck('MICROSOFT_CLIENT_ID', 'Microsoft client ID'),
+    jiraClientId: envCheck('JIRA_CLIENT_ID', 'Jira client ID'),
+    serviceNowClientId: envCheck('SERVICENOW_CLIENT_ID', 'ServiceNow client ID'),
+    zoomClientId: envCheck('ZOOM_CLIENT_ID', 'Zoom client ID'),
+    encryptionKey: envCheck('ENCRYPTION_KEY', 'Encryption key'),
+    clerkPublishableKey: envCheck('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'Clerk publishable key'),
+    clerkSecretKey: envCheck('CLERK_SECRET_KEY', 'Clerk secret key'),
+  };
+  const required = [
+    checks.postgresql,
+    checks.anthropic.status === 'ok' ? checks.anthropic : checks.openai,
+    checks.encryptionKey,
+    checks.clerkPublishableKey,
+    checks.clerkSecretKey,
+  ];
+
+  return {
+    ready: required.every((check) => check.status === 'ok'),
+    checkedAt: new Date().toISOString(),
+    checks,
+  };
+}
+
 async function checkZoomLastSync(): Promise<ReadinessCheck> {
   const databaseUrl = validateDatabaseUrl();
   if (!databaseUrl.valid) {
