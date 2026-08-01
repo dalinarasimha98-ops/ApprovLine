@@ -194,7 +194,7 @@ async function submitSecurityRequest(formData: FormData) {
   const tenant = await getDashboardTenant(8000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/trust/compliance');
 
   const requestType = String(formData.get('requestType') ?? 'Security questionnaire');
   const requester = String(formData.get('requester') ?? '').trim();
@@ -220,9 +220,51 @@ export default async function ComplianceHubPage() {
   const tenant = await getDashboardTenant(5000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) {
+    return (
+      <DashboardShell>
+        <section className="mx-auto grid w-full max-w-4xl gap-5 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Compliance Hub</p>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950">Workspace data is temporarily unavailable</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+              Your session is still active. ApprovLine could not load the tenant record in time, so this page stayed here instead of redirecting you away.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <PendingLink href="/trust/compliance" pendingText="Retrying..." className="rounded-xl bg-[#2155d9] px-4 py-2.5 text-sm font-black text-white hover:bg-[#1947be]">
+              Retry Compliance Hub
+            </PendingLink>
+            <PendingLink href="/health" pendingText="Opening health..." className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black text-slate-700 hover:bg-slate-50">
+              Open health check
+            </PendingLink>
+          </div>
+          {tenant.error ? <p className="rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-900">Safe diagnostic: {tenant.error}</p> : null}
+        </section>
+      </DashboardShell>
+    );
+  }
 
-  const readiness = await buildComplianceReadinessReport();
+  let readiness;
+  try {
+    readiness = await buildComplianceReadinessReport();
+  } catch (error) {
+    console.error('[compliance] readiness report failed', error);
+    return (
+      <DashboardShell>
+        <section className="mx-auto grid w-full max-w-4xl gap-5 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Compliance Hub</p>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950">Compliance readiness is temporarily delayed</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">The workspace loaded correctly, but a readiness dependency did not respond. Retry without leaving the Compliance Hub.</p>
+          </div>
+          <PendingLink href="/trust/compliance" pendingText="Retrying..." className="w-fit rounded-xl bg-[#2155d9] px-4 py-2.5 text-sm font-black text-white hover:bg-[#1947be]">
+            Retry Compliance Hub
+          </PendingLink>
+        </section>
+      </DashboardShell>
+    );
+  }
   const checks = readiness.checks;
   const copilotReady = checks.anthropic?.status === 'ok' || checks.openai?.status === 'ok';
   const identityReady = checks.clerkSecretKey?.status === 'ok' && checks.clerkPublishableKey?.status === 'ok';
