@@ -112,18 +112,43 @@ export function normalizeDatabaseUrlForPrisma() {
   const validation = validateDatabaseUrl();
   if (validation.valid && validation.normalized) {
     let normalized = validation.normalized;
+    const url = new URL(normalized);
 
     // Vercel functions must use Supabase's transaction pooler. Session mode
     // has a small shared client cap and can exhaust it during concurrent SSR.
-    if (process.env.VERCEL === '1') {
-      const url = new URL(normalized);
-      if (url.hostname.endsWith('.pooler.supabase.com')) {
-        url.port = '6543';
-        url.searchParams.set('pgbouncer', 'true');
-        url.searchParams.set('connection_limit', '1');
-        url.searchParams.set('sslmode', 'require');
-        normalized = url.toString();
+    //
+    // connection_limit stays at 1 here deliberately: every concurrent
+    // serverless function instance gets its own Prisma Client, each holding
+    // up to `connection_limit` connections against PgBouncer's shared,
+    // finite connection budget. Raising this per-instance limit multiplies
+    // total connections by however many instances are running concurrently
+    // and would make pool exhaustion *worse*, not better, under load - it
+    // would recreate the exact "timed out fetching a new connection from
+    // the connection pool" failure this change is meant to fix. What is
+    // safe to raise is pool_timeout, which only controls how long a single
+    // instance waits for one of its own (still capped) connections.
+    if (process.env.VERCEL === '1' && url.hostname.endsWith('.pooler.supabase.com')) {
+      url.port = '6543';
+      url.searchParams.set('pgbouncer', 'true');
+      url.searchParams.set('connection_limit', '1');
+      url.searchParams.set('pool_timeout', '30');
+      url.searchParams.set('sslmode', 'require');
+      normalized = url.toString();
+    } else if (process.env.VERCEL !== '1') {
+      // Outside serverless (local dev, and the long-running queue worker
+      // process), a single process really does benefit from a real pool -
+      // apply sane defaults only when the URL doesn't already specify them,
+      // so an operator's explicit choice is never overridden.
+      let changed = false;
+      if (!url.searchParams.has('connection_limit')) {
+        url.searchParams.set('connection_limit', '10');
+        changed = true;
       }
+      if (!url.searchParams.has('pool_timeout')) {
+        url.searchParams.set('pool_timeout', '30');
+        changed = true;
+      }
+      if (changed) normalized = url.toString();
     }
 
     process.env.DATABASE_URL = normalized;

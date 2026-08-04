@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
+import { isMigrationError } from '@/lib/prisma-errors';
 import { buildMemoryDashboard, memoryEntityLabels, rebuildMemoryGraphForOrganization } from '@/services/memory';
 
 export const dynamic = 'force-dynamic';
@@ -180,12 +181,24 @@ export default async function MemoryPage({ searchParams }: MemoryPageProps) {
         ) : null}
 
         {error ? (
-          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-            <p className="text-sm font-black uppercase tracking-wide text-amber-800">Database migration required</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">Memory Graph storage is not ready yet</h2>
-            <p className="mt-2 text-sm font-semibold leading-6 text-amber-900">Run <code className="rounded bg-white px-2 py-1">npm run db:deploy</code> in production to enable Memory Graph tables.</p>
-            <p className="mt-3 rounded-xl bg-white p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error}</p>
-          </section>
+          isMigrationError(error) ? (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+              <p className="text-sm font-black uppercase tracking-wide text-amber-800">Database migration required</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-950">Memory Graph storage is not ready yet</h2>
+              <p className="mt-2 text-sm font-semibold leading-6 text-amber-900">Run <code className="rounded bg-white px-2 py-1">npm run db:deploy</code> in production to enable Memory Graph tables.</p>
+              <p className="mt-3 rounded-xl bg-white p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error}</p>
+            </section>
+          ) : (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+              <p className="text-sm font-black uppercase tracking-wide text-amber-800">Memory Graph temporarily unavailable</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-950">We could not load the graph this time</h2>
+              <p className="mt-2 text-sm font-semibold leading-6 text-amber-900">The database did not respond in time. This is usually transient - retry in a moment.</p>
+              <p className="mt-3 rounded-xl bg-white p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error}</p>
+              <PendingLink href="/memory" pendingText="Retrying..." className="mt-4 inline-flex rounded-xl bg-[#2155d9] px-4 py-2.5 text-sm font-black text-white">
+                Retry
+              </PendingLink>
+            </section>
+          )
         ) : data ? (
           <>
             <div className="grid gap-4 md:grid-cols-3">

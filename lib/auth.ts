@@ -1,9 +1,46 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { validateDatabaseUrl } from '@/lib/env';
+import { isConnectionPoolError } from '@/lib/prisma-errors';
 import type { TenantIsolationContext } from '@/lib/tenant-isolation';
 import type { AppRole } from '@/types/rbac';
 import { canAccessRole } from '@/types/rbac';
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Retries the tenant lookup on transient failures (pool exhaustion, timeout)
+ * with exponential backoff. Does not retry on errors that won't resolve by
+ * retrying (e.g. a genuinely missing table) — isConnectionPoolError() is the
+ * signal for "worth retrying"; the timeout race below still applies inside
+ * each attempt.
+ */
+async function findUserWithRetry(clerkUserId: string, timeoutMs: number, maxAttempts = 3) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const userPromise = prisma.user.findUnique({
+        where: { clerkUserId },
+        include: { organization: true },
+      });
+      return await Promise.race([
+        userPromise,
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`Dashboard tenant lookup timed out after ${timeoutMs}ms`)), timeoutMs);
+        }),
+      ]);
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      const retryable = isConnectionPoolError(message) || message.includes('timed out');
+      if (!retryable || attempt === maxAttempts) throw error;
+      await sleep(250 * 2 ** (attempt - 1)); // 250ms, 500ms, 1000ms
+    }
+  }
+  throw lastError;
+}
 
 export class TenantDatabaseError extends Error {
   constructor(message: string, public cause?: unknown) {
@@ -84,7 +121,7 @@ export async function getCurrentTenant() {
   }
 }
 
-export async function getDashboardTenant(timeoutMs = 3000) {
+export async function getDashboardTenant(timeoutMs = 10000) {
   const startedAt = Date.now();
   const session = await auth();
   if (!session.userId) {
@@ -111,16 +148,7 @@ export async function getDashboardTenant(timeoutMs = 3000) {
   }
 
   try {
-    const userPromise = prisma.user.findUnique({
-      where: { clerkUserId: session.userId },
-      include: { organization: true },
-    });
-    const user = await Promise.race([
-      userPromise,
-      new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error(`Dashboard tenant lookup timed out after ${timeoutMs}ms`)), timeoutMs);
-      }),
-    ]);
+    const user = await findUserWithRetry(session.userId, timeoutMs);
 
     if (!user?.organization) {
       return {

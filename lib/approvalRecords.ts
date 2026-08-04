@@ -130,7 +130,7 @@ export async function loadDashboardApprovalRecords(filters: ApprovalListFilters)
         orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
         take: Math.min(filters.limit ?? 50, 100),
       }),
-      filters.timeoutMs ?? 4500,
+      filters.timeoutMs ?? 10000,
     );
 
     approvalRecordsCache().set(cacheKey, { records, cachedAt: now });
