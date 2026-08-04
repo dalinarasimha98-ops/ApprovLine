@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import { z } from 'zod';
 import { createHash } from 'crypto';
 import { env } from '@/config/env';
@@ -9,6 +8,9 @@ import {
   CLASSIFIER_PROMPT_VERSION,
 } from '@/services/classifier/prompts';
 import type { ApprovalCategory, RiskLevel } from '@/types/classifier';
+import { generateText } from '@/services/ai/gateway';
+import { DEFAULT_ANTHROPIC_MODEL } from '@/services/ai/providers/anthropicGeneration';
+import { OPENAI_MODEL } from '@/services/ai/providers/openaiGeneration';
 
 const classifierSchema = z.object({
   approval_detected: z.boolean(),
@@ -28,18 +30,7 @@ const classifierSchema = z.object({
   conditions: z.string().nullable(),
 });
 
-const OPENAI_MODEL = 'gpt-4.1-mini';
-const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-5';
-const ANTHROPIC_MODEL_FALLBACKS = [
-  DEFAULT_ANTHROPIC_MODEL,
-  'claude-sonnet-4-5-20250929',
-  'claude-3-7-sonnet-latest',
-  'claude-3-7-sonnet-20250219',
-  'claude-3-5-sonnet-latest',
-  'claude-3-5-sonnet-20241022',
-  'claude-3-5-haiku-latest',
-  'claude-3-5-haiku-20241022',
-];
+const CLASSIFIER_MAX_TOKENS = 800;
 
 export const CLASSIFIER_MODEL = env.ANTHROPIC_API_KEY
   ? env.ANTHROPIC_MODEL ?? DEFAULT_ANTHROPIC_MODEL
@@ -172,93 +163,13 @@ function parseClassifierJson(content: string) {
   return classifierSchema.parse(JSON.parse(cleaned));
 }
 
-function anthropicModelCandidates() {
-  return Array.from(
-    new Set([env.ANTHROPIC_MODEL, ...ANTHROPIC_MODEL_FALLBACKS].filter((model): model is string => Boolean(model))),
-  );
-}
-
-async function requestAnthropicClassification(input: ClassifyRequest, model: string, apiKey: string) {
-  return fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 800,
-      temperature: 0,
-      system: approvalClassifierSystemPrompt(),
-      messages: [
-        {
-          role: 'user',
-          content: approvalClassifierUserPrompt(input),
-        },
-      ],
-    }),
-  });
-}
-
-async function classifyWithAnthropic(input: ClassifyRequest): Promise<ClassifyResponse> {
-  const apiKey = env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const rejectedModels: string[] = [];
-
-  for (const model of anthropicModelCandidates()) {
-    const response = await requestAnthropicClassification(input, model, apiKey);
-    const payload = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      const message = payload?.error?.message ?? 'Anthropic classification request failed';
-      if (/model/i.test(message)) {
-        rejectedModels.push(model);
-        continue;
-      }
-      throw new Error(message);
-    }
-
-    const text = payload?.content?.find((part: { type?: string }) => part.type === 'text')?.text;
-    if (!text) {
-      throw new Error('Anthropic returned an empty classification response');
-    }
-
-    return normalizeClassifierResult(input, parseClassifierJson(text));
-  }
-
-  throw new Error(`Anthropic rejected all configured model IDs: ${rejectedModels.join(', ')}`);
-}
-
 export async function classifyWithOpenAI(input: ClassifyRequest): Promise<ClassifyResponse> {
-  if (env.ANTHROPIC_API_KEY) {
-    return classifyWithAnthropic(input);
-  }
-
-  if (!env.OPENAI_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY or OPENAI_API_KEY is not configured');
-  }
-
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-  const completion = await client.chat.completions.create({
-    model: CLASSIFIER_MODEL,
-    temperature: 0,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: approvalClassifierSystemPrompt() },
-      { role: 'user', content: approvalClassifierUserPrompt(input) },
-    ],
+  const result = await generateText({
+    system: approvalClassifierSystemPrompt(),
+    user: approvalClassifierUserPrompt(input),
+    maxTokens: CLASSIFIER_MAX_TOKENS,
   });
-
-  const content = completion.choices[0]?.message.content;
-  if (!content) {
-    throw new Error('OpenAI returned an empty classification response');
-  }
-
-  return normalizeClassifierResult(input, parseClassifierJson(content));
+  return normalizeClassifierResult(input, parseClassifierJson(result.text));
 }
 
 export { CLASSIFIER_PROMPT_VERSION };

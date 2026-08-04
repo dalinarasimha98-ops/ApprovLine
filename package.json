@@ -31,6 +31,7 @@
     "test:e2e:approvals": "playwright test tests/e2e/approval-timeline.spec.ts",
     "readiness": "tsx scripts/readiness.ts",
     "gmail:sync": "tsx scripts/gmail-sync.ts",
+    "reembed:playbooks": "tsx scripts/reembed-playbook-chunks.ts",
     "worker": "tsx services/queue/worker.ts"
   },
   "dependencies": {
