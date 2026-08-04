@@ -1,4 +1,5 @@
 import { Worker } from 'bullmq';
+import { connectPrismaWithRetry } from '@/lib/prisma';
 import { createRedisConnection } from '@/services/queue/connection';
 import { approvalQueueName, type IncomingMessageJob } from '@/services/queue/approvalQueue';
 import { processIncomingMessage } from '@/services/ingestion/processIncomingMessage';
@@ -12,6 +13,10 @@ import {
 } from '@/services/queue/reliability';
 
 const connection = createRedisConnection('approval-worker');
+
+await connectPrismaWithRetry().catch((error) => {
+  console.error(`[queue:${approvalQueueName}] Database connection failed after retries; worker is starting anyway and will retry on first query.`, error);
+});
 
 function classifyFailure(error: unknown) {
   const message = error instanceof Error ? error.message : 'Unknown queue failure';

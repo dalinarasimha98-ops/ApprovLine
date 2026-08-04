@@ -25,7 +25,7 @@ export default async function ApprovalsPage({
 }) {
   const startedAt = Date.now();
   console.info('[dashboard] approvals page start load');
-  const tenant = await getDashboardTenant(3000);
+  const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   const filters = await searchParams;

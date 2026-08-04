@@ -6,6 +6,7 @@ import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
+import { isMigrationError } from '@/lib/prisma-errors';
 import { createDemoInvestigationsForOrganization, createInvestigationCase, getInvestigationMetrics } from '@/services/investigations';
 
 export const dynamic = 'force-dynamic';
@@ -33,12 +34,6 @@ function riskClass(risk?: string | null) {
   if (risk === 'critical' || risk === 'high') return 'border-rose-100 bg-rose-50 text-rose-700';
   if (risk === 'medium') return 'border-amber-100 bg-amber-50 text-amber-700';
   return 'border-emerald-100 bg-emerald-50 text-emerald-700';
-}
-
-function isMigrationError(message: string | null) {
-  if (!message) return false;
-  const lower = message.toLowerCase();
-  return lower.includes('does not exist') || lower.includes('relation') || lower.includes('table') || lower.includes('p2021') || lower.includes('migration');
 }
 
 function MetricCard({ label, value, help, tone = 'blue' }: { label: string; value: number; help: string; tone?: 'blue' | 'amber' | 'rose' | 'green' }) {
