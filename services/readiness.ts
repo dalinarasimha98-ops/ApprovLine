@@ -2,6 +2,8 @@ import { env } from '@/config/env';
 import { prisma } from '@/lib/prisma';
 import { validateDatabaseUrl } from '@/lib/env';
 import { checkRedisConnection } from '@/services/queue/connection';
+import { generationGatewayStatus } from '@/services/ai/gateway';
+import { embeddingGatewayStatus } from '@/services/ai/embeddingGateway';
 
 export type ReadinessStatus = 'ok' | 'missing' | 'error';
 
@@ -38,6 +40,75 @@ function databaseErrorMessage(error: unknown, fallback: string) {
   return `${message}${databaseUrlHint()}`;
 }
 
+/**
+ * Reports whether the AI Gateway is actually serving generation from its
+ * primary provider (Anthropic), not just whether a key is present. Falling
+ * back to a secondary provider is a supported transitional state (see the
+ * migration plan) but must never be silent — this check is how it surfaces.
+ */
+function aiGatewayCheck(): ReadinessCheck {
+  const status = generationGatewayStatus();
+  if (status.configured.length === 0) {
+    return { status: 'missing', message: 'No generation provider configured (set ANTHROPIC_API_KEY).' };
+  }
+
+  const anthropicTelemetry = status.telemetry.find((entry) => entry?.provider === 'anthropic');
+  if (anthropicTelemetry && anthropicTelemetry.totalCalls > 0 && anthropicTelemetry.totalFailures === anthropicTelemetry.totalCalls) {
+    return {
+      status: 'error',
+      message: `Anthropic generation failing this instance: ${anthropicTelemetry.lastError ?? 'unknown error'}.`,
+    };
+  }
+
+  const usingFallback = status.configured[0] !== status.primaryProvider;
+  if (usingFallback) {
+    return {
+      status: 'error',
+      message: `Primary provider "${status.primaryProvider}" is not configured; generation is running on fallback chain [${status.configured.join(', ')}] only.`,
+    };
+  }
+
+  return {
+    status: 'ok',
+    message:
+      anthropicTelemetry && anthropicTelemetry.totalCalls > 0
+        ? `Anthropic generation healthy this instance: last latency ${anthropicTelemetry.lastLatencyMs}ms, ${anthropicTelemetry.totalFailures} failure(s) of ${anthropicTelemetry.totalCalls} call(s).`
+        : 'Anthropic configured as primary generation provider. No calls recorded yet this instance (telemetry is per-instance, not durable).',
+  };
+}
+
+/**
+ * Reports whether the Embedding Provider (Voyage AI) is actually available.
+ * Unlike aiGatewayCheck(), there is no fallback tier to fall back to here —
+ * "missing"/"error" is the correct, visible state when it's unavailable,
+ * per the no-silent-degradation requirement in the approved migration plan.
+ */
+function embeddingGatewayCheck(): ReadinessCheck {
+  const status = embeddingGatewayStatus();
+  if (!status.activeProvider) {
+    return {
+      status: 'missing',
+      message: 'No embedding provider configured (set VOYAGE_API_KEY). Playbook indexing and search will fail explicitly rather than degrade to a non-semantic fallback.',
+    };
+  }
+
+  const telemetry = status.telemetry;
+  if (telemetry && telemetry.totalCalls > 0 && telemetry.totalFailures === telemetry.totalCalls) {
+    return {
+      status: 'error',
+      message: `${status.activeProvider} embeddings failing this instance: ${telemetry.lastError ?? 'unknown error'}.`,
+    };
+  }
+
+  return {
+    status: 'ok',
+    message:
+      telemetry && telemetry.totalCalls > 0
+        ? `${status.activeProvider} (${status.activeModel}, ${status.activeDimensions}d) healthy this instance: last latency ${telemetry.lastLatencyMs}ms, ${telemetry.totalFailures} failure(s) of ${telemetry.totalCalls} call(s).`
+        : `${status.activeProvider} (${status.activeModel}, ${status.activeDimensions}d) configured as embedding provider. No calls recorded yet this instance.`,
+  };
+}
+
 export async function buildReadinessReport() {
   const postgresql = await checkPostgres();
   const redis = await checkRedis();
@@ -46,6 +117,9 @@ export async function buildReadinessReport() {
     redis,
     openai: envCheck('OPENAI_API_KEY', 'OpenAI API key'),
     anthropic: envCheck('ANTHROPIC_API_KEY', 'Anthropic API key'),
+    aiGateway: aiGatewayCheck(),
+    voyage: envCheck('VOYAGE_API_KEY', 'Voyage API key'),
+    embeddingGateway: embeddingGatewayCheck(),
     slackClientId: envCheck('SLACK_CLIENT_ID', 'Slack client ID'),
     slackClientSecret: envCheck('SLACK_CLIENT_SECRET', 'Slack client secret'),
     slackSigningSecret: envCheck('SLACK_SIGNING_SECRET', 'Slack signing secret'),

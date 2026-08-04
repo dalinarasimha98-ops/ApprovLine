@@ -1,11 +1,10 @@
 import crypto from "node:crypto";
-import OpenAI from "openai";
 import mammoth from "mammoth";
 import { prisma } from "@/lib/prisma";
-import { env } from "@/config/env";
+import { generateText } from "@/services/ai/gateway";
+import { generateEmbedding, embeddingGatewayStatus } from "@/services/ai/embeddingGateway";
+import { AIEmbeddingError } from "@/services/ai/embeddings";
 import type { ApprovalRecord, PlaybookRule, Prisma } from "@prisma/client";
-
-const embeddingDimensions = 96;
 
 type SourceMatch = {
   chunkId: string;
@@ -288,39 +287,6 @@ export function chunkPlaybookContent(content: string) {
   return chunks.length ? chunks : [content.slice(0, 1800)];
 }
 
-function localEmbedding(text: string) {
-  const vector = Array.from({ length: embeddingDimensions }, () => 0);
-  const tokens = text.toLowerCase().match(/[a-z0-9$,.]+/g) ?? [];
-  for (const token of tokens) {
-    const hash = crypto.createHash("sha1").update(token).digest();
-    const index = hash[0] % embeddingDimensions;
-    vector[index] += 1 + Math.min(token.length, 12) / 12;
-  }
-  const norm =
-    Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
-  return vector.map((value) => Number((value / norm).toFixed(6)));
-}
-
-export async function embedText(text: string) {
-  if (!env.OPENAI_API_KEY) return localEmbedding(text);
-
-  try {
-    const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-    const response = await client.embeddings.create({
-      model: "text-embedding-3-small",
-      input: text.slice(0, 8000),
-      dimensions: embeddingDimensions,
-    });
-    return response.data[0]?.embedding ?? localEmbedding(text);
-  } catch (error) {
-    console.warn(
-      "[playbooks] OpenAI embeddings unavailable, using local fallback",
-      error,
-    );
-    return localEmbedding(text);
-  }
-}
-
 function cosineSimilarity(left: number[], right: number[]) {
   let dot = 0;
   let leftNorm = 0;
@@ -359,7 +325,7 @@ export async function indexPlaybookDocument(input: {
   try {
     const chunks = chunkPlaybookContent(input.content);
     for (const [index, content] of chunks.entries()) {
-      const embedding = await embedText(content);
+      const embedded = await generateEmbedding(content, "document");
       await prisma.playbookChunk.create({
         data: {
           organizationId: input.organizationId,
@@ -368,7 +334,12 @@ export async function indexPlaybookDocument(input: {
           content,
           sectionTitle: sectionTitleFor(content, index),
           tokenEstimate: Math.ceil(content.length / 4),
-          embedding,
+          embedding: embedded.vector,
+          embeddingProvider: embedded.provider,
+          embeddingModel: embedded.model,
+          embeddingVersion: embedded.version,
+          embeddingDimensions: embedded.dimensions,
+          embeddingUpdatedAt: new Date(),
           metadata: {
             demo: Boolean(input.metadata?.demo),
             contentHash,
@@ -734,16 +705,35 @@ export async function searchPlaybookChunks(
   question: string,
   limit = 5,
 ): Promise<SourceMatch[]> {
-  const queryEmbedding = await embedText(question);
+  const queryEmbedding = await generateEmbedding(question, "query");
+
+  // Only compare vectors produced by the same provider/model as the query
+  // embedding — mixing embedding spaces (e.g. a legacy OpenAI-derived vector
+  // against a Voyage query vector) produces a meaningless cosine score, not
+  // just a lower-quality one. Chunks awaiting re-embedding are correctly
+  // excluded here rather than silently included with a wrong score; run the
+  // reembedPlaybookChunks backfill (scripts/reembed-playbook-chunks.ts) to
+  // bring them into the current embedding space.
   const chunks = await prisma.playbookChunk.findMany({
     where: {
       organizationId,
       document: { status: "READY" },
+      embeddingProvider: queryEmbedding.provider,
+      embeddingModel: queryEmbedding.model,
     },
     include: { document: true },
     orderBy: { createdAt: "desc" },
     take: 200,
   });
+
+  if (chunks.length === 0) {
+    const anyChunkCount = await prisma.playbookChunk.count({ where: { organizationId, document: { status: "READY" } } });
+    if (anyChunkCount > 0) {
+      console.warn(
+        `[playbooks] organization ${organizationId} has ${anyChunkCount} chunk(s) but none embedded with the active provider/model (${queryEmbedding.provider}/${queryEmbedding.model}); run the reembed backfill.`,
+      );
+    }
+  }
 
   return chunks
     .map((chunk) => ({
@@ -753,12 +743,70 @@ export async function searchPlaybookChunks(
       sectionTitle: chunk.sectionTitle ?? `Section ${chunk.chunkIndex + 1}`,
       content: chunk.content,
       score: cosineSimilarity(
-        queryEmbedding,
+        queryEmbedding.vector,
         Array.isArray(chunk.embedding) ? chunk.embedding.map(Number) : [],
       ),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
+}
+
+/**
+ * Backfills every PlaybookChunk not yet embedded with the currently active
+ * provider/model. This is the deliberate, operator-triggered migration step
+ * referenced throughout this module — it is never run automatically, so
+ * existing embeddings stay untouched (and therefore still searchable
+ * against their own provider) until this is explicitly invoked. See
+ * scripts/reembed-playbook-chunks.ts for the CLI entry point.
+ *
+ * Rollback: since chunk source text (`content`) is never modified, rollback
+ * does not require preserving old vector bytes — re-run this same backfill
+ * after pointing the embedding gateway back at a prior provider (e.g. by
+ * unsetting VOYAGE_API_KEY, which currently has no other configurable
+ * provider — see services/ai/embeddingGateway.ts) to regenerate equivalent
+ * embeddings from the unchanged source text.
+ */
+export async function reembedPlaybookChunks(organizationId?: string) {
+  const status = embeddingGatewayStatus();
+  if (!status.activeProvider || !status.activeModel) {
+    throw new AIEmbeddingError(
+      "No embedding provider is configured (set VOYAGE_API_KEY); refusing to run a backfill with no destination provider.",
+      "gateway",
+    );
+  }
+
+  const chunks = await prisma.playbookChunk.findMany({
+    where: {
+      ...(organizationId ? { organizationId } : {}),
+      NOT: { embeddingProvider: status.activeProvider, embeddingModel: status.activeModel },
+    },
+    select: { id: true, content: true },
+  });
+
+  let migrated = 0;
+  let failed = 0;
+  for (const chunk of chunks) {
+    try {
+      const embedded = await generateEmbedding(chunk.content, "document");
+      await prisma.playbookChunk.update({
+        where: { id: chunk.id },
+        data: {
+          embedding: embedded.vector,
+          embeddingProvider: embedded.provider,
+          embeddingModel: embedded.model,
+          embeddingVersion: embedded.version,
+          embeddingDimensions: embedded.dimensions,
+          embeddingUpdatedAt: new Date(),
+        },
+      });
+      migrated += 1;
+    } catch (error) {
+      failed += 1;
+      console.warn(`[playbooks] failed to re-embed chunk ${chunk.id}`, error);
+    }
+  }
+
+  return { total: chunks.length, migrated, failed, activeProvider: status.activeProvider, activeModel: status.activeModel };
 }
 
 function inferGuidance(
@@ -834,37 +882,23 @@ function inferGuidance(
   };
 }
 
-async function answerWithOpenAI(question: string, sources: SourceMatch[]) {
-  if (!env.OPENAI_API_KEY) return null;
+async function generatePlaybookAnswer(question: string, sources: SourceMatch[]): Promise<PlaybookAnswer | null> {
   try {
-    const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are ApprovLine Playbook AI. Answer approval governance questions using only provided policy sources. Return JSON with answer, requiredApprovers, requiredDepartments, policySections, evidenceMissing, compliant, confidence.",
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            question,
-            sources: sources.map((source) => ({
-              document: source.documentName,
-              section: source.sectionTitle,
-              excerpt: source.content.slice(0, 1400),
-              score: source.score,
-            })),
-          }),
-        },
-      ],
-      temperature: 0.1,
+    const result = await generateText({
+      system:
+        "You are ApprovLine Playbook AI. Answer approval governance questions using only provided policy sources. Return JSON with answer, requiredApprovers, requiredDepartments, policySections, evidenceMissing, compliant, confidence.",
+      user: JSON.stringify({
+        question,
+        sources: sources.map((source) => ({
+          document: source.documentName,
+          section: source.sectionTitle,
+          excerpt: source.content.slice(0, 1400),
+          score: source.score,
+        })),
+      }),
+      maxTokens: 2048,
     });
-    const raw = response.choices[0]?.message.content;
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<PlaybookAnswer>;
+    const parsed = JSON.parse(result.text) as Partial<PlaybookAnswer>;
     return {
       answer: String(parsed.answer ?? ""),
       requiredApprovers: Array.isArray(parsed.requiredApprovers)
@@ -887,7 +921,7 @@ async function answerWithOpenAI(question: string, sources: SourceMatch[]) {
     } satisfies PlaybookAnswer;
   } catch (error) {
     console.warn(
-      "[playbooks] OpenAI answer generation unavailable, using rules fallback",
+      "[playbooks] AI answer generation unavailable, using rules fallback",
       error,
     );
     return null;
@@ -903,7 +937,7 @@ export async function queryPlaybooks(input: {
     input.organizationId,
     input.question,
   );
-  const aiAnswer = await answerWithOpenAI(input.question, sources);
+  const aiAnswer = await generatePlaybookAnswer(input.question, sources);
   const answer = aiAnswer ?? inferGuidance(input.question, sources);
   const stored = await prisma.playbookQuery.create({
     data: {

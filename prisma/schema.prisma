@@ -1030,21 +1030,27 @@ model PlaybookDocument {
 }
 
 model PlaybookChunk {
-  id             String           @id @default(cuid())
-  organizationId String
-  documentId     String
-  chunkIndex     Int
-  content        String
-  sectionTitle   String?
-  tokenEstimate  Int
-  embedding      Json
-  metadata       Json?
-  createdAt      DateTime         @default(now())
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  document       PlaybookDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  id                  String           @id @default(cuid())
+  organizationId      String
+  documentId          String
+  chunkIndex          Int
+  content             String
+  sectionTitle        String?
+  tokenEstimate       Int
+  embedding           Json
+  embeddingProvider   String?
+  embeddingModel      String?
+  embeddingVersion    String?
+  embeddingDimensions Int?
+  embeddingUpdatedAt  DateTime?
+  metadata            Json?
+  createdAt           DateTime         @default(now())
+  organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  document            PlaybookDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([documentId, chunkIndex])
   @@index([organizationId, documentId])
+  @@index([organizationId, embeddingProvider, embeddingModel])
 }
 
 model PlaybookRule {

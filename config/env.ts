@@ -10,6 +10,8 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: optionalEnvString,
   ANTHROPIC_MODEL: optionalEnvString,
   OPENAI_API_KEY: optionalEnvString,
+  VOYAGE_API_KEY: optionalEnvString,
+  VOYAGE_EMBEDDING_MODEL: optionalEnvString,
   REDIS_URL: optionalEnvString,
   CLERK_SECRET_KEY: optionalEnvString,
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: optionalEnvString,
