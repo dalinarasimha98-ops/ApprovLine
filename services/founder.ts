@@ -1,8 +1,10 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
+import { DASHBOARD_TENANT_CACHE_TAG } from '@/lib/auth';
 
 export type FounderRole = 'SUPER_ADMIN' | 'FOUNDER_ADMIN' | 'SUPPORT_ADMIN';
 
@@ -999,6 +1001,11 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
 
     return customer;
   }, { maxWait: 10000, timeout: 20000 });
+
+  // Founder-provisioned orgs are marked onboarded immediately — bust the
+  // tenant cache so an existing session for this org never keeps reading a
+  // stale pre-provisioning result.
+  revalidateTag(DASHBOARD_TENANT_CACHE_TAG);
 
   return result;
 }

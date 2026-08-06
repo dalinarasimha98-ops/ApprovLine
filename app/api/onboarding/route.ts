@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getCurrentTenant } from '@/lib/auth';
+import { revalidateTag } from 'next/cache';
+import { DASHBOARD_TENANT_CACHE_TAG, getCurrentTenant } from '@/lib/auth';
 import { buildOnboardingState, saveOnboardingPatch, type OnboardingPatch } from '@/services/onboarding';
 
 export const dynamic = 'force-dynamic';
@@ -24,5 +25,11 @@ export async function PATCH(request: Request) {
     actorUserId: tenant.user.id,
     patch,
   });
+  if (patch.complete) {
+    // The cached getDashboardTenant() result (up to 5 minutes stale) must
+    // never keep telling a just-onboarded user their workspace still needs
+    // onboarding, so bust it the moment completion is recorded.
+    revalidateTag(DASHBOARD_TENANT_CACHE_TAG);
+  }
   return NextResponse.json(state);
 }

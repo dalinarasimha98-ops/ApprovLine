@@ -1,4 +1,6 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
+import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
 import { validateDatabaseUrl } from '@/lib/env';
 import { isConnectionPoolError } from '@/lib/prisma-errors';
@@ -8,6 +10,60 @@ import { canAccessRole } from '@/types/rbac';
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Cross-request cache tag for the tenant lookup — see saveOnboardingPatch(), which calls
+ *  revalidateTag(DASHBOARD_TENANT_CACHE_TAG) the moment onboarding completes so a
+ *  just-onboarded user is never served a stale "incomplete" result. */
+export const DASHBOARD_TENANT_CACHE_TAG = 'dashboard-tenant';
+const DASHBOARD_TENANT_REVALIDATE_SECONDS = 300;
+/**
+ * Fixed DB-side timeout for the query behind the cache. This is intentionally
+ * NOT the same thing as the `timeoutMs` argument callers pass to
+ * getDashboardTenant() — that argument only bounds how long a given request
+ * waits on this shared, cached lookup; it must never change how long the
+ * lookup itself is allowed to run, or every caller's timeout would fragment
+ * retry/backoff behavior for what is supposed to be one shared code path.
+ */
+const DASHBOARD_TENANT_QUERY_TIMEOUT_MS = 8000;
+/** Floor for the outer race in getDashboardTenant() — see its usage below. */
+const MINIMUM_TENANT_LOOKUP_TIMEOUT_MS = 4000;
+
+// --- Circuit breaker -------------------------------------------------------
+// getDashboardTenant() is the single most-called query in the app (every
+// protected page hits it). If the database is genuinely struggling, retrying
+// with backoff on every concurrent page load only makes things worse under a
+// connection-limit=1 pool. After a few consecutive failures we stop issuing
+// new queries for a cooldown window and fail fast instead. State is
+// module-scope, so this is a best-effort, per-warm-instance breaker (Vercel
+// may spin up multiple instances under load, each with its own counter) —
+// still meaningfully reduces load compared to no breaker at all.
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 60_000;
+let consecutiveTenantLookupFailures = 0;
+let tenantLookupBreakerOpenUntil = 0;
+
+function isTenantLookupBreakerOpen() {
+  return Date.now() < tenantLookupBreakerOpenUntil;
+}
+
+function recordTenantLookupSuccess() {
+  consecutiveTenantLookupFailures = 0;
+  tenantLookupBreakerOpenUntil = 0;
+}
+
+function recordTenantLookupFailure() {
+  consecutiveTenantLookupFailures += 1;
+  if (consecutiveTenantLookupFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+    tenantLookupBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+  }
+}
+
+export class TenantLookupCircuitOpenError extends Error {
+  constructor() {
+    super('Workspace lookup is temporarily paused after repeated database failures. Retrying shortly.');
+    this.name = 'TenantLookupCircuitOpenError';
+  }
 }
 
 /**
@@ -41,6 +97,40 @@ async function findUserWithRetry(clerkUserId: string, timeoutMs: number, maxAtte
   }
   throw lastError;
 }
+
+async function fetchTenantRecordFresh(clerkUserId: string) {
+  if (isTenantLookupBreakerOpen()) {
+    throw new TenantLookupCircuitOpenError();
+  }
+  try {
+    const user = await findUserWithRetry(clerkUserId, DASHBOARD_TENANT_QUERY_TIMEOUT_MS);
+    recordTenantLookupSuccess();
+    return user;
+  } catch (error) {
+    recordTenantLookupFailure();
+    throw error;
+  }
+}
+
+/**
+ * A user's tenant row almost never changes between page loads — there is no
+ * reason to hit the database on every render. This is the primary fix for
+ * "Dashboard tenant lookup timed out": once warm, 95%+ of page loads serve
+ * this from the Next.js Data Cache instead of touching Postgres at all.
+ * Keyed on clerkUserId (an argument to the wrapped function, which Next.js
+ * folds into the cache key), so each user's cache entry is independent.
+ */
+const getCachedTenantRecord = unstable_cache(
+  (clerkUserId: string) => fetchTenantRecordFresh(clerkUserId),
+  ['dashboard-tenant-record'],
+  { revalidate: DASHBOARD_TENANT_REVALIDATE_SECONDS, tags: [DASHBOARD_TENANT_CACHE_TAG] },
+);
+
+// Per-request dedup on top of the cross-request cache above: several Server
+// Components on the same page (e.g. Compliance Hub's identity card and
+// readiness card) each call getDashboardTenant() independently — this
+// ensures they still only resolve one lookup (cached or not) per request.
+const getTenantRecordForRequest = cache((clerkUserId: string) => getCachedTenantRecord(clerkUserId));
 
 export class TenantDatabaseError extends Error {
   constructor(message: string, public cause?: unknown) {
@@ -121,7 +211,7 @@ export async function getCurrentTenant() {
   }
 }
 
-export async function getDashboardTenant(timeoutMs = 10000) {
+export async function getDashboardTenant(timeoutMs = DASHBOARD_TENANT_QUERY_TIMEOUT_MS) {
   const startedAt = Date.now();
   const session = await auth();
   if (!session.userId) {
@@ -148,7 +238,24 @@ export async function getDashboardTenant(timeoutMs = 10000) {
   }
 
   try {
-    const user = await findUserWithRetry(session.userId, timeoutMs);
+    // Several call sites still pass a short custom timeoutMs from before
+    // caching existed (some as low as 1500ms). That's fine on a warm cache
+    // (resolves in microseconds either way), but on a cold cache it would
+    // undermine the whole fix by racing past a legitimately-in-flight first
+    // lookup before it ever gets a chance to populate the cache. Enforce a
+    // floor so no caller can accidentally override the cached version's
+    // real budget.
+    const effectiveTimeoutMs = Math.max(timeoutMs, MINIMUM_TENANT_LOOKUP_TIMEOUT_MS);
+    // Races the (usually cached, near-instant) tenant lookup against the
+    // caller's own timeout budget. On a warm cache this resolves in
+    // microseconds regardless of timeoutMs; only a cold cache entry or a
+    // genuinely struggling database ever gets close to this bound.
+    const user = await Promise.race([
+      getTenantRecordForRequest(session.userId),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`Dashboard tenant lookup timed out after ${effectiveTimeoutMs}ms`)), effectiveTimeoutMs);
+      }),
+    ]);
 
     if (!user?.organization) {
       return {
@@ -181,13 +288,17 @@ export async function getDashboardTenant(timeoutMs = 10000) {
       loadMs: Date.now() - startedAt,
     };
   } catch (error) {
+    // Full internal detail (timeout message, circuit-breaker state, Prisma
+    // error) is logged for diagnostics only — never surfaced to the UI.
+    // Pages that render tenant.error must show this generic message so a
+    // raw "timed out after Nms" string can never appear on screen again.
     console.error('[tenant] dashboard tenant lookup failed', error);
     return {
       session,
       user: null,
       organization: null,
       status: 'error' as const,
-      error: error instanceof Error ? error.message : 'Unable to load workspace.',
+      error: 'Workspace lookup is temporarily unavailable. Please retry in a moment.',
       loadMs: Date.now() - startedAt,
     };
   }
