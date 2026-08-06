@@ -46,7 +46,17 @@ async function refreshMemoryGraphAction() {
   const tenant = await getDashboardTenant(5000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (!tenant.organization) redirect('/onboarding');
-  await rebuildMemoryGraphForOrganization(tenant.organization.id);
+
+  try {
+    await rebuildMemoryGraphForOrganization(tenant.organization.id);
+  } catch (error) {
+    // A genuinely exhausted retry (see findMemoryEntitiesForRelationship in
+    // services/memory.ts) or any other rebuild failure must never crash this
+    // Server Action - the user gets sent back to a working page with an
+    // inline notice instead of Next's generic error boundary.
+    console.error('[memory] graph refresh failed', error);
+    redirect('/memory?refresh=error');
+  }
   redirect('/memory?refresh=complete');
 }
 
@@ -262,6 +272,11 @@ export default async function MemoryPage({ searchParams }: MemoryPageProps) {
 
         {params.refresh === 'complete' ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">Memory Graph refreshed from the latest ApprovLine records.</div>
+        ) : null}
+        {params.refresh === 'error' ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+            Memory Graph refresh could not complete right now. Existing data below is unaffected — try again in a moment.
+          </div>
         ) : null}
 
         <Suspense key={`${params.q ?? ''}`} fallback={<CardSkeleton rows={4} />}>
