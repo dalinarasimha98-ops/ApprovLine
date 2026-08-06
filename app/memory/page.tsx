@@ -1,12 +1,18 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
+import { RefreshButton } from '@/components/system/RefreshButton';
+import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
 import { isMigrationError } from '@/lib/prisma-errors';
 import { buildMemoryDashboard, memoryEntityLabels, rebuildMemoryGraphForOrganization } from '@/services/memory';
 
 export const dynamic = 'force-dynamic';
+
+const AUTO_RETRY_INTERVAL_MS = 30_000;
 
 type MemoryPageProps = {
   searchParams: Promise<{ q?: string; refresh?: string }>;
@@ -14,6 +20,13 @@ type MemoryPageProps = {
 
 function safeError(error: unknown) {
   return error instanceof Error ? error.message.slice(0, 260) : 'Memory Graph could not load safely.';
+}
+
+function minutesAgo(ms: number) {
+  const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (minutes === 0) return 'less than a minute ago';
+  if (minutes === 1) return '1 minute ago';
+  return `${minutes} minutes ago`;
 }
 
 function dateText(value: Date) {
@@ -137,20 +150,91 @@ function GraphPreview({
   );
 }
 
+function DegradedNotice({ message, alert }: { message: string; alert: boolean }) {
+  return (
+    <div className={alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm' : 'rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm'}>
+      {alert ? <AutoRetryOnDegraded intervalMs={AUTO_RETRY_INTERVAL_MS} /> : null}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className={alert ? 'text-sm font-black text-amber-950' : 'text-sm font-black text-slate-950'}>
+            {alert ? 'Memory Graph is recovering' : 'Refreshing...'}
+          </p>
+          <p className="mt-1 text-sm leading-6">{message}</p>
+        </div>
+        <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 disabled:opacity-70" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The only part of the page that depends on the database. Wrapped in
+ * Suspense so the header, search form, and shell above always render
+ * immediately regardless of query speed. buildMemoryDashboard() itself
+ * never throws for a slow/failing query anymore (it returns a
+ * degraded/alert/message shape instead) - the try/catch here only exists
+ * for ensureMemoryStorage() failing outright (genuinely missing tables),
+ * which is a distinct, rarer failure mode from a slow query.
+ */
+async function MemoryDashboardSection({ organizationId, query }: { organizationId: string; query?: string }) {
+  let data: Awaited<ReturnType<typeof buildMemoryDashboard>> | null = null;
+  let error: string | null = null;
+  try {
+    data = await buildMemoryDashboard(organizationId, query);
+  } catch (cause) {
+    error = safeError(cause);
+  }
+
+  if (error) {
+    return isMigrationError(error) ? (
+      <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+        <p className="text-sm font-black uppercase tracking-wide text-amber-800">Database migration required</p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950">Memory Graph storage is not ready yet</h2>
+        <p className="mt-2 text-sm font-semibold leading-6 text-amber-900">Run <code className="rounded bg-white px-2 py-1">npm run db:deploy</code> in production to enable Memory Graph tables.</p>
+        <p className="mt-3 rounded-xl bg-white p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error}</p>
+      </section>
+    ) : (
+      <DegradedNotice alert message="Memory Graph is temporarily unavailable. The rest of the dashboard remains usable." />
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <>
+      {data.message ? <DegradedNotice message={data.message} alert={data.alert} /> : null}
+      {!data.message && data.staleAsOfMs ? (
+        <p className="-mt-2 text-xs font-bold text-slate-400">Last updated {minutesAgo(data.staleAsOfMs)}.</p>
+      ) : null}
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard label="Total entities" value={data.totalEntities} help="Vendors, approvals, policies, risks, people, projects, and evidence nodes." />
+        <StatCard label="Relationships" value={data.totalRelationships} help="Connected links such as approved by, governed by, created from, and investigates." />
+        <StatCard label="High-risk nodes" value={data.recentRisks.length} help="Risk-bearing entities surfaced from approvals and policy evaluations." />
+      </div>
+
+      {query ? (
+        <EntityList title={`Search results for "${query}"`} items={data.searchResults} empty="No matching graph entities found yet." />
+      ) : null}
+
+      <GraphPreview entities={data.graphEntities} relationships={data.graphRelationships} />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <EntityList title="Recent entities" items={data.recentEntities} empty="Entities will appear as ApprovLine captures approvals and evidence." />
+        <EntityList title="Recent decisions" items={data.recentDecisions} empty="Decisions appear after approvals or meeting decisions are captured." />
+        <EntityList title="Recent risks" items={data.recentRisks} empty="Risk nodes appear after high-risk approvals or compliance findings." />
+        <EntityList title="Recent investigations" items={data.recentInvestigations} empty="Investigation entities appear after cases are created." />
+      </div>
+    </>
+  );
+}
+
 export default async function MemoryPage({ searchParams }: MemoryPageProps) {
   const params = await searchParams;
   const tenant = await getDashboardTenant(6000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization) redirect('/dashboard');
-
-  let data: Awaited<ReturnType<typeof buildMemoryDashboard>> | null = null;
-  let error: string | null = null;
-  try {
-    data = await buildMemoryDashboard(tenant.organization.id, params.q);
-  } catch (cause) {
-    error = safeError(cause);
-  }
 
   return (
     <DashboardShell>
@@ -180,47 +264,9 @@ export default async function MemoryPage({ searchParams }: MemoryPageProps) {
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">Memory Graph refreshed from the latest ApprovLine records.</div>
         ) : null}
 
-        {error ? (
-          isMigrationError(error) ? (
-            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-              <p className="text-sm font-black uppercase tracking-wide text-amber-800">Database migration required</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-950">Memory Graph storage is not ready yet</h2>
-              <p className="mt-2 text-sm font-semibold leading-6 text-amber-900">Run <code className="rounded bg-white px-2 py-1">npm run db:deploy</code> in production to enable Memory Graph tables.</p>
-              <p className="mt-3 rounded-xl bg-white p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error}</p>
-            </section>
-          ) : (
-            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-              <p className="text-sm font-black uppercase tracking-wide text-amber-800">Memory Graph temporarily unavailable</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-950">We could not load the graph this time</h2>
-              <p className="mt-2 text-sm font-semibold leading-6 text-amber-900">The database did not respond in time. This is usually transient - retry in a moment.</p>
-              <p className="mt-3 rounded-xl bg-white p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error}</p>
-              <PendingLink href="/memory" pendingText="Retrying..." className="mt-4 inline-flex rounded-xl bg-[#2155d9] px-4 py-2.5 text-sm font-black text-white">
-                Retry
-              </PendingLink>
-            </section>
-          )
-        ) : data ? (
-          <>
-            <div className="grid gap-4 md:grid-cols-3">
-              <StatCard label="Total entities" value={data.totalEntities} help="Vendors, approvals, policies, risks, people, projects, and evidence nodes." />
-              <StatCard label="Relationships" value={data.totalRelationships} help="Connected links such as approved by, governed by, created from, and investigates." />
-              <StatCard label="High-risk nodes" value={data.recentRisks.length} help="Risk-bearing entities surfaced from approvals and policy evaluations." />
-            </div>
-
-            {params.q ? (
-              <EntityList title={`Search results for "${params.q}"`} items={data.searchResults} empty="No matching graph entities found yet." />
-            ) : null}
-
-            <GraphPreview entities={data.graphEntities} relationships={data.graphRelationships} />
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <EntityList title="Recent entities" items={data.recentEntities} empty="Entities will appear as ApprovLine captures approvals and evidence." />
-              <EntityList title="Recent decisions" items={data.recentDecisions} empty="Decisions appear after approvals or meeting decisions are captured." />
-              <EntityList title="Recent risks" items={data.recentRisks} empty="Risk nodes appear after high-risk approvals or compliance findings." />
-              <EntityList title="Recent investigations" items={data.recentInvestigations} empty="Investigation entities appear after cases are created." />
-            </div>
-          </>
-        ) : null}
+        <Suspense key={`${params.q ?? ''}`} fallback={<CardSkeleton rows={4} />}>
+          <MemoryDashboardSection organizationId={tenant.organization.id} query={params.q} />
+        </Suspense>
       </div>
     </DashboardShell>
   );

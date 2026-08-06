@@ -1,0 +1,13 @@
+-- CreateIndex
+-- The Alerts & Risks page (services/alerts.ts) looks up dismissed/escalated
+-- alert state via AuditLog.findMany({ where: { organizationId, action: {
+-- in: [...] } } }). None of AuditLog's existing indexes cover
+-- (organizationId, action) together - AuditLog is the single
+-- fastest-growing table in the schema (every classification, integration
+-- sync, and manual action writes a row), so without this index that lookup
+-- degrades as an organization's audit history grows, regardless of caching.
+--
+-- Every other WHERE clause used by the alerts query (ApprovalRecord.riskLevel,
+-- .approvalType, .status) is already covered by existing indexes from prior
+-- migrations, so no additional ApprovalRecord index is added here.
+CREATE INDEX "AuditLog_organizationId_action_idx" ON "AuditLog"("organizationId", "action");
