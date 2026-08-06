@@ -1,5 +1,6 @@
 import { ApprovalStatus, ApprovalType, IntegrationProvider, type Prisma } from '@prisma/client';
 import { env } from '@/config/env';
+import { invalidateApprovalRecordsCache } from '@/lib/approvalRecords';
 import { prisma } from '@/lib/prisma';
 import { writeAuditLog } from '@/services/audit';
 import { CLASSIFIER_MODEL, CLASSIFIER_PROMPT_VERSION, hashClassifierInput } from '@/services/classifier/openai';
@@ -238,6 +239,7 @@ export async function persistClassificationResult(input: {
       },
     });
 
+    invalidateApprovalRecordsCache(organizationId);
     return { classifier, approval };
   } catch (error) {
     if (input.idempotencyKey) {

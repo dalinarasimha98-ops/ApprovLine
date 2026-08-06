@@ -1,7 +1,9 @@
 import { ApprovalStatus, ApprovalType } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { requireRole } from '@/lib/auth';
+import { approvalRecordsCacheTag } from '@/lib/approvalRecords';
 import { prisma } from '@/lib/prisma';
 import { measure } from '@/lib/performance';
 import { writeAuditLog } from '@/services/audit';
@@ -49,6 +51,7 @@ export async function POST(request: NextRequest) {
       metadata: { sourcePlatform: 'slack', category, riskLevel },
     });
   }
+  revalidateTag(approvalRecordsCacheTag(tenant.organization.id));
   return NextResponse.redirect(new URL('/dashboard/approvals?sourcePlatform=slack', request.url));
   });
 }

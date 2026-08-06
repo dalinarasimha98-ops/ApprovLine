@@ -1,5 +1,7 @@
 import type { ApprovalStatus, ApprovalType, IntegrationProvider, MemoryEntity, MemoryEntityType, Prisma } from '@prisma/client';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import { approvalRecordsCacheTag } from '@/lib/approvalRecords';
 import { createDemoDataForOrganization } from '@/lib/demo-data';
 import type { FounderAccess } from '@/services/founder';
 import { logFounderAction } from '@/services/founder';
@@ -610,6 +612,8 @@ export async function generateFounderDemoWorkspace(access: FounderAccess, indust
     customerAccountId: customer.id,
     metadata: json({ industry, companySize, approvals, graph, investigations, copilotQuestions }),
   });
+
+  revalidateTag(approvalRecordsCacheTag(organization.id));
 
   return {
     organizationId: organization.id,

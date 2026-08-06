@@ -1,10 +1,18 @@
 import { getDashboardTenant } from '@/lib/auth';
 import { ApprovalTable } from '@/components/dashboard/ApprovalTable';
 import type { ApprovalTableRecord } from '@/components/dashboard/ApprovalTable';
+import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import { loadDashboardApprovalRecords } from '@/lib/approvalRecords';
 import { redirect } from 'next/navigation';
+
+function minutesAgo(ms: number) {
+  const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (minutes === 0) return 'less than a minute ago';
+  if (minutes === 1) return '1 minute ago';
+  return `${minutes} minutes ago`;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +41,8 @@ export default async function ApprovalsPage({
   let loadError: string | null = null;
   let loadErrorReference: string | null = null;
   let cacheNotice: string | null = null;
+  let staleNotice: string | null = null;
+  let isAlert = false;
 
   try {
     if (!tenant.organization) throw new Error(tenant.error ?? 'Workspace unavailable.');
@@ -44,10 +54,21 @@ export default async function ApprovalsPage({
     });
 
     approvals = result.records;
-    if (result.degraded && result.source === 'cache') cacheNotice = result.message ?? 'Showing recently loaded approval records.';
-    if (result.degraded && result.source === 'empty') {
+    isAlert = result.alert;
+    // A single slow query (breaker still closed) must never alarm the user
+    // — serving a slightly stale result gets a quiet caption, not a banner.
+    if (result.degraded && result.source === 'cache' && !result.alert && result.staleAsOfMs) {
+      staleNotice = `Last updated ${minutesAgo(result.staleAsOfMs)}.`;
+    }
+    if (result.alert) {
       loadErrorReference = result.reference ?? null;
-      cacheNotice = 'Approval records are still usable, but live database results are delayed. Showing the empty state instead of blocking the page.';
+      cacheNotice = result.message ?? 'Live database results are delayed.';
+    } else if (result.degraded && result.source === 'empty') {
+      // Cold cache + no stale fallback, but the breaker hasn't tripped yet
+      // (fewer than 3 consecutive failures) — this resolves itself almost
+      // always on the very next request, so it gets a calm loading message
+      // instead of the alarming "recovering" banner.
+      cacheNotice = result.message ?? 'Approval records are loading. Retrying automatically.';
     }
     console.info(`[dashboard] approvals query finished in ${Date.now() - startedAt}ms`);
   } catch (error) {
@@ -108,16 +129,20 @@ export default async function ApprovalsPage({
           </FormSubmitButton>
         </div>
       </form>
+      {staleNotice ? <p className="-mt-2 text-xs font-bold text-slate-400">{staleNotice}</p> : null}
+      {isAlert ? <AutoRetryOnDegraded /> : null}
       {cacheNotice ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm">
+        <div className={isAlert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm' : 'rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm'}>
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
-              <h3 className="text-sm font-black text-slate-950">Approval records are recovering</h3>
+              <h3 className={isAlert ? 'text-sm font-black text-amber-950' : 'text-sm font-black text-slate-950'}>
+                {isAlert ? 'Approval records are recovering' : 'Approval records are loading'}
+              </h3>
               <p className="mt-1 text-sm leading-6">{cacheNotice}</p>
-              {loadErrorReference ? <p className="mt-1 text-xs font-bold text-slate-400">Reference: {loadErrorReference}</p> : null}
+              {loadErrorReference ? <p className="mt-1 text-xs font-bold opacity-70">Reference: {loadErrorReference}</p> : null}
             </div>
             <PendingLink href="/dashboard/approvals" pendingText="Retrying..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
-              Retry
+              Retry now
             </PendingLink>
           </div>
         </div>

@@ -1,7 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Prisma, type ApprovalStatus, type ApprovalType, type ManualApprovalKind, type ManualApprovalVerificationStatus } from '@prisma/client';
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import { approvalRecordsCacheTag } from '@/lib/approvalRecords';
 
 export const manualApprovalInputSchema = z.object({
   kind: z.enum(['VERBAL', 'MANUAL']),
@@ -97,7 +99,7 @@ export async function createManualApproval(args: {
   assertManualVerificationTransition(null, input.verificationStatus as ManualApprovalVerificationStatus);
   const recordSnapshot = snapshot(input, actorUserId, 1);
 
-  return prisma.$transaction(async (tx) => {
+  const approval = await prisma.$transaction(async (tx) => {
     const approval = await tx.approvalRecord.create({
       data: {
         organizationId,
@@ -155,6 +157,9 @@ export async function createManualApproval(args: {
     });
     return approval;
   }, { timeout: 15_000 });
+
+  revalidateTag(approvalRecordsCacheTag(organizationId));
+  return approval;
 }
 
 export async function updateManualApproval(args: {
@@ -164,7 +169,7 @@ export async function updateManualApproval(args: {
   input: ManualApprovalInput;
 }) {
   const { organizationId, actorUserId, approvalId, input } = args;
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const existing = await tx.approvalRecord.findFirst({
       where: { id: approvalId, organizationId },
       include: { manualDetail: true, manualVersions: { orderBy: { version: 'desc' }, take: 1 } },
@@ -229,6 +234,9 @@ export async function updateManualApproval(args: {
     });
     return { id: approvalId, version: nextVersion, changedFields: Object.keys(previousValues) };
   }, { timeout: 15_000 });
+
+  revalidateTag(approvalRecordsCacheTag(organizationId));
+  return result;
 }
 
 export function createConfirmationToken() {
