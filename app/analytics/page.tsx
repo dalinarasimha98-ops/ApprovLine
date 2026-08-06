@@ -1,10 +1,13 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
+import { RefreshButton } from '@/components/system/RefreshButton';
+import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
-import { buildExecutiveAnalytics, type ExecutiveAnalytics } from '@/services/analytics';
-import { recordPerformance, withTimeout } from '@/lib/performance';
+import { getCoreAnalytics, getPlaybookAnalytics, type CoreAnalytics, type PlaybookAnalyticsSection } from '@/services/analytics';
+import { recordPerformance } from '@/lib/performance';
 
 export const dynamic = 'force-dynamic';
 
@@ -139,7 +142,15 @@ function DepartmentTable({ items }: { items: Array<{ name: string; count: number
   );
 }
 
-function ReportPreview({ report, exportSuffix }: { report: ExecutiveAnalytics; exportSuffix: string }) {
+function DegradedNotice({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-900">
+      {label}: showing the last successfully loaded data while the live query recovers.
+    </div>
+  );
+}
+
+function ReportPreview({ report, exportSuffix }: { report: CoreAnalytics; exportSuffix: string }) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
@@ -205,55 +216,44 @@ function ReportPreview({ report, exportSuffix }: { report: ExecutiveAnalytics; e
   );
 }
 
-function AnalyticsErrorState({ message }: { message: string }) {
+function SectionUnavailable({ title, message }: { title: string; message: string }) {
   return (
-    <DashboardShell>
-      <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-950 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-wide">Analytics unavailable</p>
-        <h2 className="mt-2 text-2xl font-black text-slate-950">We could not load the Executive ROI Dashboard</h2>
-        <p className="mt-2 text-sm font-semibold">{message}</p>
-        <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="mt-4 inline-flex min-h-0 h-11 items-center justify-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm">
-          Open demo preview
-        </PendingLink>
-      </section>
-    </DashboardShell>
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-wide">{title}</p>
+      <p className="mt-2 text-sm font-semibold">{message}</p>
+    </div>
   );
 }
 
-export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps) {
-  const tenant = await getDashboardTenant(4000);
-  if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization) redirect('/dashboard');
-
-  const query = await searchParams;
-  const requestedDemo = query.demo === '1';
-  let liveReport: ExecutiveAnalytics;
-  const analyticsStartedAt = Date.now();
-
+/**
+ * Core ROI metrics: captured approvals, time saved, risk, compliance,
+ * integrations, trends. One cached, timeout-guarded fetch
+ * (getCoreAnalytics) - if it fails entirely (no live or stale data
+ * available), this renders its own unavailable state without affecting
+ * the Playbook AI section below.
+ */
+async function CoreAnalyticsSection({ organizationId, requestedDemo }: { organizationId: string; requestedDemo: boolean }) {
+  const startedAt = Date.now();
+  let liveReport: CoreAnalytics;
   try {
-    liveReport = await withTimeout(
-      'executive analytics page',
-      buildExecutiveAnalytics(tenant.organization.id, { demoProjection: requestedDemo }),
-      8500,
-    );
-    recordPerformance('/analytics/executive-roi', Date.now() - analyticsStartedAt, 200);
+    liveReport = await getCoreAnalytics(organizationId, { demoProjection: requestedDemo });
+    recordPerformance('/analytics/core', Date.now() - startedAt, 200);
   } catch (error) {
-    recordPerformance('/analytics/executive-roi', Date.now() - analyticsStartedAt, 504);
-    return <AnalyticsErrorState message={error instanceof Error ? error.message : 'Analytics query timed out.'} />;
+    recordPerformance('/analytics/core', Date.now() - startedAt, 504);
+    return (
+      <SectionUnavailable
+        title="Core approval metrics unavailable"
+        message={error instanceof Error ? error.message : 'The analytics query did not complete. Other sections on this page are unaffected.'}
+      />
+    );
   }
 
   const usingEmptyDemoPreview = !requestedDemo && liveReport.approvals.total === 0;
   let report = liveReport;
   if (usingEmptyDemoPreview) {
     try {
-      report = await withTimeout(
-        'executive analytics demo projection',
-        buildExecutiveAnalytics(tenant.organization.id, { demoProjection: true }),
-        8500,
-      );
+      report = await getCoreAnalytics(organizationId, { demoProjection: true });
     } catch (error) {
-      recordPerformance('/analytics/demo-projection', 8500, 504);
       console.warn('[analytics] demo projection fallback', error instanceof Error ? error.message : error);
       report = liveReport;
     }
@@ -261,181 +261,238 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const exportSuffix = report.demoProjection ? '&demo=1' : '';
 
   return (
+    <>
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-[#07111f] p-6 text-white shadow-sm sm:p-7">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-200">Executive ROI Dashboard</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Boardroom-ready business value view</h2>
+            <p className="mt-3 max-w-4xl text-base leading-7 text-slate-200">
+              See the full ApprovLine ROI story before exporting: captured approvals, risk reduction, time saved, compliance readiness, integrations, and Playbook AI insights.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {['CEO', 'CFO', 'CTO', 'Head of Legal', 'Compliance Officer', 'Procurement Head'].map((role) => (
+                <span key={role} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-black text-blue-100">{role}</span>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+            <p className="text-xs font-black uppercase tracking-wide text-blue-200">Report mode</p>
+            <p className="mt-1 text-sm font-bold text-white">{report.demoProjection ? 'Demo preview' : 'Live workspace'}</p>
+            <p className="mt-1 text-xs font-semibold text-slate-300">Generated {new Date(report.generatedAt).toLocaleString()}</p>
+          </div>
+        </div>
+      </div>
+
+      {report.degraded ? <DegradedNotice label="Core approval metrics" /> : null}
+
+      {(usingEmptyDemoPreview || report.demoProjection) ? (
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm sm:flex-row sm:items-center">
+          <div>
+            <h3 className="font-black text-slate-950">{usingEmptyDemoPreview ? 'No live analytics yet - showing demo preview' : 'Demo analytics preview enabled'}</h3>
+            <p className="mt-1 text-sm font-semibold text-slate-600">Use this customer-ready preview while Slack, Gmail, approvals, and Playbook AI data accumulate.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
+              View live data
+            </PendingLink>
+            <form action="/api/demo/seed" method="post">
+              <FormSubmitButton pendingText="Generating..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
+                Generate demo data
+              </FormSubmitButton>
+            </form>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm sm:flex-row sm:items-center">
+          <div>
+            <h3 className="font-black text-slate-950">Want to present a fuller customer story?</h3>
+            <p className="mt-1 text-sm font-semibold text-slate-600">Switch to demo preview to show realistic monthly executive ROI projections.</p>
+          </div>
+          <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
+            Use demo analytics
+          </PendingLink>
+        </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Approvals captured" value={numberFormat(report.approvals.total)} help="Total approval and rejection decisions in the executive reporting window." href="/analytics/drilldown/approvals-captured" />
+        <MetricCard label="Time saved" value={`${numberFormat(report.timeSaved.totalHours)} hrs`} help="Manual search, retrieval, and audit preparation effort avoided." tone="green" href="/analytics/drilldown/time-saved" />
+        <MetricCard label="High-risk approvals" value={numberFormat(report.riskReduction.highRiskApprovalsDetected)} help="Security, compliance, legal, finance, and procurement decisions surfaced." tone="amber" href="/analytics/drilldown/high-risk-approvals" />
+        <MetricCard label="Traceability" value={`${report.complianceReadiness.approvalTraceability}%`} help="Records with approver, source, timestamp, and decision context." tone="dark" href="/analytics/drilldown/traceability" />
+      </div>
+
+      <ReportPreview report={report} exportSuffix={exportSuffix} />
+
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <PendingLink href="/analytics/drilldown/approval-categories" pendingText="Opening category details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Approvals captured</p>
+          <h3 className="mt-1 text-lg font-black text-slate-950">Approvals by department</h3>
+          <div className="mt-5">
+            <DepartmentTable items={report.approvals.byDepartment} />
+          </div>
+          <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View department and category details &gt;</p>
+        </PendingLink>
+
+        <PendingLink href="/analytics/drilldown/integration-insights" pendingText="Opening integration details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Approvals by source</p>
+          <h3 className="mt-1 text-lg font-black text-slate-950">Integration contribution</h3>
+          <div className="mt-5">
+            <CountList items={report.approvals.bySource} empty="Source data appears after Slack or Gmail ingestion runs." />
+          </div>
+          <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View integration details &gt;</p>
+        </PendingLink>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Time saved</p>
+          <h3 className="mt-1 text-lg font-black text-slate-950">Operational effort avoided</h3>
+          <div className="mt-5 grid gap-3">
+            <MetricCard label="Manual search" value={`${numberFormat(report.timeSaved.manualSearchHours)} hrs`} help="Time avoided searching Slack, Gmail, and audit trails." />
+            <MetricCard label="Audit prep" value={`${numberFormat(report.timeSaved.auditPreparationHours)} hrs`} help="Evidence reconstruction effort avoided." />
+            <MetricCard label="Retrieval" value={`${numberFormat(report.timeSaved.retrievalHours)} hrs`} help="Approval lookup and source-link retrieval time avoided." />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Risk reduction</p>
+          <h3 className="mt-1 text-lg font-black text-slate-950">Controls surfaced</h3>
+          <div className="mt-5 grid gap-3">
+            {[
+              ['Missing approvals detected', report.riskReduction.missingApprovalsDetected],
+              ['Conditional approvals detected', report.riskReduction.conditionalApprovalsDetected],
+              ['High-risk approvals detected', report.riskReduction.highRiskApprovalsDetected],
+              ['Approvals without evidence', report.riskReduction.approvalsWithoutEvidence],
+            ].map(([label, value]) => (
+              <div key={label as string} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                <span className="text-sm font-bold text-slate-700">{label}</span>
+                <span className="text-lg font-black text-slate-950">{numberFormat(value as number)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <PendingLink href="/analytics/drilldown/compliance-readiness" pendingText="Opening compliance details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Compliance readiness</p>
+          <h3 className="mt-1 text-lg font-black text-slate-950">Audit posture</h3>
+          <div className="mt-5 grid gap-5">
+            <ProgressRow label="Audit completeness" value={report.complianceReadiness.auditCompleteness} />
+            <ProgressRow label="Evidence coverage" value={report.complianceReadiness.evidenceCoverage} />
+            <ProgressRow label="Approval traceability" value={report.complianceReadiness.approvalTraceability} />
+          </div>
+          <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View readiness details &gt;</p>
+        </PendingLink>
+      </div>
+
+      <PendingLink href="/analytics/drilldown/integration-insights" pendingText="Opening integration details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+        <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Integration insights</p>
+        <h3 className="mt-1 text-lg font-black text-slate-950">Connector contribution</h3>
+        <div className="mt-5 grid gap-3">
+          {[
+            ['Slack approvals', report.integrations.slackApprovals],
+            ['Gmail approvals', report.integrations.gmailApprovals],
+            ['Teams approvals', report.integrations.teamsApprovals],
+            ['Jira approvals', report.integrations.jiraApprovals],
+            ['Outlook approvals', report.integrations.outlookApprovals],
+            ['ServiceNow approvals', report.integrations.serviceNowApprovals],
+            ['Zoom approvals', report.integrations.zoomApprovals],
+          ].map(([label, value]) => (
+            <div key={label as string} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+              <span className="font-bold text-slate-700">{label}</span>
+              <span className="font-black text-slate-950">{numberFormat(value as number)}</span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View integration approvals &gt;</p>
+      </PendingLink>
+    </>
+  );
+}
+
+/**
+ * Playbook AI insights: questions asked, referenced policies, missing
+ * policy areas, approval bottlenecks. Backed by getPlaybookAnalytics(),
+ * a fetch entirely independent of CoreAnalyticsSection's - if this one
+ * fails or is slow, the Core section above is unaffected and vice versa.
+ */
+async function PlaybookAnalyticsSection({ organizationId, requestedDemo }: { organizationId: string; requestedDemo: boolean }) {
+  const startedAt = Date.now();
+  let report: PlaybookAnalyticsSection;
+  try {
+    report = await getPlaybookAnalytics(organizationId, { demoProjection: requestedDemo });
+    recordPerformance('/analytics/playbook', Date.now() - startedAt, 200);
+  } catch (error) {
+    recordPerformance('/analytics/playbook', Date.now() - startedAt, 504);
+    return (
+      <SectionUnavailable
+        title="Playbook AI insights unavailable"
+        message={error instanceof Error ? error.message : 'The playbook analytics query did not complete. Other sections on this page are unaffected.'}
+      />
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {report.degraded ? (
+        <div className="mb-4">
+          <DegradedNotice label="Playbook AI insights" />
+        </div>
+      ) : null}
+      <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Playbook AI insights</p>
+      <h3 className="mt-1 text-lg font-black text-slate-950">Policy intelligence</h3>
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div>
+          <p className="text-sm font-black text-slate-950">{numberFormat(report.playbookAi.questionsAsked)} questions asked</p>
+          <div className="mt-3">
+            <CountList items={report.playbookAi.mostReferencedPolicies} empty="Referenced policies appear after Playbook AI answers questions." />
+          </div>
+        </div>
+        <div className="grid gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Missing policy areas</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(report.playbookAi.missingPolicyAreas.length ? report.playbookAi.missingPolicyAreas : ['No missing policy areas detected']).map((item) => (
+                <span key={item} className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">{item}</span>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Approval bottlenecks</p>
+            <div className="mt-2">
+              <CountList items={report.playbookAi.approvalBottlenecks} empty="Bottlenecks appear when conditional or pending records exist." />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps) {
+  const tenant = await getDashboardTenant();
+  if (tenant.status === 'unauthenticated') redirect('/sign-in');
+  if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
+  if (!tenant.organization) redirect('/dashboard');
+
+  const query = await searchParams;
+  const requestedDemo = query.demo === '1';
+  const organizationId = tenant.organization.id;
+
+  return (
     <DashboardShell>
       <section className="grid gap-6">
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-[#07111f] p-6 text-white shadow-sm sm:p-7">
-          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-200">Executive ROI Dashboard</p>
-              <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Boardroom-ready business value view</h2>
-              <p className="mt-3 max-w-4xl text-base leading-7 text-slate-200">
-                See the full ApprovLine ROI story before exporting: captured approvals, risk reduction, time saved, compliance readiness, integrations, and Playbook AI insights.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {['CEO', 'CFO', 'CTO', 'Head of Legal', 'Compliance Officer', 'Procurement Head'].map((role) => (
-                  <span key={role} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-black text-blue-100">{role}</span>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-blue-200">Report mode</p>
-              <p className="mt-1 text-sm font-bold text-white">{report.demoProjection ? 'Demo preview' : 'Live workspace'}</p>
-              <p className="mt-1 text-xs font-semibold text-slate-300">Generated {new Date(report.generatedAt).toLocaleString()}</p>
-            </div>
-          </div>
+        <div className="flex items-center justify-end">
+          <RefreshButton />
         </div>
 
-        {(usingEmptyDemoPreview || report.demoProjection) ? (
-          <div className="flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm sm:flex-row sm:items-center">
-            <div>
-              <h3 className="font-black text-slate-950">{usingEmptyDemoPreview ? 'No live analytics yet - showing demo preview' : 'Demo analytics preview enabled'}</h3>
-              <p className="mt-1 text-sm font-semibold text-slate-600">Use this customer-ready preview while Slack, Gmail, approvals, and Playbook AI data accumulate.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
-                View live data
-              </PendingLink>
-              <form action="/api/demo/seed" method="post">
-                <FormSubmitButton pendingText="Generating..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
-                  Generate demo data
-                </FormSubmitButton>
-              </form>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm sm:flex-row sm:items-center">
-            <div>
-              <h3 className="font-black text-slate-950">Want to present a fuller customer story?</h3>
-              <p className="mt-1 text-sm font-semibold text-slate-600">Switch to demo preview to show realistic monthly executive ROI projections.</p>
-            </div>
-            <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
-              Use demo analytics
-            </PendingLink>
-          </div>
-        )}
+        <Suspense fallback={<CardSkeleton rows={4} />}>
+          <CoreAnalyticsSection organizationId={organizationId} requestedDemo={requestedDemo} />
+        </Suspense>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label="Approvals captured" value={numberFormat(report.approvals.total)} help="Total approval and rejection decisions in the executive reporting window." href="/analytics/drilldown/approvals-captured" />
-          <MetricCard label="Time saved" value={`${numberFormat(report.timeSaved.totalHours)} hrs`} help="Manual search, retrieval, and audit preparation effort avoided." tone="green" href="/analytics/drilldown/time-saved" />
-          <MetricCard label="High-risk approvals" value={numberFormat(report.riskReduction.highRiskApprovalsDetected)} help="Security, compliance, legal, finance, and procurement decisions surfaced." tone="amber" href="/analytics/drilldown/high-risk-approvals" />
-          <MetricCard label="Traceability" value={`${report.complianceReadiness.approvalTraceability}%`} help="Records with approver, source, timestamp, and decision context." tone="dark" href="/analytics/drilldown/traceability" />
-        </div>
-
-        <ReportPreview report={report} exportSuffix={exportSuffix} />
-
-        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <PendingLink href="/analytics/drilldown/approval-categories" pendingText="Opening category details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Approvals captured</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">Approvals by department</h3>
-            <div className="mt-5">
-              <DepartmentTable items={report.approvals.byDepartment} />
-            </div>
-            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View department and category details &gt;</p>
-          </PendingLink>
-
-          <PendingLink href="/analytics/drilldown/integration-insights" pendingText="Opening integration details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Approvals by source</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">Integration contribution</h3>
-            <div className="mt-5">
-              <CountList items={report.approvals.bySource} empty="Source data appears after Slack or Gmail ingestion runs." />
-            </div>
-            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View integration details &gt;</p>
-          </PendingLink>
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Time saved</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">Operational effort avoided</h3>
-            <div className="mt-5 grid gap-3">
-              <MetricCard label="Manual search" value={`${numberFormat(report.timeSaved.manualSearchHours)} hrs`} help="Time avoided searching Slack, Gmail, and audit trails." />
-              <MetricCard label="Audit prep" value={`${numberFormat(report.timeSaved.auditPreparationHours)} hrs`} help="Evidence reconstruction effort avoided." />
-              <MetricCard label="Retrieval" value={`${numberFormat(report.timeSaved.retrievalHours)} hrs`} help="Approval lookup and source-link retrieval time avoided." />
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Risk reduction</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">Controls surfaced</h3>
-            <div className="mt-5 grid gap-3">
-              {[
-                ['Missing approvals detected', report.riskReduction.missingApprovalsDetected],
-                ['Conditional approvals detected', report.riskReduction.conditionalApprovalsDetected],
-                ['High-risk approvals detected', report.riskReduction.highRiskApprovalsDetected],
-                ['Approvals without evidence', report.riskReduction.approvalsWithoutEvidence],
-              ].map(([label, value]) => (
-                <div key={label as string} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-                  <span className="text-sm font-bold text-slate-700">{label}</span>
-                  <span className="text-lg font-black text-slate-950">{numberFormat(value as number)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <PendingLink href="/analytics/drilldown/compliance-readiness" pendingText="Opening compliance details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Compliance readiness</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">Audit posture</h3>
-            <div className="mt-5 grid gap-5">
-              <ProgressRow label="Audit completeness" value={report.complianceReadiness.auditCompleteness} />
-              <ProgressRow label="Evidence coverage" value={report.complianceReadiness.evidenceCoverage} />
-              <ProgressRow label="Approval traceability" value={report.complianceReadiness.approvalTraceability} />
-            </div>
-            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View readiness details &gt;</p>
-          </PendingLink>
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-          <PendingLink href="/analytics/drilldown/integration-insights" pendingText="Opening integration details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Integration insights</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">Connector contribution</h3>
-            <div className="mt-5 grid gap-3">
-              {[
-                ['Slack approvals', report.integrations.slackApprovals],
-                ['Gmail approvals', report.integrations.gmailApprovals],
-                ['Teams approvals', report.integrations.teamsApprovals],
-                ['Jira approvals', report.integrations.jiraApprovals],
-                ['Outlook approvals', report.integrations.outlookApprovals],
-                ['ServiceNow approvals', report.integrations.serviceNowApprovals],
-                ['Zoom approvals', report.integrations.zoomApprovals],
-              ].map(([label, value]) => (
-                <div key={label as string} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-                  <span className="font-bold text-slate-700">{label}</span>
-                  <span className="font-black text-slate-950">{numberFormat(value as number)}</span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View integration approvals &gt;</p>
-          </PendingLink>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Playbook AI insights</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">Policy intelligence</h3>
-            <div className="mt-5 grid gap-5 lg:grid-cols-2">
-              <div>
-                <p className="text-sm font-black text-slate-950">{numberFormat(report.playbookAi.questionsAsked)} questions asked</p>
-                <div className="mt-3">
-                  <CountList items={report.playbookAi.mostReferencedPolicies} empty="Referenced policies appear after Playbook AI answers questions." />
-                </div>
-              </div>
-              <div className="grid gap-4">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-slate-500">Missing policy areas</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {(report.playbookAi.missingPolicyAreas.length ? report.playbookAi.missingPolicyAreas : ['No missing policy areas detected']).map((item) => (
-                      <span key={item} className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">{item}</span>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-slate-500">Approval bottlenecks</p>
-                  <div className="mt-2">
-                    <CountList items={report.playbookAi.approvalBottlenecks} empty="Bottlenecks appear when conditional or pending records exist." />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={<CardSkeleton rows={3} />}>
+          <PlaybookAnalyticsSection organizationId={organizationId} requestedDemo={requestedDemo} />
+        </Suspense>
       </section>
     </DashboardShell>
   );
