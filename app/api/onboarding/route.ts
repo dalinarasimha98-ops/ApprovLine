@@ -12,24 +12,34 @@ function forbidden(message: string) {
 export async function GET() {
   const tenant = await getCurrentTenant();
   if (tenant.user.role !== 'ADMIN') return forbidden('Only organization admins can manage onboarding.');
-  const state = await buildOnboardingState(tenant.organization.id);
-  return NextResponse.json(state);
+  try {
+    const state = await buildOnboardingState(tenant.organization.id);
+    return NextResponse.json(state);
+  } catch (error) {
+    console.error('[onboarding-api] GET failed', error);
+    return NextResponse.json({ error: 'Onboarding status is temporarily unavailable. Retry in a moment.' }, { status: 503 });
+  }
 }
 
 export async function PATCH(request: Request) {
   const tenant = await getCurrentTenant();
   if (tenant.user.role !== 'ADMIN') return forbidden('Only organization admins can manage onboarding.');
   const patch = (await request.json()) as OnboardingPatch;
-  const state = await saveOnboardingPatch({
-    organizationId: tenant.organization.id,
-    actorUserId: tenant.user.id,
-    patch,
-  });
-  if (patch.complete) {
-    // The cached getDashboardTenant() result (up to 5 minutes stale) must
-    // never keep telling a just-onboarded user their workspace still needs
-    // onboarding, so bust it the moment completion is recorded.
-    revalidateTag(DASHBOARD_TENANT_CACHE_TAG);
+  try {
+    const state = await saveOnboardingPatch({
+      organizationId: tenant.organization.id,
+      actorUserId: tenant.user.id,
+      patch,
+    });
+    if (patch.complete) {
+      // The cached getDashboardTenant() result (up to 5 minutes stale) must
+      // never keep telling a just-onboarded user their workspace still needs
+      // onboarding, so bust it the moment completion is recorded.
+      revalidateTag(DASHBOARD_TENANT_CACHE_TAG);
+    }
+    return NextResponse.json(state);
+  } catch (error) {
+    console.error('[onboarding-api] PATCH failed', error);
+    return NextResponse.json({ error: 'Could not save onboarding progress. Retry in a moment.' }, { status: 503 });
   }
-  return NextResponse.json(state);
 }

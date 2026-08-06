@@ -41,7 +41,24 @@ export default async function IdentitySettingsPage() {
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (!tenant.organization) redirect('/onboarding');
 
-  const data = await getIdentityCenterData(tenant);
+  let data;
+  try {
+    data = await getIdentityCenterData(tenant);
+  } catch (error) {
+    return (
+      <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-slate-950 sm:px-6">
+        <section className="mx-auto grid max-w-5xl gap-4 rounded-[28px] border border-amber-200 bg-white p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Enterprise Identity Center</p>
+          <h1 className="text-2xl font-black text-slate-950">We could not load identity settings this time</h1>
+          <p className="text-sm leading-6 text-slate-600">The database did not respond in time. This is usually transient - retry in a moment.</p>
+          <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error instanceof Error ? error.message.slice(0, 220) : 'Unknown error.'}</p>
+          <Link href="/settings/identity" className="inline-flex w-fit rounded-xl bg-[#2155d9] px-5 py-3 text-sm font-black text-white">
+            Retry
+          </Link>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-slate-950 sm:px-6">
