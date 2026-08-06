@@ -1,16 +1,66 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
+import { PendingLink } from '@/components/system/PendingLink';
+import { RefreshButton } from '@/components/system/RefreshButton';
 import { getDashboardTenant } from '@/lib/auth';
+import { isMigrationError } from '@/lib/prisma-errors';
 import { buildOnboardingState } from '@/services/onboarding';
 
 export const dynamic = 'force-dynamic';
+
+function safeError(error: unknown) {
+  return error instanceof Error ? error.message.slice(0, 260) : 'Onboarding status could not load safely.';
+}
+
+function minutesAgo(ms: number) {
+  const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (minutes === 0) return 'less than a minute ago';
+  if (minutes === 1) return '1 minute ago';
+  return `${minutes} minutes ago`;
+}
 
 export default async function OnboardingSettingsPage() {
   const tenant = await getDashboardTenant(3000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (!tenant.organization) redirect('/onboarding');
 
-  const state = await buildOnboardingState(tenant.organization.id);
+  let state: Awaited<ReturnType<typeof buildOnboardingState>> | null = null;
+  let error: string | null = null;
+  try {
+    state = await buildOnboardingState(tenant.organization.id);
+  } catch (cause) {
+    error = safeError(cause);
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-slate-950 sm:px-6">
+        <section className="mx-auto grid max-w-5xl gap-5 rounded-[28px] border border-amber-200 bg-white p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Onboarding Management</p>
+          <h1 className="text-2xl font-black text-slate-950">
+            {isMigrationError(error) ? 'Onboarding storage is not ready yet' : 'We could not load onboarding status this time'}
+          </h1>
+          <p className="text-sm leading-6 text-slate-600">
+            {isMigrationError(error)
+              ? 'Run npm run db:deploy in production to enable onboarding tables.'
+              : 'The database did not respond in time. This is usually transient - retry in a moment.'}
+          </p>
+          <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error}</p>
+          <div className="flex flex-wrap gap-3">
+            <PendingLink href="/settings/onboarding" pendingText="Retrying..." className="inline-flex w-fit rounded-xl bg-[#2155d9] px-5 py-3 text-sm font-black text-white">
+              Retry
+            </PendingLink>
+            <Link href="/dashboard/settings" className="inline-flex w-fit rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">
+              Back to settings
+            </Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
+  if (!state) return null;
+
   const organization = state.organization;
   const readiness = state.readiness;
 
@@ -36,6 +86,24 @@ export default async function OnboardingSettingsPage() {
             </div>
           </div>
         </div>
+
+        {state.message ? (
+          <div className={state.alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm' : 'rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm'}>
+            {state.alert ? <AutoRetryOnDegraded /> : null}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className={state.alert ? 'text-sm font-black text-amber-950' : 'text-sm font-black text-slate-950'}>
+                  {state.alert ? 'Onboarding status is recovering' : 'Refreshing...'}
+                </p>
+                <p className="mt-1 text-sm leading-6">{state.message}</p>
+              </div>
+              <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 disabled:opacity-70" />
+            </div>
+          </div>
+        ) : null}
+        {!state.message && state.staleAsOfMs ? (
+          <p className="-mt-2 text-xs font-bold text-slate-400">Last updated {minutesAgo(state.staleAsOfMs)}.</p>
+        ) : null}
 
         <div className="grid gap-4 md:grid-cols-3">
           <Metric label="Readiness score" value={`${readiness.score}%`} />

@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import type { CopilotSetupDraft, IntegrationDraft, OnboardingStepKey, PlaybookDraft, TeamInviteDraft } from '@/services/onboarding';
-import { onboardingStepKeys, onboardingStepLabels } from '@/services/onboarding';
+import type { CopilotSetupDraft, IntegrationDraft, OnboardingStepKey, PlaybookDraft, TeamInviteDraft } from '@/services/onboarding-shared';
+import { onboardingStepKeys, onboardingStepLabels } from '@/services/onboarding-shared';
 
 type WizardState = {
   organization: {

@@ -57,7 +57,12 @@ export default async function OnboardingPage({ searchParams }: { searchParams?: 
 
   if (tenant.organization.onboardedAt && !restartRequested) redirect('/dashboard');
 
-  const state = await buildOnboardingState(tenant.organization.id);
+  let state;
+  try {
+    state = await buildOnboardingState(tenant.organization.id);
+  } catch (error) {
+    return <DatabaseSetupError message={error instanceof Error ? error.message.slice(0, 220) : undefined} />;
+  }
   const organization = state.organization;
 
   return (

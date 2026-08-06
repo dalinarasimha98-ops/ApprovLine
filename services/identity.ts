@@ -2,7 +2,10 @@ import { revalidatePath } from 'next/cache';
 import type { IntegrationProvider, IntegrationStatus, Prisma, Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import type { getDashboardTenant } from '@/lib/auth';
+import { withTimeout } from '@/lib/performance';
 import { writeAuditLog } from '@/services/audit';
+
+const IDENTITY_QUERY_TIMEOUT_MS = 3000;
 
 type Tenant = Awaited<ReturnType<typeof getDashboardTenant>>;
 
@@ -150,17 +153,24 @@ export async function getIdentityCenterData(tenant: Tenant): Promise<IdentityDas
   const selectedProvider = identityConfig.provider ?? 'azure_ad';
   const canEdit = tenant.user.role === 'ADMIN';
 
+  // SSO/session state must always reflect the current, live value - never
+  // cached (see the settings-page audit for why) - but each query is still
+  // timeout-guarded so a slow one degrades to its safe fallback instead of
+  // holding up the whole page.
   const [usersSynced, integrations, audits] = await Promise.all([
-    prisma.user.count({ where: { organizationId: organization.id } }).catch(() => 0),
-    prisma.integration
-      .findMany({
+    withTimeout('identity:usersSynced', prisma.user.count({ where: { organizationId: organization.id } }), IDENTITY_QUERY_TIMEOUT_MS).catch(() => 0),
+    withTimeout(
+      'identity:integrations',
+      prisma.integration.findMany({
         where: { organizationId: organization.id },
         select: { provider: true, status: true, updatedAt: true, metadata: true },
         orderBy: { updatedAt: 'desc' },
-      })
-      .catch(() => [] as Array<{ provider: IntegrationProvider; status: IntegrationStatus; updatedAt: Date; metadata: Prisma.JsonValue }>),
-    prisma.auditLog
-      .findMany({
+      }),
+      IDENTITY_QUERY_TIMEOUT_MS,
+    ).catch(() => [] as Array<{ provider: IntegrationProvider; status: IntegrationStatus; updatedAt: Date; metadata: Prisma.JsonValue }>),
+    withTimeout(
+      'identity:audits',
+      prisma.auditLog.findMany({
         where: {
           organizationId: organization.id,
           OR: [
@@ -173,8 +183,9 @@ export async function getIdentityCenterData(tenant: Tenant): Promise<IdentityDas
         include: { actorUser: true },
         orderBy: { createdAt: 'desc' },
         take: 8,
-      })
-      .catch(() => []),
+      }),
+      IDENTITY_QUERY_TIMEOUT_MS,
+    ).catch(() => []),
   ]);
 
   const lastAudit = audits[0]?.createdAt;
