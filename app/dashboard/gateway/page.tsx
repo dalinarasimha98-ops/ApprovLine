@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic';
 async function seedGatewayDemoAction() {
   'use server';
   const tenant = await getDashboardTenant(2500);
+  if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status !== 'ready' || !tenant.organization) redirect('/onboarding');
   await seedUniversalGatewayDemo(tenant.organization.id);
   revalidatePath('/dashboard/gateway');
