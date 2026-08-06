@@ -42,7 +42,7 @@ const items: NavigationItem[] = [
   { href: '/dashboard/gateway', label: 'Universal Gateway', icon: GitBranch },
   { href: '/dashboard/settings/integrations', label: 'Integrations', icon: Cable },
   { href: '/dashboard/audit', label: 'Reports & Exports', icon: ScrollText },
-  { href: '/investigations?risk=high', label: 'Alerts & Risks', icon: ShieldAlert },
+  { href: '/dashboard/alerts', label: 'Alerts & Risks', icon: ShieldAlert },
   { href: '/trust/compliance', label: 'Compliance Hub', icon: ShieldCheck },
   { href: '/settings/identity', label: 'Users & Teams', icon: Users },
   { href: '/founder', label: 'Founder Control Center', icon: Gauge },

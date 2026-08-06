@@ -59,8 +59,8 @@ export function DashboardUtilityLinks() {
   return (
     <>
       <Link
-        href="/investigations?risk=high"
-        title="Open alerts and high-risk investigations"
+        href="/dashboard/alerts"
+        title="Open alerts and risks"
         className="relative grid h-8 w-8 place-items-center rounded-md text-slate-400 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="Notifications and alerts"
       >
