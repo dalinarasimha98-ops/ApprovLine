@@ -57,6 +57,38 @@ type EntityInput = {
   seenAt?: Date;
 };
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * rebuildMemoryGraphForOrganization() calls linkMemoryEntities() dozens to
+ * hundreds of times in a loop when refreshing a workspace's graph (once per
+ * approval/vendor/policy/risk relationship). Under connection_limit=1, that
+ * rapid sequence of small queries is exactly the shape that produces
+ * "Timed out fetching a new connection from the pool" - retrying a
+ * transient timeout here, at the source, fixes it for every caller
+ * (rebuildMemoryGraphForOrganization, the evidence pipeline, the founder
+ * demo generator) without touching each of them individually.
+ */
+async function findMemoryEntitiesForRelationship(ids: string[], maxAttempts = 3) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await prisma.memoryEntity.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, organizationId: true },
+      });
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isConnectionPoolError(message) || attempt === maxAttempts) throw error;
+      await sleep(250 * 2 ** (attempt - 1)); // 250ms, 500ms, 1000ms
+    }
+  }
+  throw lastError;
+}
+
 type RelationshipInput = {
   organizationId: string;
   fromEntityId: string;
@@ -150,12 +182,7 @@ export async function linkMemoryEntities(input: RelationshipInput) {
   if (input.fromEntityId === input.toEntityId) return null;
   await ensureMemoryStorage();
 
-  const entities = await prisma.memoryEntity.findMany({
-    where: {
-      id: { in: [input.fromEntityId, input.toEntityId] },
-    },
-    select: { id: true, organizationId: true },
-  });
+  const entities = await findMemoryEntitiesForRelationship([input.fromEntityId, input.toEntityId]);
   const fromEntity = entities.find((entity) => entity.id === input.fromEntityId);
   const toEntity = entities.find((entity) => entity.id === input.toEntityId);
 
