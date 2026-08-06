@@ -1,5 +1,8 @@
+import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
+import { withTimeout } from '@/lib/performance';
 
 type NamedCount = {
   name: string;
@@ -53,7 +56,67 @@ export type ExecutiveAnalytics = {
     approvalBottlenecks: NamedCount[];
   };
   highRiskSummary: NamedCount[];
+  /** Set when this section is serving a stale cached value because the live fetch failed. */
+  degraded?: boolean;
 };
+
+export type CoreAnalytics = Omit<ExecutiveAnalytics, 'playbookAi'>;
+export type PlaybookAnalyticsSection = Pick<ExecutiveAnalytics, 'playbookAi' | 'generatedAt' | 'demoProjection' | 'degraded'>;
+
+// Per-query cap. Any single query exceeding this is cut loose rather than
+// allowed to hold up the page - see timedQuery(). Queries run in Promise.all,
+// so with a small, fixed number of queries per group the group's wall time
+// is bounded by this constant, not the sum of every query.
+const QUERY_TIMEOUT_MS = 3000;
+// Anything slower than this is logged, even if it stayed under the timeout,
+// so a query trending slow shows up before it starts timing out.
+const SLOW_QUERY_LOG_MS = 2000;
+// Belt-and-suspenders cap on the whole fetch (queries + assembly), on top of
+// the per-query caps above.
+const TOTAL_FETCH_TIMEOUT_MS = 5000;
+const CACHE_REVALIDATE_SECONDS = 300;
+// Last-resort fallback only, if a fetch fails AND nothing has ever
+// succeeded within this window. Mirrors the stale-cache pattern already
+// used in lib/approvalRecords.ts.
+const STALE_CACHE_TTL_MS = 30 * 60 * 1000;
+
+async function timedQuery<T>(label: string, promise: Promise<T>, timeoutMs = QUERY_TIMEOUT_MS): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    const result = await withTimeout(label, promise, timeoutMs);
+    const durationMs = Date.now() - startedAt;
+    if (durationMs > SLOW_QUERY_LOG_MS) console.warn(`[analytics] slow query "${label}" took ${durationMs}ms`);
+    return result;
+  } catch (error) {
+    console.warn(`[analytics] query "${label}" failed after ${Date.now() - startedAt}ms`, error instanceof Error ? error.message : error);
+    throw error;
+  }
+}
+
+type StaleCacheEntry<T> = { value: T; cachedAt: number };
+const globalForAnalytics = globalThis as unknown as {
+  approvlineAnalyticsStaleCache?: Map<string, StaleCacheEntry<unknown>>;
+};
+function staleCache() {
+  globalForAnalytics.approvlineAnalyticsStaleCache ??= new Map();
+  return globalForAnalytics.approvlineAnalyticsStaleCache;
+}
+
+/** Runs `run()`; on failure, serves the last value that succeeded for `key` (if recent enough) instead of throwing. */
+async function withStaleFallback<T extends { degraded?: boolean }>(key: string, run: () => Promise<T>): Promise<T> {
+  try {
+    const value = await run();
+    staleCache().set(key, { value, cachedAt: Date.now() });
+    return value;
+  } catch (error) {
+    const cached = staleCache().get(key) as StaleCacheEntry<T> | undefined;
+    if (cached && Date.now() - cached.cachedAt < STALE_CACHE_TTL_MS) {
+      console.warn(`[analytics] serving stale value for "${key}" after fetch error`, error instanceof Error ? error.message : error);
+      return { ...cached.value, degraded: true };
+    }
+    throw error;
+  }
+}
 
 function percent(numerator: number, denominator: number) {
   if (denominator <= 0) return 0;
@@ -62,6 +125,10 @@ function percent(numerator: number, denominator: number) {
 
 function scale(value: number, multiplier: number, minimum = 0) {
   return Math.max(minimum, Math.round(value * multiplier));
+}
+
+function demoMultiplier(demoProjection: boolean, approvalCount: number) {
+  return demoProjection ? Math.max(1, Math.ceil(742 / Math.max(approvalCount, 8))) : 1;
 }
 
 function topCounts(values: Array<string | null | undefined>, fallback: string) {
@@ -104,45 +171,44 @@ function extractMissingEvidence(answer: unknown) {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
 
-export async function buildExecutiveAnalytics(organizationId: string, options: AnalyticsOptions = {}): Promise<ExecutiveAnalytics> {
-  // Keep these reads sequential. Production uses a deliberately small Prisma
-  // pool, so parallel aggregate reads compete for the same connection.
-  const approvals = await prisma.approvalRecord.findMany({
-    where: { organizationId },
-    select: {
-      approvalType: true,
-      riskLevel: true,
-      status: true,
-      evidenceSnippet: true,
-      sourceLink: true,
-      approverName: true,
-      sourcePlatform: true,
-      approvalTimestamp: true,
-      subject: true,
-      reasoning: true,
-      confidence: true,
-      department: true,
-      category: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 500,
-  });
-  const integrationCount = await prisma.integration.count({ where: { organizationId } });
-  const playbookQueries = await prisma.playbookQuery.findMany({
-      where: { organizationId },
-      select: { sourceChunkIds: true, answer: true },
-      orderBy: { createdAt: 'desc' },
-      take: 150,
-    }).catch(() => []);
-  const chunks = await prisma.playbookChunk.findMany({
-      where: { organizationId },
-      select: { id: true, document: { select: { name: true } } },
-      take: 250,
-    }).catch(() => []);
+// ---------------------------------------------------------------------------
+// Core analytics: approvals captured, time saved, risk, compliance,
+// integrations, trends. Backed by two queries (approvals, integration
+// count) that only ever need to know about ApprovalRecord/Integration -
+// independent of the playbook data below, so it gets its own cache entry
+// and its own Suspense boundary on the page.
+// ---------------------------------------------------------------------------
 
-  const demoProjection = Boolean(options.demoProjection);
-  const multiplier = demoProjection ? Math.max(1, Math.ceil(742 / Math.max(approvals.length, 8))) : 1;
+async function fetchCoreAnalyticsFresh(organizationId: string, demoProjection: boolean): Promise<CoreAnalytics> {
+  const [approvals, integrationCount] = await Promise.all([
+    timedQuery(
+      'core:approvals',
+      prisma.approvalRecord.findMany({
+        where: { organizationId },
+        select: {
+          approvalType: true,
+          riskLevel: true,
+          status: true,
+          evidenceSnippet: true,
+          sourceLink: true,
+          approverName: true,
+          sourcePlatform: true,
+          approvalTimestamp: true,
+          subject: true,
+          reasoning: true,
+          confidence: true,
+          department: true,
+          category: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 500,
+      }),
+    ).catch(() => [] as Awaited<ReturnType<typeof prisma.approvalRecord.findMany>>),
+    timedQuery('core:integrationCount', prisma.integration.count({ where: { organizationId } })).catch(() => 0),
+  ]);
+
+  const multiplier = demoMultiplier(demoProjection, approvals.length);
   const totalApprovals = demoProjection ? scale(approvals.length || 8, multiplier, 742) : approvals.length;
   const conditional = approvals.filter((item) => item.approvalType === 'CONDITIONAL').length;
   const highRisk = approvals.filter((item) => item.riskLevel === 'high' || item.riskLevel === 'critical').length;
@@ -156,10 +222,6 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
     .map((item) => ({ ...item, count: scale(item.count, multiplier) }));
   const sourceCounts = topCounts(approvals.map((item) => sourceName(item.sourcePlatform)), 'Unknown')
     .map((item) => ({ ...item, count: scale(item.count, multiplier) }));
-  const pendingByDepartment = topCounts(
-    approvals.filter((item) => item.status === 'PENDING_REVIEW' || item.approvalType === 'CONDITIONAL').map((item) => item.department),
-    'Unassigned',
-  ).map((item) => ({ ...item, count: scale(item.count, multiplier) }));
   const highRiskSummary = topCounts(
     approvals.filter((item) => item.riskLevel === 'high' || item.riskLevel === 'critical').map((item) => item.department ?? item.category),
     'Unassigned',
@@ -178,10 +240,117 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
   }
   const trends = trendMonths.map((item, index) => ({
     name: item.name,
-    count: demoProjection
-      ? Math.max([82, 96, 117, 131, 149, 167][index], scale(item.count, multiplier))
-      : item.count,
+    count: demoProjection ? Math.max([82, 96, 117, 131, 149, 167][index], scale(item.count, multiplier)) : item.count,
   }));
+
+  const retrievalHours = scale(totalApprovals * 0.08, 1);
+  const manualSearchHours = scale(totalApprovals * 0.11, 1);
+  const auditPreparationHours = scale((scale(highRisk + conditional + rejections, multiplier) || totalApprovals * 0.08) * 0.45, 1);
+  const totalHours = demoProjection ? Math.max(41, retrievalHours + manualSearchHours + auditPreparationHours) : retrievalHours + manualSearchHours + auditPreparationHours;
+  const traceability = demoProjection ? Math.max(96, percent(traceableRecords, approvals.length || 1)) : percent(traceableRecords, approvals.length);
+
+  const integrations = {
+    slackApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Slack').length, multiplier),
+    gmailApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Gmail').length, multiplier),
+    teamsApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Teams').length, multiplier),
+    jiraApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Jira').length, multiplier),
+    outlookApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Outlook').length, multiplier),
+    serviceNowApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'ServiceNow').length, multiplier),
+    zoomApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Zoom').length, multiplier),
+  };
+  if (integrationCount === 0 && demoProjection) {
+    integrations.slackApprovals ||= 398;
+    integrations.gmailApprovals ||= 344;
+    integrations.jiraApprovals ||= 68;
+    integrations.serviceNowApprovals ||= 44;
+    integrations.zoomApprovals ||= 54;
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    demoProjection,
+    summary: `ApprovLine captured ${totalApprovals} approvals this month, identified ${scale(highRisk, multiplier, demoProjection ? 18 : 0)} high-risk approvals, reduced audit preparation effort by an estimated ${totalHours} hours, and achieved ${traceability}% approval traceability.`,
+    approvals: { total: totalApprovals, byDepartment: departmentCounts, bySource: sourceCounts, trends },
+    timeSaved: { totalHours, manualSearchHours, auditPreparationHours, retrievalHours },
+    riskReduction: {
+      missingApprovalsDetected: scale(rejections, multiplier),
+      conditionalApprovalsDetected: scale(conditional, multiplier),
+      highRiskApprovalsDetected: scale(highRisk, multiplier, demoProjection ? 18 : 0),
+      approvalsWithoutEvidence: scale(withoutEvidence, multiplier),
+    },
+    complianceReadiness: {
+      auditCompleteness: demoProjection ? Math.max(94, percent(completeRecords, approvals.length || 1)) : percent(completeRecords, approvals.length),
+      evidenceCoverage: demoProjection ? Math.max(95, percent(evidenceRecords, approvals.length || 1)) : percent(evidenceRecords, approvals.length),
+      approvalTraceability: traceability,
+    },
+    integrations,
+    highRiskSummary: highRiskSummary.length
+      ? highRiskSummary
+      : demoProjection
+        ? [{ name: 'Compliance', count: 8 }, { name: 'Security', count: 6 }, { name: 'Procurement', count: 4 }]
+        : [],
+  };
+}
+
+const fetchCoreAnalyticsCached = unstable_cache(
+  (organizationId: string, demoProjection: boolean) => fetchCoreAnalyticsFresh(organizationId, demoProjection),
+  ['executive-analytics-core'],
+  { revalidate: CACHE_REVALIDATE_SECONDS },
+);
+
+/**
+ * Wrapped in React's cache() so multiple components in the same page render
+ * calling this with the same args share one in-flight request instead of
+ * each triggering their own - safe to call from as many places as needed.
+ */
+export const getCoreAnalytics = cache(async (organizationId: string, options: AnalyticsOptions = {}): Promise<CoreAnalytics> => {
+  const demoProjection = Boolean(options.demoProjection);
+  return withStaleFallback(`core:${organizationId}:${demoProjection}`, () =>
+    withTimeout('core analytics (total)', fetchCoreAnalyticsCached(organizationId, demoProjection), TOTAL_FETCH_TIMEOUT_MS),
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Playbook AI analytics: questions asked, referenced policies, missing
+// policy areas, approval bottlenecks. Backed by playbookQuery/playbookChunk
+// queries plus a small, separately-scoped approval count/lookup - genuinely
+// independent of the (much larger) approvals fetch above, so it gets its
+// own cache entry and its own Suspense boundary.
+// ---------------------------------------------------------------------------
+
+async function fetchPlaybookAnalyticsFresh(organizationId: string, demoProjection: boolean): Promise<PlaybookAnalyticsSection> {
+  const [approvalCount, pendingApprovals, playbookQueries, chunks] = await Promise.all([
+    timedQuery('playbook:approvalCount', prisma.approvalRecord.count({ where: { organizationId } })).catch(() => 0),
+    timedQuery(
+      'playbook:pendingApprovals',
+      prisma.approvalRecord.findMany({
+        where: { organizationId, OR: [{ status: 'PENDING_REVIEW' }, { approvalType: 'CONDITIONAL' }] },
+        select: { department: true },
+        take: 200,
+      }),
+    ).catch(() => [] as Array<{ department: string | null }>),
+    timedQuery(
+      'playbook:queries',
+      prisma.playbookQuery.findMany({
+        where: { organizationId },
+        select: { sourceChunkIds: true, answer: true },
+        orderBy: { createdAt: 'desc' },
+        take: 150,
+      }),
+    ).catch(() => [] as Array<{ sourceChunkIds: string[]; answer: unknown }>),
+    timedQuery(
+      'playbook:chunks',
+      prisma.playbookChunk.findMany({
+        where: { organizationId },
+        select: { id: true, document: { select: { name: true } } },
+        take: 250,
+      }),
+    ).catch(() => [] as Array<{ id: string; document: { name: string } }>),
+  ]);
+
+  const multiplier = demoMultiplier(demoProjection, approvalCount);
+  const pendingByDepartment = topCounts(pendingApprovals.map((item) => item.department), 'Unassigned')
+    .map((item) => ({ ...item, count: scale(item.count, multiplier) }));
 
   const chunkById = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const referencedPolicies = new Map<string, number>();
@@ -195,51 +364,11 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
     .map(([name, count]) => ({ name, count: scale(count, demoProjection ? 6 : 1) }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
-  const missingPolicyAreas = Array.from(new Set(playbookQueries.flatMap((query) => extractMissingEvidence(query.answer))))
-    .slice(0, 6);
+  const missingPolicyAreas = Array.from(new Set(playbookQueries.flatMap((query) => extractMissingEvidence(query.answer)))).slice(0, 6);
 
-  const retrievalHours = scale(totalApprovals * 0.08, 1);
-  const manualSearchHours = scale(totalApprovals * 0.11, 1);
-  const auditPreparationHours = scale((scale(highRisk + conditional + rejections, multiplier) || totalApprovals * 0.08) * 0.45, 1);
-  const totalHours = demoProjection ? Math.max(41, retrievalHours + manualSearchHours + auditPreparationHours) : retrievalHours + manualSearchHours + auditPreparationHours;
-  const traceability = demoProjection ? Math.max(96, percent(traceableRecords, approvals.length || 1)) : percent(traceableRecords, approvals.length);
-
-  const report: ExecutiveAnalytics = {
+  return {
     generatedAt: new Date().toISOString(),
     demoProjection,
-    summary: `ApprovLine captured ${totalApprovals} approvals this month, identified ${scale(highRisk, multiplier, demoProjection ? 18 : 0)} high-risk approvals, reduced audit preparation effort by an estimated ${totalHours} hours, and achieved ${traceability}% approval traceability.`,
-    approvals: {
-      total: totalApprovals,
-      byDepartment: departmentCounts,
-      bySource: sourceCounts,
-      trends,
-    },
-    timeSaved: {
-      totalHours,
-      manualSearchHours,
-      auditPreparationHours,
-      retrievalHours,
-    },
-    riskReduction: {
-      missingApprovalsDetected: scale(rejections, multiplier),
-      conditionalApprovalsDetected: scale(conditional, multiplier),
-      highRiskApprovalsDetected: scale(highRisk, multiplier, demoProjection ? 18 : 0),
-      approvalsWithoutEvidence: scale(withoutEvidence, multiplier),
-    },
-    complianceReadiness: {
-      auditCompleteness: demoProjection ? Math.max(94, percent(completeRecords, approvals.length || 1)) : percent(completeRecords, approvals.length),
-      evidenceCoverage: demoProjection ? Math.max(95, percent(evidenceRecords, approvals.length || 1)) : percent(evidenceRecords, approvals.length),
-      approvalTraceability: traceability,
-    },
-    integrations: {
-      slackApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Slack').length, multiplier),
-      gmailApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Gmail').length, multiplier),
-      teamsApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Teams').length, multiplier),
-      jiraApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Jira').length, multiplier),
-      outlookApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Outlook').length, multiplier),
-      serviceNowApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'ServiceNow').length, multiplier),
-      zoomApprovals: scale(approvals.filter((item) => sourceName(item.sourcePlatform) === 'Zoom').length, multiplier),
-    },
     playbookAi: {
       questionsAsked: scale(playbookQueries.length, demoProjection ? 6 : 1),
       mostReferencedPolicies: mostReferencedPolicies.length
@@ -258,26 +387,32 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
           : [],
       approvalBottlenecks: pendingByDepartment,
     },
-    highRiskSummary: highRiskSummary.length
-      ? highRiskSummary
-      : demoProjection
-        ? [
-            { name: 'Compliance', count: 8 },
-            { name: 'Security', count: 6 },
-            { name: 'Procurement', count: 4 },
-          ]
-        : [],
   };
+}
 
-  if (integrationCount === 0 && demoProjection) {
-    report.integrations.slackApprovals ||= 398;
-    report.integrations.gmailApprovals ||= 344;
-    report.integrations.jiraApprovals ||= 68;
-    report.integrations.serviceNowApprovals ||= 44;
-    report.integrations.zoomApprovals ||= 54;
-  }
+const fetchPlaybookAnalyticsCached = unstable_cache(
+  (organizationId: string, demoProjection: boolean) => fetchPlaybookAnalyticsFresh(organizationId, demoProjection),
+  ['executive-analytics-playbook'],
+  { revalidate: CACHE_REVALIDATE_SECONDS },
+);
 
-  return report;
+export const getPlaybookAnalytics = cache(async (organizationId: string, options: AnalyticsOptions = {}): Promise<PlaybookAnalyticsSection> => {
+  const demoProjection = Boolean(options.demoProjection);
+  return withStaleFallback(`playbook:${organizationId}:${demoProjection}`, () =>
+    withTimeout('playbook analytics (total)', fetchPlaybookAnalyticsCached(organizationId, demoProjection), TOTAL_FETCH_TIMEOUT_MS),
+  );
+});
+
+/**
+ * Full combined report. Used by CSV/PDF export and Copilot, which need the
+ * whole shape synchronously and aren't part of the streamed page - the page
+ * itself calls getCoreAnalytics()/getPlaybookAnalytics() directly so each
+ * can resolve and stream independently. Both groups are already individually
+ * cached and timeout-guarded, so this just fetches both in parallel.
+ */
+export async function buildExecutiveAnalytics(organizationId: string, options: AnalyticsOptions = {}): Promise<ExecutiveAnalytics> {
+  const [core, playbook] = await Promise.all([getCoreAnalytics(organizationId, options), getPlaybookAnalytics(organizationId, options)]);
+  return { ...core, ...playbook, degraded: Boolean(core.degraded || playbook.degraded) };
 }
 
 export function analyticsCsv(report: ExecutiveAnalytics) {
