@@ -3,6 +3,7 @@ import { cache } from 'react';
 import { env } from '@/config/env';
 import { prisma } from '@/lib/prisma';
 import { validateDatabaseUrl } from '@/lib/env';
+import { withTimeout } from '@/lib/performance';
 import { checkRedisConnection } from '@/services/queue/connection';
 import { generationGatewayStatus } from '@/services/ai/gateway';
 import { embeddingGatewayStatus } from '@/services/ai/embeddingGateway';
@@ -111,9 +112,34 @@ function embeddingGatewayCheck(): ReadinessCheck {
   };
 }
 
+const READINESS_CHECK_TIMEOUT_MS = 3000;
+
+function timedCheck(label: string, promise: Promise<ReadinessCheck>): Promise<ReadinessCheck> {
+  return withTimeout(label, promise, READINESS_CHECK_TIMEOUT_MS).catch((error) => ({
+    status: 'error',
+    message: error instanceof Error ? error.message : `${label} timed out`,
+  }));
+}
+
 export async function buildReadinessReport() {
-  const postgresql = await checkPostgres();
-  const redis = await checkRedis();
+  // These 8 checks are each their own DB round trip (Postgres, Redis, and
+  // one per connector's last-sync lookup) and were previously awaited one
+  // at a time — under a connection_limit=1 pool, that serialized ~8 round
+  // trips into a single request, which is what made /health take ~7-8s.
+  // Nothing here depends on another check's result, so Promise.all is a
+  // straightforward, zero-risk fix; the per-check timeout means one slow
+  // connector lookup can no longer hold up every other check either.
+  const [postgresql, redis, gmailLastSync, outlookLastSync, teamsLastSync, jiraLastSync, serviceNowLastSync, zoomLastSync] = await Promise.all([
+    timedCheck('readiness:postgres', checkPostgres()),
+    timedCheck('readiness:redis', checkRedis()),
+    timedCheck('readiness:gmailLastSync', checkGmailLastSync()),
+    timedCheck('readiness:outlookLastSync', checkOutlookLastSync()),
+    timedCheck('readiness:teamsLastSync', checkTeamsLastSync()),
+    timedCheck('readiness:jiraLastSync', checkJiraLastSync()),
+    timedCheck('readiness:serviceNowLastSync', checkServiceNowLastSync()),
+    timedCheck('readiness:zoomLastSync', checkZoomLastSync()),
+  ]);
+
   const checks = {
     postgresql,
     redis,
@@ -144,12 +170,12 @@ export async function buildReadinessReport() {
     gmailSyncInterval: env.GMAIL_SYNC_INTERVAL_MINUTES
       ? { status: 'ok' as const, message: `Gmail sync interval ${env.GMAIL_SYNC_INTERVAL_MINUTES} minutes` }
       : { status: 'missing' as const, message: 'GMAIL_SYNC_INTERVAL_MINUTES missing; defaults to 15 minutes' },
-    gmailLastSync: await checkGmailLastSync(),
-    outlookLastSync: await checkOutlookLastSync(),
-    teamsLastSync: await checkTeamsLastSync(),
-    jiraLastSync: await checkJiraLastSync(),
-    serviceNowLastSync: await checkServiceNowLastSync(),
-    zoomLastSync: await checkZoomLastSync(),
+    gmailLastSync,
+    outlookLastSync,
+    teamsLastSync,
+    jiraLastSync,
+    serviceNowLastSync,
+    zoomLastSync,
     appUrl: envCheck('APP_URL', 'App URL'),
     encryptionKey: envCheck('ENCRYPTION_KEY', 'Encryption key'),
     clerkPublishableKey: envCheck('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'Clerk publishable key'),
@@ -171,6 +197,22 @@ export async function buildReadinessReport() {
     checks,
   };
 }
+
+/**
+ * Cached entry point for /health specifically — a public page any uptime
+ * monitor or human can hit repeatedly, and a real system status rarely
+ * changes second to second. Parallelizing buildReadinessReport() above
+ * already fixes the root cause (was ~7-8s from 8 sequential DB round
+ * trips, now bounded by the slowest single check), but caching means a
+ * repeat hit within the window resolves without touching the database at
+ * all. Kept as a separate wrapper rather than caching buildReadinessReport()
+ * itself, because that function is also called from scripts/readiness.ts
+ * (a standalone CLI script with no Next.js server context — unstable_cache
+ * would throw there) and from the debug/integrations-health API routes,
+ * which should always report the current, uncached state.
+ */
+const getCachedHealthReport = unstable_cache(() => buildReadinessReport(), ['health-report'], { revalidate: 30 });
+export const buildHealthPageReport = cache(() => getCachedHealthReport());
 
 /**
  * Lightweight readiness snapshot for pages that explain platform posture.

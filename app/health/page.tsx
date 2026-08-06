@@ -1,4 +1,4 @@
-import { buildReadinessReport } from '@/services/readiness';
+import { buildHealthPageReport } from '@/services/readiness';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +9,7 @@ const styles = {
 };
 
 export default async function HealthPage() {
-  const report = await buildReadinessReport();
+  const report = await buildHealthPageReport();
   const rows = [
     ['PostgreSQL', report.checks.postgresql],
     ['Redis', report.checks.redis],
