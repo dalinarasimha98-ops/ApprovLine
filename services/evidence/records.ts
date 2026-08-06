@@ -1,6 +1,9 @@
 import type { Prisma, UnifiedEvidenceMemberStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { withTimeout } from '@/lib/performance';
 import { enqueueIncomingMessage, type IncomingMessageJob } from '@/services/queue/approvalQueue';
+
+const EVIDENCE_DETAIL_QUERY_TIMEOUT_MS = 3000;
 
 const publicEventSelect = {
   id: true,
@@ -112,59 +115,79 @@ export async function getUnifiedEvidenceExperience(
   eventLimit = 40,
 ) {
   const take = Math.min(100, Math.max(1, eventLimit));
-  const record = await prisma.unifiedEvidenceRecord.findFirst({
-    where: { id, organizationId },
-    include: {
-      primaryApproval: true,
-      events: {
-        select: publicEventSelect,
-        orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
-        take: take + 1,
+  const record = await withTimeout(
+    'evidence:record',
+    prisma.unifiedEvidenceRecord.findFirst({
+      where: { id, organizationId },
+      include: {
+        primaryApproval: true,
+        events: {
+          select: publicEventSelect,
+          orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
+          take: take + 1,
+        },
+        members: {
+          orderBy: { createdAt: 'asc' },
+          take: take + 1,
+        },
       },
-      members: {
-        orderBy: { createdAt: 'asc' },
-        take: take + 1,
-      },
-    },
-  });
+    }),
+    EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+  );
   if (!record) return null;
 
   const hasMoreEvents = record.events.length > take;
   const events = record.events.slice(0, take);
   const eventIds = new Set(events.map((event) => event.id));
-  const providerCounts = await prisma.canonicalEvidenceEvent.groupBy({
-    by: ['providerKey'],
-    where: { organizationId, unifiedRecordId: id },
-    _count: { _all: true },
-    _max: { occurredAt: true },
-  });
-  const connections = await prisma.evidenceProviderConnection.findMany({
-    where: { organizationId },
-    select: {
-      providerKey: true,
-      displayName: true,
-      status: true,
-      lastSyncAt: true,
-      health: {
+  // These three don't depend on each other - only on the record above -
+  // so they run concurrently instead of one after another.
+  const [providerCounts, connections, latestEvent] = await Promise.all([
+    withTimeout(
+      'evidence:providerCounts',
+      prisma.canonicalEvidenceEvent.groupBy({
+        by: ['providerKey'],
+        where: { organizationId, unifiedRecordId: id },
+        _count: { _all: true },
+        _max: { occurredAt: true },
+      }),
+      EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+    ).catch(() => [] as Array<{ providerKey: string; _count: { _all: number }; _max: { occurredAt: Date | null } }>),
+    withTimeout(
+      'evidence:connections',
+      prisma.evidenceProviderConnection.findMany({
+        where: { organizationId },
         select: {
+          providerKey: true,
+          displayName: true,
           status: true,
-          latencyMs: true,
-          syncStatus: true,
-          lastEventAt: true,
-          lastSuccessfulSyncAt: true,
-          consecutiveFailures: true,
-          lastErrorCode: true,
-          lastErrorMessage: true,
-          checkedAt: true,
+          lastSyncAt: true,
+          health: {
+            select: {
+              status: true,
+              latencyMs: true,
+              syncStatus: true,
+              lastEventAt: true,
+              lastSuccessfulSyncAt: true,
+              consecutiveFailures: true,
+              lastErrorCode: true,
+              lastErrorMessage: true,
+              checkedAt: true,
+            },
+          },
         },
-      },
-    },
-  });
-  const latestEvent = await prisma.canonicalEvidenceEvent.findFirst({
-    where: { organizationId, unifiedRecordId: id },
-    orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
-    select: { id: true },
-  });
+      }),
+      EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+    ).catch(() => []),
+    withTimeout(
+      'evidence:latestEvent',
+      prisma.canonicalEvidenceEvent.findFirst({
+        where: { organizationId, unifiedRecordId: id },
+        orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+        select: { id: true },
+      }),
+      EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+    ).catch(() => null),
+  ]);
   const connectionByProvider = new Map(
     connections.map((connection) => [connection.providerKey, connection]),
   );

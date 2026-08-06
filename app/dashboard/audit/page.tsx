@@ -1,13 +1,21 @@
-import { prisma } from '@/lib/prisma';
-import { getDashboardTenant } from '@/lib/auth';
-import { PendingLink } from '@/components/system/PendingLink';
-import { withTimeout } from '@/lib/performance';
 import { redirect } from 'next/navigation';
+import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
+import { PendingLink } from '@/components/system/PendingLink';
+import { RefreshButton } from '@/components/system/RefreshButton';
+import { getDashboardTenant } from '@/lib/auth';
+import { getAuditLogHistory } from '@/services/audit';
 
 export const dynamic = 'force-dynamic';
 
-function isQueryTimeout(message: string) {
-  return message.toLowerCase().includes('timed out');
+type AuditPageProps = {
+  searchParams: Promise<{ cursor?: string }>;
+};
+
+function minutesAgo(ms: number) {
+  const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (minutes === 0) return 'less than a minute ago';
+  if (minutes === 1) return '1 minute ago';
+  return `${minutes} minutes ago`;
 }
 
 function badgeClass(action: string) {
@@ -17,38 +25,14 @@ function badgeClass(action: string) {
   return 'bg-slate-100 text-slate-700 border-slate-200';
 }
 
-export default async function AuditPage() {
-  const startedAt = Date.now();
-  console.info('[dashboard] audit page start load');
+export default async function AuditPage({ searchParams }: AuditPageProps) {
   const tenant = await getDashboardTenant(3000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  let logs: Awaited<ReturnType<typeof prisma.auditLog.findMany>> = [];
-  let loadError: string | null = null;
-  let loadNotice: string | null = null;
+  if (!tenant.organization) redirect('/dashboard');
 
-  try {
-    if (!tenant.organization) throw new Error(tenant.error ?? 'Workspace unavailable.');
-    console.info('[dashboard] audit logs query start');
-    logs = await withTimeout(
-      'dashboard audit logs query',
-      prisma.auditLog.findMany({
-        where: { organizationId: tenant.organization.id },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      }),
-      5000,
-    );
-    console.info(`[dashboard] audit logs query finished in ${Date.now() - startedAt}ms`);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unable to load audit logs.';
-    if (isQueryTimeout(message)) {
-      loadNotice = 'Audit logs are taking longer than expected. The page is available now, and you can retry while the database warms up.';
-    } else {
-      loadError = message;
-    }
-    console.error(`[dashboard] audit logs query failed after ${Date.now() - startedAt}ms`, error);
-  }
+  const params = await searchParams;
+  const result = await getAuditLogHistory(tenant.organization.id, params.cursor);
 
   return (
     <section className="grid gap-6">
@@ -62,27 +46,27 @@ export default async function AuditPage() {
           Export evidence
         </PendingLink>
       </div>
+
+      {result.message ? (
+        <div className={result.alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm' : 'rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm'}>
+          {result.alert ? <AutoRetryOnDegraded /> : null}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className={result.alert ? 'text-sm font-black text-amber-950' : 'text-sm font-black text-slate-950'}>
+                {result.alert ? 'Audit history is recovering' : 'Refreshing...'}
+              </p>
+              <p className="mt-1 text-sm leading-6">{result.message}</p>
+            </div>
+            <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 disabled:opacity-70" />
+          </div>
+        </div>
+      ) : null}
+      {!result.message && result.staleAsOfMs ? (
+        <p className="-mt-2 text-xs font-bold text-slate-400">Last updated {minutesAgo(result.staleAsOfMs)}.</p>
+      ) : null}
+
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-        {loadNotice ? (
-          <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-5 text-blue-950">
-            <h3 className="font-black">Audit history is still warming up</h3>
-            <p className="mt-1 text-sm leading-6">{loadNotice}</p>
-            <PendingLink href="/dashboard/audit" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white">
-              Retry
-            </PendingLink>
-          </div>
-        ) : null}
-        {loadError ? (
-          <div className="rounded-xl border border-amber-100 bg-amber-50 p-5 text-amber-900">
-            <h3 className="font-black">Unable to load audit logs</h3>
-            <p className="mt-1 text-sm">The audit log query returned an error. The rest of the dashboard remains available.</p>
-            <p className="mt-2 rounded-lg bg-white/70 p-2 text-xs font-semibold">{loadError}</p>
-            <PendingLink href="/dashboard/audit" pendingText="Retrying..." className="mt-3 inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-3 text-sm font-bold text-white">
-              Retry
-            </PendingLink>
-          </div>
-        ) : null}
-        {logs.map((log) => (
+        {result.logs.map((log) => (
           <div key={log.id} className="grid gap-3 rounded-xl p-4 transition hover:bg-slate-50 sm:grid-cols-[auto_1fr_auto] sm:items-start">
             <span className="mt-1 h-2.5 w-2.5 rounded-full bg-[#2155d9] shadow-[0_0_0_4px_rgba(33,85,217,0.12)]" />
             <div>
@@ -95,7 +79,7 @@ export default async function AuditPage() {
             <span className="text-sm font-semibold text-slate-500">{log.createdAt.toLocaleString()}</span>
           </div>
         ))}
-        {logs.length === 0 && (
+        {result.logs.length === 0 && !result.message ? (
           <div className="p-10 text-center">
             <h3 className="text-lg font-black text-slate-950">No audit logs yet</h3>
             <p className="mt-2 text-sm text-slate-500">Events will appear here as onboarding, integrations, and approval ingestion run.</p>
@@ -103,8 +87,20 @@ export default async function AuditPage() {
               <button className="rounded-lg bg-[#2155d9] px-4 py-2 text-sm font-black text-white shadow-sm shadow-blue-200">Generate demo data</button>
             </form>
           </div>
-        )}
+        ) : null}
       </div>
+
+      {result.nextCursor ? (
+        <div className="flex justify-center">
+          <PendingLink
+            href={`/dashboard/audit?cursor=${result.nextCursor}`}
+            pendingText="Loading older logs..."
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            Load older logs
+          </PendingLink>
+        </div>
+      ) : null}
     </section>
   );
 }

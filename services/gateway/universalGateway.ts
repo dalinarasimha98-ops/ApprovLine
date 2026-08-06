@@ -1,10 +1,29 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
+import { unstable_cache, revalidateTag } from 'next/cache';
+import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
+import { isConnectionPoolError } from '@/lib/prisma-errors';
+import { withTimeout } from '@/lib/performance';
+import { toDate } from '@/lib/types/dates';
 import { writeAuditLog } from '@/services/audit';
 import { enqueueIncomingMessage, type IncomingMessageJob } from '@/services/queue/approvalQueue';
 import { buildGatewayIdempotencyKey, createCorrelationId } from '@/services/queue/reliability';
 import type { ApprovalCategory } from '@/types/classifier';
+
+// --- Cache tag / invalidation ------------------------------------------
+export function gatewayMetricsCacheTag(organizationId: string) {
+  return `gateway-metrics-${organizationId}`;
+}
+
+/** Safe to call from anywhere - never throws outside a Next.js server request scope. */
+export function invalidateGatewayMetricsCache(organizationId: string) {
+  try {
+    revalidateTag(gatewayMetricsCacheTag(organizationId));
+  } catch (error) {
+    console.warn('[gateway] cache invalidation skipped (no Next.js server request scope)', error instanceof Error ? error.message : error);
+  }
+}
 
 const enterpriseSystems = [
   'sap',
@@ -210,6 +229,8 @@ export async function ingestUniversalApproval(input: UniversalApprovalInput, opt
     throw new Error(enqueued.reason);
   }
 
+  invalidateGatewayMetricsCache(organization.id);
+
   return {
     accepted: true,
     organizationId: organization.id,
@@ -290,45 +311,214 @@ export async function ingestGatewayArtifact(input: {
   return results;
 }
 
-export async function buildGatewayMetrics(organizationId: string) {
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const [events, approvals, sources] = await Promise.all([
-    prisma.event.findMany({
-      where: { organizationId, type: { startsWith: 'gateway.' }, createdAt: { gte: since } },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    }),
-    prisma.approvalRecord.findMany({
-      where: {
-        organizationId,
-        OR: [
-          { sourcePlatform: { in: ['sap', 'oracle', 'coupa', 'workday', 'salesforce', 'hubspot', 'custom'] } },
-          { sourcePlatform: { contains: 'gateway', mode: 'insensitive' } },
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 25,
-    }),
-    prisma.approvalRecord.groupBy({
-      by: ['sourcePlatform'],
-      where: { organizationId },
-      _count: { _all: true },
-      orderBy: { _count: { sourcePlatform: 'desc' } },
-      take: 12,
-    }),
-  ]);
+const gatewayApprovalSelect = {
+  id: true,
+  subject: true,
+  sourcePlatform: true,
+  department: true,
+  approverName: true,
+  confidence: true,
+  createdAt: true,
+} satisfies Prisma.ApprovalRecordSelect;
 
-  const countBy = (needle: string) => events.filter((event) => event.type.includes(needle)).length;
+type GatewayMetricsFresh = {
+  apiTraffic: number;
+  webhookTraffic: number;
+  imports: number;
+  documentsProcessed: number;
+  transcriptsProcessed: number;
+  recentApprovals: Prisma.ApprovalRecordGetPayload<{ select: typeof gatewayApprovalSelect }>[];
+  gatewayEmail: string;
+};
+
+function sleepGateway(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// --- Circuit breaker -----------------------------------------------------
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 60_000;
+let consecutiveGatewayFailures = 0;
+let gatewayBreakerOpenUntil = 0;
+
+function isGatewayBreakerOpen() {
+  return Date.now() < gatewayBreakerOpenUntil;
+}
+
+function recordGatewaySuccess() {
+  consecutiveGatewayFailures = 0;
+  gatewayBreakerOpenUntil = 0;
+}
+
+function recordGatewayFailure() {
+  consecutiveGatewayFailures += 1;
+  if (consecutiveGatewayFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+    gatewayBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+  }
+}
+
+class GatewayMetricsCircuitOpenError extends Error {
+  constructor() {
+    super('Gateway metrics lookup is temporarily paused after repeated database failures.');
+    this.name = 'GatewayMetricsCircuitOpenError';
+  }
+}
+
+const GATEWAY_QUERY_TIMEOUT_MS = 3000;
+const GATEWAY_TOTAL_FETCH_TIMEOUT_MS = 5000;
+const GATEWAY_REVALIDATE_SECONDS = 120;
+const GATEWAY_STALE_CACHE_TTL_MS = 10 * 60 * 1000;
+
+async function fetchGatewayMetricsFresh(organizationId: string): Promise<GatewayMetricsFresh> {
+  if (isGatewayBreakerOpen()) {
+    throw new GatewayMetricsCircuitOpenError();
+  }
+
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  // sourceBreakdown (an approvalRecord.groupBy) was computed here but never
+  // read anywhere in the app - dropped rather than cached, since the
+  // cheapest query is the one you don't run.
+  const attempt = () =>
+    Promise.all([
+      withTimeout(
+        'gateway:events',
+        prisma.event.findMany({
+          where: { organizationId, type: { startsWith: 'gateway.' }, createdAt: { gte: since } },
+          select: { type: true },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        }),
+        GATEWAY_QUERY_TIMEOUT_MS,
+      ),
+      withTimeout(
+        'gateway:recentApprovals',
+        prisma.approvalRecord.findMany({
+          where: {
+            organizationId,
+            OR: [
+              { sourcePlatform: { in: ['sap', 'oracle', 'coupa', 'workday', 'salesforce', 'hubspot', 'custom'] } },
+              { sourcePlatform: { contains: 'gateway', mode: 'insensitive' } },
+            ],
+          },
+          select: gatewayApprovalSelect,
+          orderBy: { createdAt: 'desc' },
+          take: 25,
+        }),
+        GATEWAY_QUERY_TIMEOUT_MS,
+      ),
+    ]);
+
+  try {
+    // One quick retry on a connection-pool-shaped error.
+    const [events, approvals] = await attempt().catch(async (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
+      await sleepGateway(300);
+      return attempt();
+    });
+
+    recordGatewaySuccess();
+    const countBy = (needle: string) => events.filter((event) => event.type.includes(needle)).length;
+    return {
+      apiTraffic: countBy('.api.'),
+      webhookTraffic: countBy('.webhook.'),
+      imports: countBy('.csv.'),
+      documentsProcessed: countBy('.document.'),
+      transcriptsProcessed: countBy('.transcript.'),
+      recentApprovals: approvals,
+      gatewayEmail: `approvals+${organizationId.slice(0, 8)}@approvline.ai`,
+    };
+  } catch (error) {
+    recordGatewayFailure();
+    throw error;
+  }
+}
+
+/**
+ * Cross-request cache - the same fix already applied to every other
+ * timeout fixed this session: previously every page load hit Postgres
+ * directly with zero shared caching, and a single slow query immediately
+ * showed the "warming up" banner and hid the entire metrics section.
+ */
+function getCachedGatewayMetricsFetcher(organizationId: string) {
+  return unstable_cache(
+    () => fetchGatewayMetricsFresh(organizationId),
+    ['gateway-metrics', organizationId],
+    { revalidate: GATEWAY_REVALIDATE_SECONDS, tags: [gatewayMetricsCacheTag(organizationId)] },
+  );
+}
+
+/**
+ * unstable_cache serializes its return value to JSON - each approval's
+ * createdAt comes back as an ISO string on a cache hit. Applied
+ * unconditionally, matching the fix already applied everywhere else this
+ * session.
+ */
+function deserializeGatewayMetrics(metrics: GatewayMetricsFresh): GatewayMetricsFresh {
   return {
-    apiTraffic: countBy('.api.'),
-    webhookTraffic: countBy('.webhook.'),
-    imports: countBy('.csv.'),
-    documentsProcessed: countBy('.document.'),
-    transcriptsProcessed: countBy('.transcript.'),
-    recentApprovals: approvals,
-    sourceBreakdown: sources,
-    gatewayEmail: `approvals+${organizationId.slice(0, 8)}@approvline.ai`,
+    ...metrics,
+    recentApprovals: metrics.recentApprovals.map((approval) => ({ ...approval, createdAt: toDate(approval.createdAt) })),
   };
+}
+
+// Per-request dedup on top of the cross-request cache above.
+const getGatewayMetricsForRequest = cache(async (organizationId: string) => {
+  const metrics = await getCachedGatewayMetricsFetcher(organizationId)();
+  return deserializeGatewayMetrics(metrics);
+});
+
+// --- Tier-2 "last known good" store --------------------------------------
+type LastGoodEntry = { metrics: GatewayMetricsFresh; cachedAt: number };
+const globalForGateway = globalThis as unknown as {
+  approvlineGatewayLastGood?: Map<string, LastGoodEntry>;
+};
+
+function lastGoodStore() {
+  globalForGateway.approvlineGatewayLastGood ??= new Map();
+  return globalForGateway.approvlineGatewayLastGood;
+}
+
+export async function buildGatewayMetrics(organizationId: string): Promise<
+  GatewayMetricsFresh & { degraded: boolean; alert: boolean; staleAsOfMs?: number; message?: string }
+> {
+  try {
+    const metrics = await withTimeout('gateway metrics (total)', getGatewayMetricsForRequest(organizationId), GATEWAY_TOTAL_FETCH_TIMEOUT_MS);
+    lastGoodStore().set(organizationId, { metrics, cachedAt: Date.now() });
+    return { ...metrics, degraded: false, alert: false };
+  } catch (error) {
+    console.error('[gateway] metrics fetch failed', error);
+
+    // The degraded banner is reserved for a database that has actually
+    // been unreachable for 3+ consecutive attempts (breaker open) - a
+    // single slow query must never alarm the user.
+    const alert = isGatewayBreakerOpen();
+
+    const lastGood = lastGoodStore().get(organizationId);
+    if (lastGood && Date.now() - lastGood.cachedAt < GATEWAY_STALE_CACHE_TTL_MS) {
+      return {
+        ...lastGood.metrics,
+        degraded: alert,
+        alert,
+        staleAsOfMs: lastGood.cachedAt,
+        message: alert ? 'Live database results are delayed, so recently loaded gateway metrics are shown instead.' : undefined,
+      };
+    }
+
+    return {
+      apiTraffic: 0,
+      webhookTraffic: 0,
+      imports: 0,
+      documentsProcessed: 0,
+      transcriptsProcessed: 0,
+      recentApprovals: [],
+      gatewayEmail: `approvals+${organizationId.slice(0, 8)}@approvline.ai`,
+      degraded: true,
+      alert,
+      message: alert
+        ? 'Gateway metrics are temporarily unavailable. The gateway stays available even though analytics are delayed.'
+        : 'Gateway metrics are loading. Retrying automatically.',
+    };
+  }
 }
 
 export async function seedUniversalGatewayDemo(organizationId: string) {

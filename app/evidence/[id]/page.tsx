@@ -4,6 +4,7 @@ import {
   UnifiedEvidenceExperience,
   type UnifiedEvidenceData,
 } from '@/components/evidence/UnifiedEvidenceExperience';
+import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
 import { getUnifiedEvidenceExperience } from '@/services/evidence/records';
 
@@ -26,7 +27,24 @@ export default async function EvidenceDetailPage({ params }: EvidenceDetailPageP
   }
   if (!tenant.organization) redirect('/dashboard');
 
-  const record = await getUnifiedEvidenceExperience(tenant.organization.id, id, 40);
+  let record;
+  try {
+    record = await getUnifiedEvidenceExperience(tenant.organization.id, id, 40);
+  } catch (error) {
+    console.error('[evidence-detail] fetch failed', error);
+    return (
+      <DashboardShell>
+        <section className="mx-auto grid w-full max-w-3xl gap-4 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wide text-amber-700">Evidence record</p>
+          <h1 className="text-2xl font-black text-slate-950">We could not load this record this time</h1>
+          <p className="text-sm leading-6 text-slate-600">The database did not respond in time. This is usually transient - retry in a moment.</p>
+          <PendingLink href={`/evidence/${id}`} pendingText="Retrying..." className="inline-flex w-fit rounded-xl bg-[#2155d9] px-5 py-3 text-sm font-black text-white">
+            Retry
+          </PendingLink>
+        </section>
+      </DashboardShell>
+    );
+  }
   if (!record) notFound();
 
   return (
