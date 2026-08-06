@@ -1,14 +1,18 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { Suspense } from 'react';
+import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
+import { RefreshButton } from '@/components/system/RefreshButton';
+import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
-import { withTimeout } from '@/lib/performance';
-import { isMigrationError } from '@/lib/prisma-errors';
 import { createInvestigationCase } from '@/services/investigations';
 import { dismissApprovalAlert, escalateApprovalAlert, getApprovalAlerts, type ApprovalAlert } from '@/services/alerts';
 
 export const dynamic = 'force-dynamic';
+
+const AUTO_RETRY_INTERVAL_MS = 30_000;
 
 type AlertsPageProps = {
   searchParams: Promise<{
@@ -21,6 +25,13 @@ type AlertsPageProps = {
 
 function dateText(value: Date) {
   return value.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function minutesAgo(ms: number) {
+  const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (minutes === 0) return 'less than a minute ago';
+  if (minutes === 1) return '1 minute ago';
+  return `${minutes} minutes ago`;
 }
 
 function severityClass(severity: string) {
@@ -45,8 +56,8 @@ function MetricCard({ label, value, tone }: { label: string; value: number; tone
   );
 }
 
-async function requireOrganizationId(timeoutMs?: number) {
-  const tenant = await getDashboardTenant(timeoutMs);
+async function requireOrganizationId() {
+  const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization) redirect('/dashboard');
@@ -78,6 +89,51 @@ async function dismissAlertAction(formData: FormData) {
   const approvalId = String(formData.get('approvalId') ?? '');
   if (approvalId) await dismissApprovalAlert({ organizationId, actorUserId, approvalId });
   revalidatePath('/dashboard/alerts');
+}
+
+function DegradedNotice({ message, alert }: { message: string; alert: boolean }) {
+  return (
+    <div className={alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm' : 'rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm'}>
+      {alert ? <AutoRetryOnDegraded intervalMs={AUTO_RETRY_INTERVAL_MS} /> : null}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className={alert ? 'text-sm font-black text-amber-950' : 'text-sm font-black text-slate-950'}>
+            {alert ? 'Alerts are recovering' : 'Refreshing...'}
+          </p>
+          <p className="mt-1 text-sm leading-6">{message}</p>
+        </div>
+        <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 disabled:opacity-70" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Both alert sections below independently call getApprovalAlerts() rather
+ * than threading one shared result through props — safe and cheap because
+ * the underlying fetch is deduped per-request (see services/alerts.ts's
+ * React cache() wrapper), and it keeps each visual section self-contained
+ * in its own Suspense boundary with its own skeleton and inline recovery
+ * state, matching the pattern already used on Compliance Hub.
+ */
+async function AlertSeverityCards({ filters }: { filters: AlertsPageProps['searchParams'] extends Promise<infer T> ? T : never }) {
+  const { organizationId } = await requireOrganizationId();
+  const result = await getApprovalAlerts(organizationId, filters);
+
+  return (
+    <div className="grid gap-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Critical" value={result.severityCounts.Critical} tone="rose" />
+        <MetricCard label="High" value={result.severityCounts.High} tone="amber" />
+        <MetricCard label="Medium" value={result.severityCounts.Medium} tone="blue" />
+        <MetricCard label="Low" value={result.severityCounts.Low} tone="emerald" />
+      </div>
+      {result.message ? <DegradedNotice message={result.message} alert={result.alert} /> : null}
+      {!result.message && result.staleAsOfMs ? (
+        <p className="-mt-2 text-xs font-bold text-slate-400">Last updated {minutesAgo(result.staleAsOfMs)}.</p>
+      ) : null}
+    </div>
+  );
 }
 
 function AlertCard({ alert }: { alert: ApprovalAlert }) {
@@ -134,6 +190,31 @@ function AlertCard({ alert }: { alert: ApprovalAlert }) {
   );
 }
 
+async function AlertsList({ filters }: { filters: AlertsPageProps['searchParams'] extends Promise<infer T> ? T : never }) {
+  const { organizationId } = await requireOrganizationId();
+  const result = await getApprovalAlerts(organizationId, filters);
+
+  if (result.alerts.length === 0) {
+    if (result.message) return null; // DegradedNotice already rendered by AlertSeverityCards
+    return (
+      <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-10 text-center shadow-sm">
+        <h3 className="text-lg font-black text-slate-950">No active alerts</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+          {result.dismissedCount > 0
+            ? `${result.dismissedCount} alert${result.dismissedCount === 1 ? '' : 's'} dismissed. Nothing else is currently flagged for review.`
+            : 'No high-risk, conditional, pending, or evidence-incomplete approvals right now.'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      {result.alerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)}
+    </div>
+  );
+}
+
 export default async function AlertsPage({ searchParams }: AlertsPageProps) {
   const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
@@ -141,15 +222,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
   if (!tenant.organization) redirect('/dashboard');
 
   const filters = await searchParams;
-
-  const result = await withTimeout('approval alerts', getApprovalAlerts(tenant.organization.id, filters), 4000).catch((error) => ({
-    alerts: [] as ApprovalAlert[],
-    severityCounts: { Critical: 0, High: 0, Medium: 0, Low: 0 },
-    total: 0,
-    dismissedCount: 0,
-    error: error instanceof Error ? error.message : 'Alerts are temporarily unavailable.',
-  }));
-  const setupWarning = 'error' in result && isMigrationError(result.error);
+  const severityKey = JSON.stringify(filters);
 
   return (
     <section className="grid gap-6">
@@ -166,27 +239,9 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Critical" value={result.severityCounts.Critical} tone="rose" />
-        <MetricCard label="High" value={result.severityCounts.High} tone="amber" />
-        <MetricCard label="Medium" value={result.severityCounts.Medium} tone="blue" />
-        <MetricCard label="Low" value={result.severityCounts.Low} tone="emerald" />
-      </div>
-
-      {'error' in result ? (
-        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 text-blue-950 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-wide">{setupWarning ? 'Alert storage pending' : 'Alerts are temporarily delayed'}</p>
-          <h3 className="mt-2 text-lg font-black text-slate-950">The rest of the dashboard is still available</h3>
-          <p className="mt-2 text-sm leading-6">
-            {setupWarning
-              ? 'Alerts read from the same approval records used everywhere else. They will appear once the latest Prisma migration is deployed.'
-              : 'Retry in a moment — this does not affect approvals, investigations, or any other page.'}
-          </p>
-          <PendingLink href="/dashboard/alerts" pendingText="Retrying..." className="mt-3 inline-flex w-fit rounded-xl bg-[#2155d9] px-4 py-2.5 text-sm font-black text-white">
-            Retry
-          </PendingLink>
-        </div>
-      ) : null}
+      <Suspense key={`cards-${severityKey}`} fallback={<CardSkeleton rows={2} />}>
+        <AlertSeverityCards filters={filters} />
+      </Suspense>
 
       <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-5">
         <label className="grid gap-1.5">
@@ -228,20 +283,9 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
         </div>
       </form>
 
-      <div className="grid gap-4">
-        {result.alerts.length === 0 && !('error' in result) ? (
-          <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-10 text-center shadow-sm">
-            <h3 className="text-lg font-black text-slate-950">No active alerts</h3>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-              {result.dismissedCount > 0
-                ? `${result.dismissedCount} alert${result.dismissedCount === 1 ? '' : 's'} dismissed. Nothing else is currently flagged for review.`
-                : 'No high-risk, conditional, pending, or evidence-incomplete approvals right now.'}
-            </p>
-          </div>
-        ) : (
-          result.alerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)
-        )}
-      </div>
+      <Suspense key={`list-${severityKey}`} fallback={<CardSkeleton rows={4} />}>
+        <AlertsList filters={filters} />
+      </Suspense>
     </section>
   );
 }

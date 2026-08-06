@@ -5,7 +5,7 @@ import type {
   UnifiedEvidenceMemberStatus,
 } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { addMemoryTimelineEvent, linkMemoryEntities, upsertMemoryEntity } from '@/services/memory';
+import { addMemoryTimelineEvent, invalidateMemoryCache, linkMemoryEntities, upsertMemoryEntity } from '@/services/memory';
 import { normalizeEvidenceEvent } from '@/services/evidence/normalizer';
 import { getEvidenceProviderManifest } from '@/services/evidence/provider-catalog';
 import type { CanonicalEvidenceInput, NormalizedEvidenceEvent } from '@/types/evidence';
@@ -515,6 +515,7 @@ export async function completeCanonicalEvidence(
 ) {
   const unifiedRecordId = await correlateEvent(organizationId, eventId, persistence?.approval ?? null);
   await projectToMemoryGraph(organizationId, eventId, unifiedRecordId, persistence?.approval ?? null)
+    .then(() => invalidateMemoryCache(organizationId))
     .catch((error) => console.error('[evidence] Memory Graph projection failed:', safeMessage(error)));
   await prisma.canonicalEvidenceEvent.update({
     where: { id: eventId },

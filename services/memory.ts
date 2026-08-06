@@ -1,7 +1,11 @@
 import type { MemoryEntity, MemoryEntityType, MemoryRelationship, MemoryTimelineEvent, Prisma } from '@prisma/client';
+import { unstable_cache, revalidateTag } from 'next/cache';
+import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
 import { assertMemoryRelationshipTenant, logTenantIsolationEvent, safeTenantIsolationMessage } from '@/lib/tenant-isolation';
+import { isConnectionPoolError } from '@/lib/prisma-errors';
 import { withTimeout } from '@/lib/performance';
+import { toDate } from '@/lib/types/dates';
 import { ensureMemoryStorage } from '@/services/memory-storage';
 
 export const memoryEntityLabels: Record<MemoryEntityType, string> = {
@@ -219,6 +223,22 @@ export async function addMemoryTimelineEvent(input: TimelineInput) {
       metadata: input.metadata ?? undefined,
     },
   }).catch(() => null);
+}
+
+// --- Cache tag / invalidation ------------------------------------------
+export function memoryCacheTag(organizationId: string) {
+  return `memory-${organizationId}`;
+}
+
+/** Safe to call from anywhere (including the standalone worker process, which
+ *  has no Next.js server request scope and would otherwise throw on a bare
+ *  revalidateTag) — see services/evidence/pipeline.ts's projectToMemoryGraph. */
+export function invalidateMemoryCache(organizationId: string) {
+  try {
+    revalidateTag(memoryCacheTag(organizationId));
+  } catch (error) {
+    console.warn('[memory] cache invalidation skipped (no Next.js server request scope)', error instanceof Error ? error.message : error);
+  }
 }
 
 export async function rebuildMemoryGraphForOrganization(organizationId: string) {
@@ -515,6 +535,8 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
       payload: { approvals: approvals.length, investigations: investigations.length, playbooks: playbooks.length, rules: rules.length },
     },
   }).catch(() => null);
+
+  invalidateMemoryCache(organizationId);
 }
 
 async function ensureMemoryGraph(organizationId: string) {
@@ -523,11 +545,59 @@ async function ensureMemoryGraph(organizationId: string) {
   if (count === 0) await rebuildMemoryGraphForOrganization(organizationId);
 }
 
-export async function buildMemoryDashboard(organizationId: string, query?: string) {
-  await ensureMemoryStorage();
-  await withTimeout('memory graph ensure', ensureMemoryGraph(organizationId), 2500).catch((error) => {
-    console.warn('[memory] graph refresh skipped', error);
-  });
+// --- Circuit breaker -----------------------------------------------------
+// Mirrors lib/auth.ts / lib/approvalRecords.ts / services/alerts.ts: after
+// repeated consecutive failures, stop hitting the database and fail fast.
+// Also gates whether a degraded message is shown at all — a single slow
+// query must never alarm the user.
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 60_000;
+let consecutiveMemoryFailures = 0;
+let memoryBreakerOpenUntil = 0;
+
+function isMemoryBreakerOpen() {
+  return Date.now() < memoryBreakerOpenUntil;
+}
+
+function recordMemorySuccess() {
+  consecutiveMemoryFailures = 0;
+  memoryBreakerOpenUntil = 0;
+}
+
+function recordMemoryFailure() {
+  consecutiveMemoryFailures += 1;
+  if (consecutiveMemoryFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+    memoryBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+  }
+}
+
+class MemoryCircuitOpenError extends Error {
+  constructor() {
+    super('Memory Graph lookup is temporarily paused after repeated database failures.');
+    this.name = 'MemoryCircuitOpenError';
+  }
+}
+
+type MemoryDashboardFresh = {
+  totalEntities: number;
+  totalRelationships: number;
+  recentEntities: MemoryEntity[];
+  recentDecisions: MemoryEntity[];
+  recentRisks: MemoryEntity[];
+  recentInvestigations: MemoryEntity[];
+  searchResults: MemoryEntity[];
+  graphEntities: MemoryEntity[];
+  graphRelationships: MemoryRelationship[];
+};
+
+const MEMORY_QUERY_TIMEOUT_MS = 3000;
+const MEMORY_TOTAL_FETCH_TIMEOUT_MS = 5000;
+const MEMORY_REVALIDATE_SECONDS = 120;
+
+async function fetchMemoryDashboardFresh(organizationId: string, query: string): Promise<MemoryDashboardFresh> {
+  if (isMemoryBreakerOpen()) {
+    throw new MemoryCircuitOpenError();
+  }
 
   const searchWhere: Prisma.MemoryEntityWhereInput | undefined = query
     ? {
@@ -541,30 +611,167 @@ export async function buildMemoryDashboard(organizationId: string, query?: strin
       }
     : undefined;
 
-  const [totalEntities, totalRelationships, recentEntities, recentDecisions, recentRisks, recentInvestigations, searchResults, graphEntities, graphRelationships] =
-    await Promise.all([
-      prisma.memoryEntity.count({ where: { organizationId } }),
-      prisma.memoryRelationship.count({ where: { organizationId } }),
-      prisma.memoryEntity.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 8 }),
-      prisma.memoryEntity.findMany({ where: { organizationId, type: { in: ['APPROVAL', 'DECISION', 'ZOOM_DECISION'] } }, orderBy: { lastSeenAt: 'desc' }, take: 6 }),
-      prisma.memoryEntity.findMany({ where: { organizationId, OR: [{ type: 'RISK' }, { riskScore: { gte: 70 } }] }, orderBy: { riskScore: 'desc' }, take: 6 }),
-      prisma.memoryEntity.findMany({ where: { organizationId, type: 'INVESTIGATION' }, orderBy: { lastSeenAt: 'desc' }, take: 6 }),
-      searchWhere ? prisma.memoryEntity.findMany({ where: searchWhere, orderBy: { updatedAt: 'desc' }, take: 12 }) : Promise.resolve([]),
-      prisma.memoryEntity.findMany({ where: { organizationId }, orderBy: { riskScore: 'desc' }, take: 14 }),
-      prisma.memoryRelationship.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 22 }),
+  const attempt = () =>
+    Promise.all([
+      withTimeout('memory:totalEntities', prisma.memoryEntity.count({ where: { organizationId } }), MEMORY_QUERY_TIMEOUT_MS).catch(() => 0),
+      withTimeout('memory:totalRelationships', prisma.memoryRelationship.count({ where: { organizationId } }), MEMORY_QUERY_TIMEOUT_MS).catch(() => 0),
+      withTimeout('memory:recentEntities', prisma.memoryEntity.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 8 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
+      withTimeout('memory:recentDecisions', prisma.memoryEntity.findMany({ where: { organizationId, type: { in: ['APPROVAL', 'DECISION', 'ZOOM_DECISION'] } }, orderBy: { lastSeenAt: 'desc' }, take: 6 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
+      withTimeout('memory:recentRisks', prisma.memoryEntity.findMany({ where: { organizationId, OR: [{ type: 'RISK' }, { riskScore: { gte: 70 } }] }, orderBy: { riskScore: 'desc' }, take: 6 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
+      withTimeout('memory:recentInvestigations', prisma.memoryEntity.findMany({ where: { organizationId, type: 'INVESTIGATION' }, orderBy: { lastSeenAt: 'desc' }, take: 6 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
+      searchWhere
+        ? withTimeout('memory:searchResults', prisma.memoryEntity.findMany({ where: searchWhere, orderBy: { updatedAt: 'desc' }, take: 12 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[])
+        : Promise.resolve([] as MemoryEntity[]),
+      withTimeout('memory:graphEntities', prisma.memoryEntity.findMany({ where: { organizationId }, orderBy: { riskScore: 'desc' }, take: 14 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
+      withTimeout('memory:graphRelationships', prisma.memoryRelationship.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 22 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryRelationship[]),
     ]);
 
+  try {
+    // One quick retry on a connection-pool-shaped error — self-heals a
+    // single transient blip within the same request.
+    const [totalEntities, totalRelationships, recentEntities, recentDecisions, recentRisks, recentInvestigations, searchResults, graphEntities, graphRelationships] =
+      await attempt().catch(async (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        return attempt();
+      });
+
+    recordMemorySuccess();
+    return { totalEntities, totalRelationships, recentEntities, recentDecisions, recentRisks, recentInvestigations, searchResults, graphEntities, graphRelationships };
+  } catch (error) {
+    recordMemoryFailure();
+    throw error;
+  }
+}
+
+/**
+ * Cross-request cache (Next.js Data Cache) — the primary fix: previously
+ * every page load hit Postgres directly with zero shared caching, and any
+ * single slow query immediately showed "Memory Graph temporarily
+ * unavailable" (see buildMemoryDashboard's breaker-gated fallback below for
+ * why that's now reserved for 3+ consecutive failures). ensureMemoryGraph()
+ * is intentionally NOT part of the cached fetch - it only ever does real
+ * work once, the first time an organization's graph is empty, so leaving it
+ * outside the cache boundary costs nothing in the steady state while
+ * guaranteeing a first-time bootstrap is visible immediately.
+ */
+function getCachedMemoryDashboardFetcher(organizationId: string) {
+  return unstable_cache(
+    (query: string) => fetchMemoryDashboardFresh(organizationId, query),
+    ['memory-dashboard', organizationId],
+    { revalidate: MEMORY_REVALIDATE_SECONDS, tags: [memoryCacheTag(organizationId)] },
+  );
+}
+
+/**
+ * unstable_cache serializes its return value to JSON - every Date field on
+ * MemoryEntity/MemoryRelationship comes back as an ISO string on a cache
+ * hit even though the Prisma-inferred type still claims they're Date
+ * objects. Applied unconditionally, matching the fix already applied to
+ * lib/approvalRecords.ts, lib/auth.ts, and services/alerts.ts.
+ */
+function deserializeMemoryEntity(entity: MemoryEntity): MemoryEntity {
   return {
-    totalEntities,
-    totalRelationships,
-    recentEntities,
-    recentDecisions,
-    recentRisks,
-    recentInvestigations,
-    searchResults,
-    graphEntities,
-    graphRelationships,
+    ...entity,
+    firstSeenAt: toDate(entity.firstSeenAt),
+    lastSeenAt: toDate(entity.lastSeenAt),
+    createdAt: toDate(entity.createdAt),
+    updatedAt: toDate(entity.updatedAt),
   };
+}
+
+function deserializeMemoryRelationship(relationship: MemoryRelationship): MemoryRelationship {
+  return { ...relationship, createdAt: toDate(relationship.createdAt), updatedAt: toDate(relationship.updatedAt) };
+}
+
+function deserializeMemoryDashboard(data: MemoryDashboardFresh): MemoryDashboardFresh {
+  return {
+    ...data,
+    recentEntities: data.recentEntities.map(deserializeMemoryEntity),
+    recentDecisions: data.recentDecisions.map(deserializeMemoryEntity),
+    recentRisks: data.recentRisks.map(deserializeMemoryEntity),
+    recentInvestigations: data.recentInvestigations.map(deserializeMemoryEntity),
+    searchResults: data.searchResults.map(deserializeMemoryEntity),
+    graphEntities: data.graphEntities.map(deserializeMemoryEntity),
+    graphRelationships: data.graphRelationships.map(deserializeMemoryRelationship),
+  };
+}
+
+// Per-request dedup on top of the cross-request cache above.
+const getMemoryDashboardForRequest = cache(async (organizationId: string, query: string) => {
+  const result = await getCachedMemoryDashboardFetcher(organizationId)(query);
+  return deserializeMemoryDashboard(result);
+});
+
+// --- Tier-2 "last known good" store --------------------------------------
+// Same pattern as lib/approvalRecords.ts / services/alerts.ts: unstable_cache
+// has no stale-if-error primitive, so this small imperative store exists
+// purely to serve the last successful result when a fresh fetch fails.
+type LastGoodEntry = { data: MemoryDashboardFresh; cachedAt: number };
+const STALE_CACHE_TTL_MS = 10 * 60 * 1000;
+
+const globalForMemory = globalThis as unknown as {
+  approvlineMemoryLastGood?: Map<string, LastGoodEntry>;
+};
+
+function lastGoodStore() {
+  globalForMemory.approvlineMemoryLastGood ??= new Map();
+  return globalForMemory.approvlineMemoryLastGood;
+}
+
+export async function buildMemoryDashboard(organizationId: string, query?: string): Promise<
+  MemoryDashboardFresh & { degraded: boolean; alert: boolean; staleAsOfMs?: number; message?: string }
+> {
+  await ensureMemoryStorage();
+  await withTimeout('memory graph ensure', ensureMemoryGraph(organizationId), 2500).catch((error) => {
+    console.warn('[memory] graph refresh skipped', error);
+  });
+
+  const normalizedQuery = query?.trim() ?? '';
+  const lastGoodKey = `${organizationId}::${normalizedQuery}`;
+
+  try {
+    const data = await withTimeout('memory dashboard (total)', getMemoryDashboardForRequest(organizationId, normalizedQuery), MEMORY_TOTAL_FETCH_TIMEOUT_MS);
+    lastGoodStore().set(lastGoodKey, { data, cachedAt: Date.now() });
+    return { ...data, degraded: false, alert: false };
+  } catch (error) {
+    console.error('[memory] dashboard fetch failed', error);
+
+    // The degraded message is reserved for a database that has actually
+    // been unreachable for 3+ consecutive attempts (breaker open) - a
+    // single slow query must never alarm the user, even if it means
+    // falling back to a slightly stale (but real) result.
+    const alert = isMemoryBreakerOpen();
+
+    const lastGood = lastGoodStore().get(lastGoodKey);
+    if (lastGood && Date.now() - lastGood.cachedAt < STALE_CACHE_TTL_MS) {
+      return {
+        ...lastGood.data,
+        degraded: alert,
+        alert,
+        staleAsOfMs: lastGood.cachedAt,
+        message: alert ? 'Live database results are delayed, so recently loaded Memory Graph data is shown instead.' : undefined,
+      };
+    }
+
+    return {
+      totalEntities: 0,
+      totalRelationships: 0,
+      recentEntities: [],
+      recentDecisions: [],
+      recentRisks: [],
+      recentInvestigations: [],
+      searchResults: [],
+      graphEntities: [],
+      graphRelationships: [],
+      degraded: true,
+      alert,
+      message: alert
+        ? 'Memory Graph is temporarily unavailable. The rest of the dashboard remains usable.'
+        : 'Memory Graph is loading. Retrying automatically.',
+    };
+  }
 }
 
 export async function getMemoryEntityProfile(organizationId: string, entityId: string) {

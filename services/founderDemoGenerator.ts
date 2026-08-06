@@ -5,7 +5,7 @@ import { approvalRecordsCacheTag } from '@/lib/approvalRecords';
 import { createDemoDataForOrganization } from '@/lib/demo-data';
 import type { FounderAccess } from '@/services/founder';
 import { logFounderAction } from '@/services/founder';
-import { addMemoryTimelineEvent, linkMemoryEntities, upsertMemoryEntity } from '@/services/memory';
+import { addMemoryTimelineEvent, invalidateMemoryCache, linkMemoryEntities, upsertMemoryEntity } from '@/services/memory';
 
 export const demoIndustries = [
   'SaaS',
@@ -614,6 +614,7 @@ export async function generateFounderDemoWorkspace(access: FounderAccess, indust
   });
 
   revalidateTag(approvalRecordsCacheTag(organization.id));
+  invalidateMemoryCache(organization.id);
 
   return {
     organizationId: organization.id,
