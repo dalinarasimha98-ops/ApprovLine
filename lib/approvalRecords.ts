@@ -5,6 +5,7 @@ import { reportApprovalFailure } from '@/lib/approval-observability';
 import { isConnectionPoolError } from '@/lib/prisma-errors';
 import { withTimeout } from '@/lib/performance';
 import { prisma } from '@/lib/prisma';
+import { toDate } from '@/lib/types/dates';
 
 export const approvalRecordListSelect = {
   id: true,
@@ -223,12 +224,28 @@ function getCachedApprovalRecordsFetcher(organizationId: string) {
   );
 }
 
+/**
+ * unstable_cache serializes its return value to JSON — createdAt/occurredAt
+ * come back as ISO strings on a cache hit even though ApprovalListRecord's
+ * type (inherited from Prisma) claims they're still Date objects. Applied
+ * unconditionally (not just on the cache-hit path) so callers never have to
+ * know or care whether a given result was served fresh or from cache.
+ */
+function deserializeApprovalRecord(record: ApprovalListRecord): ApprovalListRecord {
+  return {
+    ...record,
+    createdAt: toDate(record.createdAt),
+    occurredAt: toDate(record.occurredAt),
+  };
+}
+
 // Per-request dedup on top of the cross-request cache, keyed by a stable
 // string (not object identity) so repeat calls with equivalent filters
 // within one request resolve to a single in-flight lookup.
 const getApprovalRecordsForRequest = cache(async (organizationId: string, cacheParamsKey: string) => {
   const cacheParams = JSON.parse(cacheParamsKey) as ApprovalRecordsCacheParams;
-  return getCachedApprovalRecordsFetcher(organizationId)(cacheParams);
+  const records = await getCachedApprovalRecordsFetcher(organizationId)(cacheParams);
+  return records.map(deserializeApprovalRecord);
 });
 
 // --- Tier-2 "last known good" store --------------------------------------

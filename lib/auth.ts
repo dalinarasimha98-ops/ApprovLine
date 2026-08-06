@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { validateDatabaseUrl } from '@/lib/env';
 import { isConnectionPoolError } from '@/lib/prisma-errors';
 import type { TenantIsolationContext } from '@/lib/tenant-isolation';
+import { toDate } from '@/lib/types/dates';
 import type { AppRole } from '@/types/rbac';
 import { canAccessRole } from '@/types/rbac';
 
@@ -126,11 +127,44 @@ const getCachedTenantRecord = unstable_cache(
   { revalidate: DASHBOARD_TENANT_REVALIDATE_SECONDS, tags: [DASHBOARD_TENANT_CACHE_TAG] },
 );
 
+type TenantUserRecord = Awaited<ReturnType<typeof findUserWithRetry>>;
+
+/**
+ * unstable_cache serializes its return value to JSON — every Date field on
+ * User/Organization comes back as an ISO string on a cache hit, even though
+ * this function's inferred type (from Prisma) still claims they're Date
+ * objects. Applied unconditionally so no current or future consumer of a
+ * tenant.user or tenant.organization Date field can be silently handed a
+ * string.
+ */
+function deserializeTenantRecord(user: TenantUserRecord): TenantUserRecord {
+  if (!user) return user;
+  return {
+    ...user,
+    createdAt: toDate(user.createdAt),
+    updatedAt: toDate(user.updatedAt),
+    organization: user.organization
+      ? {
+          ...user.organization,
+          createdAt: toDate(user.organization.createdAt),
+          updatedAt: toDate(user.organization.updatedAt),
+          onboardingStartedAt: toDate(user.organization.onboardingStartedAt),
+          onboardingLastSavedAt: toDate(user.organization.onboardingLastSavedAt),
+          memoryGraphInitializedAt: toDate(user.organization.memoryGraphInitializedAt),
+          onboardedAt: toDate(user.organization.onboardedAt),
+        }
+      : user.organization,
+  };
+}
+
 // Per-request dedup on top of the cross-request cache above: several Server
 // Components on the same page (e.g. Compliance Hub's identity card and
 // readiness card) each call getDashboardTenant() independently — this
 // ensures they still only resolve one lookup (cached or not) per request.
-const getTenantRecordForRequest = cache((clerkUserId: string) => getCachedTenantRecord(clerkUserId));
+const getTenantRecordForRequest = cache(async (clerkUserId: string) => {
+  const user = await getCachedTenantRecord(clerkUserId);
+  return deserializeTenantRecord(user);
+});
 
 export class TenantDatabaseError extends Error {
   constructor(message: string, public cause?: unknown) {
