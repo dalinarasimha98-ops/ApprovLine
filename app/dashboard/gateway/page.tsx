@@ -1,12 +1,20 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
 import { getDashboardTenant } from '@/lib/auth';
-import { withTimeout } from '@/lib/performance';
 import { buildGatewayMetrics, seedUniversalGatewayDemo } from '@/services/gateway/universalGateway';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
+import { RefreshButton } from '@/components/system/RefreshButton';
 
 export const dynamic = 'force-dynamic';
+
+function minutesAgo(ms: number) {
+  const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (minutes === 0) return 'less than a minute ago';
+  if (minutes === 1) return '1 minute ago';
+  return `${minutes} minutes ago`;
+}
 
 async function seedGatewayDemoAction() {
   'use server';
@@ -30,9 +38,7 @@ export default async function UniversalGatewayPage({
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
 
   const query = await searchParams;
-  const metrics = tenant.organization
-    ? await withTimeout('gateway metrics', buildGatewayMetrics(tenant.organization.id), 1800).catch(() => null)
-    : null;
+  const metrics = tenant.organization ? await buildGatewayMetrics(tenant.organization.id) : null;
 
   const endpointBase = 'https://approvline.com';
   const cards = [
@@ -69,11 +75,22 @@ export default async function UniversalGatewayPage({
         </div>
       ) : null}
 
-      {!metrics ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
-          <h3 className="font-black">Gateway metrics are warming up</h3>
-          <p className="mt-1 text-sm font-semibold">The gateway stays available even if analytics are delayed. Try refreshing in a moment.</p>
+      {metrics?.message ? (
+        <div className={metrics.alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm' : 'rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm'}>
+          {metrics.alert ? <AutoRetryOnDegraded /> : null}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className={metrics.alert ? 'font-black text-amber-950' : 'font-black text-slate-950'}>
+                {metrics.alert ? 'Gateway metrics are recovering' : 'Refreshing...'}
+              </h3>
+              <p className="mt-1 text-sm font-semibold">{metrics.message}</p>
+            </div>
+            <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 disabled:opacity-70" />
+          </div>
         </div>
+      ) : null}
+      {metrics && !metrics.message && metrics.staleAsOfMs ? (
+        <p className="-mt-2 text-xs font-bold text-slate-400">Last updated {minutesAgo(metrics.staleAsOfMs)}.</p>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
