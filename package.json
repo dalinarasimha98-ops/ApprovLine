@@ -68,6 +68,6 @@
     "postcss": "$postcss"
   },
   "engines": {
-    "node": "20.x"
+    "node": ">=24.0.0"
   }
 }
