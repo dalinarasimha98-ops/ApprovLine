@@ -1,8 +1,10 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
+import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
 import { writeAuditLog } from '@/services/audit';
 import { buildComplianceReadinessReport } from '@/services/readiness';
@@ -191,7 +193,7 @@ function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title
 async function submitSecurityRequest(formData: FormData) {
   'use server';
 
-  const tenant = await getDashboardTenant(8000);
+  const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization || !tenant.user) redirect('/trust/compliance');
@@ -216,33 +218,89 @@ async function submitSecurityRequest(formData: FormData) {
   revalidatePath('/trust/compliance');
 }
 
-export default async function ComplianceHubPage() {
-  const tenant = await getDashboardTenant(5000);
+function InlineRetryNotice({ title, detail, tone = 'dark' }: { title: string; detail: string; tone?: 'dark' | 'light' }) {
+  const isDark = tone === 'dark';
+  return (
+    <div className={isDark ? 'rounded-2xl border border-white/10 bg-white/[0.06] p-5' : 'rounded-2xl border border-amber-200 bg-white p-5 shadow-sm'}>
+      <p className={isDark ? 'text-sm font-black text-white' : 'text-sm font-black text-slate-950'}>{title}</p>
+      <p className={isDark ? 'mt-2 text-sm leading-6 text-slate-300' : 'mt-2 text-sm leading-6 text-slate-600'}>{detail}</p>
+      <PendingLink
+        href="/trust/compliance"
+        pendingText="Retrying..."
+        className={
+          isDark
+            ? 'mt-4 inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm font-black text-white hover:bg-white/10'
+            : 'mt-4 inline-flex w-fit rounded-xl bg-[#2155d9] px-4 py-2.5 text-sm font-black text-white hover:bg-[#1947be]'
+        }
+      >
+        Retry
+      </PendingLink>
+    </div>
+  );
+}
+
+function WorkspaceIdentityCardSkeleton() {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+      <div className="h-4 w-40 animate-pulse rounded-full bg-white/10" />
+      <div className="mt-3 h-7 w-2/3 animate-pulse rounded-lg bg-white/10" />
+      <div className="mt-4 h-4 w-full animate-pulse rounded bg-white/10" />
+      <div className="mt-5 h-9 w-36 animate-pulse rounded-xl bg-white/10" />
+    </div>
+  );
+}
+
+/**
+ * The only part of the hero that depends on the tenant lookup. Rendered
+ * inside a Suspense boundary so the rest of the shell (title, description,
+ * pills, and every static section below) never waits on the database —
+ * a slow or cold tenant lookup only delays this one card.
+ */
+async function WorkspaceIdentityCard() {
+  const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization || !tenant.user) {
+  if (!tenant.organization) {
     return (
-      <DashboardShell>
-        <section className="mx-auto grid w-full max-w-4xl gap-5 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Compliance Hub</p>
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950">Workspace data is temporarily unavailable</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-              Your session is still active. ApprovLine could not load the tenant record in time, so this page stayed here instead of redirecting you away.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <PendingLink href="/trust/compliance" pendingText="Retrying..." className="rounded-xl bg-[#2155d9] px-4 py-2.5 text-sm font-black text-white hover:bg-[#1947be]">
-              Retry Compliance Hub
-            </PendingLink>
-            <PendingLink href="/health" pendingText="Opening health..." className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black text-slate-700 hover:bg-slate-50">
-              Open health check
-            </PendingLink>
-          </div>
-          {tenant.error ? <p className="rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-900">Safe diagnostic: {tenant.error}</p> : null}
-        </section>
-      </DashboardShell>
+      <InlineRetryNotice
+        title="Workspace data is temporarily unavailable"
+        detail={tenant.error ?? 'Your session is still active. Retrying automatically.'}
+      />
     );
+  }
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+      <p className="text-sm font-black text-white">Workspace under review</p>
+      <p className="mt-2 text-2xl font-black">{tenant.organization.name}</p>
+      <p className="mt-3 text-sm leading-6 text-slate-300">Use this hub during legal, procurement, compliance, and security review to reduce repeated founder responses.</p>
+      <PendingLink href="/trust" pendingText="Opening trust center..." className="mt-5 inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm font-black text-white hover:bg-white/10">
+        Open Trust Center
+      </PendingLink>
+    </div>
+  );
+}
+
+function computeReadinessDerived(checks: Awaited<ReturnType<typeof buildComplianceReadinessReport>>['checks']) {
+  return {
+    copilotReady: checks.anthropic?.status === 'ok' || checks.openai?.status === 'ok',
+    identityReady: checks.clerkSecretKey?.status === 'ok' && checks.clerkPublishableKey?.status === 'ok',
+    integrationReady: connectorReadinessKeys.some((key) => checks[key]?.status === 'ok'),
+  };
+}
+
+/**
+ * "Compliance readiness overview" grid — depends on tenant auth gating plus
+ * the (cached) readiness report. Its own Suspense boundary so a slow
+ * readiness check never blocks the static sections below it, or the
+ * workspace identity card above it.
+ */
+async function ReadinessOverviewCards() {
+  const tenant = await getDashboardTenant();
+  if (tenant.status === 'unauthenticated') redirect('/sign-in');
+  if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
+  if (!tenant.organization) {
+    return <InlineRetryNotice tone="light" title="Readiness overview is temporarily unavailable" detail={tenant.error ?? 'Retrying automatically.'} />;
   }
 
   let readiness;
@@ -251,24 +309,16 @@ export default async function ComplianceHubPage() {
   } catch (error) {
     console.error('[compliance] readiness report failed', error);
     return (
-      <DashboardShell>
-        <section className="mx-auto grid w-full max-w-4xl gap-5 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Compliance Hub</p>
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950">Compliance readiness is temporarily delayed</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">The workspace loaded correctly, but a readiness dependency did not respond. Retry without leaving the Compliance Hub.</p>
-          </div>
-          <PendingLink href="/trust/compliance" pendingText="Retrying..." className="w-fit rounded-xl bg-[#2155d9] px-4 py-2.5 text-sm font-black text-white hover:bg-[#1947be]">
-            Retry Compliance Hub
-          </PendingLink>
-        </section>
-      </DashboardShell>
+      <InlineRetryNotice
+        tone="light"
+        title="Compliance readiness is temporarily delayed"
+        detail="The workspace loaded correctly, but a readiness dependency did not respond. Retry without leaving the Compliance Hub."
+      />
     );
   }
+
   const checks = readiness.checks;
-  const copilotReady = checks.anthropic?.status === 'ok' || checks.openai?.status === 'ok';
-  const identityReady = checks.clerkSecretKey?.status === 'ok' && checks.clerkPublishableKey?.status === 'ok';
-  const integrationReady = connectorReadinessKeys.some((key) => checks[key]?.status === 'ok');
+  const { identityReady } = computeReadinessDerived(checks);
 
   const dashboardCards = [
     { label: 'Security Status', value: 'Active', message: 'Read-only access model, audit logging, and tenant boundaries are documented.' },
@@ -279,6 +329,60 @@ export default async function ComplianceHubPage() {
     { label: 'System Health', value: readiness.ready ? 'Healthy' : 'Needs Review', message: readiness.ready ? 'Core readiness checks are passing.' : 'Some readiness checks need follow-up before enterprise review.' },
   ];
 
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {dashboardCards.map((card) => (
+        <div key={card.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm font-black uppercase tracking-wide text-slate-500">{card.label}</p>
+            <StatusPill label={card.value} />
+          </div>
+          <p className="mt-4 text-sm leading-6 text-slate-600">{card.message}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * "Service status" strip near the bottom of the page. A second, independent
+ * consumer of the same (cached) readiness report — its own Suspense
+ * boundary so it streams in on its own regardless of where the overview
+ * cards above have gotten to.
+ */
+async function ServiceStatusStrip() {
+  const tenant = await getDashboardTenant();
+  if (tenant.status === 'unauthenticated') redirect('/sign-in');
+  if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
+  if (!tenant.organization) {
+    return <InlineRetryNotice title="Service status is temporarily unavailable" detail={tenant.error ?? 'Retrying automatically.'} />;
+  }
+
+  let readiness;
+  try {
+    readiness = await buildComplianceReadinessReport();
+  } catch (error) {
+    console.error('[compliance] readiness report failed', error);
+    return <InlineRetryNotice title="Service status is temporarily delayed" detail="Retry without leaving the Compliance Hub." />;
+  }
+
+  const { copilotReady, integrationReady } = computeReadinessDerived(readiness.checks);
+
+  return (
+    <>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+        <p className="text-sm font-black">AI providers</p>
+        <p className="mt-2 text-sm text-slate-300">{copilotReady ? 'Configured for Copilot and Playbook AI.' : 'Add OpenAI or Anthropic credentials for Copilot readiness.'}</p>
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+        <p className="text-sm font-black">Integration posture</p>
+        <p className="mt-2 text-sm text-slate-300">{integrationReady ? 'At least one enterprise connector is configured.' : 'Connectors are documented and ready for credential configuration.'}</p>
+      </div>
+    </>
+  );
+}
+
+export default function ComplianceHubPage() {
   return (
     <DashboardShell>
       <section className="grid gap-8">
@@ -296,14 +400,9 @@ export default async function ComplianceHubPage() {
                 <StatusPill label="Read-only integrations" />
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
-              <p className="text-sm font-black text-white">Workspace under review</p>
-              <p className="mt-2 text-2xl font-black">{tenant.organization.name}</p>
-              <p className="mt-3 text-sm leading-6 text-slate-300">Use this hub during legal, procurement, compliance, and security review to reduce repeated founder responses.</p>
-              <PendingLink href="/trust" pendingText="Opening trust center..." className="mt-5 inline-flex rounded-xl border border-white/15 px-4 py-2 text-sm font-black text-white hover:bg-white/10">
-                Open Trust Center
-              </PendingLink>
-            </div>
+            <Suspense fallback={<WorkspaceIdentityCardSkeleton />}>
+              <WorkspaceIdentityCard />
+            </Suspense>
           </div>
         </div>
 
@@ -313,17 +412,9 @@ export default async function ComplianceHubPage() {
             title="Compliance readiness overview"
             description="A fast boardroom view of security, compliance, data protection, identity, audit, and operational health."
           />
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {dashboardCards.map((card) => (
-              <div key={card.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-black uppercase tracking-wide text-slate-500">{card.label}</p>
-                  <StatusPill label={card.value} />
-                </div>
-                <p className="mt-4 text-sm leading-6 text-slate-600">{card.message}</p>
-              </div>
-            ))}
-          </div>
+          <Suspense fallback={<CardSkeleton rows={2} />}>
+            <ReadinessOverviewCards />
+          </Suspense>
         </section>
 
         <section className="grid gap-5">
@@ -537,14 +628,16 @@ export default async function ComplianceHubPage() {
             <p className="text-xs font-black uppercase tracking-wide text-blue-200">Service status</p>
             <p className="mt-2 text-sm leading-6 text-slate-300">Database, queue, identity, Copilot, gateway, and readiness checks are surfaced for enterprise review.</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-            <p className="text-sm font-black">AI providers</p>
-            <p className="mt-2 text-sm text-slate-300">{copilotReady ? 'Configured for Copilot and Playbook AI.' : 'Add OpenAI or Anthropic credentials for Copilot readiness.'}</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-            <p className="text-sm font-black">Integration posture</p>
-            <p className="mt-2 text-sm text-slate-300">{integrationReady ? 'At least one enterprise connector is configured.' : 'Connectors are documented and ready for credential configuration.'}</p>
-          </div>
+          <Suspense
+            fallback={
+              <>
+                <div className="h-20 animate-pulse rounded-2xl border border-white/10 bg-white/[0.06]" />
+                <div className="h-20 animate-pulse rounded-2xl border border-white/10 bg-white/[0.06]" />
+              </>
+            }
+          >
+            <ServiceStatusStrip />
+          </Suspense>
         </section>
       </section>
     </DashboardShell>

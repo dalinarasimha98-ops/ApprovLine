@@ -1,3 +1,5 @@
+import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import { env } from '@/config/env';
 import { prisma } from '@/lib/prisma';
 import { validateDatabaseUrl } from '@/lib/env';
@@ -175,7 +177,7 @@ export async function buildReadinessReport() {
  * Connector sync history and Redis are intentionally excluded so an optional
  * dependency can never prevent the Compliance Hub from rendering.
  */
-export async function buildComplianceReadinessReport() {
+async function buildComplianceReadinessReportFresh() {
   const postgresql = await Promise.race<ReadinessCheck>([
     checkPostgres(),
     new Promise((resolve) => {
@@ -213,6 +215,21 @@ export async function buildComplianceReadinessReport() {
     checks,
   };
 }
+
+/**
+ * This report is env-config + a single Postgres ping — not tenant-scoped
+ * data — so it caches globally rather than per-organization. Compliance Hub
+ * renders it in two separate places (an overview grid and a service-status
+ * strip), each in its own Suspense boundary; caching here means the second
+ * one is served instantly instead of re-running the Postgres ping.
+ */
+const getCachedComplianceReadinessReport = unstable_cache(
+  () => buildComplianceReadinessReportFresh(),
+  ['compliance-readiness-report'],
+  { revalidate: 180 },
+);
+
+export const buildComplianceReadinessReport = cache(() => getCachedComplianceReadinessReport());
 
 async function checkZoomLastSync(): Promise<ReadinessCheck> {
   const databaseUrl = validateDatabaseUrl();
