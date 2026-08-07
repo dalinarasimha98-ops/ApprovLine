@@ -6,6 +6,7 @@ import type {
 } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { addMemoryTimelineEvent, invalidateMemoryCache, linkMemoryEntities, upsertMemoryEntity } from '@/services/memory';
+import { invalidateUnifiedEvidenceCache } from '@/services/evidence/records';
 import { normalizeEvidenceEvent } from '@/services/evidence/normalizer';
 import { getEvidenceProviderManifest } from '@/services/evidence/provider-catalog';
 import type { CanonicalEvidenceInput, NormalizedEvidenceEvent } from '@/types/evidence';
@@ -387,6 +388,7 @@ async function correlateEvent(
           },
         }),
       ]);
+      invalidateUnifiedEvidenceCache(organizationId);
       return best.candidate.id;
     }
   }
@@ -426,6 +428,7 @@ async function correlateEvent(
       lastProcessedAt: new Date(),
     },
   });
+  invalidateUnifiedEvidenceCache(organizationId);
   return record.id;
 }
 

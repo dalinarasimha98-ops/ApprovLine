@@ -1,9 +1,71 @@
 import type { Prisma, UnifiedEvidenceMemberStatus } from '@prisma/client';
+import { unstable_cache, revalidateTag } from 'next/cache';
+import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
+import { isConnectionPoolError, isMigrationError } from '@/lib/prisma-errors';
 import { withTimeout } from '@/lib/performance';
+import { toDate } from '@/lib/types/dates';
 import { enqueueIncomingMessage, type IncomingMessageJob } from '@/services/queue/approvalQueue';
 
 const EVIDENCE_DETAIL_QUERY_TIMEOUT_MS = 3000;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// --- Cache tag / invalidation ------------------------------------------
+export function unifiedEvidenceCacheTag(organizationId: string) {
+  return `unified-evidence-${organizationId}`;
+}
+
+/** Safe to call from anywhere, including the standalone worker process
+ *  (the evidence correlation pipeline runs there) - never throws outside
+ *  a Next.js server request scope. */
+export function invalidateUnifiedEvidenceCache(organizationId: string) {
+  try {
+    revalidateTag(unifiedEvidenceCacheTag(organizationId));
+  } catch (error) {
+    console.warn('[evidence] cache invalidation skipped (no Next.js server request scope)', error instanceof Error ? error.message : error);
+  }
+}
+
+// --- Circuit breaker -----------------------------------------------------
+// Shared by getLatestUnifiedEvidenceRecordId() and searchUnifiedEvidence() -
+// both back the same /evidence list page and fail together when the
+// database is genuinely struggling. Mirrors the pattern used across every
+// other service fixed this session.
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 60_000;
+let consecutiveEvidenceListFailures = 0;
+let evidenceListBreakerOpenUntil = 0;
+
+function isEvidenceListBreakerOpen() {
+  return Date.now() < evidenceListBreakerOpenUntil;
+}
+
+function recordEvidenceListSuccess() {
+  consecutiveEvidenceListFailures = 0;
+  evidenceListBreakerOpenUntil = 0;
+}
+
+function recordEvidenceListFailure() {
+  consecutiveEvidenceListFailures += 1;
+  if (consecutiveEvidenceListFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+    evidenceListBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+  }
+}
+
+class EvidenceListCircuitOpenError extends Error {
+  constructor() {
+    super('Unified evidence lookup is temporarily paused after repeated database failures.');
+    this.name = 'EvidenceListCircuitOpenError';
+  }
+}
+
+const EVIDENCE_LIST_QUERY_TIMEOUT_MS = 3000;
+const EVIDENCE_LIST_TOTAL_FETCH_TIMEOUT_MS = 5000;
+const EVIDENCE_LIST_REVALIDATE_SECONDS = 60;
+const EVIDENCE_LIST_STALE_CACHE_TTL_MS = 10 * 60 * 1000;
 
 const publicEventSelect = {
   id: true,
@@ -32,17 +94,43 @@ const publicEventSelect = {
   lastProcessedAt: true,
 } satisfies Prisma.CanonicalEvidenceEventSelect;
 
-export async function searchUnifiedEvidence(input: {
+type EvidenceSearchInput = {
   organizationId: string;
   query?: string;
   providerKey?: string;
   riskLevel?: string;
   page?: number;
   pageSize?: number;
-}) {
-  const page = Math.max(1, input.page ?? 1);
-  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 25));
-  const where: Prisma.UnifiedEvidenceRecordWhereInput = {
+};
+
+const unifiedEvidenceListSelect = {
+  id: true,
+  subject: true,
+  decision: true,
+  outcome: true,
+  category: true,
+  department: true,
+  approverName: true,
+  approverEmail: true,
+  riskLevel: true,
+  confidence: true,
+  verificationStatus: true,
+  evidenceCount: true,
+  sourceCount: true,
+  lastSeenAt: true,
+  events: { select: { providerKey: true }, distinct: ['providerKey'] },
+  _count: { select: { events: true, members: true } },
+} satisfies Prisma.UnifiedEvidenceRecordSelect;
+
+type UnifiedEvidenceListRow = Prisma.UnifiedEvidenceRecordGetPayload<{ select: typeof unifiedEvidenceListSelect }>;
+
+type EvidenceSearchResultFresh = {
+  records: Array<Omit<UnifiedEvidenceListRow, 'events'> & { providers: string[] }>;
+  pagination: { page: number; pageSize: number; total: number; pages: number };
+};
+
+function buildEvidenceSearchWhere(input: EvidenceSearchInput): Prisma.UnifiedEvidenceRecordWhereInput {
+  return {
     organizationId: input.organizationId,
     riskLevel: input.riskLevel || undefined,
     events: input.providerKey ? { some: { providerKey: input.providerKey } } : undefined,
@@ -54,59 +142,218 @@ export async function searchUnifiedEvidence(input: {
       { category: { contains: input.query, mode: 'insensitive' } },
     ] : undefined,
   };
-  const records = await prisma.unifiedEvidenceRecord.findMany({
-    where,
-    orderBy: { lastSeenAt: 'desc' },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-    include: {
-      events: {
-        select: { providerKey: true },
-        distinct: ['providerKey'],
-      },
-      _count: { select: { events: true, members: true } },
-    },
-  });
-  const total = await prisma.unifiedEvidenceRecord.count({ where });
-  return {
-    records: records.map((record) => ({
-      ...record,
-      providers: record.events.map((event) => event.providerKey),
-      events: undefined,
-    })),
-    pagination: { page, pageSize, total, pages: Math.ceil(total / pageSize) },
-  };
 }
 
-export async function getLatestUnifiedEvidenceRecordId(organizationId: string) {
-  const record = await prisma.unifiedEvidenceRecord.findFirst({
-    where: { organizationId },
-    orderBy: [{ lastSeenAt: 'desc' }, { updatedAt: 'desc' }, { id: 'asc' }],
-    select: { id: true },
-  });
+async function fetchEvidenceSearchFresh(cacheParams: Required<EvidenceSearchInput>): Promise<EvidenceSearchResultFresh> {
+  if (isEvidenceListBreakerOpen()) {
+    throw new EvidenceListCircuitOpenError();
+  }
 
-  return record?.id ?? null;
+  const where = buildEvidenceSearchWhere(cacheParams);
+  const attempt = () =>
+    Promise.all([
+      withTimeout(
+        'evidence:searchRecords',
+        prisma.unifiedEvidenceRecord.findMany({
+          where,
+          select: unifiedEvidenceListSelect,
+          orderBy: { lastSeenAt: 'desc' },
+          skip: (cacheParams.page - 1) * cacheParams.pageSize,
+          take: cacheParams.pageSize,
+        }),
+        EVIDENCE_LIST_QUERY_TIMEOUT_MS,
+      ),
+      withTimeout('evidence:searchCount', prisma.unifiedEvidenceRecord.count({ where }), EVIDENCE_LIST_QUERY_TIMEOUT_MS),
+    ]);
+
+  try {
+    const [records, total] = await attempt().catch(async (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
+      await sleep(300);
+      return attempt();
+    });
+
+    recordEvidenceListSuccess();
+    return {
+      records: records.map((record) => ({
+        ...record,
+        providers: record.events.map((event) => event.providerKey),
+        events: undefined,
+      })),
+      pagination: { page: cacheParams.page, pageSize: cacheParams.pageSize, total, pages: Math.ceil(total / cacheParams.pageSize) },
+    };
+  } catch (error) {
+    // A missing table is a permanent condition, not the database struggling
+    // - it must never count toward the breaker (which would otherwise mask
+    // the real "run npm run db:deploy" message behind a generic
+    // "temporarily unavailable" one after 3 occurrences) and retrying it
+    // is pointless.
+    if (!isMigrationError(error instanceof Error ? error.message : String(error))) {
+      recordEvidenceListFailure();
+    }
+    throw error;
+  }
+}
+
+function getCachedEvidenceSearchFetcher(organizationId: string) {
+  return unstable_cache(
+    (cacheParams: Required<EvidenceSearchInput>) => fetchEvidenceSearchFresh(cacheParams),
+    ['unified-evidence-search', organizationId],
+    { revalidate: EVIDENCE_LIST_REVALIDATE_SECONDS, tags: [unifiedEvidenceCacheTag(organizationId)] },
+  );
+}
+
+/** unstable_cache serializes to JSON - lastSeenAt comes back as a string on a
+ *  cache hit. Applied unconditionally, matching the fix already applied
+ *  everywhere else this session. */
+function deserializeEvidenceSearchResult(result: EvidenceSearchResultFresh): EvidenceSearchResultFresh {
+  return { ...result, records: result.records.map((record) => ({ ...record, lastSeenAt: toDate(record.lastSeenAt) })) };
+}
+
+const getEvidenceSearchForRequest = cache(async (organizationId: string, cacheKey: string) => {
+  const cacheParams = JSON.parse(cacheKey) as Required<EvidenceSearchInput>;
+  const result = await getCachedEvidenceSearchFetcher(organizationId)(cacheParams);
+  return deserializeEvidenceSearchResult(result);
+});
+
+type LastGoodSearchEntry = { result: EvidenceSearchResultFresh; cachedAt: number };
+const globalForEvidenceSearch = globalThis as unknown as {
+  approvlineEvidenceSearchLastGood?: Map<string, LastGoodSearchEntry>;
+};
+function evidenceSearchLastGoodStore() {
+  globalForEvidenceSearch.approvlineEvidenceSearchLastGood ??= new Map();
+  return globalForEvidenceSearch.approvlineEvidenceSearchLastGood;
+}
+
+export async function searchUnifiedEvidence(input: EvidenceSearchInput): Promise<
+  EvidenceSearchResultFresh & { degraded: boolean; alert: boolean; staleAsOfMs?: number; message?: string; setupRequired?: boolean }
+> {
+  const cacheParams: Required<EvidenceSearchInput> = {
+    organizationId: input.organizationId,
+    query: input.query?.trim().toLowerCase() ?? '',
+    providerKey: input.providerKey ?? '',
+    riskLevel: input.riskLevel ?? '',
+    page: Math.max(1, input.page ?? 1),
+    pageSize: Math.min(100, Math.max(1, input.pageSize ?? 25)),
+  };
+  const cacheKey = JSON.stringify(cacheParams);
+  const lastGoodKey = `${input.organizationId}::${cacheKey}`;
+
+  try {
+    const result = await withTimeout('evidence search (total)', getEvidenceSearchForRequest(input.organizationId, cacheKey), EVIDENCE_LIST_TOTAL_FETCH_TIMEOUT_MS);
+    evidenceSearchLastGoodStore().set(lastGoodKey, { result, cachedAt: Date.now() });
+    return { ...result, degraded: false, alert: false };
+  } catch (error) {
+    console.error('[evidence] search fetch failed', error);
+
+    // A genuinely missing table is a distinct, permanent condition - it
+    // must never be presented as "temporarily unavailable, retry in a
+    // moment" (that's misleading; retrying will never fix it) and it must
+    // never be masked by a stale cache showing old data as if nothing was
+    // wrong.
+    if (isMigrationError(error instanceof Error ? error.message : String(error))) {
+      return {
+        records: [],
+        pagination: { page: cacheParams.page, pageSize: cacheParams.pageSize, total: 0, pages: 0 },
+        degraded: true,
+        alert: true,
+        setupRequired: true,
+        message: error instanceof Error ? error.message : 'Unified evidence storage is not ready yet.',
+      };
+    }
+
+    const alert = isEvidenceListBreakerOpen();
+
+    const lastGood = evidenceSearchLastGoodStore().get(lastGoodKey);
+    if (lastGood && Date.now() - lastGood.cachedAt < EVIDENCE_LIST_STALE_CACHE_TTL_MS) {
+      return {
+        ...lastGood.result,
+        degraded: alert,
+        alert,
+        staleAsOfMs: lastGood.cachedAt,
+        message: alert ? 'Live database results are delayed, so recently loaded evidence records are shown instead.' : undefined,
+      };
+    }
+
+    return {
+      records: [],
+      pagination: { page: cacheParams.page, pageSize: cacheParams.pageSize, total: 0, pages: 0 },
+      degraded: true,
+      alert,
+      message: alert
+        ? 'Unified evidence is temporarily unavailable. The rest of the dashboard remains usable.'
+        : 'Unified evidence is loading. Retrying automatically.',
+    };
+  }
+}
+
+/**
+ * Used only to decide whether to redirect a default /evidence landing to
+ * the single most recent record - a convenience, not the data the user
+ * came for. On failure this degrades to null (no redirect, fall through to
+ * the normal search list) rather than surfacing an error state for what is
+ * ultimately an optional shortcut.
+ */
+export async function getLatestUnifiedEvidenceRecordId(organizationId: string): Promise<string | null> {
+  if (isEvidenceListBreakerOpen()) return null;
+
+  const attempt = () =>
+    withTimeout(
+      'evidence:latestRecordId',
+      prisma.unifiedEvidenceRecord.findFirst({
+        where: { organizationId },
+        orderBy: [{ lastSeenAt: 'desc' }, { updatedAt: 'desc' }, { id: 'asc' }],
+        select: { id: true },
+      }),
+      EVIDENCE_LIST_QUERY_TIMEOUT_MS,
+    );
+
+  try {
+    const record = await attempt().catch(async (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
+      await sleep(300);
+      return attempt();
+    });
+    recordEvidenceListSuccess();
+    return record?.id ?? null;
+  } catch (error) {
+    // Same reasoning as fetchEvidenceSearchFresh: a missing table must
+    // never count toward the shared breaker, or it would mask
+    // searchUnifiedEvidence's distinct "run npm run db:deploy" message
+    // behind the breaker's generic degraded state.
+    if (!isMigrationError(error instanceof Error ? error.message : String(error))) {
+      recordEvidenceListFailure();
+    }
+    console.error('[evidence] latest-record lookup failed, skipping redirect', error);
+    return null;
+  }
 }
 
 export async function getUnifiedEvidenceDetail(organizationId: string, id: string) {
-  return prisma.unifiedEvidenceRecord.findFirst({
-    where: { id, organizationId },
-    include: {
-      primaryApproval: true,
-      events: {
-        select: publicEventSelect,
-        orderBy: { occurredAt: 'asc' },
-        take: 101,
-      },
-      members: {
-        include: {
-          event: { select: publicEventSelect },
+  return withTimeout(
+    'evidence:detail',
+    prisma.unifiedEvidenceRecord.findFirst({
+      where: { id, organizationId },
+      include: {
+        primaryApproval: true,
+        events: {
+          select: publicEventSelect,
+          orderBy: { occurredAt: 'asc' },
+          take: 101,
         },
-        orderBy: { createdAt: 'asc' },
-        take: 101,
+        members: {
+          include: {
+            event: { select: publicEventSelect },
+          },
+          orderBy: { createdAt: 'asc' },
+          take: 101,
+        },
       },
-    },
-  });
+    }),
+    EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+  );
 }
 
 export async function getUnifiedEvidenceExperience(
@@ -384,6 +631,9 @@ export async function reviewEvidenceSuggestion(input: {
       },
     });
     return reviewed;
+  }).then((result) => {
+    invalidateUnifiedEvidenceCache(input.organizationId);
+    return result;
   });
 }
 
