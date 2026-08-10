@@ -8,4 +8,12 @@ tsconfig.tsbuildinfo
 test-results/
 playwright-report/
 .DS_Store
+Thumbs.db
+out/
+build/
+prisma/generated/
+coverage/
+.nyc_output/
+*.pem
+.cache/
 .env*

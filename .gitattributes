@@ -1,0 +1,4 @@
+* text=auto
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
+*.prisma linguist-language=Prisma
