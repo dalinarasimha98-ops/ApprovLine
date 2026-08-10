@@ -1,10 +1,21 @@
+import { auth, currentUser } from '@clerk/nextjs/server';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { FounderBadge, FounderMetricCard, MigrationNotice } from '@/components/founder/FounderShell';
+import { isFounderIdentity } from '@/lib/founder-identity';
 import { buildFounderOverview } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
 
 export default async function FounderHomePage() {
+  // Redundant with middleware.ts and app/founder/layout.tsx by design - a
+  // single-operator console this sensitive gets checked at every layer.
+  const session = await auth();
+  if (!session.userId) redirect('/dashboard');
+  const clerkUser = await currentUser();
+  const email = clerkUser?.primaryEmailAddress?.emailAddress ?? clerkUser?.emailAddresses[0]?.emailAddress ?? null;
+  if (!isFounderIdentity(session.userId, email)) redirect('/dashboard');
+
   const overview = await buildFounderOverview();
   const data = overview.data;
 

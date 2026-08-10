@@ -5,6 +5,7 @@ import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
 import { DASHBOARD_TENANT_CACHE_TAG } from '@/lib/auth';
+import { isFounderIdentity } from '@/lib/founder-identity';
 
 export type FounderRole = 'SUPER_ADMIN' | 'FOUNDER_ADMIN' | 'SUPPORT_ADMIN';
 
@@ -481,9 +482,17 @@ export async function getFounderAccess(): Promise<FounderAccess> {
 
   const clerkUser = await currentUser();
   const email = clerkUser?.primaryEmailAddress?.emailAddress ?? clerkUser?.emailAddresses[0]?.emailAddress ?? null;
-  if (!email) return { ok: false, reason: 'forbidden', email };
 
-  const explicitEnvRole = envRoleForEmail(email);
+  // Hard identity gate first, before anything else runs. /founder is a
+  // single-operator console - only the identity configured via
+  // FOUNDER_USER_ID / FOUNDER_EMAIL may ever pass, never a role table, org
+  // membership, or Clerk metadata. Nothing below this line (Prisma calls
+  // included) can run for anyone who isn't the founder.
+  if (!isFounderIdentity(session.userId, email)) {
+    return { ok: false, reason: 'forbidden', email };
+  }
+
+  const explicitEnvRole = email ? envRoleForEmail(email) : null;
   let role =
     explicitEnvRole ??
     parseFounderRole(clerkUser?.privateMetadata?.platformRole) ??
@@ -492,14 +501,20 @@ export async function getFounderAccess(): Promise<FounderAccess> {
     parseFounderRole(clerkUser?.publicMetadata?.founderRole);
   try {
     await ensureFounderStorage();
-    const dbAdmin = await prisma.platformAdmin.findUnique({ where: { email: email.toLowerCase() } });
-    if (dbAdmin?.active && !explicitEnvRole) role = dbAdmin.role as FounderRole;
+    if (email) {
+      const dbAdmin = await prisma.platformAdmin.findUnique({ where: { email: email.toLowerCase() } });
+      if (dbAdmin?.active && !explicitEnvRole) role = dbAdmin.role as FounderRole;
+    }
   } catch (error) {
     if (!isFounderTableMissing(error)) console.error('[founder] platform admin lookup failed', error);
   }
+  // The confirmed founder identity always gets full access, even if none of
+  // the legacy role mechanisms (env allowlists, PlatformAdmin rows, Clerk
+  // metadata) happen to be configured - a single missing role assignment
+  // must never lock out the one person this console exists for.
+  if (!role) role = 'SUPER_ADMIN';
 
-  if (!role) return { ok: false, reason: 'forbidden', email };
-  return { ok: true, userId: session.userId, email, role, readOnly: role === 'SUPPORT_ADMIN' };
+  return { ok: true, userId: session.userId, email: email ?? '', role, readOnly: role === 'SUPPORT_ADMIN' };
 }
 
 export function canWriteFounder(access: FounderAccess) {

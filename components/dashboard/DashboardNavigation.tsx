@@ -12,7 +12,6 @@ import {
   Cable,
   FileCheck2,
   FileSearch,
-  Gauge,
   GitBranch,
   LayoutDashboard,
   Network,
@@ -45,7 +44,6 @@ const items: NavigationItem[] = [
   { href: '/dashboard/alerts', label: 'Alerts & Risks', icon: ShieldAlert },
   { href: '/trust/compliance', label: 'Compliance Hub', icon: ShieldCheck },
   { href: '/settings/identity', label: 'Users & Teams', icon: Users },
-  { href: '/founder', label: 'Founder Control Center', icon: Gauge },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
