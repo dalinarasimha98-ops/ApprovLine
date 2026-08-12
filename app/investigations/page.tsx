@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
 import { isMigrationError } from '@/lib/prisma-errors';
 import { createDemoInvestigationsForOrganization, createInvestigationCase, getInvestigationMetrics } from '@/services/investigations';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +57,8 @@ async function createInvestigationAction(formData: FormData) {
   'use server';
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (!tenant.organization) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/investigations', tenant.user.role);
 
   const approvalIds = formData.getAll('approvalIds').map(String).filter(Boolean);
   const department = String(formData.get('department') ?? '').trim();
@@ -80,7 +82,8 @@ async function seedInvestigationsAction() {
   'use server';
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (!tenant.organization) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/investigations', tenant.user.role);
   const result = await createDemoInvestigationsForOrganization(tenant.organization.id).catch(() => null);
   if (!result) redirect('/investigations?setup=required');
   redirect('/investigations?demo=created');
@@ -90,7 +93,8 @@ export default async function InvestigationsPage({ searchParams }: Investigation
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization) redirect('/dashboard');
+  if (!tenant.organization || !tenant.user) redirect('/dashboard');
+  enforcePageRole('/investigations', tenant.user.role);
 
   const filters = await searchParams;
   const caseWhere: Prisma.InvestigationCaseWhereInput = {

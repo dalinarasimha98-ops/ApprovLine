@@ -6,8 +6,8 @@ import { validateDatabaseUrl } from '@/lib/env';
 import { isConnectionPoolError } from '@/lib/prisma-errors';
 import type { TenantIsolationContext } from '@/lib/tenant-isolation';
 import { toDate } from '@/lib/types/dates';
-import type { AppRole } from '@/types/rbac';
-import { canAccessRole } from '@/types/rbac';
+import type { Role } from '@/lib/rbac';
+import { hasMinimumRole } from '@/lib/rbac';
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -215,6 +215,19 @@ export async function getCurrentTenant() {
     });
     console.info(`[tenant] organization upsert finished in ${Date.now() - startedAt}ms`);
 
+    // Role for a brand-new user row: the first person ever attached to an
+    // organization becomes its OWNER (so every org always has one); anyone
+    // who joins later - because Clerk already placed them in that org -
+    // gets the lowest default role (MEMBER), never inheriting ADMIN/OWNER
+    // just by being the Nth person to load a page. This check only runs on
+    // the create path; existing users keep whatever role they already have.
+    const existingUser = await prisma.user.findUnique({ where: { clerkUserId: session.userId } });
+    let roleForNewUser: Role = 'MEMBER';
+    if (!existingUser) {
+      const existingMemberCount = await prisma.user.count({ where: { organizationId: organization.id } });
+      roleForNewUser = existingMemberCount === 0 ? 'OWNER' : 'MEMBER';
+    }
+
     console.info('[tenant] user upsert start');
     const user = await prisma.user.upsert({
       where: { clerkUserId: session.userId },
@@ -228,7 +241,7 @@ export async function getCurrentTenant() {
         email,
         name: clerkUser?.fullName,
         organizationId: organization.id,
-        role: 'ADMIN',
+        role: roleForNewUser,
       },
     });
     console.info(`[tenant] finish load in ${Date.now() - startedAt}ms`);
@@ -338,16 +351,29 @@ export async function getDashboardTenant(timeoutMs = DASHBOARD_TENANT_QUERY_TIME
   }
 }
 
-export async function requireRole(requiredRole: AppRole) {
+export async function requireRole(requiredRole: Role) {
   const tenant = await getCurrentTenant();
-  if (!canAccessRole(tenant.user.role as AppRole, requiredRole)) {
+  if (!hasMinimumRole(tenant.user.role as Role, requiredRole)) {
     throw new Response('Forbidden', { status: 403 });
   }
   return tenant;
 }
 
-function permissionsForRole(role: AppRole) {
-  const permissions: Record<AppRole, string[]> = {
+function permissionsForRole(role: Role) {
+  const permissions: Record<Role, string[]> = {
+    OWNER: [
+      'workspace:admin',
+      'workspace:owner',
+      'approvals:read',
+      'approvals:write',
+      'audit:read',
+      'copilot:use',
+      'exports:create',
+      'integrations:manage',
+      'playbooks:manage',
+      'investigations:manage',
+      'memory:read',
+    ],
     ADMIN: [
       'workspace:admin',
       'approvals:read',
@@ -360,13 +386,13 @@ function permissionsForRole(role: AppRole) {
       'investigations:manage',
       'memory:read',
     ],
-    COMPLIANCE_OFFICER: [
+    AUDITOR: [
       'approvals:read',
       'audit:read',
       'copilot:use',
       'exports:create',
       'playbooks:read',
-      'investigations:manage',
+      'investigations:read',
       'memory:read',
     ],
     MANAGER: [
@@ -376,19 +402,22 @@ function permissionsForRole(role: AppRole) {
       'investigations:read',
       'memory:read',
     ],
-    EMPLOYEE: [
+    MEMBER: [
       'approvals:read',
       'copilot:use',
       'memory:read',
     ],
+    VIEWER: [
+      'approvals:read',
+    ],
   };
 
-  return permissions[role] ?? permissions.EMPLOYEE;
+  return permissions[role] ?? permissions.MEMBER;
 }
 
 export async function resolveTenantContext(): Promise<TenantIsolationContext> {
   const tenant = await getCurrentTenant();
-  const role = tenant.user.role as AppRole;
+  const role = tenant.user.role as Role;
 
   return {
     authenticatedUserId: tenant.user.id,

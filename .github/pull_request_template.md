@@ -7,5 +7,6 @@
 - [ ] npm run check passes
 - [ ] npm run build passes
 - [ ] npm run test:tenant-isolation passes
+- [ ] npm run test:rbac passes
 - [ ] No secrets committed
 - [ ] No console.log left in production code

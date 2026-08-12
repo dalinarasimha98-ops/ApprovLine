@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { getFounderAccess } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const access = await getFounderAccess();
+  if (!access.ok) return NextResponse.json({ error: 'founder_access_required' }, { status: access.reason === 'unauthenticated' ? 401 : 403 });
+
   const raw = process.env.DATABASE_URL;
   const trimmed = raw?.trim() ?? '';
 

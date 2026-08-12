@@ -6,6 +6,7 @@ import { RefreshButton } from '@/components/system/RefreshButton';
 import { getDashboardTenant } from '@/lib/auth';
 import { isMigrationError } from '@/lib/prisma-errors';
 import { buildOnboardingState } from '@/services/onboarding';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,8 @@ function minutesAgo(ms: number) {
 export default async function OnboardingSettingsPage() {
   const tenant = await getDashboardTenant(3000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (!tenant.organization) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/settings', tenant.user.role);
 
   let state: Awaited<ReturnType<typeof buildOnboardingState>> | null = null;
   let error: string | null = null;

@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
 import { analyticsCsv, analyticsPdf, buildExecutiveAnalytics } from '@/services/analytics';
 import { withTimeout } from '@/lib/performance';
+import { hasAnyRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!tenant.organization) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  if (!tenant.organization || !tenant.user) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN', 'AUDITOR'])) {
+    return NextResponse.json({ error: 'Your workspace role cannot export analytics.' }, { status: 403 });
+  }
 
   const format = request.nextUrl.searchParams.get('format') ?? 'csv';
   const demoProjection = request.nextUrl.searchParams.get('demo') === '1';

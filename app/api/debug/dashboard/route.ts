@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
+import { getFounderAccess } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,9 @@ function slowestOperation(checks: Record<string, CheckStatus>) {
 }
 
 export async function GET() {
+  const access = await getFounderAccess();
+  if (!access.ok) return NextResponse.json({ error: 'founder_access_required' }, { status: access.reason === 'unauthenticated' ? 401 : 403 });
+
   const startedAt = Date.now();
   const session = await auth();
   const authStatus: CheckStatus = {

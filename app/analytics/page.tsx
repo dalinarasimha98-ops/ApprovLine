@@ -8,6 +8,7 @@ import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
 import { getCoreAnalytics, getPlaybookAnalytics, type CoreAnalytics, type PlaybookAnalyticsSection } from '@/services/analytics';
 import { recordPerformance } from '@/lib/performance';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -474,6 +475,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization) redirect('/dashboard');
+  enforcePageRole('/analytics', tenant.user.role);
 
   const query = await searchParams;
   const requestedDemo = query.demo === '1';

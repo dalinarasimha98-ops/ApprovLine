@@ -119,7 +119,7 @@ export function ManualApprovalPanel({ approval, detail, evidence, versions, conf
     router.refresh();
   }
 
-  const elevatedVerifier = currentUserRole === 'ADMIN' || currentUserRole === 'COMPLIANCE_OFFICER';
+  const elevatedVerifier = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
   const canSecondVerify = detail.secondPersonRequired
     && !detail.secondVerifiedAt
     && !detail.secondVerificationNote

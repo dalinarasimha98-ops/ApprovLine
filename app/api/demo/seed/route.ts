@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
 import { createDemoDataForOrganization } from '@/lib/demo-data';
 import { isPilotMigrationRequired, logPilotActivity } from '@/services/pilot';
+import { hasAnyRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,10 +17,14 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL('/onboarding', request.url));
   }
 
-  if (!tenant.organization) {
+  if (!tenant.organization || !tenant.user) {
     const url = new URL('/dashboard?demo=error', request.url);
     url.searchParams.set('reason', tenant.error ?? 'workspace_unavailable');
     return NextResponse.redirect(url);
+  }
+
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) {
+    return NextResponse.json({ error: 'Only workspace admins can generate demo data.' }, { status: 403 });
   }
 
   try {
@@ -27,7 +32,7 @@ export async function POST(request: Request) {
     try {
       await logPilotActivity({
         organizationId: tenant.organization.id,
-        actorUserId: tenant.user?.id,
+        actorUserId: tenant.user.id,
         action: 'pilot.demo_workspace.generated',
         entityType: 'DemoWorkspace',
         metadata: { demoOnly: true },

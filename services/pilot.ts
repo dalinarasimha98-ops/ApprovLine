@@ -362,9 +362,9 @@ function fallbackInvitesFromAuditLogs(logs: Awaited<ReturnType<typeof getFallbac
     .filter((log) => log.action === 'pilot.invite.created')
     .map((log) => {
       const metadata = objectMetadata(log.metadata);
-      const role = typeof metadata.role === 'string' && ['ADMIN', 'MANAGER', 'EMPLOYEE', 'COMPLIANCE_OFFICER'].includes(metadata.role)
+      const role = typeof metadata.role === 'string' && ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'AUDITOR', 'VIEWER'].includes(metadata.role)
         ? metadata.role as Role
-        : 'EMPLOYEE';
+        : 'MEMBER';
       return {
         id: log.id,
         email: typeof metadata.email === 'string' ? metadata.email : 'beta-user@example.com',

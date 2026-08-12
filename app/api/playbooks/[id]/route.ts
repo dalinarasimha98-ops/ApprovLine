@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { hasAnyRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +11,10 @@ export async function DELETE(
 ) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!tenant.organization) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  if (!tenant.organization || !tenant.user) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) {
+    return NextResponse.json({ error: 'Your workspace role cannot delete playbooks.' }, { status: 403 });
+  }
 
   const { id } = await params;
   const document = await prisma.playbookDocument.findFirst({
@@ -25,7 +29,7 @@ export async function DELETE(
   await prisma.auditLog.create({
     data: {
       organizationId: tenant.organization.id,
-      actorUserId: tenant.user?.id,
+      actorUserId: tenant.user.id,
       action: 'playbook.document.deleted',
       metadata: {
         documentId: document.id,

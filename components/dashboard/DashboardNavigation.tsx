@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react';
+import { findRoutePermission, hasAnyRole, type Role } from '@/lib/rbac';
 
 type NavigationItem = {
   href: string;
@@ -47,11 +48,25 @@ const items: NavigationItem[] = [
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
-export function DashboardNavigation({ mobile = false }: { mobile?: boolean }) {
+export function DashboardNavigation({ mobile = false, role = null }: { mobile?: boolean; role?: Role | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const currentRoute = pendingHref ?? pathname;
+
+  // Purely cosmetic: hides links the current role can't reach so the nav
+  // doesn't advertise pages that will just redirect away. The actual
+  // security boundary is enforcePageRole() on each destination page and the
+  // matching role check on its API routes - not this filter. A null role
+  // (tenant lookup unavailable) shows every item rather than blocking
+  // rendering, matching this component's existing fail-open rendering style.
+  const visibleItems = useMemo(() => {
+    if (!role) return items;
+    return items.filter(({ href }) => {
+      const allowedRoles = findRoutePermission(href);
+      return !allowedRoles || hasAnyRole(role, allowedRoles);
+    });
+  }, [role]);
 
   useEffect(() => {
     setPendingHref(null);
@@ -59,7 +74,7 @@ export function DashboardNavigation({ mobile = false }: { mobile?: boolean }) {
 
   useEffect(() => {
     const warmRoutes = () => {
-      items.forEach(({ href }) => router.prefetch(href));
+      visibleItems.forEach(({ href }) => router.prefetch(href));
     };
     const canUseIdleCallback =
       typeof window.requestIdleCallback === 'function' && typeof window.cancelIdleCallback === 'function';
@@ -74,12 +89,12 @@ export function DashboardNavigation({ mobile = false }: { mobile?: boolean }) {
       }
       window.clearTimeout(routeWarmupHandle);
     };
-  }, [router]);
+  }, [router, visibleItems]);
 
   const activeHref = useMemo(() => {
     if (pendingHref) return pendingHref;
 
-    return items
+    return visibleItems
         .filter(({ href }) => {
           const route = href.split('?')[0];
           const current = currentRoute.split('?')[0];
@@ -88,7 +103,7 @@ export function DashboardNavigation({ mobile = false }: { mobile?: boolean }) {
           return current === route || current.startsWith(`${route}/`);
         })
         .sort((a, b) => b.href.split('?')[0].length - a.href.split('?')[0].length)[0]?.href;
-  }, [currentRoute, pendingHref]);
+  }, [currentRoute, pendingHref, visibleItems]);
 
   const beginNavigation = (href: string) => {
     const target = href.split('?')[0];
@@ -98,7 +113,7 @@ export function DashboardNavigation({ mobile = false }: { mobile?: boolean }) {
   if (mobile) {
     return (
       <nav className="flex gap-2 overflow-x-auto pb-1">
-        {items.map(({ href, label, icon: Icon }) => (
+        {visibleItems.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -129,7 +144,7 @@ export function DashboardNavigation({ mobile = false }: { mobile?: boolean }) {
         </div>
       ) : null}
       <div className="grid gap-0.5">
-        {items.map(({ href, label, icon: Icon, badge }) => {
+        {visibleItems.map(({ href, label, icon: Icon, badge }) => {
           const active = activeHref === href;
           const pending = pendingHref === href;
           return (

@@ -2,13 +2,17 @@ import { NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { evaluateRecentApprovals, getPlaybookComplianceInsights, seedDemoPlaybooks } from '@/services/playbooks';
+import { hasAnyRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!tenant.organization) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  if (!tenant.organization || !tenant.user) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN', 'AUDITOR'])) {
+    return NextResponse.json({ error: 'Your workspace role cannot view playbooks.' }, { status: 403 });
+  }
 
   const documents = await prisma.playbookDocument.findMany({
     where: { organizationId: tenant.organization.id },
@@ -29,9 +33,12 @@ export async function GET() {
 export async function POST() {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!tenant.organization) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  if (!tenant.organization || !tenant.user) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) {
+    return NextResponse.json({ error: 'Your workspace role cannot manage playbooks.' }, { status: 403 });
+  }
 
-  const result = await seedDemoPlaybooks(tenant.organization.id, tenant.user?.id);
+  const result = await seedDemoPlaybooks(tenant.organization.id, tenant.user.id);
   await evaluateRecentApprovals(tenant.organization.id, 50);
   return NextResponse.json(result);
 }

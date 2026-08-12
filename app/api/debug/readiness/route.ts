@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { env } from '@/config/env';
 import { buildReadinessReport } from '@/services/readiness';
+import { getFounderAccess } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,9 @@ function configured(value: string | undefined) {
 }
 
 export async function GET() {
+  const access = await getFounderAccess();
+  if (!access.ok) return NextResponse.json({ error: 'founder_access_required' }, { status: access.reason === 'unauthenticated' ? 401 : 403 });
+
   const report = await buildReadinessReport();
 
   return NextResponse.json({

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { buildInvestigationSummary, buildPolicyChecks, timelineForApproval } from '@/services/investigations';
+import { hasAnyRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,8 +48,11 @@ export async function GET(_: Request, { params }: ReportRouteProps) {
   if (tenant.status === 'unauthenticated') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  if (!tenant.organization) {
+  if (!tenant.organization || !tenant.user) {
     return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  }
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN', 'AUDITOR'])) {
+    return NextResponse.json({ error: 'Your workspace role cannot export investigation reports.' }, { status: 403 });
   }
   const { id } = await params;
   const investigation = await prisma.investigationCase.findFirst({

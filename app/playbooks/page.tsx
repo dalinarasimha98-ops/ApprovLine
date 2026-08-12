@@ -5,6 +5,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
 import { getPlaybookComplianceInsights } from '@/services/playbooks';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ export default async function PlaybooksPage() {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
+  if (tenant.user) enforcePageRole('/playbooks', tenant.user.role);
 
   const documents = tenant.organization
     ? await withTimeout(

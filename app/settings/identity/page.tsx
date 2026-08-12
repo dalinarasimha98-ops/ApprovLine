@@ -9,6 +9,7 @@ import {
   testIdentityConnection,
   type IdentityProviderCard,
 } from '@/services/identity';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,8 @@ async function saveIdentity(formData: FormData) {
   'use server';
   const tenant = await getDashboardTenant(8000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (!tenant.organization) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/settings', tenant.user.role);
   await saveIdentityConfiguration(tenant, formData);
 }
 
@@ -24,7 +26,8 @@ async function testConnection() {
   'use server';
   const tenant = await getDashboardTenant(8000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (!tenant.organization) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/settings', tenant.user.role);
   await testIdentityConnection(tenant);
 }
 
@@ -32,14 +35,16 @@ async function revokeSession(formData: FormData) {
   'use server';
   const tenant = await getDashboardTenant(8000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (!tenant.organization) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/settings', tenant.user.role);
   await revokeIdentitySession(tenant, formData);
 }
 
 export default async function IdentitySettingsPage() {
   const tenant = await getDashboardTenant(8000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (!tenant.organization) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/settings', tenant.user.role);
 
   let data;
   try {
@@ -169,9 +174,10 @@ export default async function IdentitySettingsPage() {
                 <label className="grid gap-2 text-sm font-black text-slate-700">
                   Default role for new SSO users
                   <select name="defaultRole" defaultValue={data.defaultRole} disabled={!data.canEdit} className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100">
-                    <option value="EMPLOYEE">Viewer / Employee</option>
+                    <option value="VIEWER">Viewer</option>
+                    <option value="MEMBER">Member</option>
                     <option value="MANAGER">Manager</option>
-                    <option value="COMPLIANCE_OFFICER">Compliance Officer</option>
+                    <option value="AUDITOR">Auditor</option>
                     <option value="ADMIN">Org Admin</option>
                   </select>
                 </label>

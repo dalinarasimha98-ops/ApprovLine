@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import type { getDashboardTenant } from '@/lib/auth';
 import { withTimeout } from '@/lib/performance';
 import { writeAuditLog } from '@/services/audit';
+import { hasAnyRole } from '@/lib/rbac';
 
 const IDENTITY_QUERY_TIMEOUT_MS = 3000;
 
@@ -151,7 +152,7 @@ export async function getIdentityCenterData(tenant: Tenant): Promise<IdentityDas
   const organization = tenant.organization;
   const identityConfig = readIdentityConfig(organization);
   const selectedProvider = identityConfig.provider ?? 'azure_ad';
-  const canEdit = tenant.user.role === 'ADMIN';
+  const canEdit = hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN']);
 
   // SSO/session state must always reflect the current, live value - never
   // cached (see the settings-page audit for why) - but each query is still
@@ -204,7 +205,7 @@ export async function getIdentityCenterData(tenant: Tenant): Promise<IdentityDas
     lastSync: formatDate(selectedUpdatedAt),
     provisioningStatus: configured ? 'JIT provisioning prepared' : 'Not configured',
     scimStatus: 'Prepared for future SCIM rollout',
-    defaultRole: identityConfig.defaultRole ?? 'EMPLOYEE',
+    defaultRole: identityConfig.defaultRole ?? 'MEMBER',
     providers: providerDefaults.map((provider) => ({
       ...provider,
       status: configured && provider.key === selectedProvider ? 'connected' : 'not_configured',
@@ -268,11 +269,11 @@ export async function getIdentityCenterData(tenant: Tenant): Promise<IdentityDas
 
 export async function saveIdentityConfiguration(tenant: Tenant, formData: FormData) {
   if (!tenant.organization || !tenant.user) throw new Error('Workspace is required.');
-  if (tenant.user.role !== 'ADMIN') throw new Error('Only organization admins can update identity settings.');
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) throw new Error('Only organization admins can update identity settings.');
 
   const currentSetup = asRecord(tenant.organization.integrationSetup);
   const provider = String(formData.get('provider') ?? 'azure_ad') as IdentityProviderKey;
-  const defaultRole = String(formData.get('defaultRole') ?? 'EMPLOYEE') as Role;
+  const defaultRole = String(formData.get('defaultRole') ?? 'MEMBER') as Role;
   const metadataFile = formData.get('metadataFile');
   const accessPolicies = Object.fromEntries(accessPolicyDefaults.map((policy) => [policy.key, formData.get(policy.key) === 'on']));
   const identity: IdentityConfig = {
@@ -318,7 +319,7 @@ export async function saveIdentityConfiguration(tenant: Tenant, formData: FormDa
 
 export async function testIdentityConnection(tenant: Tenant) {
   if (!tenant.organization || !tenant.user) throw new Error('Workspace is required.');
-  if (tenant.user.role !== 'ADMIN') throw new Error('Only organization admins can test identity settings.');
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) throw new Error('Only organization admins can test identity settings.');
   const identity = readIdentityConfig(tenant.organization);
 
   await writeAuditLog({
@@ -336,7 +337,7 @@ export async function testIdentityConnection(tenant: Tenant) {
 
 export async function revokeIdentitySession(tenant: Tenant, formData: FormData) {
   if (!tenant.organization || !tenant.user) throw new Error('Workspace is required.');
-  if (tenant.user.role !== 'ADMIN') throw new Error('Only organization admins can revoke sessions.');
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) throw new Error('Only organization admins can revoke sessions.');
 
   await writeAuditLog({
     organizationId: tenant.organization.id,

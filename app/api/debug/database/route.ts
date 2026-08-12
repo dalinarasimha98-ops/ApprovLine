@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { validateDatabaseUrl } from '@/lib/env';
+import { getFounderAccess } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,9 @@ function errorCode(error: unknown) {
 }
 
 export async function GET() {
+  const access = await getFounderAccess();
+  if (!access.ok) return NextResponse.json({ error: 'founder_access_required' }, { status: access.reason === 'unauthenticated' ? 401 : 403 });
+
   const databaseUrl = validateDatabaseUrl();
   if (!databaseUrl.valid) {
     return NextResponse.json({

@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
+import { hasAnyRole } from '@/lib/rbac';
 
 type EvidenceAccess = 'read' | 'write' | 'manage';
 
-const writeRoles = new Set(['ADMIN', 'MANAGER', 'COMPLIANCE_OFFICER']);
-const manageRoles = new Set(['ADMIN']);
+// AUDITOR is deliberately excluded from write access: compliance/audit
+// reviewers get full read visibility into evidence but must stay read-only
+// to preserve separation of duties for compliance reviews.
+const writeRoles = ['OWNER', 'ADMIN', 'MANAGER'] as const;
+const manageRoles = ['OWNER', 'ADMIN'] as const;
 
 export async function requireEvidenceAccess(access: EvidenceAccess) {
   const tenant = await getDashboardTenant(5000);
@@ -29,8 +33,8 @@ export async function requireEvidenceAccess(access: EvidenceAccess) {
     access === 'read'
       ? true
       : access === 'write'
-        ? writeRoles.has(role)
-        : manageRoles.has(role);
+        ? hasAnyRole(role, [...writeRoles])
+        : hasAnyRole(role, [...manageRoles]);
   if (!allowed) {
     return {
       ok: false as const,

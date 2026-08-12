@@ -3,6 +3,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { PendingLink } from '@/components/system/PendingLink';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { ConfirmSubmitButton } from '@/components/system/ConfirmSubmitButton';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,8 @@ export default async function SettingsPage() {
   const tenant = await getDashboardTenant(1500);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
+  if (!tenant.user) redirect('/dashboard');
+  enforcePageRole('/dashboard/settings', tenant.user.role);
 
   const organization = tenant.organization;
 

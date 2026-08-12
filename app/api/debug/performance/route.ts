@@ -4,6 +4,7 @@ import { slowestMeasurements, withTimeout } from '@/lib/performance';
 import { env } from '@/config/env';
 import { checkRedisConnection } from '@/services/queue/connection';
 import { getApprovalQueue } from '@/services/queue/approvalQueue';
+import { getFounderAccess } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,9 @@ async function queueStatus() {
 }
 
 export async function GET() {
+  const access = await getFounderAccess();
+  if (!access.ok) return NextResponse.json({ error: 'founder_access_required' }, { status: access.reason === 'unauthenticated' ? 401 : 403 });
+
   const [database, redis, openai, queue] = await Promise.all([
     timed('Database', async () => {
       await prisma.$queryRaw`SELECT 1`;

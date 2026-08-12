@@ -150,7 +150,7 @@ async function fetchOnboardingStateFresh(organizationId: string) {
       // never a row list capped by `take`, or the seat count would silently
       // under-report for any org with more users than the cap.
       withTimeout('onboarding:userCount', prisma.user.count({ where: { organizationId } }), ONBOARDING_QUERY_TIMEOUT_MS).catch(() => 0),
-      withTimeout('onboarding:adminCount', prisma.user.count({ where: { organizationId, role: 'ADMIN' } }), ONBOARDING_QUERY_TIMEOUT_MS).catch(() => 0),
+      withTimeout('onboarding:adminCount', prisma.user.count({ where: { organizationId, role: { in: ['OWNER', 'ADMIN'] } } }), ONBOARDING_QUERY_TIMEOUT_MS).catch(() => 0),
       withTimeout(
         'onboarding:playbookDocuments',
         prisma.playbookDocument.findMany({

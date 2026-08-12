@@ -9,6 +9,7 @@ import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
 import { createInvestigationCase } from '@/services/investigations';
 import { dismissApprovalAlert, escalateApprovalAlert, getApprovalAlerts, type ApprovalAlert } from '@/services/alerts';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,8 +61,9 @@ async function requireOrganizationId() {
   const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization) redirect('/dashboard');
-  return { organizationId: tenant.organization.id, actorUserId: tenant.user?.id };
+  if (!tenant.organization || !tenant.user) redirect('/dashboard');
+  enforcePageRole('/dashboard/alerts', tenant.user.role);
+  return { organizationId: tenant.organization.id, actorUserId: tenant.user.id };
 }
 
 async function investigateAlertAction(formData: FormData) {

@@ -5,6 +5,7 @@ import {
   indexPlaybookDocument,
 } from "@/services/playbooks";
 import { EntitlementDeniedError, requireEntitlement } from "@/lib/entitlements";
+import { hasAnyRole } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,17 @@ export async function POST(request: Request) {
     const tenant = await getDashboardTenant(4000);
     if (tenant.status === "unauthenticated")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!tenant.organization)
+    if (!tenant.organization || !tenant.user)
       return NextResponse.json(
         { error: tenant.error ?? "Workspace unavailable." },
         { status: 503 },
       );
+    if (!hasAnyRole(tenant.user.role, ["OWNER", "ADMIN"])) {
+      return NextResponse.json(
+        { error: "Your workspace role cannot upload playbooks." },
+        { status: 403 },
+      );
+    }
     await requireEntitlement(tenant.organization.id, "playbook_ai");
 
     const form = await request.formData();
@@ -56,7 +63,7 @@ export async function POST(request: Request) {
     const category = String(form.get("category") ?? "").trim();
     const document = await indexPlaybookDocument({
       organizationId: tenant.organization.id,
-      ownerUserId: tenant.user?.id,
+      ownerUserId: tenant.user.id,
       name: file.name,
       fileType: extension,
       content,

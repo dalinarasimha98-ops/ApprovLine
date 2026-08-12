@@ -8,10 +8,12 @@ datasource db {
 }
 
 enum Role {
+  OWNER
   ADMIN
   MANAGER
-  EMPLOYEE
-  COMPLIANCE_OFFICER
+  MEMBER
+  AUDITOR
+  VIEWER
 }
 
 enum PlatformRole {
@@ -309,7 +311,7 @@ model User {
   clerkUserId                    String                        @unique
   email                          String
   name                           String?
-  role                           Role                          @default(EMPLOYEE)
+  role                           Role                          @default(MEMBER)
   createdAt                      DateTime                      @default(now())
   updatedAt                      DateTime                      @updatedAt
   organization                   Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1191,7 +1193,7 @@ model PilotInvite {
   organizationId String
   inviterUserId  String?
   email          String
-  role           Role         @default(EMPLOYEE)
+  role           Role         @default(MEMBER)
   status         String       @default("pending")
   invitedAt      DateTime     @default(now())
   acceptedAt     DateTime?

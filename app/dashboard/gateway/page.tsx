@@ -6,6 +6,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { buildGatewayMetrics, seedUniversalGatewayDemo } from '@/services/gateway/universalGateway';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { RefreshButton } from '@/components/system/RefreshButton';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,8 @@ async function seedGatewayDemoAction() {
   'use server';
   const tenant = await getDashboardTenant(2500);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (tenant.status !== 'ready' || !tenant.organization) redirect('/onboarding');
+  if (tenant.status !== 'ready' || !tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/dashboard/gateway', tenant.user.role);
   await seedUniversalGatewayDemo(tenant.organization.id);
   revalidatePath('/dashboard/gateway');
   redirect('/dashboard/gateway?demo=created');
@@ -36,6 +38,7 @@ export default async function UniversalGatewayPage({
 
   const tenant = await getDashboardTenant(2500);
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
+  if (tenant.user) enforcePageRole('/dashboard/gateway', tenant.user.role);
 
   const query = await searchParams;
   const metrics = tenant.organization ? await buildGatewayMetrics(tenant.organization.id) : null;

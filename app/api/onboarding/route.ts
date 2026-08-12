@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { DASHBOARD_TENANT_CACHE_TAG, getCurrentTenant } from '@/lib/auth';
 import { buildOnboardingState, saveOnboardingPatch, type OnboardingPatch } from '@/services/onboarding';
+import { hasAnyRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,7 @@ function forbidden(message: string) {
 
 export async function GET() {
   const tenant = await getCurrentTenant();
-  if (tenant.user.role !== 'ADMIN') return forbidden('Only organization admins can manage onboarding.');
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) return forbidden('Only organization admins can manage onboarding.');
   try {
     const state = await buildOnboardingState(tenant.organization.id);
     return NextResponse.json(state);
@@ -23,7 +24,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   const tenant = await getCurrentTenant();
-  if (tenant.user.role !== 'ADMIN') return forbidden('Only organization admins can manage onboarding.');
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) return forbidden('Only organization admins can manage onboarding.');
   const patch = (await request.json()) as OnboardingPatch;
   try {
     const state = await saveOnboardingPatch({

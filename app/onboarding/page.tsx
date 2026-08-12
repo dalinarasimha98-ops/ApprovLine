@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { CustomerOnboardingWizard } from '@/components/onboarding/CustomerOnboardingWizard';
 import { getCurrentTenant, isTenantDatabaseError } from '@/lib/auth';
 import { buildOnboardingState, type CopilotSetupDraft, type IntegrationDraft, type PlaybookDraft, type TeamInviteDraft } from '@/services/onboarding';
+import { hasAnyRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +43,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams?: 
     throw error;
   }
 
-  if (tenant.user.role !== 'ADMIN') {
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) {
     return (
       <main className="grid min-h-screen place-items-center bg-slate-50 px-4">
         <section className="max-w-xl rounded-2xl border border-amber-200 bg-white p-8 shadow-sm">

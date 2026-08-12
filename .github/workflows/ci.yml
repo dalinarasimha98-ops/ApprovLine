@@ -42,6 +42,8 @@ jobs:
         run: npm run test:reliability
       - name: Test — tenant isolation
         run: npm run test:tenant-isolation
+      - name: Test — RBAC
+        run: npm run test:rbac
       - name: Test — production certification
         run: npm run test:certification
       - name: Build

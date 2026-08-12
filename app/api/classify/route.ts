@@ -5,6 +5,7 @@ import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import { classifyWithOpenAI } from '@/services/classifier/openai';
 import { persistClassificationResult } from '@/services/classifier/persistence';
+import { hasMinimumRole } from '@/lib/rbac';
 
 const classifyRequestSchema = z.object({
   message: z.string().min(1).max(4000),
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
       const tenant = await getCurrentTenant();
       if (tenant.organization.id !== parsed.data.organizationId) {
         return NextResponse.json({ error: 'Forbidden tenant scope' }, { status: 403 });
+      }
+      if (!hasMinimumRole(tenant.user.role, 'MEMBER')) {
+        return NextResponse.json({ error: 'Your workspace role cannot create approval records.' }, { status: 403 });
       }
       organizationId = tenant.organization.id;
     }

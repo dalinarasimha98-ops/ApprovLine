@@ -8,6 +8,7 @@ import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
 import { writeAuditLog } from '@/services/audit';
 import { buildComplianceReadinessReport } from '@/services/readiness';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -197,6 +198,7 @@ async function submitSecurityRequest(formData: FormData) {
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization || !tenant.user) redirect('/trust/compliance');
+  enforcePageRole('/trust/compliance', tenant.user.role);
 
   const requestType = String(formData.get('requestType') ?? 'Security questionnaire');
   const requester = String(formData.get('requester') ?? '').trim();
@@ -260,7 +262,7 @@ async function WorkspaceIdentityCard() {
   const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization) {
+  if (!tenant.organization || !tenant.user) {
     return (
       <InlineRetryNotice
         title="Workspace data is temporarily unavailable"
@@ -268,6 +270,7 @@ async function WorkspaceIdentityCard() {
       />
     );
   }
+  enforcePageRole('/trust/compliance', tenant.user.role);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
@@ -299,9 +302,10 @@ async function ReadinessOverviewCards() {
   const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization) {
+  if (!tenant.organization || !tenant.user) {
     return <InlineRetryNotice tone="light" title="Readiness overview is temporarily unavailable" detail={tenant.error ?? 'Retrying automatically.'} />;
   }
+  enforcePageRole('/trust/compliance', tenant.user.role);
 
   let readiness;
   try {
@@ -354,9 +358,10 @@ async function ServiceStatusStrip() {
   const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization) {
+  if (!tenant.organization || !tenant.user) {
     return <InlineRetryNotice title="Service status is temporarily unavailable" detail={tenant.error ?? 'Retrying automatically.'} />;
   }
+  enforcePageRole('/trust/compliance', tenant.user.role);
 
   let readiness;
   try {

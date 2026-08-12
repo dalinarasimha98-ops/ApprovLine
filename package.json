@@ -23,6 +23,7 @@
     "test:founder": "node --import tsx tests/founder-hardening.test.ts",
     "test:reliability": "node --import tsx tests/reliability-hardening.test.ts",
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
+    "test:rbac": "node --import tsx scripts/test-rbac.ts",
     "test:certification": "node --import tsx tests/production-certification.test.ts",
     "test:production-hardening": "node --import tsx tests/production-hardening.test.ts",
     "test:manual-approvals": "node --import tsx tests/manual-approvals.test.ts",

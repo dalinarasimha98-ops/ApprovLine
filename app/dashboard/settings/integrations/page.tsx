@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { ConfirmSubmitButton } from '@/components/system/ConfirmSubmitButton';
 import type { Prisma } from '@prisma/client';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -335,6 +336,15 @@ export default async function IntegrationsPage({
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
+  // Deliberately not gating on `!tenant.user` here (unlike most other
+  // pages): this page has its own 'error'/'database_invalid' fallback UI
+  // below that must stay reachable, and narrowing on user here would
+  // eliminate those branches from the type entirely (TS statically proves
+  // them unreachable once user is required non-null, since both statuses
+  // return user: null - see getDashboardTenant()). Skipping the role check
+  // when tenant.user is absent is safe: those statuses never reach the
+  // integrations list/mutation logic below either way.
+  if (tenant.user) enforcePageRole('/dashboard/settings', tenant.user.role);
   const query = await searchParams;
   let statusNotice: string | null = null;
   let integrations: Awaited<ReturnType<typeof prisma.integration.findMany>> = [];

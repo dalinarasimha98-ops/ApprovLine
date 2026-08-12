@@ -11,8 +11,9 @@ import {
   DashboardUtilityLinks,
   WorkspaceSwitcherLink,
 } from '@/components/dashboard/DashboardHeaderControls';
+import { getDashboardTenant } from '@/lib/auth';
 
-export function DashboardShell({
+export async function DashboardShell({
   children,
   immersive = false,
 }: {
@@ -20,6 +21,15 @@ export function DashboardShell({
   immersive?: boolean;
 }) {
   const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  // Every page that renders this shell has already resolved (and gated on)
+  // the tenant itself, so this call is a cache hit in practice - see
+  // getDashboardTenant()'s per-request dedup in lib/auth.ts. Role is only
+  // used to decide which nav items to *show*; it is never the actual
+  // security boundary (that's enforcePageRole() on each destination page
+  // and the role check on each API route) - so a null role here just means
+  // "show everything" rather than blocking rendering.
+  const tenant = await getDashboardTenant(1500).catch(() => null);
+  const role = tenant?.user?.role ?? null;
   return (
     <div className="min-h-screen bg-[#030b18] text-slate-100">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-white/[0.08] bg-[#020916] p-3 text-white lg:flex">
@@ -30,7 +40,7 @@ export function DashboardShell({
           <span>ApprovLine</span>
         </Link>
         <WorkspaceSwitcherLink />
-        <DashboardNavigation />
+        <DashboardNavigation role={role} />
         <div className="mt-3 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.035] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Workspace plan</p>
           <p className="mt-1 text-xs font-semibold text-slate-200">Manage billing and usage</p>
@@ -57,7 +67,7 @@ export function DashboardShell({
               {hasClerk ? <UserButton /> : <div className="text-sm font-semibold text-slate-500">Local build</div>}
             </div>
           </div>
-          <div className="mt-3 lg:hidden"><DashboardNavigation mobile /></div>
+          <div className="mt-3 lg:hidden"><DashboardNavigation mobile role={role} /></div>
         </header>
         <div className={immersive ? 'p-3 sm:p-4 xl:p-5' : 'grid gap-4 p-3 sm:p-4 xl:p-5'}>
           {immersive ? null : <DashboardFilterLinks />}

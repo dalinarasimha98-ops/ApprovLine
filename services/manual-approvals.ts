@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { approvalRecordsCacheTag } from '@/lib/approvalRecords';
+import { hasAnyRole, type Role } from '@/lib/rbac';
 
 export const manualApprovalInputSchema = z.object({
   kind: z.enum(['VERBAL', 'MANUAL']),
@@ -32,8 +33,10 @@ export const manualApprovalInputSchema = z.object({
 
 export type ManualApprovalInput = z.infer<typeof manualApprovalInputSchema>;
 
-export function canManageManualApprovals(role: string) {
-  return role === 'ADMIN' || role === 'MANAGER' || role === 'COMPLIANCE_OFFICER';
+// AUDITOR is deliberately excluded: recording/editing manual approvals is a
+// write action, and compliance reviewers must stay read-only.
+export function canManageManualApprovals(role: Role) {
+  return hasAnyRole(role, ['OWNER', 'ADMIN', 'MANAGER']);
 }
 
 export class ManualApprovalTransitionError extends Error {

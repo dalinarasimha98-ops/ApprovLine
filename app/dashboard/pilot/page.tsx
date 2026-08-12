@@ -27,7 +27,7 @@ async function invitePilotUser(formData: FormData) {
   const tenant = await getDashboardTenant(3000);
   if (!tenant.organization || !tenant.user) redirect('/dashboard/pilot?pilot=error');
   const email = cleanString(formData.get('email')).toLowerCase();
-  const role = cleanString(formData.get('role'), 'EMPLOYEE') as Role;
+  const role = cleanString(formData.get('role'), 'MEMBER') as Role;
   if (!email.includes('@')) redirect('/dashboard/pilot?pilot=invalid_invite');
   await createPilotInvite({
     organizationId: tenant.organization.id,
@@ -250,11 +250,13 @@ export default async function PilotReadinessPage({
             </label>
             <label className="grid gap-1 text-sm font-black text-slate-700">
               Role
-              <select name="role" defaultValue="EMPLOYEE" className={inputClass}>
+              <select name="role" defaultValue="MEMBER" className={inputClass}>
+                <option value="OWNER">Owner</option>
                 <option value="ADMIN">Admin</option>
                 <option value="MANAGER">Manager</option>
-                <option value="COMPLIANCE_OFFICER">Compliance Officer</option>
-                <option value="EMPLOYEE">Employee</option>
+                <option value="AUDITOR">Auditor</option>
+                <option value="MEMBER">Member</option>
+                <option value="VIEWER">Viewer</option>
               </select>
             </label>
             <FormSubmitButton pendingText="Saving invite..." className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#2155d9] px-5 text-sm font-black text-white shadow-sm shadow-blue-200">

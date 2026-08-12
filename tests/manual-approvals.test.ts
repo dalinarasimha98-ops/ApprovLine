@@ -46,10 +46,11 @@ test('manual approval input requires defensible recorder context', () => {
 });
 
 test('only authorized workspace roles can manage manual approvals', () => {
+  assert.equal(canManageManualApprovals('OWNER'), true);
   assert.equal(canManageManualApprovals('ADMIN'), true);
   assert.equal(canManageManualApprovals('MANAGER'), true);
-  assert.equal(canManageManualApprovals('COMPLIANCE_OFFICER'), true);
-  assert.equal(canManageManualApprovals('EMPLOYEE'), false);
+  assert.equal(canManageManualApprovals('AUDITOR'), false);
+  assert.equal(canManageManualApprovals('MEMBER'), false);
   assert.equal(canManageManualApprovals('VIEWER'), false);
 });
 

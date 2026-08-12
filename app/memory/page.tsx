@@ -9,6 +9,7 @@ import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
 import { isMigrationError } from '@/lib/prisma-errors';
 import { buildMemoryDashboard, memoryEntityLabels, rebuildMemoryGraphForOrganization } from '@/services/memory';
+import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,8 @@ async function refreshMemoryGraphAction() {
   'use server';
   const tenant = await getDashboardTenant(5000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (!tenant.organization) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/memory', tenant.user.role);
 
   try {
     await rebuildMemoryGraphForOrganization(tenant.organization.id);
@@ -244,7 +246,8 @@ export default async function MemoryPage({ searchParams }: MemoryPageProps) {
   const tenant = await getDashboardTenant(6000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (!tenant.organization) redirect('/dashboard');
+  if (!tenant.organization || !tenant.user) redirect('/dashboard');
+  enforcePageRole('/memory', tenant.user.role);
 
   return (
     <DashboardShell>

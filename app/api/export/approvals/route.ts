@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
 import { reportApprovalFailure } from '@/lib/approval-observability';
 import { withTimeout } from '@/lib/performance';
+import { hasAnyRole } from '@/lib/rbac';
 
 function contains(value: string | null) {
   return value ? { contains: value, mode: 'insensitive' as const } : undefined;
@@ -54,8 +55,11 @@ export async function GET(request: NextRequest) {
   if (tenant.status === 'unauthenticated') {
     return NextResponse.json({ error: 'Your session expired. Sign in again.' }, { status: 401 });
   }
-  if (!tenant.organization) {
+  if (!tenant.organization || !tenant.user) {
     return NextResponse.json({ error: 'Workspace access could not be confirmed. Please retry.' }, { status: 503 });
+  }
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN', 'AUDITOR'])) {
+    return NextResponse.json({ error: 'Your workspace role cannot export approval records.' }, { status: 403 });
   }
   const { organization } = tenant;
   const params = request.nextUrl.searchParams;

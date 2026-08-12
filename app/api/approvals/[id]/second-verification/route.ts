@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { hasAnyRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!detail.secondPersonRequired) {
     return NextResponse.json({ error: 'This approval does not require second-person verification.' }, { status: 409 });
   }
-  const elevated = tenant.user.role === 'ADMIN' || tenant.user.role === 'COMPLIANCE_OFFICER';
+  const elevated = hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN']);
   if (detail.secondVerifierUserId !== tenant.user.id && !elevated) {
     return NextResponse.json({ error: 'You are not assigned to verify this approval.' }, { status: 403 });
   }
