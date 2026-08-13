@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { hashConfirmationToken } from '@/services/manual-approvals';
+import { invalidateApprovalDetailCache } from '@/services/approvalDetail';
 
 export const dynamic = 'force-dynamic';
 const responseSchema = z.object({ decision: z.enum(['CONFIRMED', 'REJECTED', 'CORRECTED']), responseNote: z.string().trim().min(3).max(2000), correction: z.record(z.unknown()).optional() });
@@ -101,5 +102,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     });
     return NextResponse.json({ error: 'The confirmation response could not be stored. Please try again.' }, { status: 503 });
   }
+  invalidateApprovalDetailCache(confirmation.approvalRecordId);
   return NextResponse.json({ accepted: true, status: verificationStatus });
 }

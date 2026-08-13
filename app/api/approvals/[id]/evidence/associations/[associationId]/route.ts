@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { canManageManualApprovals } from '@/services/manual-approvals';
+import { invalidateApprovalDetailCache } from '@/services/approvalDetail';
 
 export const dynamic = 'force-dynamic';
 const schema = z.object({ status: z.enum(['CONFIRMED', 'REJECTED']), reason: z.string().trim().max(1000).optional() });
@@ -21,5 +22,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     prisma.approvalEvidenceAssociation.update({ where: { id: association.id }, data: confirmed ? { status: 'CONFIRMED', origin: 'HUMAN_VERIFIED', verifiedByUserId: tenant.user.id, verifiedAt: new Date(), rejectedByUserId: null, rejectedAt: null, rejectionReason: null } : { status: 'REJECTED', rejectedByUserId: tenant.user.id, rejectedAt: new Date(), rejectionReason: parsed.data.reason || 'Not related to this approval.', verifiedByUserId: null, verifiedAt: null } }),
     prisma.auditLog.create({ data: { organizationId: tenant.organization.id, actorUserId: tenant.user.id, approvalRecordId: id, action: confirmed ? 'MANUAL_EVIDENCE_CONFIRMED' : 'MANUAL_EVIDENCE_REJECTED', metadata: { associationId, messageSourceId: association.messageSourceId, reason: parsed.data.reason ?? null } } }),
   ]);
+  invalidateApprovalDetailCache(id);
   return NextResponse.json({ status: parsed.data.status });
 }

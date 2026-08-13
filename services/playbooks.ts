@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { generateText } from "@/services/ai/gateway";
 import { generateEmbedding, embeddingGatewayStatus } from "@/services/ai/embeddingGateway";
 import { AIEmbeddingError } from "@/services/ai/embeddings";
+import { invalidateApprovalDetailCache } from "@/services/approvalDetail";
 import type { ApprovalRecord, PlaybookRule, Prisma } from "@prisma/client";
 
 type SourceMatch = {
@@ -600,6 +601,7 @@ export async function evaluateApprovalCompliance(
     },
   });
 
+  invalidateApprovalDetailCache(approval.id);
   return evaluation;
 }
 

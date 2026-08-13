@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasAnyRole } from '@/lib/rbac';
+import { invalidateApprovalDetailCache } from '@/services/approvalDetail';
 
 export const dynamic = 'force-dynamic';
 
@@ -127,6 +128,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Second-person verification could not be stored. Please try again.' }, { status: 503 });
   }
 
+  invalidateApprovalDetailCache(id);
   return NextResponse.json({
     accepted: true,
     decision: parsed.data.decision,

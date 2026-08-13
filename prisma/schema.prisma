@@ -780,6 +780,7 @@ model ClassifierResult {
   @@index([inputHash])
   @@index([organizationId, idempotencyKey])
   @@index([organizationId, correlationId])
+  @@index([approvalRecordId, createdAt])
 }
 
 model AuditLog {
@@ -800,6 +801,7 @@ model AuditLog {
   @@index([action])
   @@index([organizationId, actorUserId, createdAt])
   @@index([organizationId, action])
+  @@index([approvalRecordId, createdAt])
 }
 
 model Subscription {

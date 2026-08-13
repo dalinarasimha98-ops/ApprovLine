@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { approvalRecordsCacheTag } from '@/lib/approvalRecords';
+import { invalidateApprovalDetailCache } from '@/services/approvalDetail';
 import { hasAnyRole, type Role } from '@/lib/rbac';
 
 export const manualApprovalInputSchema = z.object({
@@ -162,6 +163,7 @@ export async function createManualApproval(args: {
   }, { timeout: 15_000 });
 
   revalidateTag(approvalRecordsCacheTag(organizationId));
+  invalidateApprovalDetailCache(approval.id);
   return approval;
 }
 
@@ -239,6 +241,7 @@ export async function updateManualApproval(args: {
   }, { timeout: 15_000 });
 
   revalidateTag(approvalRecordsCacheTag(organizationId));
+  invalidateApprovalDetailCache(approvalId);
   return result;
 }
 

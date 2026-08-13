@@ -1,5 +1,6 @@
 import type { ApprovalRecord, AuditLog, MessageSource, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { invalidateApprovalDetailCache } from '@/services/approvalDetail';
 
 export type InvestigationApprovalWithEvidence = ApprovalRecord & {
   messageSource: MessageSource | null;
@@ -163,7 +164,7 @@ export async function createInvestigationCase(input: {
   const summary = buildInvestigationSummary(approvals);
   const title = input.title?.trim() || approvals[0]?.subject || `${input.department ?? 'Approval'} investigation`;
 
-  return prisma.investigationCase.create({
+  const investigation = await prisma.investigationCase.create({
     data: {
       organizationId: input.organizationId,
       title,
@@ -184,6 +185,12 @@ export async function createInvestigationCase(input: {
       },
     },
   });
+
+  // Each linked approval's "Related Records" section (app/approvals/[id])
+  // now has a new investigation to show.
+  for (const approval of approvals) invalidateApprovalDetailCache(approval.id);
+
+  return investigation;
 }
 
 export async function createDemoInvestigationsForOrganization(organizationId: string) {
