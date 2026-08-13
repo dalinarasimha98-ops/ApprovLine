@@ -571,7 +571,7 @@ export function UnifiedEvidenceExperience({ initialData }: { initialData: Unifie
                       {initialData.subject}
                     </h1>
                     <p className="mt-1 text-sm font-medium text-slate-400">
-                      {initialData.decision ?? initialData.primaryApproval?.title ?? 'Unified decision record'}
+                      {initialData.decision ?? 'Unified decision record'}
                     </p>
                   </div>
                 </div>

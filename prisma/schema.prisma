@@ -543,6 +543,7 @@ model CanonicalEvidenceEvent {
   @@index([organizationId, threadId])
   @@index([organizationId, correlationId])
   @@index([organizationId, status, receivedAt])
+  @@index([unifiedRecordId, occurredAt])
 }
 
 model UnifiedEvidenceRecord {

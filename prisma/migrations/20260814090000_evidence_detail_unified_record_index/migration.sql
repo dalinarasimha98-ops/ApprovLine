@@ -1,0 +1,11 @@
+-- Root cause of "The database did not respond in time" on /evidence/[id]
+-- (services/evidence/records.ts's getUnifiedEvidenceExperience /
+-- getUnifiedEvidenceDetail): CanonicalEvidenceEvent had no index covering
+-- unifiedRecordId, which every query behind the evidence detail page filters
+-- on (the record's own events include, the providerCounts groupBy, the
+-- latestEvent lookup, and the "load more timeline" pagination endpoint all
+-- do `WHERE unifiedRecordId = ?`). Same class of bug as the AuditLog/
+-- ClassifierResult fix on the approval detail page - a fast-growing table
+-- filtered by a foreign key with no supporting index degrades into a
+-- sequential scan as it grows.
+CREATE INDEX "CanonicalEvidenceEvent_unifiedRecordId_occurredAt_idx" ON "CanonicalEvidenceEvent"("unifiedRecordId", "occurredAt");

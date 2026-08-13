@@ -30,10 +30,12 @@ export function invalidateUnifiedEvidenceCache(organizationId: string) {
 }
 
 // --- Circuit breaker -----------------------------------------------------
-// Shared by getLatestUnifiedEvidenceRecordId() and searchUnifiedEvidence() -
-// both back the same /evidence list page and fail together when the
-// database is genuinely struggling. Mirrors the pattern used across every
-// other service fixed this session.
+// Shared by every function in this file - the /evidence list
+// (getLatestUnifiedEvidenceRecordId, searchUnifiedEvidence) and the
+// /evidence/[id] detail page (getUnifiedEvidenceDetail,
+// getUnifiedEvidenceExperience) - since they all hit the same database and
+// fail together when it's genuinely struggling. Mirrors the pattern used
+// across every other service fixed this session.
 const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3;
 const CIRCUIT_BREAKER_COOLDOWN_MS = 60_000;
 let consecutiveEvidenceListFailures = 0;
@@ -331,54 +333,180 @@ export async function getLatestUnifiedEvidenceRecordId(organizationId: string): 
   }
 }
 
-export async function getUnifiedEvidenceDetail(organizationId: string, id: string) {
-  return withTimeout(
+// --- Detail-page stale fallback (Tier-2 "last known good") -----------------
+// unstable_cache only memoizes successful returns of its own wrapped
+// function - it has no "serve the last successful value even though this
+// attempt errored" primitive. Mirrors lib/approvalRecords.ts's
+// lastGoodStore().
+const EVIDENCE_DETAIL_REVALIDATE_SECONDS = 60;
+const EVIDENCE_DETAIL_STALE_CACHE_TTL_MS = 10 * 60 * 1000;
+
+type LastGoodEntry<T> = { value: T; cachedAt: number };
+const globalForEvidenceDetail = globalThis as unknown as {
+  approvlineEvidenceDetailLastGood?: Map<string, LastGoodEntry<unknown>>;
+};
+function evidenceDetailLastGoodStore() {
+  globalForEvidenceDetail.approvlineEvidenceDetailLastGood ??= new Map();
+  return globalForEvidenceDetail.approvlineEvidenceDetailLastGood;
+}
+
+function deserializeEventDates<T extends { occurredAt: unknown; receivedAt: unknown; lastProcessedAt?: unknown }>(event: T) {
+  return {
+    ...event,
+    occurredAt: toDate(event.occurredAt as Parameters<typeof toDate>[0]),
+    receivedAt: toDate(event.receivedAt as Parameters<typeof toDate>[0]),
+    lastProcessedAt: toDate(event.lastProcessedAt as Parameters<typeof toDate>[0]),
+  };
+}
+
+function deserializePrimaryApproval<T extends { approvalTimestamp?: unknown; occurredAt: unknown; createdAt: unknown; updatedAt: unknown } | null>(approval: T) {
+  if (!approval) return approval;
+  return {
+    ...approval,
+    approvalTimestamp: toDate(approval.approvalTimestamp as Parameters<typeof toDate>[0]),
+    occurredAt: toDate(approval.occurredAt as Parameters<typeof toDate>[0]),
+    createdAt: toDate(approval.createdAt as Parameters<typeof toDate>[0]),
+    updatedAt: toDate(approval.updatedAt as Parameters<typeof toDate>[0]),
+  };
+}
+
+function deserializeConnection<T extends { lastSyncAt: unknown; health: { lastEventAt: unknown; lastSuccessfulSyncAt: unknown; checkedAt: unknown } | null } | null>(connection: T) {
+  if (!connection) return connection;
+  return {
+    ...connection,
+    lastSyncAt: toDate(connection.lastSyncAt as Parameters<typeof toDate>[0]),
+    health: connection.health
+      ? {
+          ...connection.health,
+          lastEventAt: toDate(connection.health.lastEventAt as Parameters<typeof toDate>[0]),
+          lastSuccessfulSyncAt: toDate(connection.health.lastSuccessfulSyncAt as Parameters<typeof toDate>[0]),
+          checkedAt: toDate(connection.health.checkedAt as Parameters<typeof toDate>[0]),
+        }
+      : connection.health,
+  };
+}
+
+async function withEvidenceDetailRetry<T>(label: string, fn: () => Promise<T>, timeoutMs: number): Promise<T> {
+  if (isEvidenceListBreakerOpen()) throw new EvidenceListCircuitOpenError();
+  const attempt = () => withTimeout(label, fn(), timeoutMs);
+  try {
+    const result = await attempt().catch(async (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
+      await sleep(300);
+      return attempt();
+    });
+    recordEvidenceListSuccess();
+    return result;
+  } catch (error) {
+    if (!isMigrationError(error instanceof Error ? error.message : String(error))) {
+      recordEvidenceListFailure();
+    }
+    throw error;
+  }
+}
+
+async function fetchUnifiedEvidenceDetailFresh(organizationId: string, id: string) {
+  return withEvidenceDetailRetry(
     'evidence:detail',
-    prisma.unifiedEvidenceRecord.findFirst({
-      where: { id, organizationId },
-      include: {
-        primaryApproval: true,
-        events: {
-          select: publicEventSelect,
-          orderBy: { occurredAt: 'asc' },
-          take: 101,
-        },
-        members: {
-          include: {
-            event: { select: publicEventSelect },
+    () =>
+      prisma.unifiedEvidenceRecord.findFirst({
+        where: { id, organizationId },
+        include: {
+          primaryApproval: true,
+          events: {
+            select: publicEventSelect,
+            orderBy: { occurredAt: 'asc' },
+            take: 101,
           },
-          orderBy: { createdAt: 'asc' },
-          take: 101,
+          members: {
+            include: {
+              event: { select: publicEventSelect },
+            },
+            orderBy: { createdAt: 'asc' },
+            take: 101,
+          },
         },
-      },
-    }),
+      }),
     EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
   );
 }
 
-export async function getUnifiedEvidenceExperience(
-  organizationId: string,
-  id: string,
-  eventLimit = 40,
-) {
-  const take = Math.min(100, Math.max(1, eventLimit));
-  const record = await withTimeout(
+function getCachedUnifiedEvidenceDetailFetcher(organizationId: string, id: string) {
+  return unstable_cache(
+    () => fetchUnifiedEvidenceDetailFresh(organizationId, id),
+    ['unified-evidence-detail', organizationId, id],
+    { revalidate: EVIDENCE_DETAIL_REVALIDATE_SECONDS, tags: [unifiedEvidenceCacheTag(organizationId)] },
+  );
+}
+
+function deserializeUnifiedEvidenceDetail<T extends {
+  firstSeenAt: unknown; lastSeenAt: unknown; createdAt: unknown; updatedAt: unknown;
+  primaryApproval: Parameters<typeof deserializePrimaryApproval>[0];
+  events: Array<Parameters<typeof deserializeEventDates>[0]>;
+  members: Array<{ reviewedAt: unknown; createdAt: unknown; updatedAt: unknown; event: Parameters<typeof deserializeEventDates>[0] }>;
+}>(record: T) {
+  return {
+    ...record,
+    firstSeenAt: toDate(record.firstSeenAt as Parameters<typeof toDate>[0]),
+    lastSeenAt: toDate(record.lastSeenAt as Parameters<typeof toDate>[0]),
+    createdAt: toDate(record.createdAt as Parameters<typeof toDate>[0]),
+    updatedAt: toDate(record.updatedAt as Parameters<typeof toDate>[0]),
+    primaryApproval: deserializePrimaryApproval(record.primaryApproval),
+    events: record.events.map(deserializeEventDates),
+    members: record.members.map((member) => ({
+      ...member,
+      reviewedAt: toDate(member.reviewedAt as Parameters<typeof toDate>[0]),
+      createdAt: toDate(member.createdAt as Parameters<typeof toDate>[0]),
+      updatedAt: toDate(member.updatedAt as Parameters<typeof toDate>[0]),
+      event: deserializeEventDates(member.event),
+    })),
+  };
+}
+
+const getEvidenceDetailForRequest = cache(async (organizationId: string, id: string) => {
+  const lastGoodKey = `detail::${organizationId}::${id}`;
+  try {
+    const record = await getCachedUnifiedEvidenceDetailFetcher(organizationId, id)();
+    if (record) {
+      const deserialized = deserializeUnifiedEvidenceDetail(record);
+      evidenceDetailLastGoodStore().set(lastGoodKey, { value: deserialized, cachedAt: Date.now() });
+      return deserialized;
+    }
+    return null;
+  } catch (error) {
+    const lastGood = evidenceDetailLastGoodStore().get(lastGoodKey);
+    if (lastGood && Date.now() - lastGood.cachedAt < EVIDENCE_DETAIL_STALE_CACHE_TTL_MS) {
+      console.warn('[evidence] detail fetch failed, serving stale cached record', error instanceof Error ? error.message : error);
+      return lastGood.value as ReturnType<typeof deserializeUnifiedEvidenceDetail>;
+    }
+    throw error;
+  }
+});
+
+export async function getUnifiedEvidenceDetail(organizationId: string, id: string) {
+  return getEvidenceDetailForRequest(organizationId, id);
+}
+
+async function fetchUnifiedEvidenceExperienceFresh(organizationId: string, id: string, take: number) {
+  const record = await withEvidenceDetailRetry(
     'evidence:record',
-    prisma.unifiedEvidenceRecord.findFirst({
-      where: { id, organizationId },
-      include: {
-        primaryApproval: true,
-        events: {
-          select: publicEventSelect,
-          orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
-          take: take + 1,
+    () =>
+      prisma.unifiedEvidenceRecord.findFirst({
+        where: { id, organizationId },
+        include: {
+          primaryApproval: true,
+          events: {
+            select: publicEventSelect,
+            orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
+            take: take + 1,
+          },
+          members: {
+            orderBy: { createdAt: 'asc' },
+            take: take + 1,
+          },
         },
-        members: {
-          orderBy: { createdAt: 'asc' },
-          take: take + 1,
-        },
-      },
-    }),
+      }),
     EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
   );
   if (!record) return null;
@@ -389,49 +517,52 @@ export async function getUnifiedEvidenceExperience(
   // These three don't depend on each other - only on the record above -
   // so they run concurrently instead of one after another.
   const [providerCounts, connections, latestEvent] = await Promise.all([
-    withTimeout(
+    withEvidenceDetailRetry(
       'evidence:providerCounts',
-      prisma.canonicalEvidenceEvent.groupBy({
-        by: ['providerKey'],
-        where: { organizationId, unifiedRecordId: id },
-        _count: { _all: true },
-        _max: { occurredAt: true },
-      }),
+      () =>
+        prisma.canonicalEvidenceEvent.groupBy({
+          by: ['providerKey'],
+          where: { organizationId, unifiedRecordId: id },
+          _count: { _all: true },
+          _max: { occurredAt: true },
+        }),
       EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
     ).catch(() => [] as Array<{ providerKey: string; _count: { _all: number }; _max: { occurredAt: Date | null } }>),
-    withTimeout(
+    withEvidenceDetailRetry(
       'evidence:connections',
-      prisma.evidenceProviderConnection.findMany({
-        where: { organizationId },
-        select: {
-          providerKey: true,
-          displayName: true,
-          status: true,
-          lastSyncAt: true,
-          health: {
-            select: {
-              status: true,
-              latencyMs: true,
-              syncStatus: true,
-              lastEventAt: true,
-              lastSuccessfulSyncAt: true,
-              consecutiveFailures: true,
-              lastErrorCode: true,
-              lastErrorMessage: true,
-              checkedAt: true,
+      () =>
+        prisma.evidenceProviderConnection.findMany({
+          where: { organizationId },
+          select: {
+            providerKey: true,
+            displayName: true,
+            status: true,
+            lastSyncAt: true,
+            health: {
+              select: {
+                status: true,
+                latencyMs: true,
+                syncStatus: true,
+                lastEventAt: true,
+                lastSuccessfulSyncAt: true,
+                consecutiveFailures: true,
+                lastErrorCode: true,
+                lastErrorMessage: true,
+                checkedAt: true,
+              },
             },
           },
-        },
-      }),
+        }),
       EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
     ).catch(() => []),
-    withTimeout(
+    withEvidenceDetailRetry(
       'evidence:latestEvent',
-      prisma.canonicalEvidenceEvent.findFirst({
-        where: { organizationId, unifiedRecordId: id },
-        orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
-        select: { id: true },
-      }),
+      () =>
+        prisma.canonicalEvidenceEvent.findFirst({
+          where: { organizationId, unifiedRecordId: id },
+          orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+          select: { id: true },
+        }),
       EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
     ).catch(() => null),
   ]);
@@ -458,6 +589,72 @@ export async function getUnifiedEvidenceExperience(
       connection: connectionByProvider.get(provider.providerKey) ?? null,
     })),
   };
+}
+
+function getCachedUnifiedEvidenceExperienceFetcher(organizationId: string, id: string, take: number) {
+  return unstable_cache(
+    () => fetchUnifiedEvidenceExperienceFresh(organizationId, id, take),
+    ['unified-evidence-experience', organizationId, id, String(take)],
+    { revalidate: EVIDENCE_DETAIL_REVALIDATE_SECONDS, tags: [unifiedEvidenceCacheTag(organizationId)] },
+  );
+}
+
+function deserializeUnifiedEvidenceExperience<T extends {
+  firstSeenAt: unknown; lastSeenAt: unknown; createdAt: unknown; updatedAt: unknown;
+  primaryApproval: Parameters<typeof deserializePrimaryApproval>[0];
+  events: Array<Parameters<typeof deserializeEventDates>[0]>;
+  members: Array<{ reviewedAt: unknown; createdAt: unknown; updatedAt: unknown }>;
+  providers: Array<{ latestEventAt: unknown; connection: Parameters<typeof deserializeConnection>[0] }>;
+}>(record: T) {
+  return {
+    ...record,
+    firstSeenAt: toDate(record.firstSeenAt as Parameters<typeof toDate>[0]),
+    lastSeenAt: toDate(record.lastSeenAt as Parameters<typeof toDate>[0]),
+    createdAt: toDate(record.createdAt as Parameters<typeof toDate>[0]),
+    updatedAt: toDate(record.updatedAt as Parameters<typeof toDate>[0]),
+    primaryApproval: deserializePrimaryApproval(record.primaryApproval),
+    events: record.events.map(deserializeEventDates),
+    members: record.members.map((member) => ({
+      ...member,
+      reviewedAt: toDate(member.reviewedAt as Parameters<typeof toDate>[0]),
+      createdAt: toDate(member.createdAt as Parameters<typeof toDate>[0]),
+      updatedAt: toDate(member.updatedAt as Parameters<typeof toDate>[0]),
+    })),
+    providers: record.providers.map((provider) => ({
+      ...provider,
+      latestEventAt: toDate(provider.latestEventAt as Parameters<typeof toDate>[0]),
+      connection: deserializeConnection(provider.connection),
+    })),
+  };
+}
+
+const getEvidenceExperienceForRequest = cache(async (organizationId: string, id: string, take: number) => {
+  const lastGoodKey = `experience::${organizationId}::${id}::${take}`;
+  try {
+    const record = await getCachedUnifiedEvidenceExperienceFetcher(organizationId, id, take)();
+    if (record) {
+      const deserialized = deserializeUnifiedEvidenceExperience(record);
+      evidenceDetailLastGoodStore().set(lastGoodKey, { value: deserialized, cachedAt: Date.now() });
+      return deserialized;
+    }
+    return null;
+  } catch (error) {
+    const lastGood = evidenceDetailLastGoodStore().get(lastGoodKey);
+    if (lastGood && Date.now() - lastGood.cachedAt < EVIDENCE_DETAIL_STALE_CACHE_TTL_MS) {
+      console.warn('[evidence] experience fetch failed, serving stale cached record', error instanceof Error ? error.message : error);
+      return lastGood.value as ReturnType<typeof deserializeUnifiedEvidenceExperience>;
+    }
+    throw error;
+  }
+});
+
+export async function getUnifiedEvidenceExperience(
+  organizationId: string,
+  id: string,
+  eventLimit = 40,
+) {
+  const take = Math.min(100, Math.max(1, eventLimit));
+  return getEvidenceExperienceForRequest(organizationId, id, take);
 }
 
 export async function getUnifiedEvidenceEventPage(input: {
