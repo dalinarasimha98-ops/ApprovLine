@@ -30,11 +30,15 @@ export function invalidateUnifiedEvidenceCache(organizationId: string) {
 }
 
 // --- Circuit breaker -----------------------------------------------------
-// Shared by every function in this file - the /evidence list
-// (getLatestUnifiedEvidenceRecordId, searchUnifiedEvidence) and the
-// /evidence/[id] detail page (getUnifiedEvidenceDetail,
-// getUnifiedEvidenceExperience) - since they all hit the same database and
-// fail together when it's genuinely struggling. Mirrors the pattern used
+// Shared by getLatestUnifiedEvidenceRecordId() and searchUnifiedEvidence() -
+// both back the /evidence list page and fail together when the database is
+// genuinely struggling. Deliberately NOT shared with the /evidence/[id]
+// detail-page functions below (see the separate breaker near
+// withEvidenceDetailRetry) - the list and detail pages hit different tables
+// with different failure modes, and an earlier version of this file shared
+// one breaker across both, which meant a detail-page-specific problem
+// tripped the list page's "Unified evidence is recovering" banner even
+// though the list page's own query was healthy. Mirrors the pattern used
 // across every other service fixed this session.
 const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3;
 const CIRCUIT_BREAKER_COOLDOWN_MS = 60_000;
@@ -386,8 +390,40 @@ function deserializeConnection<T extends { lastSyncAt: unknown; health: { lastEv
   };
 }
 
+// --- Circuit breaker (detail page) -----------------------------------------
+// Independent from the list-page breaker above - see that breaker's comment
+// for why sharing one breaker between list and detail was a bug, not a
+// simplification. Shared only between getUnifiedEvidenceDetail() and
+// getUnifiedEvidenceExperience(), which both hit the same
+// UnifiedEvidenceRecord + CanonicalEvidenceEvent queries for one record.
+let consecutiveEvidenceDetailFailures = 0;
+let evidenceDetailBreakerOpenUntil = 0;
+
+function isEvidenceDetailBreakerOpen() {
+  return Date.now() < evidenceDetailBreakerOpenUntil;
+}
+
+function recordEvidenceDetailSuccess() {
+  consecutiveEvidenceDetailFailures = 0;
+  evidenceDetailBreakerOpenUntil = 0;
+}
+
+function recordEvidenceDetailFailure() {
+  consecutiveEvidenceDetailFailures += 1;
+  if (consecutiveEvidenceDetailFailures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+    evidenceDetailBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+  }
+}
+
+class EvidenceDetailCircuitOpenError extends Error {
+  constructor() {
+    super('Unified evidence record lookup is temporarily paused after repeated database failures.');
+    this.name = 'EvidenceDetailCircuitOpenError';
+  }
+}
+
 async function withEvidenceDetailRetry<T>(label: string, fn: () => Promise<T>, timeoutMs: number): Promise<T> {
-  if (isEvidenceListBreakerOpen()) throw new EvidenceListCircuitOpenError();
+  if (isEvidenceDetailBreakerOpen()) throw new EvidenceDetailCircuitOpenError();
   const attempt = () => withTimeout(label, fn(), timeoutMs);
   try {
     const result = await attempt().catch(async (error) => {
@@ -396,11 +432,11 @@ async function withEvidenceDetailRetry<T>(label: string, fn: () => Promise<T>, t
       await sleep(300);
       return attempt();
     });
-    recordEvidenceListSuccess();
+    recordEvidenceDetailSuccess();
     return result;
   } catch (error) {
     if (!isMigrationError(error instanceof Error ? error.message : String(error))) {
-      recordEvidenceListFailure();
+      recordEvidenceDetailFailure();
     }
     throw error;
   }
