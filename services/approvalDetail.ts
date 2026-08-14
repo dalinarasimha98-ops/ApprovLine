@@ -104,10 +104,14 @@ function deserializeCore(record: ApprovalCore): ApprovalCore {
 }
 
 function fetchCoreFresh(organizationId: string, approvalId: string) {
+  // 5000ms, not 3000ms: this query itself is fast (indexed, lean select) -
+  // the budget has to cover connection-pool queue wait under
+  // connection_limit=5 when several approval-detail pages load at once,
+  // not just execution time. See Sentry 6b20f1ffb7884ade93151f5e7d8e2fdf.
   return withRetry(
     'approval detail core',
     () => prisma.approvalRecord.findFirst({ where: { id: approvalId, organizationId }, select: approvalCoreSelect }),
-    3000,
+    5000,
   );
 }
 
@@ -353,7 +357,7 @@ function fetchManualBundleFresh(organizationId: string, approvalId: string) {
           take: 10,
         }),
       ]),
-    3500,
+    3000,
   );
 }
 
