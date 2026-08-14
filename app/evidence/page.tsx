@@ -300,11 +300,13 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
 
   const organizationId = tenant.organization.id;
 
-  const isDefaultLanding = !params.q && !params.provider && !params.risk && !params.page;
-  if (isDefaultLanding) {
-    const latestRecordId = await getLatestUnifiedEvidenceRecordId(organizationId);
-    if (latestRecordId) redirect(`/evidence/${latestRecordId}`);
-  }
+  // Previously auto-redirected straight to the most recent record on every
+  // default visit to /evidence, which meant the list itself was never seen
+  // under normal navigation - clicking "Unified Evidence" in the nav always
+  // skipped it. Now only offered as an explicit "View Latest" action below;
+  // getLatestUnifiedEvidenceRecordId() already has its own timeout/retry/
+  // breaker, so this is cheap and safe to leave unguarded.
+  const latestRecordId = await getLatestUnifiedEvidenceRecordId(organizationId);
 
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
 
@@ -326,10 +328,19 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              {latestRecordId ? (
+                <PendingLink
+                  href={`/evidence/${latestRecordId}`}
+                  pendingText="Opening latest record..."
+                  className="rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-950 shadow-sm"
+                >
+                  View Latest
+                </PendingLink>
+              ) : null}
               <PendingLink
                 href="/approvals/manual"
                 pendingText="Opening manual capture..."
-                className="rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-950 shadow-sm"
+                className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-black text-white"
               >
                 Record verbal approval
               </PendingLink>

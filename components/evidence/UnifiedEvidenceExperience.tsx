@@ -615,7 +615,7 @@ export function UnifiedEvidenceExperience({ initialData }: { initialData: Unifie
                 </div>
               </div>
 
-              <div className="grid border-t border-white/[0.08] bg-[#061323]/70 sm:grid-cols-2 lg:grid-cols-7">
+              <div className="grid border-t border-white/[0.08] bg-[#061323]/70 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 {[
                   ['Status', titleCase(status), 'text-emerald-300'],
                   ['Amount', amountText(initialData.amount, initialData.currency), 'text-white'],
@@ -627,7 +627,7 @@ export function UnifiedEvidenceExperience({ initialData }: { initialData: Unifie
                 ].map(([label, value, tone]) => (
                   <div key={label} className="min-w-0 border-b border-r border-white/[0.07] px-4 py-3 last:border-r-0 lg:border-b-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-                    <p className={`mt-1 truncate text-sm font-bold ${tone}`} title={value}>{value}</p>
+                    <p className={`mt-1 break-words text-sm font-bold leading-5 ${tone}`} title={value}>{value}</p>
                   </div>
                 ))}
               </div>
@@ -1094,7 +1094,7 @@ function FlagshipTabPanel({
   onProviderOpen: (provider: EvidenceProvider) => void;
 }) {
   if (tab === 'analysis') {
-    const riskDimensions = riskDimensionsFromEvaluation(initialData.complianceEvaluation);
+    const riskRadarNode = renderRiskRadar(initialData.complianceEvaluation);
     return (
       <div className="grid gap-4 p-4 lg:grid-cols-2">
         <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4 lg:col-span-2">
@@ -1105,14 +1105,7 @@ function FlagshipTabPanel({
               : 'No playbook compliance evaluation has run for this record yet.'}
           </p>
           <div className="mt-4">
-            {riskDimensions ? (
-              <RiskRadarChart dimensions={riskDimensions} />
-            ) : (
-              <EmptyPanel
-                title="Risk radar not available"
-                text="This record has no linked playbook compliance evaluation yet. Upload playbooks and run Evaluate Approvals to score it."
-              />
-            )}
+            {riskRadarNode ?? <RiskRadarEmptyState />}
           </div>
         </section>
         <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
@@ -1627,6 +1620,51 @@ function RiskRadarChart({ dimensions }: { dimensions: RiskDimension[] }) {
       </div>
     </div>
   );
+}
+
+function RiskRadarEmptyState() {
+  const size = 200;
+  const center = size / 2;
+  const radius = center - 30;
+  const sides = 5;
+  const angleStep = (Math.PI * 2) / sides;
+  const startAngle = -Math.PI / 2;
+  const points = Array.from({ length: sides }, (_, index) => {
+    const angle = startAngle + angleStep * index;
+    return `${center + radius * Math.cos(angle)},${center + radius * Math.sin(angle)}`;
+  }).join(' ');
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-6 text-center">
+      <svg viewBox={`0 0 ${size} ${size}`} className="h-40 w-40 opacity-40" aria-hidden="true">
+        <polygon points={points} fill="none" stroke="#475569" strokeWidth={1.5} strokeDasharray="4 4" />
+      </svg>
+      <div>
+        <h3 className="text-sm font-bold text-slate-200">Risk analysis not yet available for this record</h3>
+        <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-slate-500">
+          Upload playbooks and run Evaluate Approvals to score this decision&apos;s compliance and risk profile.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Isolates risk-dimension derivation and chart rendering behind a plain
+ * try/catch (both are hook-free pure functions, safe to call directly
+ * rather than via JSX) so a bad evaluation shape or a chart-math edge case
+ * degrades to the empty state instead of taking the whole AI Analysis tab
+ * down - logged so it's debuggable rather than silently swallowed.
+ */
+function renderRiskRadar(evaluation: ComplianceEvaluation | null | undefined): ReactNode {
+  try {
+    const dimensions = riskDimensionsFromEvaluation(evaluation);
+    if (!dimensions) return null;
+    return RiskRadarChart({ dimensions });
+  } catch (error) {
+    console.error('[evidence] risk radar rendering failed', error);
+    return null;
+  }
 }
 
 function EmptyPanel({ title, text }: { title: string; text: string }) {
