@@ -110,6 +110,19 @@ type PrimaryApproval = {
   status?: string | null;
 };
 
+type ComplianceEvaluation = {
+  score: number;
+  status: string;
+  severity: string;
+  missingApprovers: string[];
+  missingDepartments: string[];
+  missingEscalationSteps: string[];
+  missingEvidence: string[];
+  triggeredRule?: string | null;
+  explanation: string;
+  createdAt: string;
+};
+
 export type UnifiedEvidenceData = {
   id: string;
   subject: string;
@@ -137,6 +150,7 @@ export type UnifiedEvidenceData = {
   eventPage: { hasMore: boolean; cursor?: string | null; limit: number };
   liveCursor?: string | null;
   providers: EvidenceProvider[];
+  complianceEvaluation?: ComplianceEvaluation | null;
 };
 
 type EvidenceMembershipWithEvent = EvidenceMembership & {
@@ -194,6 +208,17 @@ const providerStyles: Record<string, { label: string; glyph: string; color: stri
   manual: { label: 'Manual approval', glyph: 'MA', color: '#f59e0b' },
   verbal: { label: 'Verbal approval', glyph: 'VA', color: '#f59e0b' },
   universal_gateway: { label: 'Universal Gateway', glyph: 'UG', color: '#14b8a6' },
+  sap: { label: 'SAP', glyph: 'SAP', color: '#0d9488' },
+  oracle: { label: 'Oracle', glyph: 'OR', color: '#f43f5e' },
+  coupa: { label: 'Coupa', glyph: 'CP', color: '#6366f1' },
+  workday: { label: 'Workday', glyph: 'WD', color: '#f97316' },
+  hubspot: { label: 'HubSpot', glyph: 'HS', color: '#f97316' },
+  api: { label: 'Universal API', glyph: 'API', color: '#64748b' },
+  webhook: { label: 'Universal Webhook', glyph: 'WH', color: '#64748b' },
+  csv: { label: 'CSV Import', glyph: 'CSV', color: '#94a3b8' },
+  email_capture: { label: 'Email Capture', glyph: '@', color: '#94a3b8' },
+  sdk: { label: 'Provider SDK', glyph: 'SDK', color: '#818cf8' },
+  custom: { label: 'Custom System', glyph: 'CS', color: '#94a3b8' },
 };
 
 const tabs: Array<{ id: TimelineTab; label: string; icon: typeof Activity }> = [
@@ -779,10 +804,14 @@ export function UnifiedEvidenceExperience({ initialData }: { initialData: Unifie
                                       </div>
                                     </div>
                                     <div className="space-y-3">
+                                      <FlagshipMetadata label="Actor" value={[event.actorName, event.actorEmail].filter(Boolean).join(' · ') || event.actorId || 'Not captured'} />
                                       <FlagshipMetadata label="Provider event" value={event.providerEventType} />
                                       <FlagshipMetadata label="Correlation ID" value={event.correlationId} />
                                       <FlagshipMetadata label="Evidence hash" value={event.evidenceHash} />
                                       <FlagshipMetadata label="Matching reasons" value={(membership?.matchingReasons ?? event.correlationKeys ?? []).join(', ') || 'No reasons recorded'} />
+                                      {eventExtraFields(event).map(([label, value]) => (
+                                        <FlagshipMetadata key={label} label={label} value={value} />
+                                      ))}
                                     </div>
                                   </div>
                                 ) : null}
@@ -875,18 +904,44 @@ export function UnifiedEvidenceExperience({ initialData }: { initialData: Unifie
               </div>
             </FlagshipSideCard>
 
-            <FlagshipSideCard title={`Source Platforms (${providers.length || initialData.sourceCount})`}>
+            <FlagshipSideCard
+              title={`Source Platforms (${providers.length || initialData.sourceCount})`}
+              action={providerFilter !== 'all' ? 'Clear filter' : undefined}
+              onAction={providerFilter !== 'all' ? () => setProviderFilter('all') : undefined}
+            >
               <div className="grid grid-cols-4 gap-2">
                 {providers.length > 0 ? providers.slice(0, 12).map((provider) => (
-                  <button
-                    key={provider.providerKey}
-                    type="button"
-                    onClick={() => setProviderDrawer(provider)}
-                    className="rounded-xl border border-white/[0.08] bg-white/[0.035] p-2 text-center transition hover:border-blue-300/30 hover:bg-blue-500/[0.08]"
-                  >
-                    <ProviderMark providerKey={provider.providerKey} />
-                    <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{providerInfo(provider.providerKey).label}</p>
-                  </button>
+                  <div key={provider.providerKey} className="group relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProviderFilter(provider.providerKey === providerFilter ? 'all' : provider.providerKey);
+                        setActiveTab('timeline');
+                      }}
+                      title={`Filter timeline to ${providerInfo(provider.providerKey).label}`}
+                      className={`w-full rounded-xl border p-2 text-center transition ${
+                        providerFilter === provider.providerKey
+                          ? 'border-blue-400/50 bg-blue-500/[0.14]'
+                          : 'border-white/[0.08] bg-white/[0.035] hover:border-blue-300/30 hover:bg-blue-500/[0.08]'
+                      }`}
+                    >
+                      <span className="relative inline-flex">
+                        <ProviderMark providerKey={provider.providerKey} />
+                        <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full border border-[#071321] bg-slate-700 px-1 text-[9px] font-black text-slate-100">
+                          {provider.eventCount}
+                        </span>
+                      </span>
+                      <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{providerInfo(provider.providerKey).label}</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => { event.stopPropagation(); setProviderDrawer(provider); }}
+                      title="View connection health"
+                      className="absolute -left-1.5 -top-1.5 hidden h-4 w-4 place-items-center rounded-full border border-white/20 bg-[#0a1728] text-[9px] font-black text-slate-400 group-hover:grid hover:text-blue-300"
+                    >
+                      i
+                    </button>
+                  </div>
                 )) : (
                   <div className="col-span-4 rounded-xl border border-dashed border-white/10 p-4 text-xs text-slate-500">No source platforms reported yet.</div>
                 )}
@@ -1039,8 +1094,27 @@ function FlagshipTabPanel({
   onProviderOpen: (provider: EvidenceProvider) => void;
 }) {
   if (tab === 'analysis') {
+    const riskDimensions = riskDimensionsFromEvaluation(initialData.complianceEvaluation);
     return (
       <div className="grid gap-4 p-4 lg:grid-cols-2">
+        <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4 lg:col-span-2">
+          <h2 className="text-lg font-black text-white">Risk Radar</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            {initialData.complianceEvaluation
+              ? `Derived from the latest playbook compliance evaluation${initialData.complianceEvaluation.triggeredRule ? ` (${initialData.complianceEvaluation.triggeredRule})` : ''}.`
+              : 'No playbook compliance evaluation has run for this record yet.'}
+          </p>
+          <div className="mt-4">
+            {riskDimensions ? (
+              <RiskRadarChart dimensions={riskDimensions} />
+            ) : (
+              <EmptyPanel
+                title="Risk radar not available"
+                text="This record has no linked playbook compliance evaluation yet. Upload playbooks and run Evaluate Approvals to score it."
+              />
+            )}
+          </div>
+        </section>
         <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
           <h2 className="text-lg font-black text-white">AI Correlation Reasoning</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -1296,6 +1370,57 @@ function eventMembership(event: EvidenceEvent, members: EvidenceMembershipWithEv
   return event.membership ?? members.find((member) => member.eventId === event.id) ?? null;
 }
 
+/**
+ * Extra detail rows for the expanded timeline card, sourced entirely from
+ * whatever real data an event actually carries - participants/attachments/
+ * links/metadata are all provider-supplied and unstructured (CanonicalEvidenceEvent
+ * has no guaranteed per-platform schema), so this only ever surfaces fields
+ * that are genuinely present rather than assuming every event has a
+ * transcript, a participant list, or reaction data.
+ */
+function eventExtraFields(event: EvidenceEvent): Array<[string, string]> {
+  const fields: Array<[string, string]> = [];
+
+  const participants = arrayValue(event.participants)
+    .map((item) => {
+      if (typeof item === 'string') return item;
+      const record = recordValue(item);
+      return [record.name, record.email].filter(Boolean).join(' ').trim();
+    })
+    .filter(Boolean);
+  if (participants.length > 0) {
+    fields.push(['Participants', participants.slice(0, 8).join(', ')]);
+  }
+
+  const attachmentNames = arrayValue(event.attachments)
+    .map((item) => String(recordValue(item).name ?? recordValue(item).filename ?? recordValue(item).title ?? '').trim())
+    .filter(Boolean);
+  if (attachmentNames.length > 0) {
+    fields.push(['Attachments', attachmentNames.slice(0, 6).join(', ')]);
+  }
+
+  const links = arrayValue(event.links)
+    .map((item) => (typeof item === 'string' ? item : String(recordValue(item).url ?? recordValue(item).href ?? '')))
+    .filter(Boolean);
+  if (links.length > 1) {
+    // The first usable link already powers the "Open source" button above -
+    // only surface this when there's more than one, so it isn't redundant.
+    fields.push(['Additional links', `${links.length - 1} more`]);
+  }
+
+  const metadata = recordValue(event.metadata);
+  const alreadyShown = new Set(['channel', 'threadId', 'thread_id']);
+  for (const [key, value] of Object.entries(metadata)) {
+    if (fields.length >= 10) break;
+    if (alreadyShown.has(key) || value == null || typeof value === 'object') continue;
+    const text = String(value).trim();
+    if (!text) continue;
+    fields.push([titleCase(key), text]);
+  }
+
+  return fields;
+}
+
 function attachmentItems(events: EvidenceEvent[]): AttachmentItem[] {
   const seen = new Set<string>();
   const result: AttachmentItem[] = [];
@@ -1405,6 +1530,101 @@ function Metric({
       <p className={`mt-1 text-lg font-bold ${accentClass}`}>
         {value}
       </p>
+    </div>
+  );
+}
+
+type RiskDimension = { label: string; score: number };
+
+function severityToScore(severity: string): number {
+  const value = severity.toLowerCase();
+  if (value === 'critical') return 100;
+  if (value === 'high') return 75;
+  if (value === 'medium') return 45;
+  return 15;
+}
+
+/**
+ * Every dimension here is derived from a real ApprovalComplianceEvaluation
+ * field (services/playbooks.ts's evaluateApprovalCompliance) - nothing is
+ * invented. Returns null when there's no evaluation to derive from (records
+ * with no linked ApprovalRecord, or one that hasn't been evaluated yet) so
+ * the caller can show an honest empty state instead of a zeroed chart that
+ * would misleadingly read as "no risk."
+ */
+function riskDimensionsFromEvaluation(evaluation: ComplianceEvaluation | null | undefined): RiskDimension[] | null {
+  if (!evaluation) return null;
+  const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
+  return [
+    { label: 'Compliance Risk', score: clamp(100 - evaluation.score) },
+    { label: 'Authorization Risk', score: clamp(evaluation.missingApprovers.length * 30) },
+    { label: 'Process Risk', score: clamp((evaluation.missingDepartments.length + evaluation.missingEscalationSteps.length) * 20) },
+    { label: 'Documentation Risk', score: clamp(evaluation.missingEvidence.length * 25) },
+    { label: 'Financial Risk', score: severityToScore(evaluation.severity) },
+  ];
+}
+
+function RiskRadarChart({ dimensions }: { dimensions: RiskDimension[] }) {
+  const size = 240;
+  const center = size / 2;
+  const radius = center - 46;
+  const angleStep = (Math.PI * 2) / dimensions.length;
+  const startAngle = -Math.PI / 2;
+
+  const pointFor = (index: number, ratio: number) => {
+    const angle = startAngle + angleStep * index;
+    return { x: center + radius * ratio * Math.cos(angle), y: center + radius * ratio * Math.sin(angle) };
+  };
+
+  const overallScore = Math.round(dimensions.reduce((sum, dimension) => sum + dimension.score, 0) / dimensions.length);
+  const color = overallScore >= 67 ? '#ef4444' : overallScore >= 34 ? '#f59e0b' : '#10b981';
+  const tone = overallScore >= 67 ? 'text-rose-300' : overallScore >= 34 ? 'text-amber-300' : 'text-emerald-300';
+
+  const dataPoints = dimensions.map((dimension, index) => pointFor(index, dimension.score / 100));
+  const dataPath = `${dataPoints.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')} Z`;
+
+  return (
+    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
+      <svg viewBox={`0 0 ${size} ${size}`} className="h-60 w-60 shrink-0">
+        {[0.25, 0.5, 0.75, 1].map((level) => {
+          const ringPoints = dimensions.map((_, index) => pointFor(index, level));
+          const ringPath = `${ringPoints.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')} Z`;
+          return <path key={level} d={ringPath} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={1} />;
+        })}
+        {dimensions.map((_, index) => {
+          const point = pointFor(index, 1);
+          return <line key={index} x1={center} y1={center} x2={point.x} y2={point.y} stroke="rgba(255,255,255,0.08)" strokeWidth={1} />;
+        })}
+        <path d={dataPath} fill={color} fillOpacity={0.22} stroke={color} strokeWidth={2} strokeLinejoin="round" />
+        {dataPoints.map((point, index) => (
+          <circle key={index} cx={point.x} cy={point.y} r={3.5} fill={color} />
+        ))}
+        {dimensions.map((dimension, index) => {
+          const labelPoint = pointFor(index, 1.26);
+          return (
+            <text
+              key={dimension.label}
+              x={labelPoint.x}
+              y={labelPoint.y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#94a3b8"
+              style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}
+            >
+              {dimension.label.replace(' Risk', '')}
+            </text>
+          );
+        })}
+      </svg>
+      <div className="w-full space-y-2">
+        <p className={`text-sm font-black ${tone}`}>Overall risk score: {overallScore} / 100</p>
+        {dimensions.map((dimension) => (
+          <div key={dimension.label} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2">
+            <span className="text-xs font-semibold text-slate-400">{dimension.label}</span>
+            <span className="text-xs font-black text-slate-200">{dimension.score}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

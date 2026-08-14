@@ -550,9 +550,9 @@ async function fetchUnifiedEvidenceExperienceFresh(organizationId: string, id: s
   const hasMoreEvents = record.events.length > take;
   const events = record.events.slice(0, take);
   const eventIds = new Set(events.map((event) => event.id));
-  // These three don't depend on each other - only on the record above -
+  // These four don't depend on each other - only on the record above -
   // so they run concurrently instead of one after another.
-  const [providerCounts, connections, latestEvent] = await Promise.all([
+  const [providerCounts, connections, latestEvent, complianceEvaluation] = await Promise.all([
     withEvidenceDetailRetry(
       'evidence:providerCounts',
       () =>
@@ -601,6 +601,33 @@ async function fetchUnifiedEvidenceExperienceFresh(organizationId: string, id: s
         }),
       EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
     ).catch(() => null),
+    // Only meaningful when this record is actually linked to an approval -
+    // primaryApprovalId is optional (correlation-only records have none),
+    // and playbook compliance evaluation is scored per-ApprovalRecord, not
+    // per-UnifiedEvidenceRecord. No approval link means no query to run.
+    record.primaryApprovalId
+      ? withEvidenceDetailRetry(
+          'evidence:complianceEvaluation',
+          () =>
+            prisma.approvalComplianceEvaluation.findFirst({
+              where: { organizationId, approvalRecordId: record.primaryApprovalId! },
+              select: {
+                score: true,
+                status: true,
+                severity: true,
+                missingApprovers: true,
+                missingDepartments: true,
+                missingEscalationSteps: true,
+                missingEvidence: true,
+                triggeredRule: true,
+                explanation: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+            }),
+          EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+        ).catch(() => null)
+      : Promise.resolve(null),
   ]);
   const connectionByProvider = new Map(
     connections.map((connection) => [connection.providerKey, connection]),
@@ -624,6 +651,7 @@ async function fetchUnifiedEvidenceExperienceFresh(organizationId: string, id: s
       latestEventAt: provider._max.occurredAt,
       connection: connectionByProvider.get(provider.providerKey) ?? null,
     })),
+    complianceEvaluation,
   };
 }
 
@@ -641,6 +669,7 @@ function deserializeUnifiedEvidenceExperience<T extends {
   events: Array<Parameters<typeof deserializeEventDates>[0]>;
   members: Array<{ reviewedAt: unknown; createdAt: unknown; updatedAt: unknown }>;
   providers: Array<{ latestEventAt: unknown; connection: Parameters<typeof deserializeConnection>[0] }>;
+  complianceEvaluation: { createdAt: unknown } | null;
 }>(record: T) {
   return {
     ...record,
@@ -661,6 +690,9 @@ function deserializeUnifiedEvidenceExperience<T extends {
       latestEventAt: toDate(provider.latestEventAt as Parameters<typeof toDate>[0]),
       connection: deserializeConnection(provider.connection),
     })),
+    complianceEvaluation: record.complianceEvaluation
+      ? { ...record.complianceEvaluation, createdAt: toDate(record.complianceEvaluation.createdAt as Parameters<typeof toDate>[0]) }
+      : null,
   };
 }
 
