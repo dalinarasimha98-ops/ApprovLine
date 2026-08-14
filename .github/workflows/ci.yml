@@ -15,6 +15,11 @@ jobs:
     timeout-minutes: 10
     env:
       DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/approvline
+      # CI's Postgres is a single throwaway service container with no
+      # PgBouncer in front of it - DIRECT_URL only exists in production to
+      # bypass Supabase's pooler for migrations (see prisma/schema.prisma's
+      # directUrl), so here it's simply the same connection as DATABASE_URL.
+      DIRECT_URL: postgresql://ci:ci@127.0.0.1:5432/approvline
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     steps:
       - name: Checkout code
