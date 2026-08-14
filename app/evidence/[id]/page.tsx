@@ -50,8 +50,9 @@ async function EvidenceDetailContent({ id }: { id: string }) {
   let record;
   try {
     record = await getUnifiedEvidenceExperience(tenant.organization.id, id, 40);
+    console.log('[evidence-detail] data loaded:', record ? 'success' : 'null/undefined', { id });
   } catch (error) {
-    console.error('[evidence-detail] fetch failed', error);
+    console.error('[evidence-detail] fetch failed', { id }, error);
     return (
       <section className="mx-auto grid w-full max-w-3xl gap-4 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-wide text-amber-700">Evidence record</p>
@@ -63,7 +64,10 @@ async function EvidenceDetailContent({ id }: { id: string }) {
       </section>
     );
   }
-  if (!record) notFound();
+  if (!record) {
+    console.error('[evidence-detail] no data returned for id:', id);
+    notFound();
+  }
 
   return <UnifiedEvidenceExperience initialData={serialize(record) as unknown as UnifiedEvidenceData} />;
 }

@@ -422,8 +422,28 @@ class EvidenceDetailCircuitOpenError extends Error {
   }
 }
 
-async function withEvidenceDetailRetry<T>(label: string, fn: () => Promise<T>, timeoutMs: number): Promise<T> {
-  if (isEvidenceDetailBreakerOpen()) throw new EvidenceDetailCircuitOpenError();
+/**
+ * `critical` gates whether a failure counts toward the shared breaker.
+ * Several callers below (providerCounts/connections/latestEvent/
+ * complianceEvaluation) already tolerate their own failure by falling back
+ * to an empty/null default at the call site via `.catch()` on the
+ * Promise.all entry - the page renders fine without them. Before this fix
+ * those non-critical failures still called recordEvidenceDetailFailure()
+ * here, so three unrelated, already-handled sub-query blips (e.g. from
+ * ordinary connection-pool contention while several detail pages load
+ * concurrently) could trip the breaker and block the one query that
+ * actually matters - the main record fetch - for every user, for 60
+ * seconds, even though nothing about the main record lookup was failing.
+ * Only `critical: true` (the main record queries) should be able to open
+ * the breaker.
+ */
+async function withEvidenceDetailRetry<T>(
+  label: string,
+  fn: () => Promise<T>,
+  timeoutMs: number,
+  options: { critical: boolean } = { critical: true },
+): Promise<T> {
+  if (options.critical && isEvidenceDetailBreakerOpen()) throw new EvidenceDetailCircuitOpenError();
   const attempt = () => withTimeout(label, fn(), timeoutMs);
   try {
     const result = await attempt().catch(async (error) => {
@@ -432,10 +452,10 @@ async function withEvidenceDetailRetry<T>(label: string, fn: () => Promise<T>, t
       await sleep(300);
       return attempt();
     });
-    recordEvidenceDetailSuccess();
+    if (options.critical) recordEvidenceDetailSuccess();
     return result;
   } catch (error) {
-    if (!isMigrationError(error instanceof Error ? error.message : String(error))) {
+    if (options.critical && !isMigrationError(error instanceof Error ? error.message : String(error))) {
       recordEvidenceDetailFailure();
     }
     throw error;
@@ -563,6 +583,7 @@ async function fetchUnifiedEvidenceExperienceFresh(organizationId: string, id: s
           _max: { occurredAt: true },
         }),
       EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+      { critical: false },
     ).catch(() => [] as Array<{ providerKey: string; _count: { _all: number }; _max: { occurredAt: Date | null } }>),
     withEvidenceDetailRetry(
       'evidence:connections',
@@ -590,6 +611,7 @@ async function fetchUnifiedEvidenceExperienceFresh(organizationId: string, id: s
           },
         }),
       EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+      { critical: false },
     ).catch(() => []),
     withEvidenceDetailRetry(
       'evidence:latestEvent',
@@ -600,6 +622,7 @@ async function fetchUnifiedEvidenceExperienceFresh(organizationId: string, id: s
           select: { id: true },
         }),
       EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+      { critical: false },
     ).catch(() => null),
     // Only meaningful when this record is actually linked to an approval -
     // primaryApprovalId is optional (correlation-only records have none),
@@ -626,6 +649,7 @@ async function fetchUnifiedEvidenceExperienceFresh(organizationId: string, id: s
               orderBy: { createdAt: 'desc' },
             }),
           EVIDENCE_DETAIL_QUERY_TIMEOUT_MS,
+          { critical: false },
         ).catch(() => null)
       : Promise.resolve(null),
   ]);
