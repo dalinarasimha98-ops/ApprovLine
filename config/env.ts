@@ -38,6 +38,7 @@ const envSchema = z.object({
   LEAD_NOTIFICATION_WEBHOOK_URL: optionalEnvString,
   CRM_WEBHOOK_URL: optionalEnvString,
   LEAD_WEBHOOK_BEARER_TOKEN: optionalEnvString,
+  CACHE_BUST_SECRET: optionalEnvString,
 });
 
 export const env = envSchema.parse(process.env);

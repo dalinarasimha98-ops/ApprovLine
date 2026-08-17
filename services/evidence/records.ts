@@ -79,7 +79,9 @@ class EvidenceListCircuitOpenError extends Error {
 
 const EVIDENCE_LIST_QUERY_TIMEOUT_MS = 3000;
 const EVIDENCE_LIST_TOTAL_FETCH_TIMEOUT_MS = 5000;
-const EVIDENCE_LIST_REVALIDATE_SECONDS = 60;
+// TEMPORARY: 1, not 60 - forcing near-immediate cache expiry to verify
+// stale post-deletion evidence data has cleared. Revert to 60 once confirmed.
+const EVIDENCE_LIST_REVALIDATE_SECONDS = 1;
 const EVIDENCE_LIST_STALE_CACHE_TTL_MS = 10 * 60 * 1000;
 
 const publicEventSelect = {
@@ -351,7 +353,9 @@ export async function getLatestUnifiedEvidenceRecordId(organizationId: string): 
 // function - it has no "serve the last successful value even though this
 // attempt errored" primitive. Mirrors lib/approvalRecords.ts's
 // lastGoodStore().
-const EVIDENCE_DETAIL_REVALIDATE_SECONDS = 60;
+// TEMPORARY: 1, not 60 - see EVIDENCE_LIST_REVALIDATE_SECONDS above. Revert
+// to 60 once stale evidence data is confirmed cleared.
+const EVIDENCE_DETAIL_REVALIDATE_SECONDS = 1;
 const EVIDENCE_DETAIL_STALE_CACHE_TTL_MS = 10 * 60 * 1000;
 
 type LastGoodEntry<T> = { value: T; cachedAt: number };
