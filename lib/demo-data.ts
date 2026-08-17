@@ -1,7 +1,6 @@
-import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import type { ApprovalStatus, ApprovalType, IntegrationProvider } from '@prisma/client';
-import { approvalRecordsCacheTag } from '@/lib/approvalRecords';
+import { invalidateApprovalRecordsCache } from '@/lib/approvalRecords';
 import { createDemoInvestigationsForOrganization } from '@/services/investigations';
 import { evaluateRecentApprovals, seedDemoPlaybooks } from '@/services/playbooks';
 
@@ -784,7 +783,7 @@ export async function createDemoDataForOrganization(organizationId: string) {
   const playbooks = await seedDemoPlaybooks(organizationId);
   const evaluations = await evaluateRecentApprovals(organizationId, 50);
   const investigations = await createDemoInvestigationsForOrganization(organizationId);
-  revalidateTag(approvalRecordsCacheTag(organizationId));
+  invalidateApprovalRecordsCache(organizationId);
   return { approvalCount: created.length, investigationCount: investigations.investigationCount, playbookCount: playbooks.created, evaluationCount: evaluations.length };
 }
 
@@ -877,6 +876,6 @@ export async function resetDemoDataForOrganization(organizationId: string) {
     }),
   ]);
 
-  revalidateTag(approvalRecordsCacheTag(organizationId));
+  invalidateApprovalRecordsCache(organizationId);
   return { reset: true };
 }
