@@ -7,7 +7,16 @@ import { withTimeout } from '@/lib/performance';
 import { toDate } from '@/lib/types/dates';
 import { enqueueIncomingMessage, type IncomingMessageJob } from '@/services/queue/approvalQueue';
 
-const EVIDENCE_DETAIL_QUERY_TIMEOUT_MS = 3000;
+// 5000ms, not 3000ms - matches the same fix already applied to approval
+// detail's core query (services/approvalDetail.ts). These queries
+// themselves are lean/indexed; the budget has to cover connection-pool
+// queue wait under real concurrent traffic, not just execution time.
+// Confirmed via production logs (vercel logs): genuine "evidence:record
+// timed out after 3000ms" failures recurring under real traffic even
+// after connection_limit was corrected - these are not connection-pool
+// exhaustion errors (no "connection limit" text alongside them), just a
+// budget that's too tight for real-world concurrent load.
+const EVIDENCE_DETAIL_QUERY_TIMEOUT_MS = 5000;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

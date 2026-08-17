@@ -10,8 +10,16 @@ const allowedHighAdvisories = new Map([
     "Dev-only ESLint dependency chain; npm fix currently requires an incompatible ESLint release.",
   ],
   [
+    "@prisma/config",
+    "Depends on deepmerge-ts (GHSA-ggr8-5vv4-36mx); the patched version only exists on the Prisma 7.x major line, deferred as its own upgrade rather than forced here.",
+  ],
+  [
     "brace-expansion",
     "Dev-only ESLint/minimatch dependency chain; production runtime is not affected.",
+  ],
+  [
+    "deepmerge-ts",
+    "Transitive dep of @prisma/config (stack exhaustion, GHSA-ggr8-5vv4-36mx); the patched 8.x release only exists on the Prisma 7.x line, which is a separate major-version upgrade, not a same-major patch.",
   ],
   [
     "eslint",
@@ -31,6 +39,10 @@ const allowedHighAdvisories = new Map([
   [
     "next",
     "Tracked upstream Next/Image dependency advisory; npm's suggested fix path is not safe for the current Next 15 app.",
+  ],
+  [
+    "prisma",
+    "Depends on @prisma/config -> deepmerge-ts (GHSA-ggr8-5vv4-36mx); fixed only on the Prisma 7.x major line, deferred as its own upgrade rather than forced here.",
   ],
   [
     "sharp",
