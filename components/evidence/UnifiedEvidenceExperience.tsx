@@ -2230,13 +2230,24 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             ['Approver email', initialData.approverEmail ?? 'Not captured'],
             ['Verification', titleCase(initialData.verificationStatus)],
             ['Risk level', initialData.riskLevel ?? 'Not assessed'],
-            ['Primary approval', initialData.primaryApproval?.id ?? 'Not linked'],
           ].map(([label, value]) => (
             <div key={label} className="bg-[#06101f] p-4">
               <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">{label}</dt>
               <dd className="mt-2 break-words text-sm font-semibold text-slate-200">{value}</dd>
             </div>
           ))}
+          <div className="bg-[#06101f] p-4">
+            <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">Primary approval</dt>
+            <dd className="mt-2 break-words text-sm font-semibold">
+              {initialData.primaryApproval ? (
+                <Link href={`/approvals/${initialData.primaryApproval.id}`} className="text-blue-300 underline decoration-blue-300/40 underline-offset-2 hover:text-blue-200">
+                  {initialData.primaryApproval.id}
+                </Link>
+              ) : (
+                <span className="text-slate-200">Not linked</span>
+              )}
+            </dd>
+          </div>
         </dl>
       );
     }
