@@ -18,18 +18,19 @@ type PendingLinkProps = {
 // gets interrupted or silently dropped (e.g. a concurrent router.refresh()
 // racing an in-flight Link navigation, such as AutoRetryOnDegraded's
 // polling while a list is in its degraded state) leaves the spinner shown
-// forever. This bounds it: if the route hasn't changed by this point, the
-// link reverts to its normal clickable state so a retry click always
-// works, instead of the user being stuck. Set above the slowest documented
-// worst-case detail-page load (core timeout + one retry, ~9-10s under
-// connection-pool pressure) so it doesn't fire while a real navigation is
-// still legitimately in flight.
+// forever. Set above the slowest documented worst-case detail-page load
+// (core timeout + one retry, ~9-10s under connection-pool pressure) so it
+// doesn't fire while a real navigation is still legitimately in flight.
 const STUCK_TRANSITION_TIMEOUT_MS = 10_000;
 
 export function PendingLink({ href, children, pendingText = 'Redirecting...', className, prefetch }: PendingLinkProps) {
   const [pending, setPending] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const isExternal = href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:');
+  const targetPath = isExternal ? href : href.split('?')[0];
+  const isCurrentPage = targetPath === pathname;
+  const shouldPrefetch = prefetch ?? !isExternal;
 
   useEffect(() => {
     setPending(false);
@@ -41,20 +42,26 @@ export function PendingLink({ href, children, pendingText = 'Redirecting...', cl
   // it - a concurrent refresh can interrupt an in-flight Link push, which
   // looks exactly like this: the destination page's data loads fine
   // server-side, but the browser never actually lands on the new route.
+  //
+  // If the timeout still fires despite that - client-side navigation can
+  // fail to commit for reasons beyond that one identified race - falling
+  // back to a real browser navigation (window.location.href) is a strict
+  // superset of what a client-side push does: it cannot silently get
+  // interrupted or lost the way an in-flight router transition can. This
+  // guarantees a click eventually opens the destination even if the exact
+  // cause of a stuck SPA transition is never fully pinned down.
   useEffect(() => {
     if (!pending) return;
     markNavigationPending();
-    const timeout = setTimeout(() => setPending(false), STUCK_TRANSITION_TIMEOUT_MS);
+    const timeout = setTimeout(() => {
+      setPending(false);
+      if (!isExternal) window.location.href = href;
+    }, STUCK_TRANSITION_TIMEOUT_MS);
     return () => {
       clearTimeout(timeout);
       markNavigationSettled();
     };
-  }, [pending]);
-
-  const isExternal = href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:');
-  const targetPath = isExternal ? href : href.split('?')[0];
-  const isCurrentPage = targetPath === pathname;
-  const shouldPrefetch = prefetch ?? !isExternal;
+  }, [pending, href, isExternal]);
 
   const primeRoute = () => {
     if (!isExternal) router.prefetch(href);
