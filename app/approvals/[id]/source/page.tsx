@@ -44,6 +44,7 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
             sender: true,
             senderEmail: true,
             receivedAt: true,
+            rawPayload: true,
           },
         },
       },
@@ -122,6 +123,19 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
                 </div>
               )}
               <a href={`/api/approvals/${id}/evidence`} download className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700">Download evidence</a>
+            </div>
+
+            <div className="mt-6">
+              <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Raw Payload</p>
+              <h2 className="mt-1 text-xl font-black text-slate-950">Captured source data</h2>
+              {source?.rawPayload ? (
+                <pre className="mt-3 max-h-96 overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-700">{JSON.stringify(source.rawPayload, null, 2)}</pre>
+              ) : (
+                <div className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+                  <p className="font-black text-slate-950">No raw payload retained</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">This approval has no linked message source, or the captured payload was not persisted.</p>
+                </div>
+              )}
             </div>
           </article>
 
