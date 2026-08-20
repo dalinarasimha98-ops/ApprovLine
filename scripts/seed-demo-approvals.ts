@@ -22,12 +22,26 @@
  * actually render sources/counts correctly: UnifiedEvidenceMember rows
  * linking each event to its UnifiedEvidenceRecord.
  *
- * Idempotent via ApprovalRecord.correlationId, prefixed with SEED_RUN_ID -
- * a readable marker (not a hash) so a re-run can find prior seeded rows
- * before creating anything, and so a future cleanup script can identify
- * these rows precisely the way clear-demo-data.ts does for lib/demo-data.ts's
- * seed. sourceLink/sourcePlatform values are realistic, not tagged with
- * 'demo'/'TDEMO' - see the summary for why that's a deliberate tradeoff.
+ * One transaction per group, not one transaction for all 15 approvals -
+ * a single transaction spanning every group (~52 sequential writes)
+ * exceeded Prisma's interactive-transaction timeout under PgBouncer's
+ * transaction-mode pooling (P2028: "Transaction not found. Transaction
+ * timed out"). If a group's transaction fails, it rolls back cleanly and
+ * the script continues to the next group rather than aborting the whole
+ * run - see the end-of-run summary for which groups succeeded, were
+ * skipped, or failed.
+ *
+ * Idempotent at the group level: before writing anything, checks for an
+ * existing UnifiedEvidenceRecord with the same subject (title) + this
+ * organizationId and skips that group if found. This is what makes a
+ * partial prior run safe to re-run - a group that already succeeded is
+ * skipped, not recreated or duplicated, and only the groups that never
+ * completed get retried. ApprovalRecord.correlationId is still tagged
+ * with SEED_RUN_ID per approval (not used for idempotency here, but kept
+ * so a future cleanup script can identify these rows precisely the way
+ * clear-demo-data.ts does for lib/demo-data.ts's seed). sourceLink/
+ * sourcePlatform values are realistic, not tagged with 'demo'/'TDEMO' -
+ * see the summary for why that's a deliberate tradeoff.
  *
  * Usage:
  *   npx tsx scripts/seed-demo-approvals.ts --org <organizationId> --dry-run
@@ -450,40 +464,19 @@ function summarize() {
   console.log(`  APPROVED / PENDING_REVIEW split: ${totalApprovals - pendingCount} / ${pendingCount}`);
 }
 
-async function main() {
-  const { organizationId, dryRun } = parseArgs(process.argv.slice(2));
-  if (!organizationId) {
-    console.error('Usage: npx tsx scripts/seed-demo-approvals.ts --org <organizationId> [--dry-run|--apply]');
-    process.exit(1);
-  }
-
-  const organization = await prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true, name: true } });
-  if (!organization) {
-    console.error(`No organization found with id ${organizationId}`);
-    process.exit(1);
-  }
-
-  const alreadySeeded = await prisma.approvalRecord.count({
-    where: { organizationId, correlationId: { startsWith: SEED_RUN_ID } },
-  });
-
-  console.log(`Organization: ${organization.name} (${organization.id})`);
-  console.log(dryRun ? '\nMode: DRY RUN - nothing will be written.\n' : '\nMode: APPLY - writing to the database.\n');
-
-  if (alreadySeeded > 0) {
-    console.log(`Already seeded: found ${alreadySeeded} ApprovalRecord row(s) with correlationId starting with "${SEED_RUN_ID}". Skipping - this run is idempotent.`);
-    return;
-  }
-
-  summarize();
-
-  if (dryRun) {
-    console.log('\nDry run complete. Re-run with --apply to write these records.');
-    return;
-  }
-
-  await prisma.$transaction(async (tx) => {
-    for (const group of groups) {
+/**
+ * One group per transaction, not all 15 approvals in one. A single
+ * transaction spanning every group (~52 sequential writes) exceeded
+ * Prisma's interactive-transaction timeout under PgBouncer's transaction-
+ * mode pooling (P2028: "Transaction not found. Transaction timed out").
+ * Each group here is at most 10 writes (3 approvals + 1 unified record +
+ * 3 events + 3 members), comfortably inside the timeout, and an explicit
+ * 10s ceiling is set as extra margin for real connection-pool queue wait
+ * rather than relying on Prisma's 5s default.
+ */
+async function createGroup(organizationId: string, group: GroupSeed) {
+  return prisma.$transaction(
+    async (tx) => {
       const createdApprovals = [];
       for (const approval of group.approvals) {
         const created = await tx.approvalRecord.create({
@@ -594,11 +587,94 @@ async function main() {
         });
       }
 
-      console.log(`Created: ${group.title} — ${group.approvals.length} approval(s), 1 UnifiedEvidenceRecord, ${group.approvals.length} CanonicalEvidenceEvent(s)`);
-    }
-  });
+      return { approvalCount: createdApprovals.length, eventCount: createdApprovals.length };
+    },
+    { timeout: 10_000, maxWait: 10_000 },
+  );
+}
 
-  console.log('\nDone. This script cannot call revalidateTag() outside a Next.js request scope, so unstable_cache entries for this org will keep serving pre-seed data until you redeploy or call /api/admin/bust-cache.');
+async function main() {
+  const { organizationId, dryRun } = parseArgs(process.argv.slice(2));
+  if (!organizationId) {
+    console.error('Usage: npx tsx scripts/seed-demo-approvals.ts --org <organizationId> [--dry-run|--apply]');
+    process.exit(1);
+  }
+
+  const organization = await prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true, name: true } });
+  if (!organization) {
+    console.error(`No organization found with id ${organizationId}`);
+    process.exit(1);
+  }
+
+  console.log(`Organization: ${organization.name} (${organization.id})`);
+  console.log(dryRun ? '\nMode: DRY RUN - nothing will be written.\n' : '\nMode: APPLY - writing to the database, one group per transaction.\n');
+
+  // Group-level idempotency: a UnifiedEvidenceRecord with this exact title
+  // already existing for this org means that group was already seeded (by
+  // this script or a prior partial run) - checked per group, not once
+  // globally, so a run that failed partway through (e.g. after Legal MSA
+  // succeeded but Finance failed) correctly skips only the groups that are
+  // already there and retries the rest, rather than skipping everything or
+  // recreating duplicates.
+  const existingTitles = new Set(
+    (
+      await prisma.unifiedEvidenceRecord.findMany({
+        where: { organizationId, subject: { in: groups.map((group) => group.title) } },
+        select: { subject: true },
+      })
+    ).map((record) => record.subject),
+  );
+
+  summarize();
+
+  if (existingTitles.size > 0) {
+    console.log(`\nAlready seeded (${existingTitles.size} of ${groups.length} groups) - will be skipped:`);
+    for (const title of existingTitles) console.log(`  - ${title}`);
+  }
+
+  if (dryRun) {
+    console.log('\nDry run complete. Re-run with --apply to write the remaining groups.');
+    return;
+  }
+
+  const succeeded: string[] = [];
+  const skipped: string[] = [...existingTitles];
+  const failed: Array<{ title: string; error: string }> = [];
+  let totalApprovalsCreated = 0;
+  let totalEventsCreated = 0;
+
+  for (const group of groups) {
+    if (existingTitles.has(group.title)) continue;
+
+    try {
+      const result = await createGroup(organizationId, group);
+      succeeded.push(group.title);
+      totalApprovalsCreated += result.approvalCount;
+      totalEventsCreated += result.eventCount;
+      console.log(`Created: ${group.title} — ${result.approvalCount} approval(s), 1 UnifiedEvidenceRecord, ${result.eventCount} CanonicalEvidenceEvent(s)`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failed.push({ title: group.title, error: message });
+      console.error(`Failed: ${group.title} — ${message}`);
+      // Group's own transaction already rolled back on error - nothing
+      // partial from this group is left behind. Continue to the next
+      // group rather than aborting the whole run.
+    }
+  }
+
+  console.log('\n--- Summary ---');
+  console.log(`Succeeded: ${succeeded.length} group(s)${succeeded.length ? ` — ${succeeded.join(', ')}` : ''}`);
+  console.log(`Skipped (already existed): ${skipped.length} group(s)${skipped.length ? ` — ${skipped.join(', ')}` : ''}`);
+  console.log(`Failed: ${failed.length} group(s)`);
+  for (const failure of failed) console.log(`  - ${failure.title}: ${failure.error}`);
+  console.log(`\nTotal created this run: ${totalApprovalsCreated} ApprovalRecord, ${succeeded.length} UnifiedEvidenceRecord, ${totalEventsCreated} CanonicalEvidenceEvent, ${totalEventsCreated} UnifiedEvidenceMember`);
+
+  if (failed.length > 0) {
+    console.log('\nRe-run the same command to retry the failed group(s) - already-succeeded groups will be skipped automatically.');
+    process.exitCode = 1;
+  }
+
+  console.log('\nThis script cannot call revalidateTag() outside a Next.js request scope, so unstable_cache entries for this org will keep serving pre-seed data until you redeploy or call /api/admin/bust-cache.');
 }
 
 main()
