@@ -34,6 +34,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { PendingLink } from '@/components/system/PendingLink';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -2240,9 +2241,9 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">Primary approval</dt>
             <dd className="mt-2 break-words text-sm font-semibold">
               {initialData.primaryApproval ? (
-                <Link href={`/approvals/${initialData.primaryApproval.id}`} className="text-blue-300 underline decoration-blue-300/40 underline-offset-2 hover:text-blue-200">
+                <PendingLink href={`/approvals/${initialData.primaryApproval.id}`} pendingText="Opening approval..." className="text-blue-300 underline decoration-blue-300/40 underline-offset-2 hover:text-blue-200">
                   {initialData.primaryApproval.id}
-                </Link>
+                </PendingLink>
               ) : (
                 <span className="text-slate-200">Not linked</span>
               )}
@@ -2357,7 +2358,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               {actionsOpen ? (
                 <div className="absolute right-0 top-11 z-30 w-52 rounded-xl border border-white/10 bg-[#071426] p-1.5 shadow-2xl">
                   {initialData.primaryApproval ? (
-                    <Link href={`/approvals/${initialData.primaryApproval.id}`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/[0.05]"><ClipboardCheck className="h-3.5 w-3.5" /> View full approval</Link>
+                    <PendingLink href={`/approvals/${initialData.primaryApproval.id}`} pendingText="Opening approval..." className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/[0.05]"><ClipboardCheck className="h-3.5 w-3.5" /> View full approval</PendingLink>
                   ) : null}
                   <button type="button" onClick={() => { setActiveTab('analysis'); setActionsOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-300 hover:bg-white/[0.05]"><Sparkles className="h-3.5 w-3.5" /> Explain correlation</button>
                   <Link href="/investigations" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/[0.05]"><AlertTriangle className="h-3.5 w-3.5" /> Open investigation center</Link>
