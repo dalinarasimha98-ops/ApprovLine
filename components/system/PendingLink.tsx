@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { markNavigationPending, markNavigationSettled } from '@/lib/navigation-pending';
 
 type PendingLinkProps = {
   href: string;
@@ -34,10 +35,20 @@ export function PendingLink({ href, children, pendingText = 'Redirecting...', cl
     setPending(false);
   }, [pathname]);
 
+  // markNavigationPending()/markNavigationSettled() (lib/navigation-pending.ts)
+  // let AutoRetryOnDegraded's background router.refresh() polling know a
+  // real navigation is in flight, so it can skip a cycle instead of racing
+  // it - a concurrent refresh can interrupt an in-flight Link push, which
+  // looks exactly like this: the destination page's data loads fine
+  // server-side, but the browser never actually lands on the new route.
   useEffect(() => {
     if (!pending) return;
+    markNavigationPending();
     const timeout = setTimeout(() => setPending(false), STUCK_TRANSITION_TIMEOUT_MS);
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      markNavigationSettled();
+    };
   }, [pending]);
 
   const isExternal = href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:');
