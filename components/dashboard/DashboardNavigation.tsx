@@ -22,6 +22,18 @@ import {
   Users,
 } from 'lucide-react';
 import { findRoutePermission, hasAnyRole, type Role } from '@/lib/rbac';
+import { markNavigationPending, markNavigationSettled } from '@/lib/navigation-pending';
+
+// Mirrors PendingLink's stuck-transition fallback (components/system/PendingLink.tsx) -
+// this nav renders its own Link/pending-state pair instead of reusing PendingLink (it
+// needs one shared "currently navigating" href across every item, for the progress bar
+// and active-item highlighting), so without this it never inherited that fix. A
+// concurrent router.refresh() - e.g. AutoRetryOnDegraded polling while a page it's
+// rendered on is in its degraded state - can interrupt an in-flight click the same way
+// it did for PendingLink before that fix, leaving a sidebar click looking like it does
+// nothing forever. Falls back to a real browser navigation, which can't be interrupted
+// the way a client-side transition can.
+const STUCK_TRANSITION_TIMEOUT_MS = 10_000;
 
 type NavigationItem = {
   href: string;
@@ -71,6 +83,20 @@ export function DashboardNavigation({ mobile = false, role = null }: { mobile?: 
   useEffect(() => {
     setPendingHref(null);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!pendingHref) return;
+    markNavigationPending();
+    const stuckHref = pendingHref;
+    const timeout = setTimeout(() => {
+      setPendingHref(null);
+      window.location.href = stuckHref;
+    }, STUCK_TRANSITION_TIMEOUT_MS);
+    return () => {
+      clearTimeout(timeout);
+      markNavigationSettled();
+    };
+  }, [pendingHref]);
 
   useEffect(() => {
     const warmRoutes = () => {

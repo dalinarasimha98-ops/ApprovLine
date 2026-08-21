@@ -24,11 +24,21 @@ export const dynamic = 'force-dynamic';
 const panelClass = 'rounded-lg border border-white/[0.09] bg-[#071525] shadow-[0_12px_36px_rgba(0,0,0,.16)]';
 const palette = ['#2f7cff', '#49c78e', '#7c6cf2', '#f58b3d', '#46b6df', '#aeb9c8'];
 
-async function safeMetric<T>(label: string, query: Promise<T>, fallback: T) {
+/**
+ * A failed/timed-out metric silently falling back to 0 or [] used to render
+ * as if the workspace were genuinely empty (0 approvals, 100% compliance,
+ * 0/0 sources) even when the org has real data - misleading, and specifically
+ * what was happening under connection-pool pressure on cold starts (the same
+ * class of issue documented around PgBouncer/connection_limit elsewhere in
+ * this app). `degraded` collects which metrics fell back so the caller can
+ * surface the existing "data delayed" banner instead of a false empty state.
+ */
+async function safeMetric<T>(label: string, query: Promise<T>, fallback: T, degraded: string[]) {
   try {
-    return await withTimeout(label, query, 1800);
+    return await withTimeout(label, query, 4000);
   } catch (error) {
     console.error(`[dashboard] ${label} failed`, error);
+    degraded.push(label);
     return fallback;
   }
 }
@@ -169,6 +179,7 @@ export default async function DashboardPage() {
 
   const organizationId = tenant.organization?.id;
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const degradedMetrics: string[] = [];
   const [
     totalApprovals,
     pendingReview,
@@ -182,16 +193,16 @@ export default async function DashboardPage() {
     trendRecords,
   ] = organizationId
     ? await Promise.all([
-        safeMetric('total approvals', prisma.approvalRecord.count({ where: { organizationId } }), 0),
-        safeMetric('pending approvals', prisma.approvalRecord.count({ where: { organizationId, status: 'PENDING_REVIEW' } }), 0),
-        safeMetric('high risk approvals', prisma.approvalRecord.count({ where: { organizationId, riskLevel: { in: ['high', 'critical'] } } }), 0),
-        safeMetric('recent approvals', prisma.approvalRecord.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 6 }), []),
-        safeMetric('approval categories', prisma.approvalRecord.groupBy({ by: ['category'], where: { organizationId }, _count: { _all: true }, orderBy: { _count: { category: 'desc' } }, take: 6 }), []),
-        safeMetric('integrations', prisma.integration.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 12 }), []),
-        safeMetric('evidence count', prisma.unifiedEvidenceRecord.count({ where: { organizationId } }), 0),
-        safeMetric('recent evidence', prisma.unifiedEvidenceRecord.findMany({ where: { organizationId }, orderBy: { lastSeenAt: 'desc' }, take: 5 }), []),
-        safeMetric('recent audit', prisma.auditLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 5 }), []),
-        safeMetric('approval trend', prisma.approvalRecord.findMany({ where: { organizationId, createdAt: { gte: since } }, select: { createdAt: true }, orderBy: { createdAt: 'asc' }, take: 500 }), []),
+        safeMetric('total approvals', prisma.approvalRecord.count({ where: { organizationId } }), 0, degradedMetrics),
+        safeMetric('pending approvals', prisma.approvalRecord.count({ where: { organizationId, status: 'PENDING_REVIEW' } }), 0, degradedMetrics),
+        safeMetric('high risk approvals', prisma.approvalRecord.count({ where: { organizationId, riskLevel: { in: ['high', 'critical'] } } }), 0, degradedMetrics),
+        safeMetric('recent approvals', prisma.approvalRecord.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 6 }), [], degradedMetrics),
+        safeMetric('approval categories', prisma.approvalRecord.groupBy({ by: ['category'], where: { organizationId }, _count: { _all: true }, orderBy: { _count: { category: 'desc' } }, take: 6 }), [], degradedMetrics),
+        safeMetric('integrations', prisma.integration.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 12 }), [], degradedMetrics),
+        safeMetric('evidence count', prisma.unifiedEvidenceRecord.count({ where: { organizationId } }), 0, degradedMetrics),
+        safeMetric('recent evidence', prisma.unifiedEvidenceRecord.findMany({ where: { organizationId }, orderBy: { lastSeenAt: 'desc' }, take: 5 }), [], degradedMetrics),
+        safeMetric('recent audit', prisma.auditLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 5 }), [], degradedMetrics),
+        safeMetric('approval trend', prisma.approvalRecord.findMany({ where: { organizationId, createdAt: { gte: since } }, select: { createdAt: true }, orderBy: { createdAt: 'asc' }, take: 500 }), [], degradedMetrics),
       ])
     : [0, 0, 0, [], [], [], 0, [], [], []] as const;
 
@@ -222,9 +233,9 @@ export default async function DashboardPage() {
           <h1 className="text-xl font-bold tracking-tight text-white">Good morning, {displayName} 👋</h1>
           <p className="mt-1 text-xs text-slate-500">Here&apos;s what&apos;s happening across your organization today.</p>
         </div>
-        {tenant.status !== 'ready' ? (
+        {tenant.status !== 'ready' || degradedMetrics.length > 0 ? (
           <Link href="/api/debug/dashboard" className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200">
-            Workspace data delayed · Open diagnostics
+            Workspace data delayed · Some numbers below may be incomplete · Open diagnostics
           </Link>
         ) : null}
       </div>
