@@ -1,6 +1,8 @@
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { ApprovalActions } from '@/components/approvals/ApprovalActions';
+import { CopyEvidenceLinkButton } from '@/components/approvals/CopyEvidenceLinkButton';
+import { EvidenceMessageCard } from '@/components/approvals/EvidenceMessageCard';
 import { ManualApprovalPanel } from '@/components/approvals/ManualApprovalPanel';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
@@ -217,24 +219,29 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
                 <p><span className="font-black text-slate-950">Reasoning:</span> {core.reasoning}</p>
                 {core.conditions ? <p><span className="font-black text-slate-950">Conditions:</span> {core.conditions}</p> : null}
                 {core.businessImpact ? <p><span className="font-black text-slate-950">Business impact:</span> {core.businessImpact}</p> : null}
-                {core.evidenceSnippet ? (
-                  <blockquote className="rounded-2xl border border-blue-100 bg-blue-50 p-4 font-semibold text-slate-700">
-                    “{core.evidenceSnippet}”
-                  </blockquote>
+                {core.evidenceSnippet || core.approverName ? (
+                  <EvidenceMessageCard
+                    platform={core.sourcePlatform ?? core.messageSource?.provider}
+                    senderName={core.approverName ?? core.messageSource?.sender ?? 'Unknown approver'}
+                    senderEmail={core.approverEmail ?? core.messageSource?.senderEmail}
+                    timestamp={dateText(core.approvalTimestamp ?? core.occurredAt)}
+                    content={core.evidenceSnippet}
+                  />
                 ) : (
                   <p className="rounded-2xl border border-dashed border-slate-200 p-4 font-semibold text-slate-500">No evidence snippet captured yet.</p>
                 )}
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-slate-500">Raw original evidence</p>
-                  {core.messageSource?.rawPayload ? (
-                    <pre className="mt-2 max-h-80 overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-700">{JSON.stringify(core.messageSource.rawPayload, null, 2)}</pre>
-                  ) : (
-                    <p className="mt-2 rounded-2xl border border-dashed border-slate-200 p-4 font-semibold text-slate-500">No raw payload retained for this approval.</p>
-                  )}
+                {core.messageSource?.rawPayload ? (
+                  <details className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <summary className="cursor-pointer text-xs font-black uppercase tracking-wide text-slate-500">Raw captured payload</summary>
+                    <pre className="mt-3 max-h-80 overflow-auto rounded-xl bg-white p-4 text-xs leading-5 text-slate-700">{JSON.stringify(core.messageSource.rawPayload, null, 2)}</pre>
+                  </details>
+                ) : null}
+                <div className="flex flex-wrap gap-3">
+                  <PendingLink href={`/approvals/${core.id}/source`} pendingText="Opening source..." className="inline-flex w-fit min-h-0 h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+                    Open Source
+                  </PendingLink>
+                  <CopyEvidenceLinkButton path={`/approvals/${core.id}/source`} className="inline-flex w-fit min-h-0 h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50" />
                 </div>
-                <PendingLink href={`/approvals/${core.id}/source`} pendingText="Opening source..." className="inline-flex w-fit min-h-0 h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
-                  Open Source
-                </PendingLink>
               </div>
             </div>
 

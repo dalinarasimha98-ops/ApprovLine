@@ -1,4 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
+import { CopyEvidenceLinkButton } from '@/components/approvals/CopyEvidenceLinkButton';
+import { EvidenceMessageCard } from '@/components/approvals/EvidenceMessageCard';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
@@ -101,8 +103,16 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
           <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Captured Evidence</p>
             <h2 className="mt-1 text-xl font-black text-slate-950">Decision context</h2>
-            {approval.evidenceSnippet ? (
-              <blockquote className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-5 text-base font-semibold leading-7 text-slate-700">“{approval.evidenceSnippet}”</blockquote>
+            {approval.evidenceSnippet || approval.approverName ? (
+              <div className="mt-5">
+                <EvidenceMessageCard
+                  platform={approval.sourcePlatform ?? source?.provider}
+                  senderName={approval.approverName ?? source?.sender ?? 'Unknown approver'}
+                  senderEmail={approval.approverEmail ?? source?.senderEmail}
+                  timestamp={dateText(approval.approvalTimestamp ?? approval.occurredAt)}
+                  content={approval.evidenceSnippet}
+                />
+              </div>
             ) : (
               <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
                 <p className="font-black text-slate-950">Evidence text was not retained</p>
@@ -123,20 +133,20 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
                 </div>
               )}
               <a href={`/api/approvals/${id}/evidence`} download className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700">Download evidence</a>
+              <CopyEvidenceLinkButton path={`/approvals/${id}/source`} className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50" />
             </div>
 
-            <div className="mt-6">
-              <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Raw Payload</p>
-              <h2 className="mt-1 text-xl font-black text-slate-950">Captured source data</h2>
-              {source?.rawPayload ? (
-                <pre className="mt-3 max-h-96 overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-700">{JSON.stringify(source.rawPayload, null, 2)}</pre>
-              ) : (
-                <div className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-                  <p className="font-black text-slate-950">No raw payload retained</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">This approval has no linked message source, or the captured payload was not persisted.</p>
-                </div>
-              )}
-            </div>
+            {source?.rawPayload ? (
+              <details className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <summary className="cursor-pointer text-xs font-black uppercase tracking-wide text-slate-500">Raw captured payload</summary>
+                <pre className="mt-3 max-h-96 overflow-auto rounded-xl bg-white p-4 text-xs leading-5 text-slate-700">{JSON.stringify(source.rawPayload, null, 2)}</pre>
+              </details>
+            ) : (
+              <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+                <p className="font-black text-slate-950">No raw payload retained</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">This approval has no linked message source, or the captured payload was not persisted.</p>
+              </div>
+            )}
           </article>
 
           <aside className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
