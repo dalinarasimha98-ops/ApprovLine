@@ -1,0 +1,11 @@
+-- The approval detail page's "View in Unified Evidence" button and the
+-- approvals list page's "View Evidence" link both look up
+-- UnifiedEvidenceRecord by primaryApprovalId (services/evidence/records.ts's
+-- getUnifiedEvidenceIdForApproval() / getUnifiedEvidenceIdsForApprovals()).
+-- primaryApprovalId is a foreign key column with no supporting index -
+-- same class of gap already fixed for CanonicalEvidenceEvent.unifiedRecordId,
+-- AuditLog.approvalRecordId, and ClassifierResult.approvalRecordId in prior
+-- migrations. Without this, every approval detail page view and every
+-- approvals list page view does a sequential scan of the org's
+-- UnifiedEvidenceRecord rows.
+CREATE INDEX "UnifiedEvidenceRecord_organizationId_primaryApprovalId_idx" ON "UnifiedEvidenceRecord"("organizationId", "primaryApprovalId");

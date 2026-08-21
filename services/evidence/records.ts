@@ -346,6 +346,91 @@ export async function getLatestUnifiedEvidenceRecordId(organizationId: string): 
   }
 }
 
+/**
+ * Powers the "View in Unified Evidence" button on the approval detail page
+ * (app/approvals/[id]/page.tsx). Not every approval has a linked
+ * UnifiedEvidenceRecord - only those captured through the real evidence
+ * pipeline or backfilled (see services/evidence/pipeline.ts's
+ * backfillUnifiedEvidenceForApproval()) do. Degrades to null on any failure
+ * (breaker open, timeout, missing table) rather than throwing, matching
+ * getLatestUnifiedEvidenceRecordId() just above - this is an optional
+ * enhancement to the approval detail page, never something that page's core
+ * render should block or fail on. The caller is expected to render nothing
+ * (not a broken link) when this returns null.
+ */
+export async function getUnifiedEvidenceIdForApproval(organizationId: string, approvalId: string): Promise<string | null> {
+  if (isEvidenceListBreakerOpen()) return null;
+
+  const attempt = () =>
+    withTimeout(
+      'evidence:idForApproval',
+      prisma.unifiedEvidenceRecord.findFirst({
+        where: { organizationId, primaryApprovalId: approvalId },
+        select: { id: true },
+      }),
+      EVIDENCE_LIST_QUERY_TIMEOUT_MS,
+    );
+
+  try {
+    const record = await attempt().catch(async (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
+      await sleep(300);
+      return attempt();
+    });
+    recordEvidenceListSuccess();
+    return record?.id ?? null;
+  } catch (error) {
+    if (!isMigrationError(error instanceof Error ? error.message : String(error))) {
+      recordEvidenceListFailure();
+    }
+    console.error('[evidence] id-for-approval lookup failed, hiding the evidence link', error);
+    return null;
+  }
+}
+
+/**
+ * Batch form of getUnifiedEvidenceIdForApproval() for the approvals list
+ * page (app/dashboard/approvals/page.tsx / components/dashboard/
+ * ApprovalTable.tsx) - one query per page load instead of one per row, which
+ * an N+1 per-row lookup would otherwise turn into. Returns a Map keyed by
+ * approvalId so the caller can do a simple lookup per row; approvals with no
+ * linked record are simply absent from the map (not an error). Degrades to
+ * an empty map on any failure, same reasoning as the single-approval version
+ * above - a failed lookup here should hide every row's evidence link, never
+ * break the list page itself.
+ */
+export async function getUnifiedEvidenceIdsForApprovals(organizationId: string, approvalIds: string[]): Promise<Map<string, string>> {
+  if (approvalIds.length === 0 || isEvidenceListBreakerOpen()) return new Map();
+
+  const attempt = () =>
+    withTimeout(
+      'evidence:idsForApprovals',
+      prisma.unifiedEvidenceRecord.findMany({
+        where: { organizationId, primaryApprovalId: { in: approvalIds } },
+        select: { id: true, primaryApprovalId: true },
+      }),
+      EVIDENCE_LIST_QUERY_TIMEOUT_MS,
+    );
+
+  try {
+    const records = await attempt().catch(async (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
+      await sleep(300);
+      return attempt();
+    });
+    recordEvidenceListSuccess();
+    return new Map(records.filter((record) => record.primaryApprovalId).map((record) => [record.primaryApprovalId!, record.id]));
+  } catch (error) {
+    if (!isMigrationError(error instanceof Error ? error.message : String(error))) {
+      recordEvidenceListFailure();
+    }
+    console.error('[evidence] ids-for-approvals lookup failed, hiding evidence links', error);
+    return new Map();
+  }
+}
+
 // --- Detail-page stale fallback (Tier-2 "last known good") -----------------
 // unstable_cache only memoizes successful returns of its own wrapped
 // function - it has no "serve the last successful value even though this

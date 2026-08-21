@@ -17,6 +17,10 @@ export type ApprovalTableRecord = {
   confidence: number;
   status: string;
   createdAt: Date;
+  /** UnifiedEvidenceRecord.id when this approval has one linked via
+   *  primaryApprovalId, null otherwise - drives whether the "View Evidence"
+   *  link renders at all (never a broken link). */
+  evidenceRecordId: string | null;
 };
 
 function riskClass(risk?: string | null) {
@@ -66,6 +70,7 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
             <th className="px-4 py-3">Date</th>
             <th className="px-4 py-3">Evidence</th>
             <th className="px-4 py-3">Details</th>
+            <th className="px-4 py-3">Unified Evidence</th>
           </tr>
         </thead>
         <tbody>
@@ -119,6 +124,15 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
                 <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening..." className="text-xs font-black text-[#2155d9] hover:underline">
                   View Full Approval
                 </PendingLink>
+              </td>
+              <td className="px-4 py-3">
+                {approval.evidenceRecordId ? (
+                  <PendingLink href={`/evidence/${approval.evidenceRecordId}`} pendingText="Opening..." className="text-xs font-black text-[#2155d9] hover:underline">
+                    View Evidence →
+                  </PendingLink>
+                ) : (
+                  <span className="text-xs font-semibold text-slate-400">Not correlated</span>
+                )}
               </td>
               </tr>
             );
