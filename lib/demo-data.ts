@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import type { ApprovalStatus, ApprovalType, IntegrationProvider } from '@prisma/client';
 import { invalidateApprovalRecordsCache } from '@/lib/approvalRecords';
 import { createDemoInvestigationsForOrganization } from '@/services/investigations';
-import { backfillUnifiedEvidenceForApproval } from '@/services/evidence/pipeline';
+import { backfillUnifiedEvidenceForApproval, runEvidenceSidecar } from '@/services/evidence/pipeline';
 import { evaluateRecentApprovals, seedDemoPlaybooks } from '@/services/playbooks';
 
 type DemoApproval = {
@@ -718,7 +718,20 @@ export async function createDemoDataForOrganization(organizationId: string) {
     // /evidence - the gap scripts/backfill-unified-evidence-from-approvals.ts
     // exists to fix after the fact. Backfilling it here means new demo runs
     // never create that gap in the first place.
-    await backfillUnifiedEvidenceForApproval(prisma, approval);
+    //
+    // Wrapped in runEvidenceSidecar (the same resilience wrapper the real
+    // ingestion pipeline uses around this exact kind of evidence-side write)
+    // so a failure here - or just this org's connection pool being under
+    // pressure, which this codebase has repeatedly hit under concurrent load
+    // - degrades to a missing evidence record for this one approval instead
+    // of throwing and aborting the rest of this HTTP-request-bound seed loop,
+    // which is invoked synchronously from app/api/demo/seed/route.ts and was
+    // never wrapped in a transaction to begin with. Aborting mid-loop was
+    // the actual cause of a follow-up report of the dashboard going empty -
+    // a seed run that fails partway through leaves far fewer approvals
+    // committed than intended, not zero because of missing evidence, but
+    // because the whole request died before the loop finished.
+    await runEvidenceSidecar(() => backfillUnifiedEvidenceForApproval(prisma, approval), 'demo-seed-backfill');
 
     await prisma.classifierResult.create({
       data: {

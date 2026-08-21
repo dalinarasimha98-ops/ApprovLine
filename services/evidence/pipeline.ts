@@ -624,37 +624,15 @@ export async function backfillUnifiedEvidenceForApproval(
   const occurredAt = approval.occurredAt;
   const evidenceHash = deterministicApprovalEvidenceHash(approval.id, occurredAt);
 
-  const event = await client.canonicalEvidenceEvent.upsert({
-    where: { organizationId_providerKey_evidenceHash: { organizationId: approval.organizationId, providerKey, evidenceHash } },
-    update: {},
-    create: {
-      organizationId: approval.organizationId,
-      approvalRecordId: approval.id,
-      providerKey,
-      providerEventType: 'approval_decision',
-      occurredAt,
-      receivedAt: approval.createdAt,
-      actorName: approval.approverName,
-      actorEmail: approval.approverEmail,
-      objectType: 'approval_record',
-      objectId: approval.id,
-      relatedIds: [],
-      content: approval.evidenceSnippet ?? approval.reasoning,
-      metadata: {
-        backfilledFromApprovalId: approval.id,
-        status: approval.status,
-        approvalType: approval.approvalType,
-        category: approval.category,
-        department: approval.department,
-      },
-      evidenceHash,
-      correlationId: approval.correlationId ?? approval.id,
-      correlationKeys: [approval.id],
-      confidence: approval.confidence,
-      status: 'COMPLETED',
-    },
-  });
-
+  // UnifiedEvidenceRecord created first, then CanonicalEvidenceEvent with
+  // unifiedRecordId already set on create - cuts this from 4 sequential round
+  // trips to 3 by avoiding a separate .update() to backfill that link
+  // afterward (the record's own fields never depend on the event's id, so
+  // this order works fine and the two could never be created in parallel
+  // anyway). Matters more here than it would elsewhere: this runs once per
+  // approval inside HTTP-request-bound seed loops (app/api/demo/seed/route.ts
+  // via lib/demo-data.ts), where every extra sequential write adds real risk
+  // of pushing an already latency-sensitive request toward its timeout.
   const record = await client.unifiedEvidenceRecord.create({
     data: {
       organizationId: approval.organizationId,
@@ -681,7 +659,37 @@ export async function backfillUnifiedEvidenceForApproval(
     },
   });
 
-  await client.canonicalEvidenceEvent.update({ where: { id: event.id }, data: { unifiedRecordId: record.id } });
+  const event = await client.canonicalEvidenceEvent.upsert({
+    where: { organizationId_providerKey_evidenceHash: { organizationId: approval.organizationId, providerKey, evidenceHash } },
+    update: {},
+    create: {
+      organizationId: approval.organizationId,
+      approvalRecordId: approval.id,
+      unifiedRecordId: record.id,
+      providerKey,
+      providerEventType: 'approval_decision',
+      occurredAt,
+      receivedAt: approval.createdAt,
+      actorName: approval.approverName,
+      actorEmail: approval.approverEmail,
+      objectType: 'approval_record',
+      objectId: approval.id,
+      relatedIds: [],
+      content: approval.evidenceSnippet ?? approval.reasoning,
+      metadata: {
+        backfilledFromApprovalId: approval.id,
+        status: approval.status,
+        approvalType: approval.approvalType,
+        category: approval.category,
+        department: approval.department,
+      },
+      evidenceHash,
+      correlationId: approval.correlationId ?? approval.id,
+      correlationKeys: [approval.id],
+      confidence: approval.confidence,
+      status: 'COMPLETED',
+    },
+  });
 
   await client.unifiedEvidenceMember.create({
     data: {
