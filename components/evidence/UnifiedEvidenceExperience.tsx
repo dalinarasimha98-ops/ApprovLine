@@ -573,7 +573,7 @@ export function UnifiedEvidenceExperience({ initialData }: { initialData: Unifie
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
           <main className="min-w-0 space-y-4">
             <section className="overflow-hidden rounded-2xl border border-blue-300/15 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.20),transparent_42%),linear-gradient(145deg,rgba(9,18,34,0.98),rgba(3,8,19,0.98))] shadow-[0_18px_80px_rgba(0,0,0,0.35)]">
-              <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-5 p-5 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
                 <div className="flex min-w-0 gap-4">
                   <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-emerald-300/25 bg-emerald-400/[0.08] text-emerald-300 shadow-[0_0_32px_rgba(52,211,153,0.16)]">
                     <ShieldCheck className="h-10 w-10" />
@@ -602,7 +602,7 @@ export function UnifiedEvidenceExperience({ initialData }: { initialData: Unifie
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 rounded-2xl border border-white/[0.08] bg-black/15 p-4">
+                <div className="flex flex-wrap gap-4 rounded-2xl border border-white/[0.08] bg-black/15 p-4">
                   <Metric label="Sources" value={String(providers.length || initialData.sourceCount)} accent="text-blue-300" />
                   <Metric label="Mentions" value={String(events.length || initialData.evidenceCount)} accent="text-blue-300" />
                   <div className="min-w-[116px]">
