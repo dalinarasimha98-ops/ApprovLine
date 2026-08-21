@@ -87,6 +87,25 @@ type ApprovalSeed = {
   occurredAt: Date;
   providerKey: string;
   providerEventType: string;
+  /** Optional full captured thread, matching EvidenceThread's expected
+   *  rawPayload shape (components/approvals/EvidenceThread.tsx). When
+   *  present, a MessageSource row is created carrying this in rawPayload
+   *  and linked via ApprovalRecord.messageSourceId, so the approval and
+   *  source pages render the full-thread view instead of the single-
+   *  message card. Deliberately populated on only a couple of approvals,
+   *  not all fifteen - most real captured evidence today is a single
+   *  message, and seeding every record with a fabricated multi-message
+   *  thread would misrepresent what that looks like in practice. */
+  thread?: { channelName: string; messages: ThreadMessageSeed[] };
+};
+
+type ThreadMessageSeed = {
+  senderName: string;
+  senderEmail?: string;
+  timestamp: Date;
+  content: string;
+  isApprovalMoment?: boolean;
+  reactions?: Array<{ emoji: string; count: number }>;
 };
 
 type GroupSeed = {
@@ -127,6 +146,36 @@ const groups: GroupSeed[] = [
         occurredAt: daysAgo(25),
         providerKey: 'gmail',
         providerEventType: 'approval_decision',
+        thread: {
+          channelName: 'MSA — Acme Corp redlines (email thread)',
+          messages: [
+            {
+              senderName: 'David Okonkwo',
+              senderEmail: 'david.okonkwo@acme.example',
+              timestamp: daysAgo(26, 2),
+              content: 'Elena — outside counsel sent back the redlined MSA. Two open items: the liability cap in section 8 and the termination-for-convenience notice period. Everything else looks clean. Attaching the marked-up PDF.',
+            },
+            {
+              senderName: 'Elena Vasquez',
+              senderEmail: 'elena.vasquez@acme.example',
+              timestamp: daysAgo(26, -3),
+              content: "Thanks David. Liability cap at 2x contract value is fine, that's our standard floor. On termination notice - let's push for 90 days instead of the 60 they proposed, given the size of this engagement.",
+            },
+            {
+              senderName: 'David Okonkwo',
+              senderEmail: 'david.okonkwo@acme.example',
+              timestamp: daysAgo(25, 4),
+              content: 'Sent the 90-day ask back to their counsel this morning. They came back and accepted it without pushback. Updated MSA is attached - this should be the final version pending your sign-off.',
+            },
+            {
+              senderName: 'Elena Vasquez',
+              senderEmail: 'elena.vasquez@acme.example',
+              timestamp: daysAgo(25),
+              content: 'Reviewed final redlines with outside counsel. Terms are acceptable — approved to proceed to signature.',
+              isApprovalMoment: true,
+            },
+          ],
+        },
       },
       {
         key: 'group-1-legal:slack',
@@ -145,6 +194,37 @@ const groups: GroupSeed[] = [
         occurredAt: daysAgo(24, -4),
         providerKey: 'slack',
         providerEventType: 'approval_decision',
+        thread: {
+          channelName: '#legal-approvals',
+          messages: [
+            {
+              senderName: 'Elena Vasquez',
+              senderEmail: 'elena.vasquez@acme.example',
+              timestamp: daysAgo(24, -6),
+              content: 'Marcus — MSA with Acme Corp is fully redlined and ready to execute, $2.4M over the term. Need your sign-off on the financial terms before we send for signature.',
+            },
+            {
+              senderName: 'Marcus Chen',
+              senderEmail: 'marcus.chen@acme.example',
+              timestamp: daysAgo(24, -5),
+              content: "Can you remind me how this splits across FY24 vs FY25? Want to make sure we're not front-loading more than planned.",
+            },
+            {
+              senderName: 'Elena Vasquez',
+              senderEmail: 'elena.vasquez@acme.example',
+              timestamp: daysAgo(24, -5),
+              content: '$900K in FY24, remaining $1.5M spread across FY25 quarterly. Matches what Finance modeled in the Q3 vendor plan.',
+            },
+            {
+              senderName: 'Marcus Chen',
+              senderEmail: 'marcus.chen@acme.example',
+              timestamp: daysAgo(24, -4),
+              content: 'Numbers check out on our end. Good to move forward — approved.',
+              isApprovalMoment: true,
+              reactions: [{ emoji: '✅', count: 2 }, { emoji: '🎉', count: 1 }],
+            },
+          ],
+        },
       },
       {
         key: 'group-1-legal:jira',
@@ -447,12 +527,15 @@ function summarize() {
   const totalUnifiedRecords = groups.length;
   const pendingCount = groups.flatMap((group) => group.approvals).filter((approval) => approval.status === 'PENDING_REVIEW').length;
 
+  const threadCount = groups.flatMap((group) => group.approvals).filter((approval) => approval.thread).length;
+
   console.log('Planned structure:\n');
   for (const group of groups) {
     console.log(`- ${group.title} [${group.department}] — ${group.approvals.length} source(s) → 1 UnifiedEvidenceRecord`);
     for (const approval of group.approvals) {
       const primary = group.approvals[group.primaryIndex] === approval ? ' (primary)' : '';
-      console.log(`    · ${approval.sourcePlatform.padEnd(15)} ${approval.status.padEnd(15)} ${approval.riskLevel.padEnd(9)}${primary} — ${approval.subject}`);
+      const thread = approval.thread ? ` [full thread: ${approval.thread.messages.length} messages]` : '';
+      console.log(`    · ${approval.sourcePlatform.padEnd(15)} ${approval.status.padEnd(15)} ${approval.riskLevel.padEnd(9)}${primary} — ${approval.subject}${thread}`);
     }
   }
 
@@ -461,6 +544,7 @@ function summarize() {
   console.log(`  UnifiedEvidenceRecord  : ${totalUnifiedRecords}`);
   console.log(`  CanonicalEvidenceEvent : ${totalEvents}`);
   console.log(`  UnifiedEvidenceMember  : ${totalEvents}`);
+  console.log(`  MessageSource (with full thread payload): ${threadCount}`);
   console.log(`  APPROVED / PENDING_REVIEW split: ${totalApprovals - pendingCount} / ${pendingCount}`);
 }
 
@@ -474,14 +558,55 @@ function summarize() {
  * 10s ceiling is set as extra margin for real connection-pool queue wait
  * rather than relying on Prisma's 5s default.
  */
+const PROVIDER_ENUM: Record<string, 'SLACK' | 'GMAIL' | 'OUTLOOK' | 'MICROSOFT_TEAMS' | 'JIRA' | 'SERVICENOW' | 'ZOOM'> = {
+  slack: 'SLACK',
+  gmail: 'GMAIL',
+  outlook: 'OUTLOOK',
+  microsoft_teams: 'MICROSOFT_TEAMS',
+  jira: 'JIRA',
+  servicenow: 'SERVICENOW',
+  zoom: 'ZOOM',
+};
+
 async function createGroup(organizationId: string, group: GroupSeed) {
   return prisma.$transaction(
     async (tx) => {
       const createdApprovals = [];
       for (const approval of group.approvals) {
+        let messageSourceId: string | undefined;
+        if (approval.thread) {
+          const provider = PROVIDER_ENUM[approval.providerKey];
+          if (provider) {
+            const messageSource = await tx.messageSource.create({
+              data: {
+                organizationId,
+                provider,
+                externalId: `${SEED_RUN_ID}:${approval.key}`,
+                channel: approval.thread.channelName,
+                sender: approval.approverName,
+                senderEmail: approval.approverEmail,
+                receivedAt: approval.occurredAt,
+                rawPayload: {
+                  channelName: approval.thread.channelName,
+                  threadMessages: approval.thread.messages.map((message) => ({
+                    senderName: message.senderName,
+                    senderEmail: message.senderEmail,
+                    timestamp: message.timestamp.toISOString(),
+                    content: message.content,
+                    isApprovalMoment: message.isApprovalMoment ?? false,
+                    reactions: message.reactions,
+                  })),
+                },
+              },
+            });
+            messageSourceId = messageSource.id;
+          }
+        }
+
         const created = await tx.approvalRecord.create({
           data: {
             organizationId,
+            messageSourceId,
             approverName: approval.approverName,
             approverEmail: approval.approverEmail,
             subject: approval.subject,

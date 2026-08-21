@@ -3,11 +3,13 @@ import { notFound, redirect } from 'next/navigation';
 import { ApprovalActions } from '@/components/approvals/ApprovalActions';
 import { CopyEvidenceLinkButton } from '@/components/approvals/CopyEvidenceLinkButton';
 import { EvidenceMessageCard } from '@/components/approvals/EvidenceMessageCard';
+import { EvidenceThread, parseThreadPayload } from '@/components/approvals/EvidenceThread';
 import { ManualApprovalPanel } from '@/components/approvals/ManualApprovalPanel';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
 import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
+import { getSafeEvidenceUrl } from '@/lib/evidence-links';
 import { reportApprovalFailure } from '@/lib/approval-observability';
 import { canManageManualApprovals } from '@/services/manual-approvals';
 import {
@@ -133,6 +135,9 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
     notFound();
   }
 
+  const threadPayload = parseThreadPayload(core.messageSource?.rawPayload);
+  const externalUrl = getSafeEvidenceUrl(core.sourceLink);
+
   return (
     <DashboardShell>
       <section className="grid gap-6">
@@ -219,7 +224,15 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
                 <p><span className="font-black text-slate-950">Reasoning:</span> {core.reasoning}</p>
                 {core.conditions ? <p><span className="font-black text-slate-950">Conditions:</span> {core.conditions}</p> : null}
                 {core.businessImpact ? <p><span className="font-black text-slate-950">Business impact:</span> {core.businessImpact}</p> : null}
-                {core.evidenceSnippet || core.approverName ? (
+                {threadPayload ? (
+                  <EvidenceThread
+                    payload={threadPayload}
+                    platform={core.sourcePlatform ?? core.messageSource?.provider}
+                    participantCount={new Set(threadPayload.threadMessages.map((message) => message.senderName)).size}
+                    sourceUrl={externalUrl}
+                    evidenceLinkPath={`/approvals/${core.id}/source`}
+                  />
+                ) : core.evidenceSnippet || core.approverName ? (
                   <EvidenceMessageCard
                     platform={core.sourcePlatform ?? core.messageSource?.provider}
                     senderName={core.approverName ?? core.messageSource?.sender ?? 'Unknown approver'}

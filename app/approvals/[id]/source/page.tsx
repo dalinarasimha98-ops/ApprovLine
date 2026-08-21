@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { CopyEvidenceLinkButton } from '@/components/approvals/CopyEvidenceLinkButton';
 import { EvidenceMessageCard } from '@/components/approvals/EvidenceMessageCard';
+import { EvidenceThread, parseThreadPayload } from '@/components/approvals/EvidenceThread';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
@@ -88,6 +89,7 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
   const approval = result.approval;
   const externalUrl = getSafeEvidenceUrl(approval.sourceLink);
   const source = approval.messageSource;
+  const threadPayload = parseThreadPayload(source?.rawPayload);
 
   return (
     <DashboardShell>
@@ -103,7 +105,17 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
           <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Captured Evidence</p>
             <h2 className="mt-1 text-xl font-black text-slate-950">Decision context</h2>
-            {approval.evidenceSnippet || approval.approverName ? (
+            {threadPayload ? (
+              <div className="mt-5">
+                <EvidenceThread
+                  payload={threadPayload}
+                  platform={approval.sourcePlatform ?? source?.provider}
+                  participantCount={new Set(threadPayload.threadMessages.map((message) => message.senderName)).size}
+                  sourceUrl={externalUrl}
+                  evidenceLinkPath={`/approvals/${id}/source`}
+                />
+              </div>
+            ) : approval.evidenceSnippet || approval.approverName ? (
               <div className="mt-5">
                 <EvidenceMessageCard
                   platform={approval.sourcePlatform ?? source?.provider}
@@ -124,7 +136,7 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
               {approval.conditions ? <p><span className="font-black text-slate-950">Conditions:</span> {approval.conditions}</p> : null}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              {externalUrl ? (
+              {threadPayload ? null : externalUrl ? (
                 <a href={externalUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white">Open original system</a>
               ) : (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -133,7 +145,9 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
                 </div>
               )}
               <a href={`/api/approvals/${id}/evidence`} download className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700">Download evidence</a>
-              <CopyEvidenceLinkButton path={`/approvals/${id}/source`} className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50" />
+              {threadPayload ? null : (
+                <CopyEvidenceLinkButton path={`/approvals/${id}/source`} className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50" />
+              )}
             </div>
 
             {source?.rawPayload ? (
