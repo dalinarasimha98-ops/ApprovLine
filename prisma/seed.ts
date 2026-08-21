@@ -1,5 +1,5 @@
 import { PrismaClient, ApprovalType, ApprovalStatus } from '@prisma/client';
-import { backfillUnifiedEvidenceForApproval } from '@/services/evidence/pipeline';
+import { backfillUnifiedEvidenceForApproval, runEvidenceSidecar } from '@/services/evidence/pipeline';
 
 const prisma = new PrismaClient();
 
@@ -53,8 +53,10 @@ async function main() {
     // that normally links an approval into Unified Evidence - without this
     // every seeded approval would show up on /dashboard/approvals but never
     // on /evidence. See services/evidence/pipeline.ts's
-    // backfillUnifiedEvidenceForApproval() for why.
-    await backfillUnifiedEvidenceForApproval(prisma, record);
+    // backfillUnifiedEvidenceForApproval() for why. Wrapped in
+    // runEvidenceSidecar so a failure here can't abort the rest of the seed
+    // loop and leave later approvals uncreated.
+    await runEvidenceSidecar(() => backfillUnifiedEvidenceForApproval(prisma, record), 'seed-backfill');
 
     await prisma.classifierResult.create({
       data: {
