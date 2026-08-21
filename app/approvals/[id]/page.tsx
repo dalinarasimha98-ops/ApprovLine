@@ -224,6 +224,14 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
                 ) : (
                   <p className="rounded-2xl border border-dashed border-slate-200 p-4 font-semibold text-slate-500">No evidence snippet captured yet.</p>
                 )}
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-500">Raw original evidence</p>
+                  {core.messageSource?.rawPayload ? (
+                    <pre className="mt-2 max-h-80 overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-700">{JSON.stringify(core.messageSource.rawPayload, null, 2)}</pre>
+                  ) : (
+                    <p className="mt-2 rounded-2xl border border-dashed border-slate-200 p-4 font-semibold text-slate-500">No raw payload retained for this approval.</p>
+                  )}
+                </div>
                 <PendingLink href={`/approvals/${core.id}/source`} pendingText="Opening source..." className="inline-flex w-fit min-h-0 h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
                   Open Source
                 </PendingLink>

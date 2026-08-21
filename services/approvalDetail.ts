@@ -71,7 +71,7 @@ const approvalCoreSelect = {
   occurredAt: true,
   createdAt: true,
   messageSource: {
-    select: { provider: true, channel: true, sender: true, senderEmail: true, receivedAt: true },
+    select: { provider: true, channel: true, sender: true, senderEmail: true, receivedAt: true, rawPayload: true },
   },
   manualDetail: {
     include: {
