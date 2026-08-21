@@ -21,6 +21,7 @@ import {
   getApprovalRelatedRecords,
   type ApprovalCore,
 } from '@/services/approvalDetail';
+import { getUnifiedEvidenceIdForApproval } from '@/services/evidence/records';
 
 function evidenceExcerpt(value: unknown): string {
   const preferredKeys = ['text', 'message', 'content', 'body', 'snippet', 'subject', 'description', 'title'];
@@ -165,6 +166,16 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
           </div>
         </div>
 
+        {/* Suspense-wrapped (fallback null) so this optional link never
+            blocks or delays the rest of the page - most approvals do have a
+            linked UnifiedEvidenceRecord (real ingestion always creates one;
+            see services/evidence/pipeline.ts), but some legacy/seed-path
+            approvals still don't until backfilled, so this renders nothing
+            rather than a broken link when there isn't one. */}
+        <Suspense fallback={null}>
+          <UnifiedEvidenceLinkBanner organizationId={organizationId} approvalId={core.id} />
+        </Suspense>
+
         {/* memoryEntityId resolves inside the Related Records section below,
             which is fetched independently - ApprovalActions falls back to a
             Memory Graph search link (its existing behavior for any approval
@@ -306,6 +317,28 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
         </div>
       </section>
     </DashboardShell>
+  );
+}
+
+async function UnifiedEvidenceLinkBanner({ organizationId, approvalId }: { organizationId: string; approvalId: string }) {
+  const unifiedEvidenceId = await getUnifiedEvidenceIdForApproval(organizationId, approvalId);
+  if (!unifiedEvidenceId) return null;
+
+  return (
+    <PendingLink
+      href={`/evidence/${unifiedEvidenceId}`}
+      pendingText="Opening unified evidence..."
+      className="flex items-center justify-between gap-3 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-violet-50 p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+    >
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-[#2155d9]">Correlated across sources</p>
+        <h3 className="mt-1 text-lg font-black text-slate-950">This decision has a Unified Evidence record</h3>
+        <p className="mt-1 text-sm font-semibold text-slate-600">See every correlated source, mention, and confidence score in one place.</p>
+      </div>
+      <span className="shrink-0 inline-flex h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-black text-white shadow-sm shadow-blue-200">
+        View in Unified Evidence →
+      </span>
+    </PendingLink>
   );
 }
 

@@ -79,6 +79,8 @@ function KpiCard({
   color,
   icon,
   points,
+  href,
+  linkLabel,
 }: {
   label: string;
   value: string;
@@ -87,6 +89,12 @@ function KpiCard({
   color: string;
   icon: React.ReactNode;
   points: number[];
+  /** Optional - when set, renders a small link inside the card (e.g. "Total
+   *  Approvals" -> /dashboard/approvals) so the dashboard's own content has
+   *  a discoverable "view the underlying records" step, not just the
+   *  persistent sidebar nav. */
+  href?: string;
+  linkLabel?: string;
 }) {
   const toneClass = tone === 'positive' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-400' : 'text-slate-400';
   return (
@@ -98,9 +106,9 @@ function KpiCard({
         </div>
         <span className="grid h-8 w-8 place-items-center rounded-full border" style={{ borderColor: `${color}66`, color }}>{icon}</span>
       </div>
-      <div className={`mt-2 flex items-center gap-1 text-[10px] font-semibold ${toneClass}`}>
-        <Activity className="h-3 w-3" />
-        {context}
+      <div className={`mt-2 flex items-center justify-between gap-1 text-[10px] font-semibold ${toneClass}`}>
+        <span className="flex items-center gap-1"><Activity className="h-3 w-3" />{context}</span>
+        {href ? <Link href={href} className="font-bold text-blue-400 hover:text-blue-300">{linkLabel ?? 'View →'}</Link> : null}
       </div>
       <div className="absolute inset-x-3 bottom-0"><Sparkline color={color} points={points} /></div>
     </article>
@@ -253,7 +261,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard label="Total Approvals" value={compact(totalApprovals)} context={`${dayCounts.reduce((sum, count) => sum + count, 0)} captured this week`} color="#2f7cff" icon={<CheckCircle2 className="h-4 w-4" />} points={[2, 5, 4, 8, 6, 10, 7, 12, 8, 13]} />
+        <KpiCard label="Total Approvals" value={compact(totalApprovals)} context={`${dayCounts.reduce((sum, count) => sum + count, 0)} captured this week`} color="#2f7cff" icon={<CheckCircle2 className="h-4 w-4" />} points={[2, 5, 4, 8, 6, 10, 7, 12, 8, 13]} href="/dashboard/approvals" linkLabel="View Approvals →" />
         <KpiCard label="High Risk Approvals" value={compact(highRiskApprovals)} context={highRiskApprovals ? 'Requires attention' : 'No high-risk records'} tone={highRiskApprovals ? 'warning' : 'positive'} color="#ff624a" icon={<AlertTriangle className="h-4 w-4" />} points={[2, 4, 9, 3, 6, 5, 7, 7, 9, 14]} />
         <KpiCard label="Pending Approvals" value={compact(pendingReview)} context={pendingReview ? 'Waiting for review' : 'Review queue is clear'} tone={pendingReview ? 'warning' : 'positive'} color="#f4b529" icon={<Clock3 className="h-4 w-4" />} points={[5, 4, 7, 8, 5, 2, 5, 3, 4, 10]} />
         <KpiCard label="Connected Sources" value={`${connected.length}/${Math.max(integrations.length, connected.length)}`} context={`${Math.max(0, integrations.length - connected.length)} need attention`} tone={integrations.length > connected.length ? 'warning' : 'positive'} color="#43ce79" icon={<Network className="h-4 w-4" />} points={[3, 2, 4, 3, 6, 4, 7, 5, 8, 7]} />

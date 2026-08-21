@@ -5,6 +5,7 @@ import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded'
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import { loadDashboardApprovalRecords } from '@/lib/approvalRecords';
+import { getUnifiedEvidenceIdsForApprovals } from '@/services/evidence/records';
 import { redirect } from 'next/navigation';
 
 function minutesAgo(ms: number) {
@@ -53,7 +54,13 @@ export default async function ApprovalsPage({
       ...filters,
     });
 
-    approvals = result.records;
+    // One batch query for the whole visible page instead of one lookup per
+    // row - see services/evidence/records.ts's getUnifiedEvidenceIdsForApprovals()
+    // for why (avoids an N+1 query per approvals list page load). Degrades
+    // to an empty map (every row's evidence link hidden) rather than
+    // failing the page if this lookup itself has trouble.
+    const evidenceIds = await getUnifiedEvidenceIdsForApprovals(tenant.organization.id, result.records.map((record) => record.id));
+    approvals = result.records.map((record) => ({ ...record, evidenceRecordId: evidenceIds.get(record.id) ?? null }));
     isAlert = result.alert;
     // A single slow query (breaker still closed) must never alarm the user
     // — serving a slightly stale result gets a quiet caption, not a banner.
