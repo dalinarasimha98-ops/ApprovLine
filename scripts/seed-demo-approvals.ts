@@ -124,7 +124,7 @@ const groups: GroupSeed[] = [
   {
     title: 'Master Service Agreement — Acme Corp $2.4M',
     department: 'Legal',
-    category: 'Legal',
+    category: 'Contract Review',
     amount: 2_400_000,
     currency: 'USD',
     primaryIndex: 2,
@@ -249,7 +249,7 @@ const groups: GroupSeed[] = [
   {
     title: 'Q4 Infrastructure Budget — $850,000',
     department: 'Finance',
-    category: 'Finance',
+    category: 'Budget Approval',
     amount: 850_000,
     currency: 'USD',
     primaryIndex: 2,
@@ -313,7 +313,7 @@ const groups: GroupSeed[] = [
   {
     title: 'Production Database Migration — Critical Change',
     department: 'Engineering',
-    category: 'Engineering',
+    category: 'Change Management',
     primaryIndex: 2,
     approvals: [
       {
@@ -375,7 +375,7 @@ const groups: GroupSeed[] = [
   {
     title: 'Senior Engineering Hire — Compensation Band Exception',
     department: 'HR',
-    category: 'HR',
+    category: 'Compensation',
     primaryIndex: 1,
     approvals: [
       {
@@ -420,7 +420,7 @@ const groups: GroupSeed[] = [
   {
     title: 'Vendor Access Exception — AWS Root Credentials',
     department: 'Security',
-    category: 'Security',
+    category: 'Access Control',
     primaryIndex: 0,
     approvals: [
       {
@@ -494,7 +494,7 @@ const groups: GroupSeed[] = [
   {
     title: 'Q1 Marketing Campaign Budget — $320,000',
     department: 'Marketing',
-    category: 'Marketing',
+    category: 'Campaign',
     amount: 320_000,
     currency: 'USD',
     primaryIndex: 0,
