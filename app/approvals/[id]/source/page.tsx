@@ -8,7 +8,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { getSafeEvidenceUrl } from '@/lib/evidence-links';
 import { prisma } from '@/lib/prisma';
 import { reportApprovalFailure } from '@/lib/approval-observability';
-import { withTimeout } from '@/lib/performance';
+import { withRetry } from '@/services/approvalDetail';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,35 +23,36 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization) redirect('/dashboard/approvals');
 
-  const result = await withTimeout(
+  const result = await withRetry(
     'approval source lookup',
-    prisma.approvalRecord.findFirst({
-      where: { id, organizationId: tenant.organization.id },
-      select: {
-        subject: true,
-        sourceLink: true,
-        sourcePlatform: true,
-        approvalTimestamp: true,
-        occurredAt: true,
-        evidenceSnippet: true,
-        reasoning: true,
-        conditions: true,
-        approverName: true,
-        approverEmail: true,
-        confidence: true,
-        riskLevel: true,
-        messageSource: {
-          select: {
-            provider: true,
-            channel: true,
-            sender: true,
-            senderEmail: true,
-            receivedAt: true,
-            rawPayload: true,
+    () =>
+      prisma.approvalRecord.findFirst({
+        where: { id, organizationId: tenant.organization.id },
+        select: {
+          subject: true,
+          sourceLink: true,
+          sourcePlatform: true,
+          approvalTimestamp: true,
+          occurredAt: true,
+          evidenceSnippet: true,
+          reasoning: true,
+          conditions: true,
+          approverName: true,
+          approverEmail: true,
+          confidence: true,
+          riskLevel: true,
+          messageSource: {
+            select: {
+              provider: true,
+              channel: true,
+              sender: true,
+              senderEmail: true,
+              receivedAt: true,
+              rawPayload: true,
+            },
           },
         },
-      },
-    }),
+      }),
     7000,
   ).then(
     (approval) => ({ approval, error: null as unknown }),

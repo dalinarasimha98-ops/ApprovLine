@@ -31,8 +31,10 @@ export function invalidateApprovalDetailCache(approvalId: string) {
 const REVALIDATE_SECONDS = 60;
 
 /** One quick retry on a connection-pool-shaped or timeout error, matching
- *  the retry pattern already used by lib/auth.ts and lib/approvalRecords.ts. */
-async function withRetry<T>(label: string, fn: () => Promise<T>, timeoutMs: number): Promise<T> {
+ *  the retry pattern already used by lib/auth.ts and lib/approvalRecords.ts.
+ *  Exported for reuse by app/approvals/[id]/source/page.tsx's one-off
+ *  query, which isn't part of this file's cached fetchers. */
+export async function withRetry<T>(label: string, fn: () => Promise<T>, timeoutMs: number): Promise<T> {
   const attempt = () => withTimeout(label, fn(), timeoutMs);
   return attempt().catch(async (error) => {
     const message = error instanceof Error ? error.message : String(error);
