@@ -50,7 +50,6 @@ async function EvidenceDetailContent({ id }: { id: string }) {
   let record;
   try {
     record = await getUnifiedEvidenceExperience(tenant.organization.id, id, 40);
-    console.log('[evidence-detail] data loaded:', record ? 'success' : 'null/undefined', { id });
   } catch (error) {
     console.error('[evidence-detail] fetch failed', { id }, error);
     return (

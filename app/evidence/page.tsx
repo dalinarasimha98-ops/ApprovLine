@@ -93,6 +93,27 @@ function ResultsSkeleton() {
   );
 }
 
+// Split out from the page body and Suspense-wrapped below so this optional
+// shortcut (only used for the hero's "View Latest" button) never blocks the
+// hero header, search form, or the stats/results sections - which don't
+// depend on it - from painting first. It used to sit inline in the page
+// function as a plain awaited call, which meant a single record's fetch
+// stood between the whole page and its first byte even though only one
+// small button in the hero actually needs it.
+async function ViewLatestRecordLink({ organizationId }: { organizationId: string }) {
+  const latestRecordId = await getLatestUnifiedEvidenceRecordId(organizationId);
+  if (!latestRecordId) return null;
+  return (
+    <PendingLink
+      href={`/evidence/${latestRecordId}`}
+      pendingText="Opening latest record..."
+      className="rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-950 shadow-sm"
+    >
+      View Latest
+    </PendingLink>
+  );
+}
+
 async function EvidenceStatsSection({ organizationId, params, page }: { organizationId: string; params: EvidenceSearchParams; page: number }) {
   const data = await searchUnifiedEvidence({
     organizationId,
@@ -299,15 +320,6 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
   if (!tenant.organization) redirect('/dashboard');
 
   const organizationId = tenant.organization.id;
-
-  // Previously auto-redirected straight to the most recent record on every
-  // default visit to /evidence, which meant the list itself was never seen
-  // under normal navigation - clicking "Unified Evidence" in the nav always
-  // skipped it. Now only offered as an explicit "View Latest" action below;
-  // getLatestUnifiedEvidenceRecordId() already has its own timeout/retry/
-  // breaker, so this is cheap and safe to leave unguarded.
-  const latestRecordId = await getLatestUnifiedEvidenceRecordId(organizationId);
-
   const page = Math.max(1, Number.parseInt(params.page ?? '1', 10) || 1);
 
   return (
@@ -328,15 +340,9 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {latestRecordId ? (
-                <PendingLink
-                  href={`/evidence/${latestRecordId}`}
-                  pendingText="Opening latest record..."
-                  className="rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-950 shadow-sm"
-                >
-                  View Latest
-                </PendingLink>
-              ) : null}
+              <Suspense fallback={null}>
+                <ViewLatestRecordLink organizationId={organizationId} />
+              </Suspense>
               <PendingLink
                 href="/approvals/manual"
                 pendingText="Opening manual capture..."
