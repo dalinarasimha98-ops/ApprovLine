@@ -13,7 +13,13 @@ type CheckStatus = {
   count?: number;
 };
 
-async function timed<T>(label: string, fn: () => Promise<T>, timeoutMs = 1500): Promise<CheckStatus & { result?: T }> {
+// 1500ms was too tight for this endpoint's own baseline: a plain SELECT 1 and
+// a single indexed user lookup were observed taking 800-1200ms+ on their own
+// here, before any concurrency is even involved (see app/dashboard/page.tsx's
+// safeMetric(), raised to 4000ms for the same reason - this mirrors that).
+// A query that's merely slow-but-completing shouldn't read as "fail" on a
+// diagnostic endpoint whose whole purpose is telling those two apart.
+async function timed<T>(label: string, fn: () => Promise<T>, timeoutMs = 4000): Promise<CheckStatus & { result?: T }> {
   const startedAt = Date.now();
   try {
     const result = await withTimeout(label, fn(), timeoutMs);
@@ -78,7 +84,7 @@ export async function GET() {
     });
   }
 
-  const database = await timed('database connection', () => prisma.$queryRaw`SELECT 1`, 1500);
+  const database = await timed('database connection', () => prisma.$queryRaw`SELECT 1`);
   const user = await timed('user organization lookup', () =>
     prisma.user.findUnique({
       where: { clerkUserId: session.userId! },
