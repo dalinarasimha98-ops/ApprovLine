@@ -1,4 +1,5 @@
 import { PrismaClient, ApprovalType, ApprovalStatus } from '@prisma/client';
+import { backfillUnifiedEvidenceForApproval } from '@/services/evidence/pipeline';
 
 const prisma = new PrismaClient();
 
@@ -47,6 +48,13 @@ async function main() {
         occurredAt: new Date(),
       },
     });
+
+    // Writes ApprovalRecord directly, bypassing the real capture pipeline
+    // that normally links an approval into Unified Evidence - without this
+    // every seeded approval would show up on /dashboard/approvals but never
+    // on /evidence. See services/evidence/pipeline.ts's
+    // backfillUnifiedEvidenceForApproval() for why.
+    await backfillUnifiedEvidenceForApproval(prisma, record);
 
     await prisma.classifierResult.create({
       data: {

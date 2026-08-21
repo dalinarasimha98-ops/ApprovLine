@@ -30,9 +30,16 @@
  *     the schema's existing @@unique([organizationId, providerKey,
  *     evidenceHash]) constraint via upsert - so re-running this script
  *     against the same data is a no-op, never a duplicate.
+ *
+ * The actual per-approval write logic lives in
+ * services/evidence/pipeline.ts's backfillUnifiedEvidenceForApproval() -
+ * this script just finds the approvals that need it and calls that function
+ * inside a transaction per approval. lib/demo-data.ts and prisma/seed.ts now
+ * call the same function when creating new approvals, so this script should
+ * only ever need to run once against data seeded before that change.
  */
-import { createHash } from 'node:crypto';
 import { prisma } from '../lib/prisma';
+import { backfillUnifiedEvidenceForApproval } from '../services/evidence/pipeline';
 
 function parseArgs(argv: string[]) {
   const orgIndex = argv.indexOf('--org');
@@ -40,15 +47,6 @@ function parseArgs(argv: string[]) {
   const apply = argv.includes('--apply');
   const dryRun = argv.includes('--dry-run') || !apply;
   return { organizationId, apply, dryRun };
-}
-
-function normalizeProviderKey(value: string | null | undefined): string {
-  if (!value) return 'custom';
-  return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '_') || 'custom';
-}
-
-function deterministicEvidenceHash(approvalId: string, occurredAt: Date): string {
-  return createHash('sha256').update(`approval-backfill:${approvalId}:${occurredAt.toISOString()}`).digest('hex');
 }
 
 async function main() {
@@ -75,7 +73,6 @@ async function main() {
 
   const approvals = await prisma.approvalRecord.findMany({
     where: { organizationId, id: { notIn: [...alreadyLinkedIds] } },
-    include: { messageSource: { select: { provider: true } } },
     orderBy: { createdAt: 'asc' },
   });
 
@@ -85,86 +82,13 @@ async function main() {
   console.log(dryRun ? '\nMode: DRY RUN - nothing will be written.\n' : '\nMode: APPLY - writing to the database.\n');
 
   for (const approval of approvals) {
-    const providerKey = normalizeProviderKey(approval.messageSource?.provider ?? approval.sourcePlatform);
-    const occurredAt = approval.occurredAt;
-    const evidenceHash = deterministicEvidenceHash(approval.id, occurredAt);
-
     console.log(
-      `- ${approval.id} :: "${approval.subject}" :: provider=${providerKey} :: risk=${approval.riskLevel ?? 'unscored'} :: occurredAt=${occurredAt.toISOString()}`,
+      `- ${approval.id} :: "${approval.subject}" :: provider=${approval.sourcePlatform ?? 'custom'} :: risk=${approval.riskLevel ?? 'unscored'} :: occurredAt=${approval.occurredAt.toISOString()}`,
     );
 
     if (dryRun) continue;
 
-    await prisma.$transaction(async (tx) => {
-      const event = await tx.canonicalEvidenceEvent.upsert({
-        where: { organizationId_providerKey_evidenceHash: { organizationId, providerKey, evidenceHash } },
-        update: {},
-        create: {
-          organizationId,
-          approvalRecordId: approval.id,
-          providerKey,
-          providerEventType: 'approval_decision',
-          occurredAt,
-          receivedAt: approval.createdAt,
-          actorName: approval.approverName,
-          actorEmail: approval.approverEmail,
-          objectType: 'approval_record',
-          objectId: approval.id,
-          relatedIds: [],
-          content: approval.evidenceSnippet ?? approval.reasoning,
-          metadata: {
-            backfilledFromApprovalId: approval.id,
-            status: approval.status,
-            approvalType: approval.approvalType,
-            category: approval.category,
-            department: approval.department,
-          },
-          evidenceHash,
-          correlationId: approval.correlationId ?? approval.id,
-          correlationKeys: [approval.id],
-          confidence: approval.confidence,
-          status: 'COMPLETED',
-        },
-      });
-
-      const record = await tx.unifiedEvidenceRecord.create({
-        data: {
-          organizationId,
-          primaryApprovalId: approval.id,
-          subject: approval.subject,
-          decision: approval.status,
-          outcome: approval.approvalType,
-          category: approval.category,
-          department: approval.department,
-          approverName: approval.approverName,
-          approverEmail: approval.approverEmail,
-          riskLevel: approval.riskLevel,
-          confidence: approval.confidence,
-          verificationStatus: 'UNVERIFIED',
-          sourceCount: 1,
-          evidenceCount: 1,
-          firstSeenAt: occurredAt,
-          lastSeenAt: occurredAt,
-          metadata: {
-            backfilledFromApprovalId: approval.id,
-            backfilledAt: new Date().toISOString(),
-            backfillScript: 'scripts/backfill-unified-evidence-from-approvals.ts',
-          },
-        },
-      });
-
-      await tx.canonicalEvidenceEvent.update({ where: { id: event.id }, data: { unifiedRecordId: record.id } });
-
-      await tx.unifiedEvidenceMember.create({
-        data: {
-          unifiedRecordId: record.id,
-          eventId: event.id,
-          status: 'AUTO_LINKED',
-          matchConfidence: 100,
-          matchingReasons: ['Backfilled directly from its own ApprovalRecord (1:1, not a correlation match).'],
-        },
-      });
-    });
+    await prisma.$transaction((tx) => backfillUnifiedEvidenceForApproval(tx, approval));
   }
 
   if (dryRun) {

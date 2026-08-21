@@ -9,7 +9,9 @@ import { addMemoryTimelineEvent, invalidateMemoryCache, linkMemoryEntities, upse
 import { invalidateUnifiedEvidenceCache } from '@/services/evidence/records';
 import { normalizeEvidenceEvent } from '@/services/evidence/normalizer';
 import { getEvidenceProviderManifest } from '@/services/evidence/provider-catalog';
+import { normalizeProviderKey } from '@/services/evidence/provider-sdk';
 import type { CanonicalEvidenceInput, NormalizedEvidenceEvent } from '@/types/evidence';
+import { createHash } from 'node:crypto';
 
 const AUTO_LINK_THRESHOLD = 80;
 const SUGGESTION_THRESHOLD = 55;
@@ -580,4 +582,114 @@ export async function runEvidenceSidecar<T>(
     console.error(`[evidence:${context}] ${safeMessage(error)}`);
     return null;
   }
+}
+
+function deterministicApprovalEvidenceHash(approvalId: string, occurredAt: Date): string {
+  return createHash('sha256').update(`approval-backfill:${approvalId}:${occurredAt.toISOString()}`).digest('hex');
+}
+
+/**
+ * Creates a 1:1 UnifiedEvidenceRecord (+ CanonicalEvidenceEvent +
+ * UnifiedEvidenceMember) directly from an ApprovalRecord that was created
+ * outside the normal capture pipeline above (captureCanonicalEvidence() +
+ * completeCanonicalEvidence()) - e.g. direct-DB-write paths like demo/seed
+ * data or manual approval recording. /evidence (Unified Evidence) only ever
+ * reads UnifiedEvidenceRecord, never ApprovalRecord directly (see
+ * services/evidence/records.ts), so an approval created without going
+ * through either this or the real capture pipeline is invisible there even
+ * though it's fully visible on /dashboard/approvals - originally identified
+ * via scripts/backfill-unified-evidence-from-approvals.ts, which backfills
+ * existing gaps; this is the same logic, extracted so new writes can avoid
+ * creating the gap in the first place instead of only fixing it after the
+ * fact. Fabricates no content - every field is copied from the approval.
+ *
+ * Idempotent: the CanonicalEvidenceEvent's evidenceHash is deterministic
+ * (approval id + occurredAt), and the create goes through the schema's
+ * existing @@unique([organizationId, providerKey, evidenceHash]) constraint
+ * via upsert, so calling this twice for the same approval is a no-op the
+ * second time rather than a duplicate.
+ *
+ * Callers decide the transaction boundary: pass a `tx` from
+ * prisma.$transaction() for atomicity with the approval's own creation, or
+ * the top-level `prisma` client when the caller's approval-creation flow
+ * isn't itself transactional (matches the style already used by
+ * lib/demo-data.ts's seed loop, which does sequential un-transacted
+ * creates for its other rows too).
+ */
+export async function backfillUnifiedEvidenceForApproval(
+  client: Prisma.TransactionClient,
+  approval: ApprovalRecord,
+): Promise<void> {
+  const providerKey = approval.sourcePlatform ? (normalizeProviderKey(approval.sourcePlatform) || 'custom') : 'custom';
+  const occurredAt = approval.occurredAt;
+  const evidenceHash = deterministicApprovalEvidenceHash(approval.id, occurredAt);
+
+  const event = await client.canonicalEvidenceEvent.upsert({
+    where: { organizationId_providerKey_evidenceHash: { organizationId: approval.organizationId, providerKey, evidenceHash } },
+    update: {},
+    create: {
+      organizationId: approval.organizationId,
+      approvalRecordId: approval.id,
+      providerKey,
+      providerEventType: 'approval_decision',
+      occurredAt,
+      receivedAt: approval.createdAt,
+      actorName: approval.approverName,
+      actorEmail: approval.approverEmail,
+      objectType: 'approval_record',
+      objectId: approval.id,
+      relatedIds: [],
+      content: approval.evidenceSnippet ?? approval.reasoning,
+      metadata: {
+        backfilledFromApprovalId: approval.id,
+        status: approval.status,
+        approvalType: approval.approvalType,
+        category: approval.category,
+        department: approval.department,
+      },
+      evidenceHash,
+      correlationId: approval.correlationId ?? approval.id,
+      correlationKeys: [approval.id],
+      confidence: approval.confidence,
+      status: 'COMPLETED',
+    },
+  });
+
+  const record = await client.unifiedEvidenceRecord.create({
+    data: {
+      organizationId: approval.organizationId,
+      primaryApprovalId: approval.id,
+      subject: approval.subject,
+      decision: approval.status,
+      outcome: approval.approvalType,
+      category: approval.category,
+      department: approval.department,
+      approverName: approval.approverName,
+      approverEmail: approval.approverEmail,
+      riskLevel: approval.riskLevel,
+      confidence: approval.confidence,
+      verificationStatus: 'UNVERIFIED',
+      sourceCount: 1,
+      evidenceCount: 1,
+      firstSeenAt: occurredAt,
+      lastSeenAt: occurredAt,
+      metadata: {
+        backfilledFromApprovalId: approval.id,
+        backfilledAt: new Date().toISOString(),
+        backfillSource: 'services/evidence/pipeline.ts#backfillUnifiedEvidenceForApproval',
+      },
+    },
+  });
+
+  await client.canonicalEvidenceEvent.update({ where: { id: event.id }, data: { unifiedRecordId: record.id } });
+
+  await client.unifiedEvidenceMember.create({
+    data: {
+      unifiedRecordId: record.id,
+      eventId: event.id,
+      status: 'AUTO_LINKED',
+      matchConfidence: 100,
+      matchingReasons: ['Backfilled directly from its own ApprovalRecord (1:1, not a correlation match).'],
+    },
+  });
 }
