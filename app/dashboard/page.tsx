@@ -180,10 +180,16 @@ export default async function DashboardPage() {
   const organizationId = tenant.organization?.id;
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const degradedMetrics: string[] = [];
+  // total/pending/high-risk used to be 3 separate count() queries. Merged into
+  // one groupBy (summed below) so this page fires fewer concurrent queries -
+  // it was firing 10 in a single Promise.all against a connection_limit of 5
+  // per Vercel function instance (see lib/env.ts's normalizeDatabaseUrlForPrisma,
+  // which documents this exact page as the reason that limit exists), so half
+  // of every request's queries were always queueing for a connection. That
+  // queueing is what was tripping safeMetric's timeout and showing the
+  // "workspace data delayed" banner even when the org has plenty of data.
   const [
-    totalApprovals,
-    pendingReview,
-    highRiskApprovals,
+    approvalStatusRiskGroups,
     recentApprovals,
     categories,
     integrations,
@@ -193,9 +199,7 @@ export default async function DashboardPage() {
     trendRecords,
   ] = organizationId
     ? await Promise.all([
-        safeMetric('total approvals', prisma.approvalRecord.count({ where: { organizationId } }), 0, degradedMetrics),
-        safeMetric('pending approvals', prisma.approvalRecord.count({ where: { organizationId, status: 'PENDING_REVIEW' } }), 0, degradedMetrics),
-        safeMetric('high risk approvals', prisma.approvalRecord.count({ where: { organizationId, riskLevel: { in: ['high', 'critical'] } } }), 0, degradedMetrics),
+        safeMetric('approval status/risk groups', prisma.approvalRecord.groupBy({ by: ['status', 'riskLevel'], where: { organizationId }, _count: { _all: true } }), [], degradedMetrics),
         safeMetric('recent approvals', prisma.approvalRecord.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 6 }), [], degradedMetrics),
         safeMetric('approval categories', prisma.approvalRecord.groupBy({ by: ['category'], where: { organizationId }, _count: { _all: true }, orderBy: { _count: { category: 'desc' } }, take: 6 }), [], degradedMetrics),
         safeMetric('integrations', prisma.integration.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 12 }), [], degradedMetrics),
@@ -204,7 +208,15 @@ export default async function DashboardPage() {
         safeMetric('recent audit', prisma.auditLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 5 }), [], degradedMetrics),
         safeMetric('approval trend', prisma.approvalRecord.findMany({ where: { organizationId, createdAt: { gte: since } }, select: { createdAt: true }, orderBy: { createdAt: 'asc' }, take: 500 }), [], degradedMetrics),
       ])
-    : [0, 0, 0, [], [], [], 0, [], [], []] as const;
+    : [[], [], [], [], 0, [], [], []] as const;
+
+  const totalApprovals = approvalStatusRiskGroups.reduce((sum, group) => sum + group._count._all, 0);
+  const pendingReview = approvalStatusRiskGroups
+    .filter((group) => group.status === 'PENDING_REVIEW')
+    .reduce((sum, group) => sum + group._count._all, 0);
+  const highRiskApprovals = approvalStatusRiskGroups
+    .filter((group) => group.riskLevel === 'high' || group.riskLevel === 'critical')
+    .reduce((sum, group) => sum + group._count._all, 0);
 
   const connected = integrations.filter((item) => item.status === 'CONNECTED' || item.status === 'SYNCING');
   const complianceScore = totalApprovals > 0 ? Math.max(0, Math.round(100 - ((highRiskApprovals + pendingReview * 0.25) / totalApprovals) * 100)) : 100;
