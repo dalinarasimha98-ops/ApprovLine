@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import type { ApprovalStatus, ApprovalType, IntegrationProvider } from '@prisma/client';
 import { invalidateApprovalRecordsCache } from '@/lib/approvalRecords';
 import { createDemoInvestigationsForOrganization } from '@/services/investigations';
+import { backfillUnifiedEvidenceForApproval } from '@/services/evidence/pipeline';
 import { evaluateRecentApprovals, seedDemoPlaybooks } from '@/services/playbooks';
 
 type DemoApproval = {
@@ -708,6 +709,16 @@ export async function createDemoDataForOrganization(organizationId: string) {
         occurredAt: receivedAt,
       },
     });
+
+    // This demo-data path writes ApprovalRecord directly, bypassing the real
+    // capture pipeline (services/evidence/pipeline.ts's
+    // captureCanonicalEvidence()/completeCanonicalEvidence()) that normally
+    // links an approval into Unified Evidence. Without this, every demo
+    // approval would be visible on /dashboard/approvals but invisible on
+    // /evidence - the gap scripts/backfill-unified-evidence-from-approvals.ts
+    // exists to fix after the fact. Backfilling it here means new demo runs
+    // never create that gap in the first place.
+    await backfillUnifiedEvidenceForApproval(prisma, approval);
 
     await prisma.classifierResult.create({
       data: {
