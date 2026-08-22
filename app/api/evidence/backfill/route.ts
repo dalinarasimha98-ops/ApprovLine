@@ -14,7 +14,16 @@ export const dynamic = 'force-dynamic';
 // Idempotent: already-linked approvals are excluded from the query below on
 // every call, so clicking the trigger again just processes the next batch
 // until none remain - the response reports how many are left.
-const BATCH_SIZE = 25;
+//
+// Kept small (not just "small enough for the timeout"): each approval here
+// is 3 sequential writes against a connection_limit=5 pool (see lib/env.ts),
+// so a large batch briefly saturates the same pool /evidence/[id] reads
+// share - reported after use as those reads' circuit breaker
+// (services/evidence/records.ts's isEvidenceDetailBreakerOpen) tripping and
+// showing "We could not load this record" for the following 60s even though
+// nothing was actually broken. 10 keeps one backfill call's write burst
+// small enough to not crowd out concurrent reads.
+const BATCH_SIZE = 10;
 
 /**
  * Self-service version of scripts/backfill-unified-evidence-from-approvals.ts
