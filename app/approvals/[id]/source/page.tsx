@@ -145,7 +145,7 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
                   <p className="mt-1">It may have been deleted, revoked, or was generated as demo evidence. The retained ApprovLine record remains auditable.</p>
                 </div>
               )}
-              <a href={`/api/approvals/${id}/evidence`} download className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700">Download evidence</a>
+              <a href={`/api/approvals/${id}/evidence`} download className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700">Download evidence (PDF)</a>
               {threadPayload ? null : (
                 <CopyEvidenceLinkButton path={`/approvals/${id}/source`} className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50" />
               )}

@@ -3,6 +3,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { reportApprovalFailure } from '@/lib/approval-observability';
 import { withTimeout } from '@/lib/performance';
+import { createSimplePdf } from '@/lib/simple-pdf';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,36 +29,38 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Approval evidence is unavailable or has been deleted.' }, { status: 404 });
     }
 
-    const payload = {
-      approval: {
-        subject: approval.subject,
-        status: approval.status,
-        approvalType: approval.approvalType,
-        approver: approval.approverName,
-        approverEmail: approval.approverEmail,
-        department: approval.department,
-        category: approval.category,
-        confidence: approval.confidence,
-        riskLevel: approval.riskLevel,
-        timestamp: approval.approvalTimestamp ?? approval.occurredAt,
-      },
-      evidence: {
-        snippet: approval.evidenceSnippet,
-        reasoning: approval.reasoning,
-        conditions: approval.conditions,
-        sourcePlatform: approval.sourcePlatform,
-        sourceLink: approval.sourceLink,
-        channel: approval.messageSource?.channel,
-        sender: approval.messageSource?.sender,
-        senderEmail: approval.messageSource?.senderEmail,
-      },
-      auditTrail: approval.auditLogs.map((event) => ({ action: event.action, timestamp: event.createdAt, metadata: event.metadata })),
-    };
+    // A human-readable PDF, not the raw JSON dump this route used to return -
+    // this is meant to be opened and read, not parsed. Reuses the same
+    // simple PDF writer app/api/export/approvals/route.ts already uses for
+    // its own single/bulk approval exports (lib/simple-pdf.ts), so this
+    // route's output looks and behaves the same way as that one instead of
+    // introducing a second PDF format.
+    const timestamp = approval.approvalTimestamp ?? approval.occurredAt;
+    const lines = [
+      'ApprovLine Approval Evidence',
+      `Generated: ${new Date().toISOString()}`,
+      '',
+      approval.subject,
+      `Status: ${approval.status} | Type: ${approval.approvalType} | Confidence: ${approval.confidence}% | Risk: ${approval.riskLevel ?? 'low'}`,
+      `Approver: ${approval.approverName ?? 'Unknown'} <${approval.approverEmail ?? 'unknown'}>`,
+      `Department: ${approval.department ?? 'Unassigned'} | Category: ${approval.category ?? 'Unassigned'}`,
+      `Source: ${approval.sourcePlatform ?? approval.messageSource?.provider ?? 'unknown'} | Channel: ${approval.messageSource?.channel ?? 'Not recorded'}`,
+      `Message sender: ${approval.messageSource?.sender ?? 'Not recorded'} <${approval.messageSource?.senderEmail ?? 'unknown'}>`,
+      `Decision timestamp: ${timestamp.toISOString()}`,
+      '',
+      `Reasoning: ${approval.reasoning}`,
+      ...(approval.conditions ? [`Conditions: ${approval.conditions}`] : []),
+      `Evidence: ${approval.evidenceSnippet ?? 'No evidence snippet retained'}`,
+      ...(approval.sourceLink ? [`Source link: ${approval.sourceLink}`] : []),
+      '',
+      `Audit trail (${approval.auditLogs.length} events):`,
+      ...approval.auditLogs.map((event) => `  ${event.createdAt.toISOString()}  ${event.action}`),
+    ];
 
-    return new NextResponse(JSON.stringify(payload, null, 2), {
+    return new NextResponse(createSimplePdf(lines), {
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="approvline-evidence-${id}.json"`,
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="approvline-evidence-${id}.pdf"`,
       },
     });
   } catch (error) {

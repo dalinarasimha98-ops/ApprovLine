@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import type { ApprovalStatus, ApprovalType, IntegrationProvider } from '@prisma/client';
+import type { ApprovalStatus, ApprovalType, IntegrationProvider, Prisma } from '@prisma/client';
 import { invalidateApprovalRecordsCache } from '@/lib/approvalRecords';
 import { createDemoInvestigationsForOrganization } from '@/services/investigations';
 import { backfillUnifiedEvidenceForApproval, runEvidenceSidecar } from '@/services/evidence/pipeline';
@@ -431,6 +431,118 @@ function demoMetadata(extra: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * The "Raw Captured Payload" panel on the evidence pages renders whatever's
+ * in MessageSource.rawPayload verbatim - this used to be demoMetadata()'s
+ * flat {demo, demoRunId, snippet, originalLink, sourcePlatform} object for
+ * every demo approval regardless of source platform, which looked nothing
+ * like what any of these providers actually send and undermined the point
+ * of showing a "raw captured payload" at all. This builds a payload shaped
+ * like each real provider's own message/event/record format instead,
+ * fabricating no new facts - every field here is copied from the same
+ * DemoApproval entry demoMetadata() was already using (subject, snippet,
+ * approver, channel, source link, timestamp). Demo-data identification/
+ * cleanup (resetDemoDataForOrganization below) never reads rawPayload
+ * fields - it keys off MessageSource.externalId and ApprovalRecord.sourceLink
+ * instead - so dropping the demo/demoRunId markers from this object doesn't
+ * affect that.
+ */
+function buildDemoRawPayload(item: DemoApproval, receivedAt: Date): Prisma.InputJsonValue {
+  switch (item.sourcePlatform) {
+    case 'slack': {
+      const [, , team, channelId] = new URL(item.sourceLink).pathname.split('/');
+      return {
+        type: 'message',
+        team,
+        channel: channelId,
+        channel_name: item.channel.replace(/^#/, ''),
+        user: `U${item.externalId.slice(-8).toUpperCase()}`,
+        username: item.approverEmail.split('@')[0],
+        text: item.evidenceSnippet,
+        ts: (receivedAt.getTime() / 1000).toFixed(6),
+        permalink: item.sourceLink,
+      };
+    }
+    case 'gmail':
+      return {
+        id: item.externalId,
+        threadId: item.externalId,
+        labelIds: ['INBOX', 'IMPORTANT'],
+        snippet: item.evidenceSnippet,
+        payload: {
+          mimeType: 'text/plain',
+          headers: [
+            { name: 'From', value: `${item.approverName} <${item.approverEmail}>` },
+            { name: 'To', value: item.channel },
+            { name: 'Subject', value: item.subject },
+            { name: 'Date', value: receivedAt.toUTCString() },
+          ],
+          body: { data: item.evidenceSnippet },
+        },
+      };
+    case 'outlook':
+      return {
+        id: item.externalId,
+        subject: item.subject,
+        bodyPreview: item.evidenceSnippet,
+        from: { emailAddress: { name: item.approverName, address: item.approverEmail } },
+        toRecipients: [{ emailAddress: { address: item.channel } }],
+        receivedDateTime: receivedAt.toISOString(),
+        webLink: item.sourceLink,
+      };
+    case 'teams': {
+      const [group, subject] = item.channel.split(' / ');
+      return {
+        id: item.externalId,
+        messageType: 'message',
+        createdDateTime: receivedAt.toISOString(),
+        from: { user: { displayName: item.approverName, id: item.externalId } },
+        body: { contentType: 'text', content: item.evidenceSnippet },
+        channelIdentity: { channelId: group ?? item.channel },
+        subject: subject ?? item.channel,
+        webUrl: item.sourceLink,
+      };
+    }
+    case 'jira': {
+      const [projectKey, issueKey] = item.channel.split(' / ');
+      return {
+        webhookEvent: 'comment_created',
+        issue: { key: issueKey ?? item.channel, fields: { project: { key: projectKey }, summary: item.subject } },
+        comment: {
+          author: { displayName: item.approverName, emailAddress: item.approverEmail },
+          body: item.evidenceSnippet,
+          created: receivedAt.toISOString(),
+        },
+        self: item.sourceLink,
+      };
+    }
+    case 'servicenow': {
+      const [table, number] = item.channel.split(' / ');
+      return {
+        sys_id: item.externalId,
+        number: number ?? item.channel,
+        table,
+        short_description: item.subject,
+        comments: item.evidenceSnippet,
+        sys_updated_by: item.approverEmail,
+        sys_updated_on: receivedAt.toISOString(),
+        url: item.sourceLink,
+      };
+    }
+    case 'zoom': {
+      const [, topic] = item.channel.split(' / ');
+      return {
+        meeting_topic: topic ?? item.channel,
+        host_email: item.approverEmail,
+        participant: { name: item.approverName },
+        transcript_snippet: item.evidenceSnippet,
+        recording_start: receivedAt.toISOString(),
+        share_url: item.sourceLink,
+      };
+    }
+  }
+}
+
 export async function createDemoDataForOrganization(organizationId: string) {
   await resetDemoDataForOrganization(organizationId);
 
@@ -678,11 +790,7 @@ export async function createDemoDataForOrganization(organizationId: string) {
         sender: item.approverName,
         senderEmail: item.approverEmail,
         receivedAt,
-        rawPayload: demoMetadata({
-          sourcePlatform: item.sourcePlatform,
-          snippet: item.evidenceSnippet,
-          originalLink: item.sourceLink,
-        }),
+        rawPayload: buildDemoRawPayload(item, receivedAt),
       },
     });
 
