@@ -36,7 +36,25 @@ export function ToastOnQuery() {
   const jira = messageFor('jira', params.get('jira'), params.get('reason'));
   const serviceNow = messageFor('servicenow', params.get('servicenow'), params.get('reason'));
   const approvalRecordId = params.get('approvalRecordId');
-  const message = slack ?? gmail ?? outlook ?? teams ?? jira ?? serviceNow ?? (approvalRecordId ? { tone: 'success', text: 'Approval record created.' } : null);
+  const evidenceBackfill = params.get('evidenceBackfill');
+  const evidenceBackfillMessage = (() => {
+    if (evidenceBackfill === 'error') {
+      return { tone: 'error' as const, text: params.get('evidenceBackfillReason') === 'forbidden' ? 'Only workspace admins can backfill Unified Evidence.' : 'Unified Evidence backfill failed. Retry in a moment.' };
+    }
+    if (evidenceBackfill === 'success') {
+      const count = Number(params.get('evidenceBackfillCount') ?? '0');
+      const failed = Number(params.get('evidenceBackfillFailed') ?? '0');
+      const remaining = params.get('evidenceBackfillRemaining') === 'true';
+      const parts = [
+        count > 0 ? `Linked ${count} approval${count === 1 ? '' : 's'} to Unified Evidence.` : 'No approvals needed linking.',
+        failed > 0 ? `${failed} could not be linked this time.` : null,
+        remaining ? 'More remain — click again to continue.' : null,
+      ].filter(Boolean);
+      return { tone: 'success' as const, text: parts.join(' ') };
+    }
+    return null;
+  })();
+  const message = slack ?? gmail ?? outlook ?? teams ?? jira ?? serviceNow ?? evidenceBackfillMessage ?? (approvalRecordId ? { tone: 'success', text: 'Approval record created.' } : null);
 
   if (!message) return null;
 

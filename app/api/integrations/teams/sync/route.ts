@@ -38,7 +38,11 @@ function syncResponse(request: NextRequest, fromForm: boolean, payload: unknown,
     } else {
       url.searchParams.set('teams', 'connected');
     }
-    return NextResponse.redirect(url);
+    // 303, not a bare redirect() (defaults to 307): this branch only runs
+    // for a plain HTML form POST (fromForm), a full-page navigation - 307
+    // would make the browser replay POST against /dashboard/settings/integrations
+    // (a GET-only page route) and 405.
+    return NextResponse.redirect(url, { status: 303 });
   }
   return NextResponse.json(payload, { status });
 }

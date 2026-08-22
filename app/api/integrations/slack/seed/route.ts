@@ -52,6 +52,9 @@ export async function POST(request: NextRequest) {
     });
   }
   revalidateTag(approvalRecordsCacheTag(tenant.organization.id));
-  return NextResponse.redirect(new URL('/dashboard/approvals?sourcePlatform=slack', request.url));
+  // 303, not a bare redirect() (defaults to 307): a POST redirecting to a
+  // GET-only page route needs Post/Redirect/Get or a form-triggered call
+  // would 405.
+  return NextResponse.redirect(new URL('/dashboard/approvals?sourcePlatform=slack', request.url), { status: 303 });
   });
 }

@@ -83,6 +83,11 @@ export default async function ApprovalsPage({
     console.error(`[dashboard] approvals query failed after ${Date.now() - startedAt}ms`, error);
   }
 
+  // Reflects only the currently visible (filtered/paginated) page, not the
+  // whole org - it's just a discoverability signal, not a stat. The actual
+  // backfill (POST /api/evidence/backfill) always operates org-wide.
+  const unlinkedOnPage = approvals.filter((approval) => !approval.evidenceRecordId).length;
+
   return (
     <section className="grid gap-6">
       <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-end">
@@ -107,6 +112,21 @@ export default async function ApprovalsPage({
           </div>
         </div>
       </div>
+      {unlinkedOnPage > 0 ? (
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm sm:flex-row sm:items-center">
+          <div>
+            <h3 className="text-sm font-black text-slate-950">{unlinkedOnPage} approval{unlinkedOnPage === 1 ? '' : 's'} on this page {unlinkedOnPage === 1 ? "isn't" : "aren't"} in Unified Evidence yet</h3>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              These predate automatic evidence correlation. Backfill creates the missing Unified Evidence record for each one directly from its existing approval data — nothing is fabricated.
+            </p>
+          </div>
+          <form action="/api/evidence/backfill" method="post">
+            <FormSubmitButton pendingText="Backfilling..." className="min-h-0 h-11 shrink-0 rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200">
+              Backfill Unified Evidence
+            </FormSubmitButton>
+          </form>
+        </div>
+      ) : null}
       <form id="filters" className="scroll-mt-32 grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-4">
         {[
           ['q', 'Search approvals'],
