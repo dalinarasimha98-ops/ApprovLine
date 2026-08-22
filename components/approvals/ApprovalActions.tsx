@@ -55,7 +55,7 @@ export function ApprovalActions({ approvalId, subject, memoryEntityId }: Approva
     const url = kind === 'evidence'
       ? `/api/approvals/${approvalId}/evidence`
       : `/api/export/approvals?approvalId=${encodeURIComponent(approvalId)}&format=${kind}`;
-    const fallback = kind === 'evidence' ? `approvline-evidence-${approvalId}.json` : `approvline-approval-${approvalId}.${kind}`;
+    const fallback = kind === 'evidence' ? `approvline-evidence-${approvalId}.pdf` : `approvline-approval-${approvalId}.${kind}`;
 
     setPendingDownload(kind);
     setMessage(null);
