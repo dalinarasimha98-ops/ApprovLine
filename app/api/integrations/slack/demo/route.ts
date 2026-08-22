@@ -17,6 +17,9 @@ export async function POST(request: NextRequest) {
     channel: 'beta-approvals',
   });
   const result = await processIncomingMessage(job, { auditAction: 'integration.slack.demo_message_processed' });
-  return NextResponse.redirect(new URL(`/dashboard/approvals?sourcePlatform=slack&approvalRecordId=${result?.approval?.id ?? ''}`, request.url));
+  // 303, not a bare redirect() (defaults to 307): a POST redirecting to a
+  // GET-only page route needs Post/Redirect/Get or a form-triggered call
+  // would 405.
+  return NextResponse.redirect(new URL(`/dashboard/approvals?sourcePlatform=slack&approvalRecordId=${result?.approval?.id ?? ''}`, request.url), { status: 303 });
   });
 }

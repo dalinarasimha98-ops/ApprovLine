@@ -39,5 +39,9 @@ export async function POST(request: Request) {
     if (!isPilotMigrationRequired(error)) throw error;
   }
 
-  return NextResponse.redirect(new URL('/dashboard/settings/integrations?slack=disconnected', request.url));
+  // 303, not a bare redirect() (defaults to 307): triggered by a plain HTML
+  // form POST ("Disconnect" on /dashboard/settings/integrations) - 307
+  // would make the browser replay POST against a GET-only page route and
+  // 405.
+  return NextResponse.redirect(new URL('/dashboard/settings/integrations?slack=disconnected', request.url), { status: 303 });
 }
