@@ -184,6 +184,16 @@ function extractMissingEvidence(answer: unknown) {
 // ---------------------------------------------------------------------------
 
 async function fetchCoreAnalyticsFresh(organizationId: string, demoProjection: boolean): Promise<CoreAnalytics> {
+  // core:approvals drives the headline "Total" and everything derived from
+  // it (department/source breakdowns, risk counts, compliance %,
+  // integrations) - it must NOT be caught-and-defaulted here the way
+  // core:integrationCount (a minor, optional signal) is. A caught failure
+  // here used to make fetchCoreAnalyticsFresh "succeed" with an empty
+  // array, producing a confidently-wrong all-zero report that then got
+  // cached and served as if it were a real empty workspace. Letting it
+  // throw makes this function reject instead, so getCoreAnalytics's
+  // withStaleFallback can correctly serve the last real value (or a
+  // genuine "temporarily unavailable" state) rather than a fake zero.
   const [approvalsRaw, integrationCount] = await Promise.all([
     timedQuery(
       'core:approvals',
@@ -208,7 +218,7 @@ async function fetchCoreAnalyticsFresh(organizationId: string, demoProjection: b
         orderBy: { createdAt: 'desc' },
         take: 500,
       }),
-    ).catch(() => [] as Awaited<ReturnType<typeof prisma.approvalRecord.findMany>>),
+    ),
     timedQuery('core:integrationCount', prisma.integration.count({ where: { organizationId } })).catch(() => 0),
   ]);
   // Every ApprovalRecord for this org counts toward the live total, seeded
