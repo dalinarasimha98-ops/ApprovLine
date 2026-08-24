@@ -130,6 +130,23 @@ function truncate(value?: string | null, length = 280) {
   return value.length > length ? `${value.slice(0, length - 1)}…` : value;
 }
 
+/**
+ * Same demo-record convention applied to services/analytics.ts's Executive
+ * ROI Dashboard - demo-seeded approvals (lib/demo-data.ts, npm run
+ * seed:demo) carry a sourceLink containing 'demo'/'TDEMO' or a MessageSource
+ * externalId starting with 'demo-'. The Memory Graph has no "demo preview"
+ * mode the way analytics does - everything it shows is presented as real
+ * connected enterprise data - so these must never be ingested as vendors,
+ * approvers, or decisions in the first place.
+ */
+function isDemoApprovalRecord(approval: { sourceLink: string | null; messageSource?: { externalId: string | null } | null }) {
+  return Boolean(
+    approval.sourceLink?.includes('demo') ||
+      approval.sourceLink?.includes('TDEMO') ||
+      approval.messageSource?.externalId?.startsWith('demo-'),
+  );
+}
+
 function vendorFromText(text: string) {
   const match = text.match(/\b(?:vendor|supplier|partner)\s+([A-Z][A-Za-z0-9&., -]{2,48})/);
   return match?.[1]?.replace(/\s+(approval|contract|payment|invoice).*$/i, '').trim() ?? null;
@@ -270,7 +287,7 @@ export function invalidateMemoryCache(organizationId: string) {
 
 export async function rebuildMemoryGraphForOrganization(organizationId: string) {
   await ensureMemoryStorage();
-  const [approvals, investigations, playbooks, rules, evaluations] = await Promise.all([
+  const [approvalsRaw, investigations, playbooks, rules, evaluations] = await Promise.all([
     prisma.approvalRecord.findMany({
       where: { organizationId },
       include: { messageSource: true },
@@ -299,6 +316,27 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
       take: 240,
     }).catch(() => []),
   ]);
+
+  const demoApprovals = approvalsRaw.filter(isDemoApprovalRecord);
+  if (demoApprovals.length > 0) {
+    // Prunes entities a rebuild before this fix already created for demo
+    // approvals. Both externalId shapes are 1:1 with a single already-
+    // identified-as-demo approval/messageSource row, so this can never
+    // reach a real customer's data. Cascades (schema onDelete: Cascade)
+    // remove the entity's relationships and timeline events too.
+    await prisma.memoryEntity.deleteMany({
+      where: {
+        organizationId,
+        externalId: {
+          in: [
+            ...demoApprovals.map((approval) => `approval:${approval.id}`),
+            ...demoApprovals.filter((approval) => approval.messageSource).map((approval) => `message-source:${approval.messageSource!.id}`),
+          ],
+        },
+      },
+    }).catch((error) => console.warn('[memory] demo entity cleanup skipped', error instanceof Error ? error.message : error));
+  }
+  const approvals = approvalsRaw.filter((approval) => !isDemoApprovalRecord(approval));
 
   const approvalEntityIds = new Map<string, string>();
   const policyEntityIds = new Map<string, string>();
