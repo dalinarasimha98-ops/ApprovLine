@@ -675,10 +675,16 @@ async function fetchMemoryDashboardFresh(organizationId: string, query: string):
       }
     : undefined;
 
+  // totalEntities/totalRelationships/graphEntities are NOT individually
+  // caught below, unlike the "Recent X" lists - those three drive the
+  // headline stat cards and the graph view itself, so a query failure on
+  // them must propagate and hit the retry/circuit-breaker/stale-value path
+  // below, not get silently replaced with 0/[] and rendered as a
+  // confidently-wrong "empty graph" indistinguishable from a real one.
   const attempt = () =>
     Promise.all([
-      withTimeout('memory:totalEntities', prisma.memoryEntity.count({ where: { organizationId } }), MEMORY_QUERY_TIMEOUT_MS).catch(() => 0),
-      withTimeout('memory:totalRelationships', prisma.memoryRelationship.count({ where: { organizationId } }), MEMORY_QUERY_TIMEOUT_MS).catch(() => 0),
+      withTimeout('memory:totalEntities', prisma.memoryEntity.count({ where: { organizationId } }), MEMORY_QUERY_TIMEOUT_MS),
+      withTimeout('memory:totalRelationships', prisma.memoryRelationship.count({ where: { organizationId } }), MEMORY_QUERY_TIMEOUT_MS),
       withTimeout('memory:recentEntities', prisma.memoryEntity.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 8 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
       withTimeout('memory:recentDecisions', prisma.memoryEntity.findMany({ where: { organizationId, type: { in: ['APPROVAL', 'DECISION', 'ZOOM_DECISION'] } }, orderBy: { lastSeenAt: 'desc' }, take: 6 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
       withTimeout('memory:recentRisks', prisma.memoryEntity.findMany({ where: { organizationId, OR: [{ type: 'RISK' }, { riskScore: { gte: 70 } }] }, orderBy: { riskScore: 'desc' }, take: 6 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
@@ -686,7 +692,7 @@ async function fetchMemoryDashboardFresh(organizationId: string, query: string):
       searchWhere
         ? withTimeout('memory:searchResults', prisma.memoryEntity.findMany({ where: searchWhere, orderBy: { updatedAt: 'desc' }, take: 12 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[])
         : Promise.resolve([] as MemoryEntity[]),
-      withTimeout('memory:graphEntities', prisma.memoryEntity.findMany({ where: { organizationId }, orderBy: { riskScore: 'desc' }, take: 14 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
+      withTimeout('memory:graphEntities', prisma.memoryEntity.findMany({ where: { organizationId }, orderBy: { riskScore: 'desc' }, take: 14 }), MEMORY_QUERY_TIMEOUT_MS),
       withTimeout('memory:graphRelationships', prisma.memoryRelationship.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 22 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryRelationship[]),
     ]);
 
