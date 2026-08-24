@@ -74,7 +74,11 @@ const SLOW_QUERY_LOG_MS = 2000;
 // Belt-and-suspenders cap on the whole fetch (queries + assembly), on top of
 // the per-query caps above.
 const TOTAL_FETCH_TIMEOUT_MS = 5000;
-const CACHE_REVALIDATE_SECONDS = 300;
+// Was 300s - an executive dashboard reporting on live approval activity
+// shouldn't be able to look 5 minutes stale after new approvals land.
+// 60s keeps the same "amortize repeated page loads instead of hitting
+// Postgres every time" benefit while cutting worst-case staleness 5x.
+const CACHE_REVALIDATE_SECONDS = 60;
 // Last-resort fallback only, if a fetch fails AND nothing has ever
 // succeeded within this window. Mirrors the stale-cache pattern already
 // used in lib/approvalRecords.ts.
@@ -436,6 +440,7 @@ export async function buildExecutiveAnalytics(organizationId: string, options: A
 export function analyticsCsv(report: ExecutiveAnalytics) {
   const rows = [
     ['Metric', 'Value'],
+    ['Report Mode', report.demoProjection ? 'Demo projection (synthetic, not real data)' : 'Live workspace (real data)'],
     ['Executive Summary', report.summary],
     ['Approvals Captured', String(report.approvals.total)],
     ['Manual Search Hours Avoided', String(report.timeSaved.manualSearchHours)],
