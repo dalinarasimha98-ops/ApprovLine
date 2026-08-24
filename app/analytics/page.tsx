@@ -249,16 +249,17 @@ async function CoreAnalyticsSection({ organizationId, requestedDemo }: { organiz
     );
   }
 
-  const usingEmptyDemoPreview = !requestedDemo && liveReport.approvals.total === 0;
-  let report = liveReport;
-  if (usingEmptyDemoPreview) {
-    try {
-      report = await getCoreAnalytics(organizationId, { demoProjection: true });
-    } catch (error) {
-      console.warn('[analytics] demo projection fallback', error instanceof Error ? error.message : error);
-      report = liveReport;
-    }
-  }
+  // Demo projection is opt-in only (?demo=1) - it must never turn on by
+  // itself. An earlier version silently swapped in scaled demo numbers
+  // whenever the live total was 0, which is exactly the kind of surprise
+  // that led to this page being reported as "showing fake data": a real
+  // workspace legitimately at zero approvals looked identical to one
+  // showing synthetic projections, with only a banner (easy to miss) as
+  // the difference. A workspace with zero approvals now gets a real,
+  // honest empty state instead - the "Use demo analytics" button below is
+  // still there for anyone who wants the preview on purpose.
+  const report = liveReport;
+  const hasNoLiveData = !requestedDemo && report.approvals.total === 0;
   const exportSuffix = report.demoProjection ? '&demo=1' : '';
 
   return (
@@ -277,9 +278,9 @@ async function CoreAnalyticsSection({ organizationId, requestedDemo }: { organiz
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-blue-200">Report mode</p>
-            <p className="mt-1 text-sm font-bold text-white">{report.demoProjection ? 'Demo preview' : 'Live workspace'}</p>
+          <div className={`rounded-2xl border p-4 ${report.demoProjection ? 'border-amber-400/60 bg-amber-400/10' : 'border-white/10 bg-white/[0.06]'}`}>
+            <p className={`text-xs font-black uppercase tracking-wide ${report.demoProjection ? 'text-amber-300' : 'text-blue-200'}`}>Report mode</p>
+            <p className="mt-1 text-sm font-bold text-white">{report.demoProjection ? '⚠ Demo preview (synthetic numbers)' : 'Live workspace (real data)'}</p>
             <p className="mt-1 text-xs font-semibold text-slate-300">Generated {new Date(report.generatedAt).toLocaleString()}</p>
           </div>
         </div>
@@ -287,18 +288,28 @@ async function CoreAnalyticsSection({ organizationId, requestedDemo }: { organiz
 
       {report.degraded ? <DegradedNotice label="Core approval metrics" /> : null}
 
-      {(usingEmptyDemoPreview || report.demoProjection) ? (
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm sm:flex-row sm:items-center">
+      {report.demoProjection ? (
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border-2 border-[#2155d9] bg-blue-50 p-4 shadow-sm sm:flex-row sm:items-center">
           <div>
-            <h3 className="font-black text-slate-950">{usingEmptyDemoPreview ? 'No live analytics yet - showing demo preview' : 'Demo analytics preview enabled'}</h3>
-            <p className="mt-1 text-sm font-semibold text-slate-600">Use this customer-ready preview while Slack, Gmail, approvals, and Playbook AI data accumulate.</p>
+            <h3 className="font-black text-slate-950">⚠ Demo analytics preview enabled — these numbers are a synthetic projection, not your real data</h3>
+            <p className="mt-1 text-sm font-semibold text-slate-600">Use this customer-ready preview for sales conversations. Every figure below is scaled/fabricated for presentation purposes.</p>
+          </div>
+          <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
+            View live data
+          </PendingLink>
+        </div>
+      ) : hasNoLiveData ? (
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm sm:flex-row sm:items-center">
+          <div>
+            <h3 className="font-black text-slate-950">No approvals captured yet</h3>
+            <p className="mt-1 text-sm font-semibold text-slate-600">These are your real, live numbers - they are zero because no approvals have been captured for this workspace yet. Connect Slack, Gmail, or another integration, or preview a customer-ready demo instead.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
-              View live data
+            <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
+              Preview demo analytics
             </PendingLink>
             <form action="/api/demo/seed" method="post">
-              <FormSubmitButton pendingText="Generating..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
+              <FormSubmitButton pendingText="Generating..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
                 Generate demo data
               </FormSubmitButton>
             </form>
