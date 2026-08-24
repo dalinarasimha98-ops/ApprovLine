@@ -175,20 +175,6 @@ function extractMissingEvidence(answer: unknown) {
   return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
 }
 
-/**
- * Same demo-record convention used everywhere else in the codebase
- * (lib/evidence-links.ts, app/approvals/[id]/page.tsx, services/investigations.ts,
- * components/dashboard/ApprovalTable.tsx, app/api/export/approvals/route.ts) -
- * demo-seeded approvals (lib/demo-data.ts) carry a sourceLink containing
- * 'demo' or the fabricated 'TDEMO' Slack workspace ID. The live (non-demo)
- * executive report must exclude these so seeded/synthetic records never
- * blend into a real customer's boardroom ROI numbers; the explicit demo
- * preview (?demo=1) is the only place they're meant to show up.
- */
-function isDemoApproval(sourceLink?: string | null) {
-  return Boolean(sourceLink?.includes('demo') || sourceLink?.includes('TDEMO'));
-}
-
 // ---------------------------------------------------------------------------
 // Core analytics: approvals captured, time saved, risk, compliance,
 // integrations, trends. Backed by two queries (approvals, integration
@@ -225,9 +211,11 @@ async function fetchCoreAnalyticsFresh(organizationId: string, demoProjection: b
     ).catch(() => [] as Awaited<ReturnType<typeof prisma.approvalRecord.findMany>>),
     timedQuery('core:integrationCount', prisma.integration.count({ where: { organizationId } })).catch(() => 0),
   ]);
-  // The demo preview (demoProjection=true) intentionally uses seeded demo
-  // records as its data source; the live report must not.
-  const approvals = demoProjection ? approvalsRaw : approvalsRaw.filter((item) => !isDemoApproval(item.sourceLink));
+  // Every ApprovalRecord for this org counts toward the live total, seeded
+  // or not - per explicit product decision, seed data (npm run seed:demo,
+  // scripts/seed-demo-approvals.ts) is treated as real approval data here,
+  // not excluded. Only demoProjection's own scaling (below) is synthetic.
+  const approvals = approvalsRaw;
 
   const multiplier = demoMultiplier(demoProjection, approvals.length);
   const totalApprovals = demoProjection ? scale(approvals.length || 8, multiplier, 742) : approvals.length;
@@ -340,16 +328,16 @@ export const getCoreAnalytics = cache(async (organizationId: string, options: An
 // ---------------------------------------------------------------------------
 
 async function fetchPlaybookAnalyticsFresh(organizationId: string, demoProjection: boolean): Promise<PlaybookAnalyticsSection> {
-  const [approvalCount, pendingApprovalsRaw, playbookQueries, chunks] = await Promise.all([
+  const [approvalCount, pendingApprovals, playbookQueries, chunks] = await Promise.all([
     timedQuery('playbook:approvalCount', prisma.approvalRecord.count({ where: { organizationId } })).catch(() => 0),
     timedQuery(
       'playbook:pendingApprovals',
       prisma.approvalRecord.findMany({
         where: { organizationId, OR: [{ status: 'PENDING_REVIEW' }, { approvalType: 'CONDITIONAL' }] },
-        select: { department: true, sourceLink: true },
+        select: { department: true },
         take: 200,
       }),
-    ).catch(() => [] as Array<{ department: string | null; sourceLink: string | null }>),
+    ).catch(() => [] as Array<{ department: string | null }>),
     timedQuery(
       'playbook:queries',
       prisma.playbookQuery.findMany({
@@ -369,7 +357,6 @@ async function fetchPlaybookAnalyticsFresh(organizationId: string, demoProjectio
     ).catch(() => [] as Array<{ id: string; document: { name: string } }>),
   ]);
 
-  const pendingApprovals = demoProjection ? pendingApprovalsRaw : pendingApprovalsRaw.filter((item) => !isDemoApproval(item.sourceLink));
   const multiplier = demoMultiplier(demoProjection, approvalCount);
   const pendingByDepartment = topCounts(pendingApprovals.map((item) => item.department), 'Unassigned')
     .map((item) => ({ ...item, count: scale(item.count, multiplier) }));
