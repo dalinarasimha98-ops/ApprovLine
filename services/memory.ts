@@ -147,6 +147,47 @@ function isDemoApprovalRecord(approval: { sourceLink: string | null; messageSour
   );
 }
 
+/**
+ * Deletes the MemoryEntity rows a rebuild created for the given demo
+ * approvals. Both externalId shapes are 1:1 with a single already-
+ * identified-as-demo approval/messageSource row, so this can never reach a
+ * real customer's data. Cascades (schema onDelete: Cascade) remove the
+ * entity's relationships and timeline events too.
+ */
+async function deleteMemoryEntitiesForApprovals(organizationId: string, demoApprovals: Array<{ id: string; messageSource: { id: string } | null }>) {
+  if (demoApprovals.length === 0) return;
+  await prisma.memoryEntity.deleteMany({
+    where: {
+      organizationId,
+      externalId: {
+        in: [
+          ...demoApprovals.map((approval) => `approval:${approval.id}`),
+          ...demoApprovals.filter((approval) => approval.messageSource).map((approval) => `message-source:${approval.messageSource!.id}`),
+        ],
+      },
+    },
+  }).catch((error) => console.warn('[memory] demo entity cleanup skipped', error instanceof Error ? error.message : error));
+}
+
+/**
+ * rebuildMemoryGraphForOrganization() only ever runs on an explicit
+ * "Refresh graph" click or when an org's graph is completely empty (see
+ * ensureMemoryGraph below) - a workspace that already has demo-tainted
+ * MemoryEntity rows from before the demo-exclusion fix will keep showing
+ * them indefinitely otherwise, since nothing else ever revisits already-
+ * synced entities. This is the standalone, page-load-triggered cleanup path
+ * for that: cheap enough (one lookup, one deleteMany) to run without the
+ * user needing to know a "Refresh graph" button exists.
+ */
+async function pruneDemoMemoryEntities(organizationId: string) {
+  const approvals = await prisma.approvalRecord.findMany({
+    where: { organizationId },
+    select: { id: true, sourceLink: true, messageSource: { select: { id: true, externalId: true } } },
+    take: 500,
+  }).catch(() => []);
+  await deleteMemoryEntitiesForApprovals(organizationId, approvals.filter(isDemoApprovalRecord));
+}
+
 function vendorFromText(text: string) {
   const match = text.match(/\b(?:vendor|supplier|partner)\s+([A-Z][A-Za-z0-9&., -]{2,48})/);
   return match?.[1]?.replace(/\s+(approval|contract|payment|invoice).*$/i, '').trim() ?? null;
@@ -317,25 +358,7 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
     }).catch(() => []),
   ]);
 
-  const demoApprovals = approvalsRaw.filter(isDemoApprovalRecord);
-  if (demoApprovals.length > 0) {
-    // Prunes entities a rebuild before this fix already created for demo
-    // approvals. Both externalId shapes are 1:1 with a single already-
-    // identified-as-demo approval/messageSource row, so this can never
-    // reach a real customer's data. Cascades (schema onDelete: Cascade)
-    // remove the entity's relationships and timeline events too.
-    await prisma.memoryEntity.deleteMany({
-      where: {
-        organizationId,
-        externalId: {
-          in: [
-            ...demoApprovals.map((approval) => `approval:${approval.id}`),
-            ...demoApprovals.filter((approval) => approval.messageSource).map((approval) => `message-source:${approval.messageSource!.id}`),
-          ],
-        },
-      },
-    }).catch((error) => console.warn('[memory] demo entity cleanup skipped', error instanceof Error ? error.message : error));
-  }
+  await deleteMemoryEntitiesForApprovals(organizationId, approvalsRaw.filter(isDemoApprovalRecord));
   const approvals = approvalsRaw.filter((approval) => !isDemoApprovalRecord(approval));
 
   const approvalEntityIds = new Map<string, string>();
@@ -604,8 +627,23 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
   invalidateMemoryCache(organizationId);
 }
 
+// Runs pruneDemoMemoryEntities() at most once per organization per server
+// process lifetime - cheap enough to run on a normal page load, but there's
+// no reason to repeat it on every request once this process has already
+// cleaned that org up. Mirrors the other in-memory, cross-request guards in
+// this file (staleCache/lastGoodStore-style globalThis pattern).
+const globalForMemoryPrune = globalThis as unknown as { approvlineMemoryPrunedOrgs?: Set<string> };
+function prunedOrgsThisProcess() {
+  globalForMemoryPrune.approvlineMemoryPrunedOrgs ??= new Set();
+  return globalForMemoryPrune.approvlineMemoryPrunedOrgs;
+}
+
 async function ensureMemoryGraph(organizationId: string) {
   await ensureMemoryStorage();
+  if (!prunedOrgsThisProcess().has(organizationId)) {
+    await pruneDemoMemoryEntities(organizationId);
+    prunedOrgsThisProcess().add(organizationId);
+  }
   const count = await prisma.memoryEntity.count({ where: { organizationId } });
   if (count === 0) await rebuildMemoryGraphForOrganization(organizationId);
 }
