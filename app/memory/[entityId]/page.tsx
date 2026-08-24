@@ -3,7 +3,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { getSafeEvidenceUrl } from '@/lib/evidence-links';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
-import { getMemoryEntityProfile, memoryEntityLabels } from '@/services/memory';
+import { getMemoryEntityProfile, isDemoMemoryEntity, memoryEntityLabels } from '@/services/memory';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,16 +28,21 @@ function RelationshipCard({
   title,
   subtitle,
   href,
+  demo,
 }: {
   label: string;
   title: string;
   subtitle?: string | null;
   href: string;
+  demo?: boolean;
 }) {
   return (
     <PendingLink href={href} pendingText="Opening related entity..." className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200">
       <p className="text-[10px] font-black uppercase tracking-wide text-[#2155d9]">{label.replaceAll('_', ' ')}</p>
-      <p className="mt-2 text-sm font-black text-slate-950">{title}</p>
+      <p className="mt-2 text-sm font-black text-slate-950">
+        {title}
+        {demo ? <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#2155d9]">Demo</span> : null}
+      </p>
       {subtitle ? <p className="mt-1 text-xs font-semibold text-slate-500">{subtitle}</p> : null}
     </PendingLink>
   );
@@ -72,6 +77,9 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
               <span className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-wide ${typeClass(entity.type)}`}>
                 {memoryEntityLabels[entity.type]}
               </span>
+              {isDemoMemoryEntity(entity) ? (
+                <span className="ml-2 inline-flex rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-[#2155d9]">Demo</span>
+              ) : null}
               <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950">{entity.title}</h1>
               {entity.subtitle ? <p className="mt-2 text-lg font-semibold text-slate-600">{entity.subtitle}</p> : null}
               <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">{entity.summary ?? 'This entity is connected to ApprovLine records, evidence, policy, risk, and timeline events.'}</p>
@@ -122,6 +130,7 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
                 title={relationship.toEntity.title}
                 subtitle={`${memoryEntityLabels[relationship.toEntity.type]} · ${relationship.toEntity.subtitle ?? 'Connected entity'}`}
                 href={`/memory/${relationship.toEntity.id}`}
+                demo={isDemoMemoryEntity(relationship.toEntity)}
               />
             ))}
             {incoming.map((relationship) => (
@@ -131,6 +140,7 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
                 title={relationship.fromEntity.title}
                 subtitle={`${memoryEntityLabels[relationship.fromEntity.type]} · ${relationship.fromEntity.subtitle ?? 'Connected entity'}`}
                 href={`/memory/${relationship.fromEntity.id}`}
+                demo={isDemoMemoryEntity(relationship.fromEntity)}
               />
             ))}
             {outgoing.length + incoming.length === 0 ? (

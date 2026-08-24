@@ -134,10 +134,17 @@ function truncate(value?: string | null, length = 280) {
  * Same demo-record convention applied to services/analytics.ts's Executive
  * ROI Dashboard - demo-seeded approvals (lib/demo-data.ts, npm run
  * seed:demo) carry a sourceLink containing 'demo'/'TDEMO' or a MessageSource
- * externalId starting with 'demo-'. The Memory Graph has no "demo preview"
- * mode the way analytics does - everything it shows is presented as real
- * connected enterprise data - so these must never be ingested as vendors,
- * approvers, or decisions in the first place.
+ * externalId starting with 'demo-'.
+ *
+ * An earlier version of this fix excluded demo approvals from the Memory
+ * Graph entirely, matching the analytics fix. That was wrong for this page
+ * specifically: analytics has a live/demo-preview toggle so "excluded from
+ * live" still leaves something to show, but the Memory Graph has no such
+ * toggle, and a workspace whose only approvals are demo-seeded ended up with
+ * an empty graph instead of a fake one. The rest of the codebase's own
+ * convention for demo records (components/dashboard/ApprovalTable.tsx,
+ * app/approvals/[id]/page.tsx) is to keep them visible with a "Demo" badge,
+ * not hide them - matched here via isDemoMemoryEntity() below instead.
  */
 function isDemoApprovalRecord(approval: { sourceLink: string | null; messageSource?: { externalId: string | null } | null }) {
   return Boolean(
@@ -147,45 +154,14 @@ function isDemoApprovalRecord(approval: { sourceLink: string | null; messageSour
   );
 }
 
-/**
- * Deletes the MemoryEntity rows a rebuild created for the given demo
- * approvals. Both externalId shapes are 1:1 with a single already-
- * identified-as-demo approval/messageSource row, so this can never reach a
- * real customer's data. Cascades (schema onDelete: Cascade) remove the
- * entity's relationships and timeline events too.
- */
-async function deleteMemoryEntitiesForApprovals(organizationId: string, demoApprovals: Array<{ id: string; messageSource: { id: string } | null }>) {
-  if (demoApprovals.length === 0) return;
-  await prisma.memoryEntity.deleteMany({
-    where: {
-      organizationId,
-      externalId: {
-        in: [
-          ...demoApprovals.map((approval) => `approval:${approval.id}`),
-          ...demoApprovals.filter((approval) => approval.messageSource).map((approval) => `message-source:${approval.messageSource!.id}`),
-        ],
-      },
-    },
-  }).catch((error) => console.warn('[memory] demo entity cleanup skipped', error instanceof Error ? error.message : error));
-}
-
-/**
- * rebuildMemoryGraphForOrganization() only ever runs on an explicit
- * "Refresh graph" click or when an org's graph is completely empty (see
- * ensureMemoryGraph below) - a workspace that already has demo-tainted
- * MemoryEntity rows from before the demo-exclusion fix will keep showing
- * them indefinitely otherwise, since nothing else ever revisits already-
- * synced entities. This is the standalone, page-load-triggered cleanup path
- * for that: cheap enough (one lookup, one deleteMany) to run without the
- * user needing to know a "Refresh graph" button exists.
- */
-async function pruneDemoMemoryEntities(organizationId: string) {
-  const approvals = await prisma.approvalRecord.findMany({
-    where: { organizationId },
-    select: { id: true, sourceLink: true, messageSource: { select: { id: true, externalId: true } } },
-    take: 500,
-  }).catch(() => []);
-  await deleteMemoryEntitiesForApprovals(organizationId, approvals.filter(isDemoApprovalRecord));
+/** Mirrors the "Demo" badge convention in ApprovalTable/approval detail page, for MemoryEntity rows tagged `metadata.demo` by rebuildMemoryGraphForOrganization(). */
+export function isDemoMemoryEntity(entity: { metadata: unknown }) {
+  return Boolean(
+    entity.metadata &&
+      typeof entity.metadata === 'object' &&
+      !Array.isArray(entity.metadata) &&
+      (entity.metadata as Record<string, unknown>).demo === true,
+  );
 }
 
 function vendorFromText(text: string) {
@@ -358,8 +334,7 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
     }).catch(() => []),
   ]);
 
-  await deleteMemoryEntitiesForApprovals(organizationId, approvalsRaw.filter(isDemoApprovalRecord));
-  const approvals = approvalsRaw.filter((approval) => !isDemoApprovalRecord(approval));
+  const approvals = approvalsRaw;
 
   const approvalEntityIds = new Map<string, string>();
   const policyEntityIds = new Map<string, string>();
@@ -424,6 +399,7 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
         confidence: approval.confidence,
         category: approval.category,
         department: approval.department,
+        demo: isDemoApprovalRecord(approval),
       },
       seenAt: approval.approvalTimestamp ?? approval.occurredAt,
     });
@@ -491,7 +467,7 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
         externalType: 'message_source',
         externalId: `message-source:${approval.messageSource.id}`,
         sourceSystem: provider,
-        metadata: { provider, externalId: approval.messageSource.externalId, senderEmail: approval.messageSource.senderEmail },
+        metadata: { provider, externalId: approval.messageSource.externalId, senderEmail: approval.messageSource.senderEmail, demo: isDemoApprovalRecord(approval) },
         seenAt: approval.messageSource.receivedAt,
       });
       await linkMemoryEntities({
@@ -627,23 +603,8 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
   invalidateMemoryCache(organizationId);
 }
 
-// Runs pruneDemoMemoryEntities() at most once per organization per server
-// process lifetime - cheap enough to run on a normal page load, but there's
-// no reason to repeat it on every request once this process has already
-// cleaned that org up. Mirrors the other in-memory, cross-request guards in
-// this file (staleCache/lastGoodStore-style globalThis pattern).
-const globalForMemoryPrune = globalThis as unknown as { approvlineMemoryPrunedOrgs?: Set<string> };
-function prunedOrgsThisProcess() {
-  globalForMemoryPrune.approvlineMemoryPrunedOrgs ??= new Set();
-  return globalForMemoryPrune.approvlineMemoryPrunedOrgs;
-}
-
 async function ensureMemoryGraph(organizationId: string) {
   await ensureMemoryStorage();
-  if (!prunedOrgsThisProcess().has(organizationId)) {
-    await pruneDemoMemoryEntities(organizationId);
-    prunedOrgsThisProcess().add(organizationId);
-  }
   const count = await prisma.memoryEntity.count({ where: { organizationId } });
   if (count === 0) await rebuildMemoryGraphForOrganization(organizationId);
 }
