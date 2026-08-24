@@ -8,7 +8,7 @@ import { RefreshButton } from '@/components/system/RefreshButton';
 import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
 import { isMigrationError } from '@/lib/prisma-errors';
-import { buildMemoryDashboard, memoryEntityLabels, rebuildMemoryGraphForOrganization } from '@/services/memory';
+import { buildMemoryDashboard, isDemoMemoryEntity, memoryEntityLabels, rebuildMemoryGraphForOrganization } from '@/services/memory';
 import { enforcePageRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
@@ -72,13 +72,17 @@ function StatCard({ label, value, help }: { label: string; value: number; help: 
   );
 }
 
+function DemoBadge() {
+  return <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#2155d9]">Demo</span>;
+}
+
 function EntityList({
   title,
   items,
   empty,
 }: {
   title: string;
-  items: Array<{ id: string; title: string; type: keyof typeof memoryEntityLabels; subtitle: string | null; riskScore: number; lastSeenAt: Date }>;
+  items: Array<{ id: string; title: string; type: keyof typeof memoryEntityLabels; subtitle: string | null; riskScore: number; lastSeenAt: Date; metadata: unknown }>;
   empty: string;
 }) {
   return (
@@ -95,7 +99,10 @@ function EntityList({
                   <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${typeTone(item.type)}`}>
                     {memoryEntityLabels[item.type]}
                   </span>
-                  <p className="mt-2 text-sm font-black text-slate-950">{item.title}</p>
+                  <p className="mt-2 text-sm font-black text-slate-950">
+                    {item.title}
+                    {isDemoMemoryEntity(item) ? <DemoBadge /> : null}
+                  </p>
                   <p className="mt-1 text-xs font-semibold text-slate-500">{item.subtitle ?? dateText(item.lastSeenAt)}</p>
                 </div>
                 <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-700 shadow-sm">Risk {item.riskScore}</span>
@@ -112,7 +119,7 @@ function GraphPreview({
   entities,
   relationships,
 }: {
-  entities: Array<{ id: string; title: string; type: keyof typeof memoryEntityLabels; riskScore: number }>;
+  entities: Array<{ id: string; title: string; type: keyof typeof memoryEntityLabels; riskScore: number; metadata: unknown }>;
   relationships: Array<{ id: string; fromEntityId: string; toEntityId: string; relationshipType: string }>;
 }) {
   const entityMap = new Map(entities.map((entity) => [entity.id, entity]));
@@ -134,7 +141,10 @@ function GraphPreview({
           <div className="relative grid grid-cols-2 gap-4 sm:grid-cols-3">
             {entities.slice(0, 12).map((entity) => (
               <Link key={entity.id} href={`/memory/${entity.id}`} className="rounded-2xl border border-white/10 bg-white/[0.08] p-4 backdrop-blur transition hover:bg-white/[0.13]">
-                <span className="text-[10px] font-black uppercase tracking-wide text-blue-200">{memoryEntityLabels[entity.type]}</span>
+                <span className="text-[10px] font-black uppercase tracking-wide text-blue-200">
+                  {memoryEntityLabels[entity.type]}
+                  {isDemoMemoryEntity(entity) ? <span className="ml-1.5 rounded-full bg-white/15 px-1.5 py-0.5 text-[9px] text-blue-100">Demo</span> : null}
+                </span>
                 <p className="mt-2 line-clamp-2 text-sm font-black text-white">{entity.title}</p>
                 <p className="mt-2 text-xs font-semibold text-slate-400">Risk {entity.riskScore}</p>
               </Link>
