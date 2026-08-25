@@ -417,112 +417,136 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
       metadata: { approvalRecordId: approval.id },
     });
 
-    if (approval.approverEmail || approval.approverName) {
-      const approver = await upsertMemoryEntity({
-        organizationId,
-        type: 'APPROVER',
-        title: approval.approverName ?? approval.approverEmail ?? 'Unknown approver',
-        subtitle: approval.approverEmail,
-        externalType: 'approval_approver',
-        externalId: `approver:${key(approval.approverEmail ?? approval.approverName ?? approval.id)}`,
-        sourceSystem: approval.sourcePlatform,
-        metadata: { email: approval.approverEmail },
-        seenAt: approval.approvalTimestamp ?? approval.occurredAt,
-      });
-      await linkMemoryEntities({
-        organizationId,
-        fromEntityId: approvalEntity.id,
-        toEntityId: approver.id,
-        relationshipType: 'APPROVED_BY',
-        evidenceSnippet: approval.evidenceSnippet,
-        sourceSystem: approval.sourcePlatform,
-      });
-    }
-
-    if (approval.department) {
-      const department = await upsertMemoryEntity({
-        organizationId,
-        type: 'DEPARTMENT',
-        title: approval.department,
-        externalType: 'department',
-        externalId: `department:${key(approval.department)}`,
-      });
-      await linkMemoryEntities({
-        organizationId,
-        fromEntityId: approvalEntity.id,
-        toEntityId: department.id,
-        relationshipType: 'OWNED_BY_DEPARTMENT',
-        sourceSystem: approval.sourcePlatform,
-      });
-    }
-
-    if (approval.messageSource) {
-      const provider = approval.messageSource.provider;
-      const sourceEntity = await upsertMemoryEntity({
-        organizationId,
-        type: sourceTypeMap[provider] ?? 'MESSAGE',
-        title: approval.messageSource.channel ?? `${provider} evidence`,
-        subtitle: approval.messageSource.sender ?? approval.messageSource.senderEmail,
-        summary: approval.evidenceSnippet,
-        externalType: 'message_source',
-        externalId: `message-source:${approval.messageSource.id}`,
-        sourceSystem: provider,
-        metadata: { provider, externalId: approval.messageSource.externalId, senderEmail: approval.messageSource.senderEmail, demo: isDemoApprovalRecord(approval) },
-        seenAt: approval.messageSource.receivedAt,
-      });
-      await linkMemoryEntities({
-        organizationId,
-        fromEntityId: approvalEntity.id,
-        toEntityId: sourceEntity.id,
-        relationshipType: 'CREATED_FROM',
-        evidenceSnippet: approval.evidenceSnippet,
-        sourceSystem: provider,
-      });
-    }
-
+    // The five blocks below (approver/department/message-source/vendor/
+    // project) each only depend on approvalEntity.id, not on each other -
+    // run them concurrently instead of one at a time. With ~7 sequential
+    // DB round trips per approval, a fully sequential loop over dozens of
+    // approvals routinely blew past ensureMemoryGraph's timeout on an
+    // org's first-ever rebuild, leaving the graph looking permanently
+    // empty even though real approval data existed (the write never
+    // finished, not a read-side bug). This keeps the DB burst per approval
+    // at or under connection_limit (5), same as before, just no longer
+    // serialized.
     const text = [approval.subject, approval.businessImpact, approval.reasoning, approval.evidenceSnippet].filter(Boolean).join(' ');
     const vendor = vendorFromText(text);
-    if (vendor) {
-      const vendorEntity = await upsertMemoryEntity({
-        organizationId,
-        type: 'VENDOR',
-        title: vendor,
-        externalType: 'detected_vendor',
-        externalId: `vendor:${key(vendor)}`,
-        sourceSystem: approval.sourcePlatform,
-        riskScore: riskScore(approval.riskLevel),
-        metadata: { detectedFromApprovalId: approval.id },
-        seenAt: approval.occurredAt,
-      });
-      await linkMemoryEntities({
-        organizationId,
-        fromEntityId: vendorEntity.id,
-        toEntityId: approvalEntity.id,
-        relationshipType: 'HAS_APPROVAL',
-        evidenceSnippet: approval.evidenceSnippet,
-        sourceSystem: approval.sourcePlatform,
-      });
-    }
     const project = projectFromText(text);
-    if (project) {
-      const projectEntity = await upsertMemoryEntity({
-        organizationId,
-        type: 'PROJECT',
-        title: project,
-        externalType: 'detected_project',
-        externalId: `project:${key(project)}`,
-        sourceSystem: approval.sourcePlatform,
-        riskScore: riskScore(approval.riskLevel),
-      });
-      await linkMemoryEntities({
-        organizationId,
-        fromEntityId: projectEntity.id,
-        toEntityId: approvalEntity.id,
-        relationshipType: 'HAS_DECISION',
-        evidenceSnippet: approval.evidenceSnippet,
-        sourceSystem: approval.sourcePlatform,
-      });
-    }
+
+    await Promise.all([
+      approval.approverEmail || approval.approverName
+        ? (async () => {
+            const approver = await upsertMemoryEntity({
+              organizationId,
+              type: 'APPROVER',
+              title: approval.approverName ?? approval.approverEmail ?? 'Unknown approver',
+              subtitle: approval.approverEmail,
+              externalType: 'approval_approver',
+              externalId: `approver:${key(approval.approverEmail ?? approval.approverName ?? approval.id)}`,
+              sourceSystem: approval.sourcePlatform,
+              metadata: { email: approval.approverEmail },
+              seenAt: approval.approvalTimestamp ?? approval.occurredAt,
+            });
+            await linkMemoryEntities({
+              organizationId,
+              fromEntityId: approvalEntity.id,
+              toEntityId: approver.id,
+              relationshipType: 'APPROVED_BY',
+              evidenceSnippet: approval.evidenceSnippet,
+              sourceSystem: approval.sourcePlatform,
+            });
+          })()
+        : null,
+
+      approval.department
+        ? (async () => {
+            const department = await upsertMemoryEntity({
+              organizationId,
+              type: 'DEPARTMENT',
+              title: approval.department!,
+              externalType: 'department',
+              externalId: `department:${key(approval.department!)}`,
+            });
+            await linkMemoryEntities({
+              organizationId,
+              fromEntityId: approvalEntity.id,
+              toEntityId: department.id,
+              relationshipType: 'OWNED_BY_DEPARTMENT',
+              sourceSystem: approval.sourcePlatform,
+            });
+          })()
+        : null,
+
+      approval.messageSource
+        ? (async () => {
+            const provider = approval.messageSource!.provider;
+            const sourceEntity = await upsertMemoryEntity({
+              organizationId,
+              type: sourceTypeMap[provider] ?? 'MESSAGE',
+              title: approval.messageSource!.channel ?? `${provider} evidence`,
+              subtitle: approval.messageSource!.sender ?? approval.messageSource!.senderEmail,
+              summary: approval.evidenceSnippet,
+              externalType: 'message_source',
+              externalId: `message-source:${approval.messageSource!.id}`,
+              sourceSystem: provider,
+              metadata: { provider, externalId: approval.messageSource!.externalId, senderEmail: approval.messageSource!.senderEmail, demo: isDemoApprovalRecord(approval) },
+              seenAt: approval.messageSource!.receivedAt,
+            });
+            await linkMemoryEntities({
+              organizationId,
+              fromEntityId: approvalEntity.id,
+              toEntityId: sourceEntity.id,
+              relationshipType: 'CREATED_FROM',
+              evidenceSnippet: approval.evidenceSnippet,
+              sourceSystem: provider,
+            });
+          })()
+        : null,
+
+      vendor
+        ? (async () => {
+            const vendorEntity = await upsertMemoryEntity({
+              organizationId,
+              type: 'VENDOR',
+              title: vendor,
+              externalType: 'detected_vendor',
+              externalId: `vendor:${key(vendor)}`,
+              sourceSystem: approval.sourcePlatform,
+              riskScore: riskScore(approval.riskLevel),
+              metadata: { detectedFromApprovalId: approval.id },
+              seenAt: approval.occurredAt,
+            });
+            await linkMemoryEntities({
+              organizationId,
+              fromEntityId: vendorEntity.id,
+              toEntityId: approvalEntity.id,
+              relationshipType: 'HAS_APPROVAL',
+              evidenceSnippet: approval.evidenceSnippet,
+              sourceSystem: approval.sourcePlatform,
+            });
+          })()
+        : null,
+
+      project
+        ? (async () => {
+            const projectEntity = await upsertMemoryEntity({
+              organizationId,
+              type: 'PROJECT',
+              title: project,
+              externalType: 'detected_project',
+              externalId: `project:${key(project)}`,
+              sourceSystem: approval.sourcePlatform,
+              riskScore: riskScore(approval.riskLevel),
+            });
+            await linkMemoryEntities({
+              organizationId,
+              fromEntityId: projectEntity.id,
+              toEntityId: approvalEntity.id,
+              relationshipType: 'HAS_DECISION',
+              evidenceSnippet: approval.evidenceSnippet,
+              sourceSystem: approval.sourcePlatform,
+            });
+          })()
+        : null,
+    ]);
   }
 
   for (const evaluation of evaluations) {
@@ -657,6 +681,17 @@ type MemoryDashboardFresh = {
 const MEMORY_QUERY_TIMEOUT_MS = 3000;
 const MEMORY_TOTAL_FETCH_TIMEOUT_MS = 5000;
 const MEMORY_REVALIDATE_SECONDS = 120;
+// ensureMemoryGraph()'s one-time bootstrap (rebuildMemoryGraphForOrganization,
+// only runs when an org's graph is completely empty) does several DB round
+// trips per approval. The old 2200-2500ms budget here was sized for a
+// handful of approvals and routinely got abandoned mid-rebuild for any
+// real org - withTimeout() doesn't cancel the underlying work, so the
+// caller just moved on and rendered whatever had (or hadn't) been written
+// yet, showing a permanently-empty graph even though the write was still
+// in flight. Now that the per-approval work below runs its independent
+// sub-tasks concurrently instead of one at a time, a generous budget here
+// is enough for the whole first-time build to actually finish inline.
+const MEMORY_GRAPH_BOOTSTRAP_TIMEOUT_MS = 20_000;
 
 async function fetchMemoryDashboardFresh(organizationId: string, query: string): Promise<MemoryDashboardFresh> {
   if (isMemoryBreakerOpen()) {
@@ -794,7 +829,7 @@ export async function buildMemoryDashboard(organizationId: string, query?: strin
   MemoryDashboardFresh & { degraded: boolean; alert: boolean; staleAsOfMs?: number; message?: string }
 > {
   await ensureMemoryStorage();
-  await withTimeout('memory graph ensure', ensureMemoryGraph(organizationId), 2500).catch((error) => {
+  await withTimeout('memory graph ensure', ensureMemoryGraph(organizationId), MEMORY_GRAPH_BOOTSTRAP_TIMEOUT_MS).catch((error) => {
     console.warn('[memory] graph refresh skipped', error);
   });
 
@@ -846,7 +881,7 @@ export async function buildMemoryDashboard(organizationId: string, query?: strin
 
 export async function getMemoryEntityProfile(organizationId: string, entityId: string) {
   await ensureMemoryStorage();
-  await withTimeout('memory graph profile ensure', ensureMemoryGraph(organizationId), 2500).catch(() => null);
+  await withTimeout('memory graph profile ensure', ensureMemoryGraph(organizationId), MEMORY_GRAPH_BOOTSTRAP_TIMEOUT_MS).catch(() => null);
   return prisma.memoryEntity.findFirst({
     where: { id: entityId, organizationId },
     include: {
@@ -865,7 +900,7 @@ export async function queryMemoryGraphForCopilot(organizationId: string, questio
     .slice(0, 8) ?? [];
   if (terms.length === 0) return [];
   await ensureMemoryStorage();
-  await withTimeout('memory graph copilot ensure', ensureMemoryGraph(organizationId), 2200).catch(() => null);
+  await withTimeout('memory graph copilot ensure', ensureMemoryGraph(organizationId), MEMORY_GRAPH_BOOTSTRAP_TIMEOUT_MS).catch(() => null);
   return prisma.memoryEntity.findMany({
     where: {
       organizationId,
