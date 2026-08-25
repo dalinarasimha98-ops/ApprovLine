@@ -616,6 +616,11 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
     }
   }
 
+  // Remove any APPROVAL entities left over from approvals that no longer
+  // exist in the database - rebuildMemoryGraphForOrganization() only upserts,
+  // so orphans from deleted approvals would otherwise persist indefinitely.
+  await pruneOrphanedApprovalEntities(organizationId);
+
   await prisma.memoryGraphEvent.create({
     data: {
       organizationId,
@@ -628,10 +633,38 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
   invalidateMemoryCache(organizationId);
 }
 
+/**
+ * Deletes MemoryEntity rows whose externalType is 'approval_record' but whose
+ * externalId no longer maps to any ApprovalRecord in the database. This fixes
+ * entity count drift that accumulates when approvals are deleted or the graph
+ * is seeded multiple times - rebuildMemoryGraphForOrganization() only upserts,
+ * so orphans from removed approvals were never cleaned up automatically.
+ * Cascade deletes on MemoryRelationship and MemoryTimelineEvent handle the
+ * dependent rows, so only the entity delete is needed here.
+ */
+async function pruneOrphanedApprovalEntities(organizationId: string) {
+  const [approvalIds, approvalEntities] = await Promise.all([
+    prisma.approvalRecord.findMany({ where: { organizationId }, select: { id: true } }),
+    prisma.memoryEntity.findMany({ where: { organizationId, externalType: 'approval_record' }, select: { id: true, externalId: true } }),
+  ]);
+
+  const validExternalIds = new Set(approvalIds.map((a) => `approval:${a.id}`));
+  const orphanIds = approvalEntities.filter((e) => !validExternalIds.has(e.externalId ?? '')).map((e) => e.id);
+
+  if (orphanIds.length > 0) {
+    await prisma.memoryEntity.deleteMany({ where: { id: { in: orphanIds }, organizationId } });
+    console.log(`[memory] pruned ${orphanIds.length} orphaned APPROVAL entities for org ${organizationId}`);
+  }
+}
+
 async function ensureMemoryGraph(organizationId: string) {
   await ensureMemoryStorage();
   const count = await prisma.memoryEntity.count({ where: { organizationId } });
-  if (count === 0) await rebuildMemoryGraphForOrganization(organizationId);
+  if (count === 0) {
+    await rebuildMemoryGraphForOrganization(organizationId);
+  } else {
+    await pruneOrphanedApprovalEntities(organizationId);
+  }
 }
 
 // --- Circuit breaker -----------------------------------------------------
