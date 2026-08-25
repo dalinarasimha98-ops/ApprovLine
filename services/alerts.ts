@@ -150,7 +150,7 @@ class AlertsCircuitOpenError extends Error {
 
 const ALERTS_QUERY_TIMEOUT_MS = 3000;
 const ALERTS_TOTAL_FETCH_TIMEOUT_MS = 5000;
-const ALERTS_REVALIDATE_SECONDS = 120;
+const ALERTS_REVALIDATE_SECONDS = 1;
 
 async function fetchAlertsFresh(cacheParams: AlertsCacheParams): Promise<AlertsResult> {
   if (isAlertsBreakerOpen()) {

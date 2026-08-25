@@ -168,7 +168,7 @@ class ApprovalQueryCircuitOpenError extends Error {
 }
 
 const APPROVAL_RECORDS_QUERY_TIMEOUT_MS = 5000;
-const APPROVAL_RECORDS_REVALIDATE_SECONDS = 60;
+const APPROVAL_RECORDS_REVALIDATE_SECONDS = 1;
 
 async function fetchApprovalRecordsFresh(cacheParams: ApprovalRecordsCacheParams): Promise<ApprovalListRecord[]> {
   if (isApprovalQueryBreakerOpen()) {

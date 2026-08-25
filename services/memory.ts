@@ -729,7 +729,7 @@ type MemoryDashboardFresh = {
 
 const MEMORY_QUERY_TIMEOUT_MS = 3000;
 const MEMORY_TOTAL_FETCH_TIMEOUT_MS = 5000;
-const MEMORY_REVALIDATE_SECONDS = 120;
+const MEMORY_REVALIDATE_SECONDS = 1;
 // ensureMemoryGraph()'s one-time bootstrap (rebuildMemoryGraphForOrganization,
 // only runs when an org's graph is completely empty) does several DB round
 // trips per approval. The old 2200-2500ms budget here was sized for a

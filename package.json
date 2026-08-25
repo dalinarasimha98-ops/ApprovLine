@@ -34,7 +34,8 @@
     "gmail:sync": "tsx scripts/gmail-sync.ts",
     "reembed:playbooks": "tsx scripts/reembed-playbook-chunks.ts",
     "worker": "tsx services/queue/worker.ts",
-    "backfill:memory": "tsx scripts/backfill-memory-graph.ts"
+    "backfill:memory": "tsx scripts/backfill-memory-graph.ts",
+    "backfill:memory:approvals": "tsx scripts/backfill-memory-from-approvals.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.32.0",
