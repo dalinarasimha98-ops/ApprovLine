@@ -659,8 +659,21 @@ async function pruneOrphanedApprovalEntities(organizationId: string) {
 
 async function ensureMemoryGraph(organizationId: string) {
   await ensureMemoryStorage();
-  const count = await prisma.memoryEntity.count({ where: { organizationId } });
-  if (count === 0) {
+
+  const [totalCount, approvalEntityCount, approvalRecordCount] = await Promise.all([
+    prisma.memoryEntity.count({ where: { organizationId } }),
+    prisma.memoryEntity.count({ where: { organizationId, externalType: 'approval_record' } }),
+    prisma.approvalRecord.count({ where: { organizationId } }),
+  ]);
+
+  // Always prune stale APPROVAL entities so the count stays in sync.
+  // Then rebuild if: the graph is empty, or the APPROVAL entity count
+  // diverged from the ApprovalRecord count (happens after seed/re-seed
+  // cycles where the prune removed orphaned entities but left non-approval
+  // entities in place, making totalCount > 0 while approvals are missing).
+  const needsRebuild = totalCount === 0 || approvalEntityCount !== approvalRecordCount;
+  if (needsRebuild) {
+    if (totalCount > 0) await pruneOrphanedApprovalEntities(organizationId);
     await rebuildMemoryGraphForOrganization(organizationId);
   } else {
     await pruneOrphanedApprovalEntities(organizationId);
