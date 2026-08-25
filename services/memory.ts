@@ -442,7 +442,7 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
               externalType: 'approval_approver',
               externalId: `approver:${key(approval.approverEmail ?? approval.approverName ?? approval.id)}`,
               sourceSystem: approval.sourcePlatform,
-              metadata: { email: approval.approverEmail },
+              metadata: { email: approval.approverEmail, demo: isDemoApprovalRecord(approval) },
               seenAt: approval.approvalTimestamp ?? approval.occurredAt,
             });
             await linkMemoryEntities({
@@ -511,7 +511,7 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
               externalId: `vendor:${key(vendor)}`,
               sourceSystem: approval.sourcePlatform,
               riskScore: riskScore(approval.riskLevel),
-              metadata: { detectedFromApprovalId: approval.id },
+              metadata: { detectedFromApprovalId: approval.id, demo: isDemoApprovalRecord(approval) },
               seenAt: approval.occurredAt,
             });
             await linkMemoryEntities({
@@ -535,6 +535,7 @@ export async function rebuildMemoryGraphForOrganization(organizationId: string) 
               externalId: `project:${key(project)}`,
               sourceSystem: approval.sourcePlatform,
               riskScore: riskScore(approval.riskLevel),
+              metadata: { detectedFromApprovalId: approval.id, demo: isDemoApprovalRecord(approval) },
             });
             await linkMemoryEntities({
               organizationId,
