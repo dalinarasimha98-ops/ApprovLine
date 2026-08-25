@@ -78,7 +78,7 @@ const TOTAL_FETCH_TIMEOUT_MS = 5000;
 // shouldn't be able to look 5 minutes stale after new approvals land.
 // 60s keeps the same "amortize repeated page loads instead of hitting
 // Postgres every time" benefit while cutting worst-case staleness 5x.
-const CACHE_REVALIDATE_SECONDS = 1;
+const CACHE_REVALIDATE_SECONDS = 60;
 // Last-resort fallback only, if a fetch fails AND nothing has ever
 // succeeded within this window. Mirrors the stale-cache pattern already
 // used in lib/approvalRecords.ts.
