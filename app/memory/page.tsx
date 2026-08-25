@@ -232,8 +232,23 @@ async function MemoryDashboardSection({ organizationId, query }: { organizationI
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard label="Total entities" value={data.totalEntities} help="Vendors, approvals, policies, risks, people, projects, and evidence nodes." />
         <StatCard label="Relationships" value={data.totalRelationships} help="Connected links such as approved by, governed by, created from, and investigates." />
-        <StatCard label="High-risk nodes" value={data.recentRisks.length} help="Risk-bearing entities surfaced from approvals and policy evaluations." />
+        <StatCard label="High-risk nodes" value={data.highRiskCount} help="Risk-bearing entities surfaced from approvals and policy evaluations." />
       </div>
+
+      {data.entityTypeBreakdown.length > 0 ? (
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-black uppercase tracking-wide text-slate-500">Total entities, by type</h2>
+          <p className="mt-1 text-xs font-semibold text-slate-500">Where the {data.totalEntities.toLocaleString()} total above comes from - every entity is traceable to a real approval, policy, investigation, or compliance record.</p>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {data.entityTypeBreakdown.map((item) => (
+              <div key={item.type} className="rounded-xl bg-slate-50 px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{memoryEntityLabels[item.type]}</p>
+                <p className="mt-1 text-xl font-black text-slate-950">{item.count.toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {query ? (
         <EntityList title={`Search results for "${query}"`} items={data.searchResults} empty="No matching graph entities found yet." />

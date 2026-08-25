@@ -670,6 +670,8 @@ class MemoryCircuitOpenError extends Error {
 type MemoryDashboardFresh = {
   totalEntities: number;
   totalRelationships: number;
+  highRiskCount: number;
+  entityTypeBreakdown: Array<{ type: MemoryEntityType; count: number }>;
   recentEntities: MemoryEntity[];
   recentDecisions: MemoryEntity[];
   recentRisks: MemoryEntity[];
@@ -721,6 +723,25 @@ async function fetchMemoryDashboardFresh(organizationId: string, query: string):
     Promise.all([
       withTimeout('memory:totalEntities', prisma.memoryEntity.count({ where: { organizationId } }), MEMORY_QUERY_TIMEOUT_MS),
       withTimeout('memory:totalRelationships', prisma.memoryRelationship.count({ where: { organizationId } }), MEMORY_QUERY_TIMEOUT_MS),
+      // A real count, not recentRisks.length below - that list is capped at
+      // take: 6, so the "High-risk nodes" stat card was always showing
+      // exactly 6 (or fewer) regardless of how many actually exist, which
+      // reads as a suspiciously round, made-up number even when it isn't.
+      withTimeout('memory:highRiskCount', prisma.memoryEntity.count({ where: { organizationId, OR: [{ type: 'RISK' }, { riskScore: { gte: 70 } }] } }), MEMORY_QUERY_TIMEOUT_MS),
+      // Surfaces exactly what the headline totals are made of (approvals,
+      // approvers, departments, vendors, policies, risks, investigations,
+      // message sources, ...) so "Total entities: 137" is traceable to real
+      // rows instead of reading as an unexplained, seemingly-inflated
+      // single number - a graph over 34 approvals plus their approvers,
+      // departments, message sources, and any linked policy/compliance/
+      // investigation data legitimately has far more than 34 nodes.
+      withTimeout(
+        'memory:entityTypeBreakdown',
+        prisma.memoryEntity.groupBy({ by: ['type'], where: { organizationId }, _count: { id: true }, orderBy: { _count: { id: 'desc' } } }),
+        MEMORY_QUERY_TIMEOUT_MS,
+      )
+        .then((rows) => rows.map((row) => ({ type: row.type, count: row._count.id })))
+        .catch(() => [] as Array<{ type: MemoryEntityType; count: number }>),
       withTimeout('memory:recentEntities', prisma.memoryEntity.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 8 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
       withTimeout('memory:recentDecisions', prisma.memoryEntity.findMany({ where: { organizationId, type: { in: ['APPROVAL', 'DECISION', 'ZOOM_DECISION'] } }, orderBy: { lastSeenAt: 'desc' }, take: 6 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
       withTimeout('memory:recentRisks', prisma.memoryEntity.findMany({ where: { organizationId, OR: [{ type: 'RISK' }, { riskScore: { gte: 70 } }] }, orderBy: { riskScore: 'desc' }, take: 6 }), MEMORY_QUERY_TIMEOUT_MS).catch(() => [] as MemoryEntity[]),
@@ -735,7 +756,7 @@ async function fetchMemoryDashboardFresh(organizationId: string, query: string):
   try {
     // One quick retry on a connection-pool-shaped error — self-heals a
     // single transient blip within the same request.
-    const [totalEntities, totalRelationships, recentEntities, recentDecisions, recentRisks, recentInvestigations, searchResults, graphEntities, graphRelationships] =
+    const [totalEntities, totalRelationships, highRiskCount, entityTypeBreakdown, recentEntities, recentDecisions, recentRisks, recentInvestigations, searchResults, graphEntities, graphRelationships] =
       await attempt().catch(async (error) => {
         const message = error instanceof Error ? error.message : String(error);
         if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
@@ -744,7 +765,7 @@ async function fetchMemoryDashboardFresh(organizationId: string, query: string):
       });
 
     recordMemorySuccess();
-    return { totalEntities, totalRelationships, recentEntities, recentDecisions, recentRisks, recentInvestigations, searchResults, graphEntities, graphRelationships };
+    return { totalEntities, totalRelationships, highRiskCount, entityTypeBreakdown, recentEntities, recentDecisions, recentRisks, recentInvestigations, searchResults, graphEntities, graphRelationships };
   } catch (error) {
     recordMemoryFailure();
     throw error;
@@ -864,6 +885,8 @@ export async function buildMemoryDashboard(organizationId: string, query?: strin
     return {
       totalEntities: 0,
       totalRelationships: 0,
+      highRiskCount: 0,
+      entityTypeBreakdown: [],
       recentEntities: [],
       recentDecisions: [],
       recentRisks: [],
