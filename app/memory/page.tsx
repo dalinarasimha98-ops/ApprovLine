@@ -229,18 +229,23 @@ async function MemoryDashboardSection({ organizationId, query }: { organizationI
         <p className="-mt-2 text-xs font-bold text-slate-400">Last updated {minutesAgo(data.staleAsOfMs)}.</p>
       ) : null}
 
+      {/* highRiskCount/entityTypeBreakdown fall back defensively (?? 0 / ?? []) because
+          getCachedMemoryDashboardFetcher's unstable_cache entry can outlive a deploy that
+          adds fields to MemoryDashboardFresh - a stale cached object from before those
+          fields existed would otherwise crash this render with "Cannot read properties of
+          undefined", which is exactly what "Memory Graph unavailable" was. */}
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard label="Total entities" value={data.totalEntities} help="Vendors, approvals, policies, risks, people, projects, and evidence nodes." />
         <StatCard label="Relationships" value={data.totalRelationships} help="Connected links such as approved by, governed by, created from, and investigates." />
-        <StatCard label="High-risk nodes" value={data.highRiskCount} help="Risk-bearing entities surfaced from approvals and policy evaluations." />
+        <StatCard label="High-risk nodes" value={data.highRiskCount ?? 0} help="Risk-bearing entities surfaced from approvals and policy evaluations." />
       </div>
 
-      {data.entityTypeBreakdown.length > 0 ? (
+      {(data.entityTypeBreakdown ?? []).length > 0 ? (
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-sm font-black uppercase tracking-wide text-slate-500">Total entities, by type</h2>
           <p className="mt-1 text-xs font-semibold text-slate-500">Where the {data.totalEntities.toLocaleString()} total above comes from - every entity is traceable to a real approval, policy, investigation, or compliance record.</p>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {data.entityTypeBreakdown.map((item) => (
+            {(data.entityTypeBreakdown ?? []).map((item) => (
               <div key={item.type} className="rounded-xl bg-slate-50 px-4 py-3">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{memoryEntityLabels[item.type]}</p>
                 <p className="mt-1 text-xl font-black text-slate-950">{item.count.toLocaleString()}</p>

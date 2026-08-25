@@ -783,10 +783,16 @@ async function fetchMemoryDashboardFresh(organizationId: string, query: string):
  * outside the cache boundary costs nothing in the steady state while
  * guaranteeing a first-time bootstrap is visible immediately.
  */
+// Bumped to -v2 when highRiskCount/entityTypeBreakdown were added to
+// MemoryDashboardFresh - a stale entry cached under the old key, from
+// before those fields existed, would otherwise get served to the new
+// code and crash the page render (undefined.length) for up to
+// MEMORY_REVALIDATE_SECONDS after every deploy that changes this shape.
+// Bump this key again any time MemoryDashboardFresh's shape changes.
 function getCachedMemoryDashboardFetcher(organizationId: string) {
   return unstable_cache(
     (query: string) => fetchMemoryDashboardFresh(organizationId, query),
-    ['memory-dashboard', organizationId],
+    ['memory-dashboard-v2', organizationId],
     { revalidate: MEMORY_REVALIDATE_SECONDS, tags: [memoryCacheTag(organizationId)] },
   );
 }
