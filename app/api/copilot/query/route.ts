@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDashboardTenant } from "@/lib/auth";
 import { answerCopilotQuestion } from "@/services/copilot/copilot";
 import { recordPerformance } from "@/lib/performance";
 import { EntitlementDeniedError, requireEntitlement } from "@/lib/entitlements";
+import { distributedRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +20,19 @@ const requestSchema = z.object({
   history: z.array(messageSchema).max(12).optional(),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const startedAt = Date.now();
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const rl = await distributedRateLimit(`copilot:${ip}`, 20, 60_000);
+    if (!rl.allowed) {
+      recordPerformance("/api/copilot/query", Date.now() - startedAt, 429);
+      return NextResponse.json(
+        { error: "Too many Copilot requests. Please wait a moment before asking again." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } },
+      );
+    }
+
     const tenant = await getDashboardTenant(COPILOT_TENANT_TIMEOUT_MS);
     if (tenant.status === "unauthenticated") {
       recordPerformance("/api/copilot/query", Date.now() - startedAt, 401);
