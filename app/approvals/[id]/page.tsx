@@ -336,7 +336,12 @@ function RightPanel({ core }: { core: ApprovalCore }) {
 // ── Unified evidence banner ────────────────────────────────────────────────
 
 async function UnifiedEvidenceLinkBanner({ organizationId, approvalId }: { organizationId: string; approvalId: string }) {
-  const unifiedEvidenceId = await getUnifiedEvidenceIdForApproval(organizationId, approvalId);
+  let unifiedEvidenceId: string | null;
+  try {
+    unifiedEvidenceId = await getUnifiedEvidenceIdForApproval(organizationId, approvalId);
+  } catch {
+    return null;
+  }
   if (!unifiedEvidenceId) return null;
 
   return (
@@ -904,7 +909,8 @@ type ApprovalDetailPageProps = {
 };
 
 export default async function ApprovalDetailPage({ params, searchParams }: ApprovalDetailPageProps) {
-  const [{ id }, sp] = await Promise.all([params, searchParams]);
+  const { id } = await params;
+  const sp = await (searchParams ?? {});
 
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
