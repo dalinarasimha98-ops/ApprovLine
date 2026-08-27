@@ -654,19 +654,36 @@ function EmailCenter({ payload }: { payload: EmailPayload }) {
 }
 
 function GenericCenter({ payload }: { payload: GenericPayload }) {
+  const hasContent = !!(payload.content || payload.records?.length || payload.title);
   return (
-    <div className="p-5 space-y-4">
-      {payload.title && <h3 className="text-sm font-bold text-[#E8EEFF]">{payload.title}</h3>}
-      {payload.content && <p className="whitespace-pre-wrap text-sm leading-6 text-[#A8BAD8]">{payload.content}</p>}
-      {payload.records?.map((r, i) => (
-        <div key={i} className="rounded-lg border border-[#1E2D4A] bg-[#0a1524] px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3D5070]">{r.label}</p>
-          <p className="mt-0.5 text-sm font-semibold text-[#E8EEFF]">{r.value}</p>
+    <div className="p-5 space-y-4 overflow-y-auto h-full">
+      {payload.title && (
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3D5070]">Captured Evidence</p>
+          <h3 className="mt-1 text-base font-bold text-[#E8EEFF]">{payload.title}</h3>
         </div>
-      ))}
-      {!payload.content && !payload.records?.length && !payload.title && (
-        <NotCaptured label="Source content" />
       )}
+      {payload.content && (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <div className="mb-2 flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-400">Evidence Snippet</span>
+          </div>
+          <p className="whitespace-pre-wrap text-sm leading-6 text-[#A8BAD8]">{payload.content}</p>
+        </div>
+      )}
+      {payload.records && payload.records.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3D5070]">Approval Context</p>
+          {payload.records.map((r, i) => (
+            <div key={i} className="rounded-lg border border-[#1E2D4A] bg-[#0a1524] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#3D5070]">{r.label}</p>
+              <p className="mt-0.5 text-sm font-semibold text-[#E8EEFF]">{r.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {!hasContent && <NotCaptured label="Source content" />}
     </div>
   );
 }
@@ -839,7 +856,7 @@ export function SourceEvidenceViewer({ approvalId, approvalSubject, sourcePlatfo
   const highlightCount = payload.providerType === 'slack' ? (payload as SlackPayload).messages.filter((m) => m.isApprovalMoment).length : 0;
 
   return (
-    <div className="flex h-[calc(100svh-5rem)] flex-col overflow-hidden rounded-2xl border border-[#1E2D4A] bg-[#0E1830]">
+    <div className="flex h-[calc(100svh-6rem)] max-h-[calc(100svh-6rem)] flex-col overflow-hidden rounded-2xl border border-[#1E2D4A] bg-[#0E1830]">
       {/* Header */}
       <div className="shrink-0 border-b border-[#1E2D4A] bg-[#0a1524]">
         {/* Top row */}
@@ -853,7 +870,7 @@ export function SourceEvidenceViewer({ approvalId, approvalSubject, sourcePlatfo
                   <CheckCircle2 className="h-2.5 w-2.5" /> Verified
                 </span>
               </div>
-              <p className="text-xs text-[#6B7FA8] truncate">View the original conversation and full context from {info.displayName}.</p>
+              <p className="text-xs text-[#6B7FA8] truncate">{payload.providerType === 'generic' ? 'Captured evidence and context from the approval record.' : `View the original conversation and full context from ${info.displayName}.`}</p>
             </div>
           </div>
 

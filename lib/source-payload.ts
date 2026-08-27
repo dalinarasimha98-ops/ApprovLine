@@ -395,6 +395,62 @@ export function parseSourcePayload(rawPayload: unknown, platform?: string | null
   return { providerType: 'generic', content: str(raw.content), title: str(raw.title) };
 }
 
+/** Build a synthetic payload from ApprovalRecord fields when no raw provider
+ *  payload was captured.  Surfaces the evidence snippet, reasoning, approver,
+ *  and manual approval detail as structured records so the viewer always shows
+ *  meaningful content instead of empty placeholders. */
+export function constructSyntheticPayload(opts: {
+  subject: string;
+  evidenceSnippet?: string | null;
+  reasoning?: string | null;
+  approverName?: string | null;
+  approverEmail?: string | null;
+  platform?: string | null;
+  channel?: string | null;
+  status?: string | null;
+  riskLevel?: string | null;
+  conditions?: string | null;
+  manualDetail?: {
+    kind: string;
+    approverRole: string;
+    communicationChannel: string;
+    businessContext: string;
+    supportingNotes?: string | null;
+    verificationStatus: string;
+    location?: string | null;
+  } | null;
+}): GenericPayload {
+  const records: NonNullable<GenericPayload['records']> = [];
+
+  if (opts.approverName) {
+    records.push({ label: 'Approver', value: opts.approverEmail ? `${opts.approverName} <${opts.approverEmail}>` : opts.approverName });
+  }
+  if (opts.platform) records.push({ label: 'Source Platform', value: opts.platform });
+  if (opts.channel) records.push({ label: 'Channel', value: opts.channel });
+  if (opts.status) records.push({ label: 'Status', value: opts.status.replace(/_/g, ' ') });
+  if (opts.riskLevel) records.push({ label: 'Risk Level', value: opts.riskLevel });
+  if (opts.conditions) records.push({ label: 'Conditions', value: opts.conditions });
+
+  if (opts.manualDetail) {
+    const md = opts.manualDetail;
+    records.push({ label: 'Approval Kind', value: md.kind.replace(/_/g, ' ') });
+    records.push({ label: 'Approver Role', value: md.approverRole });
+    records.push({ label: 'Communication Channel', value: md.communicationChannel });
+    if (md.location) records.push({ label: 'Location', value: md.location });
+    records.push({ label: 'Verification Status', value: md.verificationStatus.replace(/_/g, ' ') });
+    if (md.businessContext) records.push({ label: 'Business Context', value: md.businessContext });
+    if (md.supportingNotes) records.push({ label: 'Supporting Notes', value: md.supportingNotes });
+  }
+
+  const content = opts.evidenceSnippet ?? opts.reasoning ?? undefined;
+  return {
+    providerType: 'generic',
+    title: opts.subject,
+    content,
+    records: records.length > 0 ? records : undefined,
+  };
+}
+
 /** Merge extra context from a CanonicalEvidenceEvent (participants, attachments,
  *  links captured at ingest time) onto an already-parsed payload.  Overlays
  *  only fields that are missing from the payload, never overwrites. */
