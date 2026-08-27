@@ -29,8 +29,8 @@ test.describe('Approval Timeline production actions', () => {
   test('Open Source always renders retained evidence or an unavailable state', async ({ page }) => {
     await page.goto(`/approvals/${approvalId}/source`);
     await expectRenderedPage(page);
-    await expect(page.getByText('Source Evidence', { exact: true })).toBeVisible();
-    await expect(page.getByText(/Decision context|Original source is no longer available/)).toBeVisible();
+    await expect(page.getByText('Original Source (Open Source)', { exact: true })).toBeVisible();
+    await expect(page.getByText('Evidence Details', { exact: true })).toBeVisible();
   });
 
   test('evidence and all export actions produce files', async ({ page }) => {

@@ -5,7 +5,7 @@ import { SourceEvidenceViewer } from '@/components/source-viewer/SourceEvidenceV
 import type { EvidenceDetailData } from '@/components/source-viewer/SourceEvidenceViewer';
 import { getDashboardTenant } from '@/lib/auth';
 import { getSafeEvidenceUrl } from '@/lib/evidence-links';
-import { parseSourcePayload, mergeEventContext } from '@/lib/source-payload';
+import { parseSourcePayload, mergeEventContext, constructSyntheticPayload } from '@/lib/source-payload';
 import { prisma } from '@/lib/prisma';
 import { reportApprovalFailure } from '@/lib/approval-observability';
 import { withRetry } from '@/services/approvalDetail';
@@ -89,11 +89,15 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
           orderBy: { createdAt: 'desc' },
           select: { approvalType: true, confidence: true, normalizedJson: true },
         }),
+        prisma.manualApprovalDetail.findFirst({
+          where: { approvalRecordId: id, organizationId: orgId },
+          select: { kind: true, approverRole: true, communicationChannel: true, businessContext: true, supportingNotes: true, verificationStatus: true, location: true, confidenceLevel: true },
+        }),
       ]),
     7000,
   ).then(
-    ([approval, event, unified, classifier]) => ({ approval, event, unified, classifier, error: null as unknown }),
-    (error: unknown) => ({ approval: null, event: null, unified: null, classifier: null, error }),
+    ([approval, event, unified, classifier, manualDetail]) => ({ approval, event, unified, classifier, manualDetail, error: null as unknown }),
+    (error: unknown) => ({ approval: null, event: null, unified: null, classifier: null, manualDetail: null, error }),
   );
 
   if (result.error) {
@@ -124,14 +128,42 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
     notFound();
   }
 
-  const { approval, event, unified, classifier } = result;
+  const { approval, event, unified, classifier, manualDetail } = result;
   const platform = approval.sourcePlatform ?? approval.messageSource?.provider ?? null;
   const externalUrl = getSafeEvidenceUrl(approval.sourceLink);
 
-  // Parse payload, then overlay any richer context from the canonical event
+  // Parse payload, then overlay any richer context from the canonical event.
+  // When no raw payload was captured (e.g. seed/demo records without a
+  // MessageSource), fall back to a synthetic payload built from the rich fields
+  // available on ApprovalRecord itself so the viewer always shows real content.
   const rawPayload = approval.messageSource?.rawPayload ?? null;
   const parsedPayload = parseSourcePayload(rawPayload, platform);
-  const payload = mergeEventContext(parsedPayload, event);
+  const hasMeaningfulPayload = parsedPayload.providerType !== 'generic' || rawPayload !== null;
+  const payload = hasMeaningfulPayload
+    ? mergeEventContext(parsedPayload, event)
+    : constructSyntheticPayload({
+        subject: approval.subject,
+        evidenceSnippet: approval.evidenceSnippet,
+        reasoning: approval.reasoning,
+        approverName: approval.approverName ?? approval.messageSource?.sender ?? null,
+        approverEmail: approval.approverEmail ?? approval.messageSource?.senderEmail ?? null,
+        platform: platform ?? undefined,
+        channel: approval.messageSource?.channel ?? undefined,
+        status: approval.status ?? undefined,
+        riskLevel: approval.riskLevel ?? undefined,
+        conditions: approval.conditions ?? null,
+        manualDetail: manualDetail
+          ? {
+              kind: String(manualDetail.kind),
+              approverRole: manualDetail.approverRole,
+              communicationChannel: manualDetail.communicationChannel,
+              businessContext: manualDetail.businessContext,
+              supportingNotes: manualDetail.supportingNotes ?? null,
+              verificationStatus: String(manualDetail.verificationStatus),
+              location: manualDetail.location ?? null,
+            }
+          : null,
+      });
 
   // Derive AI reasoning from normalizedJson if it has a reasoning field
   const normalizedJson = classifier?.normalizedJson;

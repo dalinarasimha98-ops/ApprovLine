@@ -355,17 +355,26 @@ export function serviceNowRecordToJob(input: {
       input.record.description ? `Description: ${input.record.description}` : '',
     ].filter(Boolean).join('\n'),
     rawPayload: {
-      sourcePlatform: 'servicenow',
+      providerType: 'servicenow',
       serviceNowInstanceUrl: input.instanceUrl,
       serviceNowTable: input.table.table,
       serviceNowTableLabel: input.table.label,
+      issueKey: recordNumber,
       requestId: recordNumber,
       changeRequestId: input.table.table === 'change_request' ? recordNumber : undefined,
-      catalogItem,
-      approver: refName(input.record.approver) ?? actor,
+      issueTitle: title,
+      project: input.table.label,
+      status: input.record.state,
+      assignee: refName(input.record.approver) ?? actor,
       assignmentGroup,
-      state: input.record.state,
-      approval: input.record.approval,
+      reporter: actor,
+      issueUrl: sourceLink,
+      approvals: refName(input.record.approver)
+        ? [{ approver: refName(input.record.approver)!, status: String(input.record.approval ?? 'Unknown'), timestamp: timestamp ?? undefined }]
+        : undefined,
+      comments: comments
+        ? [{ author: actor, timestamp: timestamp ?? '', body: String(comments), isApprovalMoment: true }]
+        : undefined,
       timestamp,
       sourceLink,
       record: input.record,

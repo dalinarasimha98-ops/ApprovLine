@@ -77,14 +77,18 @@ export async function processIncomingMessage(
     correlationId,
     idempotencyKey,
     rawPayload: {
-      payload: job.rawPayload ?? {},
-      queue: input?.envelope
+      ...(job.rawPayload && typeof job.rawPayload === 'object' && !Array.isArray(job.rawPayload)
+        ? (job.rawPayload as Record<string, unknown>)
+        : {}),
+      ...(input?.envelope
         ? {
-            jobType: input.envelope.jobType,
-            traceId: input.envelope.traceId,
-            metadata: input.envelope.metadata ?? {},
+            _queue: {
+              jobType: input.envelope.jobType,
+              traceId: input.envelope.traceId,
+              metadata: input.envelope.metadata ?? {},
+            },
           }
-        : undefined,
+        : {}),
     } as Prisma.InputJsonValue,
     receivedAt: job.timestamp ? new Date(job.timestamp) : undefined,
   } satisfies Prisma.MessageSourceUncheckedCreateInput;
