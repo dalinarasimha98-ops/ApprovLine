@@ -1,19 +1,42 @@
 import { notFound, redirect } from 'next/navigation';
-import { CopyEvidenceLinkButton } from '@/components/approvals/CopyEvidenceLinkButton';
-import { EvidenceMessageCard } from '@/components/approvals/EvidenceMessageCard';
-import { EvidenceThread, parseThreadPayload } from '@/components/approvals/EvidenceThread';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
+import { SourceEvidenceViewer } from '@/components/source-viewer/SourceEvidenceViewer';
+import type { EvidenceDetailData } from '@/components/source-viewer/SourceEvidenceViewer';
 import { getDashboardTenant } from '@/lib/auth';
 import { getSafeEvidenceUrl } from '@/lib/evidence-links';
+import { parseSourcePayload, mergeEventContext } from '@/lib/source-payload';
 import { prisma } from '@/lib/prisma';
 import { reportApprovalFailure } from '@/lib/approval-observability';
 import { withRetry } from '@/services/approvalDetail';
 
 export const dynamic = 'force-dynamic';
 
-function dateText(value: Date | null | undefined) {
-  return value ? value.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not recorded';
+function fmtCapture(d: Date | null | undefined) {
+  return d
+    ? d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' })
+    : 'Not recorded';
+}
+
+/** Derive a 0-100 numeric risk score from riskLevel + confidence. */
+function deriveRiskScore(riskLevel: string | null, confidence: number): number {
+  if (riskLevel === 'high') return Math.max(65, Math.min(95, Math.round(confidence * 0.88)));
+  if (riskLevel === 'medium') return Math.max(40, Math.min(74, Math.round(confidence * 0.65)));
+  return Math.max(10, Math.min(44, Math.round(confidence * 0.35)));
+}
+
+/** Short deterministic ID label for display (not a DB key). */
+function shortId(id: string, prefix: string) {
+  return `${prefix}-${id.slice(-6).toUpperCase()}`;
+}
+
+/** Format approval type enum for display. */
+function formatApprovalType(t: string | null | undefined): string | null {
+  if (!t) return null;
+  return t
+    .split('_')
+    .map((w) => w[0] + w.slice(1).toLowerCase())
+    .join(' ');
 }
 
 export default async function ApprovalSourcePage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,56 +46,70 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization) redirect('/dashboard/approvals');
 
+  const orgId = tenant.organization.id;
+
   const result = await withRetry(
     'approval source lookup',
     () =>
-      prisma.approvalRecord.findFirst({
-        where: { id, organizationId: tenant.organization.id },
-        select: {
-          subject: true,
-          sourceLink: true,
-          sourcePlatform: true,
-          approvalTimestamp: true,
-          occurredAt: true,
-          evidenceSnippet: true,
-          reasoning: true,
-          conditions: true,
-          approverName: true,
-          approverEmail: true,
-          confidence: true,
-          riskLevel: true,
-          messageSource: {
-            select: {
-              provider: true,
-              channel: true,
-              sender: true,
-              senderEmail: true,
-              receivedAt: true,
-              rawPayload: true,
+      Promise.all([
+        prisma.approvalRecord.findFirst({
+          where: { id, organizationId: orgId },
+          select: {
+            subject: true,
+            sourceLink: true,
+            sourcePlatform: true,
+            approvalTimestamp: true,
+            occurredAt: true,
+            evidenceSnippet: true,
+            reasoning: true,
+            conditions: true,
+            approverName: true,
+            approverEmail: true,
+            confidence: true,
+            riskLevel: true,
+            status: true,
+            department: true,
+            category: true,
+            messageSource: {
+              select: { provider: true, channel: true, sender: true, senderEmail: true, receivedAt: true, rawPayload: true },
             },
           },
-        },
-      }),
+        }),
+        prisma.canonicalEvidenceEvent.findFirst({
+          where: { approvalRecordId: id, organizationId: orgId },
+          orderBy: { occurredAt: 'desc' },
+          select: { id: true, providerKey: true, threadId: true, occurredAt: true, participants: true, attachments: true, links: true, metadata: true },
+        }),
+        prisma.unifiedEvidenceRecord.findFirst({
+          where: { primaryApprovalId: id, organizationId: orgId },
+          select: { id: true },
+        }),
+        prisma.classifierResult.findFirst({
+          where: { approvalRecordId: id, organizationId: orgId },
+          orderBy: { createdAt: 'desc' },
+          select: { approvalType: true, confidence: true, normalizedJson: true },
+        }),
+      ]),
     7000,
   ).then(
-    (approval) => ({ approval, error: null as unknown }),
-    (error: unknown) => ({ approval: null, error }),
+    ([approval, event, unified, classifier]) => ({ approval, event, unified, classifier, error: null as unknown }),
+    (error: unknown) => ({ approval: null, event: null, unified: null, classifier: null, error }),
   );
 
   if (result.error) {
     const correlationId = reportApprovalFailure(result.error, {
-      action: 'open_source', approvalId: id, organizationId: tenant.organization.id, userId: tenant.session.userId,
+      action: 'open_source', approvalId: id, organizationId: orgId, userId: tenant.session.userId,
     });
     return (
       <DashboardShell>
-        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-wide text-amber-800">Evidence temporarily unavailable</p>
-          <h1 className="mt-2 text-2xl font-black text-slate-950">The source record could not be loaded</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">Your approval is safe. Retry the evidence lookup or return to the approval record.</p>
-          <p className="mt-3 text-xs font-bold text-slate-500">Reference: {correlationId}</p>
+        <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6">
+          <p className="text-xs font-bold uppercase tracking-wide text-amber-400">Evidence temporarily unavailable</p>
+          <h1 className="mt-2 text-2xl font-black text-[#E8EEFF]">The source record could not be loaded</h1>
+          <p className="mt-2 text-sm leading-6 text-[#6B7FA8]">Your approval is safe. Retry the evidence lookup or return to the approval record.</p>
+          <p className="mt-3 text-xs font-bold text-[#3D5070]">Reference: {correlationId}</p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <PendingLink href={`/approvals/${id}/source`} pendingText="Retrying..." className="inline-flex h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white">Retry</PendingLink>
-            <PendingLink href={`/approvals/${id}`} pendingText="Opening approval..." className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700">Back to approval</PendingLink>
+            <PendingLink href={`/approvals/${id}/source`} pendingText="Retrying..." className="inline-flex h-10 items-center rounded-xl bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500">Retry</PendingLink>
+            <PendingLink href={`/approvals/${id}`} pendingText="Opening approval..." className="inline-flex h-10 items-center rounded-xl border border-[#1E2D4A] px-5 text-sm font-bold text-[#A8BAD8] hover:border-violet-500/30 hover:text-[#E8EEFF]">Back to approval</PendingLink>
           </div>
         </section>
       </DashboardShell>
@@ -81,111 +118,87 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
 
   if (!result.approval) {
     reportApprovalFailure(new Error('Approval source missing'), {
-      action: 'open_source', approvalId: id, organizationId: tenant.organization.id, userId: tenant.session.userId,
+      action: 'open_source', approvalId: id, organizationId: orgId, userId: tenant.session.userId,
       reason: 'Approval was deleted or does not belong to this tenant.',
     });
     notFound();
   }
 
-  const approval = result.approval;
+  const { approval, event, unified, classifier } = result;
+  const platform = approval.sourcePlatform ?? approval.messageSource?.provider ?? null;
   const externalUrl = getSafeEvidenceUrl(approval.sourceLink);
-  const source = approval.messageSource;
-  const threadPayload = parseThreadPayload(source?.rawPayload);
+
+  // Parse payload, then overlay any richer context from the canonical event
+  const rawPayload = approval.messageSource?.rawPayload ?? null;
+  const parsedPayload = parseSourcePayload(rawPayload, platform);
+  const payload = mergeEventContext(parsedPayload, event);
+
+  // Derive AI reasoning from normalizedJson if it has a reasoning field
+  const normalizedJson = classifier?.normalizedJson;
+  const aiReasoning = (() => {
+    if (approval.reasoning) return approval.reasoning;
+    if (normalizedJson && typeof normalizedJson === 'object' && !Array.isArray(normalizedJson)) {
+      const nj = normalizedJson as Record<string, unknown>;
+      if (typeof nj.reasoning === 'string') return nj.reasoning;
+    }
+    return null;
+  })();
+
+  // Format UE ID
+  const ueId = unified?.id ? `UE-${new Date().getFullYear()}-${unified.id.slice(-6).toUpperCase()}` : null;
+  const evId = event?.id ? shortId(event.id, `EV-${(platform ?? 'SRC').toUpperCase().slice(0, 5)}`) : null;
+  const arLabel = `APPR-${new Date().getFullYear()}-${id.slice(-5).toUpperCase()}`;
+
+  const capturedAt = fmtCapture(approval.approvalTimestamp ?? event?.occurredAt ?? approval.occurredAt);
+
+  const detail: EvidenceDetailData = {
+    evidenceId: evId,
+    unifiedEvidenceId: ueId,
+    approvalRecordId: arLabel,
+    decisionType: approval.category ?? formatApprovalType(classifier?.approvalType),
+    decisionTitle: approval.subject,
+    amount: null,
+    approverName: approval.approverName ?? approval.messageSource?.sender ?? null,
+    approverEmail: approval.approverEmail ?? approval.messageSource?.senderEmail ?? null,
+    status: approval.status ?? 'PENDING_REVIEW',
+    riskLevel: approval.riskLevel ?? null,
+    riskScore: deriveRiskScore(approval.riskLevel, approval.confidence ?? 50),
+    capturedAt,
+    source: platform,
+    channel: approval.messageSource?.channel ?? null,
+    workspace: null,
+    threadTs: event?.threadId ?? null,
+    messageTs: null,
+    issueUrl: null,
+    prUrl: null,
+    confidenceScore: classifier?.confidence ?? approval.confidence ?? 0,
+    aiClassification: formatApprovalType(classifier?.approvalType) ?? 'Approval',
+    aiReasoning,
+    rawPayload: approval.messageSource?.rawPayload ?? null,
+  };
+
+  // Overlay provider-specific detail fields from payload
+  if (payload.providerType === 'slack') {
+    detail.workspace = payload.workspace ?? null;
+    detail.threadTs = payload.threadTs ?? detail.threadTs;
+    detail.messageTs = payload.messageTs ?? null;
+    detail.channel = payload.channel ? `#${payload.channel}` : detail.channel;
+  } else if (payload.providerType === 'jira' || payload.providerType === 'servicenow' || payload.providerType === 'asana' || payload.providerType === 'monday') {
+    detail.issueUrl = payload.issueUrl ?? null;
+  } else if (payload.providerType === 'github' || payload.providerType === 'gitlab' || payload.providerType === 'azure_devops') {
+    detail.prUrl = payload.prUrl ?? null;
+  }
 
   return (
-    <DashboardShell>
-      <section className="mx-auto grid max-w-5xl gap-6">
-        <div className="rounded-3xl border border-slate-200 bg-[#07111f] p-6 text-white shadow-sm">
-          <PendingLink href={`/approvals/${id}`} pendingText="Opening approval..." className="text-xs font-black uppercase tracking-wide text-blue-200">&lt;- Full approval</PendingLink>
-          <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-blue-200">Source Evidence</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight">{approval.subject}</h1>
-          <p className="mt-3 text-sm text-slate-300">Captured from {approval.sourcePlatform ?? source?.provider ?? 'an enterprise source'} on {dateText(approval.approvalTimestamp ?? approval.occurredAt)}.</p>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Captured Evidence</p>
-            <h2 className="mt-1 text-xl font-black text-slate-950">Decision context</h2>
-            {threadPayload ? (
-              <div className="mt-5">
-                <EvidenceThread
-                  payload={threadPayload}
-                  platform={approval.sourcePlatform ?? source?.provider}
-                  participantCount={new Set(threadPayload.threadMessages.map((message) => message.senderName)).size}
-                  sourceUrl={externalUrl}
-                  evidenceLinkPath={`/approvals/${id}/source`}
-                />
-              </div>
-            ) : approval.evidenceSnippet || approval.approverName ? (
-              <div className="mt-5">
-                <EvidenceMessageCard
-                  platform={approval.sourcePlatform ?? source?.provider}
-                  senderName={approval.approverName ?? source?.sender ?? 'Unknown approver'}
-                  senderEmail={approval.approverEmail ?? source?.senderEmail}
-                  timestamp={dateText(approval.approvalTimestamp ?? approval.occurredAt)}
-                  content={approval.evidenceSnippet}
-                />
-              </div>
-            ) : (
-              <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-                <p className="font-black text-slate-950">Evidence text was not retained</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">The source metadata remains available below for audit traceability.</p>
-              </div>
-            )}
-            <div className="mt-5 grid gap-3 text-sm leading-6 text-slate-600">
-              <p><span className="font-black text-slate-950">Reasoning:</span> {approval.reasoning}</p>
-              {approval.conditions ? <p><span className="font-black text-slate-950">Conditions:</span> {approval.conditions}</p> : null}
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              {threadPayload ? null : externalUrl ? (
-                <a href={externalUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white">Open original system</a>
-              ) : (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  <p className="font-black">Original source is no longer available.</p>
-                  <p className="mt-1">It may have been deleted, revoked, or was generated as demo evidence. The retained ApprovLine record remains auditable.</p>
-                </div>
-              )}
-              <a href={`/api/approvals/${id}/evidence`} download className="inline-flex h-11 items-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700">Download evidence (PDF)</a>
-              {threadPayload ? null : (
-                <CopyEvidenceLinkButton path={`/approvals/${id}/source`} className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 hover:bg-slate-50" />
-              )}
-            </div>
-
-            {source?.rawPayload ? (
-              <details className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <summary className="cursor-pointer text-xs font-black uppercase tracking-wide text-slate-500">Raw captured payload</summary>
-                <pre className="mt-3 max-h-96 overflow-auto rounded-xl bg-white p-4 text-xs leading-5 text-slate-700">{JSON.stringify(source.rawPayload, null, 2)}</pre>
-              </details>
-            ) : (
-              <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-                <p className="font-black text-slate-950">No raw payload retained</p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">This approval has no linked message source, or the captured payload was not persisted.</p>
-              </div>
-            )}
-          </article>
-
-          <aside className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Source Metadata</p>
-            <dl className="mt-4 grid gap-3 text-sm">
-              {[
-                ['Platform', approval.sourcePlatform ?? source?.provider ?? 'Unknown'],
-                ['Channel', source?.channel ?? 'Not recorded'],
-                ['Approver', approval.approverName ?? source?.sender ?? 'Unknown'],
-                ['Approver email', approval.approverEmail ?? source?.senderEmail ?? 'Not recorded'],
-                ['Decision time', dateText(approval.approvalTimestamp ?? approval.occurredAt)],
-                ['Received time', dateText(source?.receivedAt)],
-                ['Confidence', `${approval.confidence}%`],
-                ['Risk', approval.riskLevel ?? 'low'],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-xl bg-slate-50 px-4 py-3">
-                  <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt>
-                  <dd className="mt-1 break-words font-black text-slate-950">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          </aside>
-        </div>
-      </section>
+    <DashboardShell immersive>
+      <SourceEvidenceViewer
+        approvalId={id}
+        approvalSubject={approval.subject}
+        sourcePlatform={platform}
+        externalUrl={externalUrl}
+        payload={payload}
+        detail={detail}
+      />
     </DashboardShell>
   );
 }
