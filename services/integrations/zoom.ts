@@ -361,7 +361,7 @@ export function zoomTranscriptToJob(input: {
       `Transcript / summary: ${input.transcriptText}`,
     ].filter(Boolean).join('\n'),
     rawPayload: {
-      sourcePlatform: 'zoom',
+      providerType: 'zoom',
       zoomAccountId: input.host?.account_id,
       zoomUserId: input.host?.id,
       meetingId,

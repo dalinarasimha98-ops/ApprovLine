@@ -250,113 +250,219 @@ function parseGitComments(v: unknown): GitComment[] | undefined {
 }
 
 /** Parse a raw DB payload (Prisma JsonValue) into a typed NormalizedPayload.
- *  Handles the legacy threadMessages format, all current providers, and
- *  falls back gracefully to GenericPayload so the viewer never crashes. */
+ *
+ * Handles three payload generations:
+ *  1. Old queue-envelope format: { payload: {...connectorFields}, queue: {...} }
+ *     Written by processIncomingMessage before the envelope-wrapping fix.
+ *  2. Connector-native format: top-level connectorFields with sourcePlatform key.
+ *     Written by individual connectors before the canonical-field-name fix.
+ *  3. Canonical format: top-level providerType key + canonical field names.
+ *     Written by connectors after the fix; this is the target going forward.
+ *
+ * Falls back to GenericPayload so the viewer never crashes on unknown shapes.
+ */
 export function parseSourcePayload(rawPayload: unknown, platform?: string | null): NormalizedPayload {
   const p = platform?.trim().toLowerCase() ?? '';
   if (!isObj(rawPayload)) return { providerType: 'generic' };
-  const raw = rawPayload;
-  const declared = str(raw.providerType);
 
-  // Slack — including legacy threadMessages format
+  // Unwrap old processIncomingMessage queue envelope: { payload: {...}, queue: {...} }
+  // Detection: top-level has no providerType/sourcePlatform but has a non-empty `payload` object.
+  let raw: Record<string, unknown> = rawPayload;
+  if (!str(raw.providerType) && !str(raw.sourcePlatform) && isObj(raw.payload) && Object.keys(raw.payload).length > 0) {
+    raw = raw.payload as Record<string, unknown>;
+  }
+
+  // Resolve the provider discriminator from either canonical key or legacy connector key.
+  const declared = str(raw.providerType) ?? str(raw.sourcePlatform);
+
+  // ── Slack ──────────────────────────────────────────────────────────────────
   if (declared === 'slack' || p === 'slack') {
-    if (Array.isArray(raw.threadMessages)) {
-      return {
-        providerType: 'slack',
-        channel: str(raw.channelName),
-        messages: (raw.threadMessages as unknown[]).filter(isObj).map((m) => ({
-          senderName: String(m.senderName ?? 'Unknown'),
-          senderEmail: str(m.senderEmail),
-          timestamp: String(m.timestamp ?? ''),
-          content: String(m.content ?? ''),
-          isApprovalMoment: m.isApprovalMoment === true,
-          reactions: parseReactions(m.reactions),
-          replyCount: num(m.replyCount),
-        })),
-        participants: parseParticipants(raw.participants),
-        attachments: parseAttachments(raw.attachments),
-        links: parseLinks(raw.links),
-        threadTs: str(raw.threadTs),
-        messageTs: str(raw.messageTs),
-        workspace: str(raw.workspace),
-        memberCount: num(raw.memberCount),
-      };
+    // evidence sub-object written by the Slack webhook route (old connector format)
+    const evidence = isObj(raw.evidence) ? (raw.evidence as Record<string, unknown>) : {};
+    // event sub-object is the full Slack event payload spread at the top level
+    const event = isObj(raw.event) ? (raw.event as Record<string, unknown>) : {};
+
+    const workspace = str(raw.workspace) ?? str(evidence.teamId) ?? str(raw.team_id);
+    const channel = str(raw.channel) ?? str(raw.channelName) ?? str(evidence.channel) ?? str(event.channel) ?? str(event.channel_id);
+    const threadTs = str(raw.threadTs) ?? str(raw.thread_ts) ?? str(event.thread_ts);
+    const messageTs = str(raw.messageTs) ?? str(evidence.messageTs) ?? str(raw.ts) ?? str(event.ts);
+
+    let messages: SlackMessage[];
+    if (Array.isArray(raw.messages) && raw.messages.length > 0) {
+      messages = parseSlackMessages(raw.messages);
+    } else if (Array.isArray(raw.threadMessages) && raw.threadMessages.length > 0) {
+      messages = (raw.threadMessages as unknown[]).filter(isObj).map((m) => ({
+        senderName: String(m.senderName ?? 'Unknown'),
+        senderEmail: str(m.senderEmail),
+        timestamp: String(m.timestamp ?? ''),
+        content: String(m.content ?? ''),
+        isApprovalMoment: m.isApprovalMoment === true,
+        reactions: parseReactions(m.reactions),
+        replyCount: num(m.replyCount),
+      }));
+    } else {
+      // Single Slack event: build one approval-moment message from flat fields
+      const senderName = str(raw.senderName) ?? str(evidence.senderName) ?? str(event.user) ?? str(raw.user) ?? 'Unknown';
+      const senderEmail = str(raw.senderEmail) ?? str(evidence.senderEmail);
+      const text = str(event.text) ?? str(raw.text) ?? str(raw.body) ?? str(raw.content) ?? '';
+      const ts = messageTs ?? str(raw.timestamp) ?? '';
+      messages = [{ senderName, senderEmail, timestamp: ts, content: text, isApprovalMoment: true, reactions: parseReactions(event.reactions ?? raw.reactions) }];
     }
+
     return {
       providerType: 'slack',
-      workspace: str(raw.workspace),
-      channel: str(raw.channel) ?? str(raw.channelName),
+      workspace,
+      channel,
       memberCount: num(raw.memberCount),
-      messages: parseSlackMessages(raw.messages),
+      messages,
       participants: parseParticipants(raw.participants),
       attachments: parseAttachments(raw.attachments),
       links: parseLinks(raw.links),
-      threadTs: str(raw.threadTs),
-      messageTs: str(raw.messageTs),
+      threadTs,
+      messageTs,
     };
   }
 
-  // Email
+  // ── Gmail / Outlook ────────────────────────────────────────────────────────
   if (declared === 'gmail' || p === 'gmail' || declared === 'outlook' || p === 'outlook') {
+    const isOutlook = declared === 'outlook' || p === 'outlook';
+    const pt: EmailPayload['providerType'] = isOutlook ? 'outlook' : 'gmail';
+
+    // Resolve threadId from either canonical key or connector-specific keys
+    const threadId = str(raw.threadId)
+      ?? str(raw.gmailThreadId)
+      ?? str(raw.outlookConversationId);
+
+    let messages: EmailMessage[];
+    if (Array.isArray(raw.messages) && raw.messages.length > 0) {
+      messages = parseEmailMessages(raw.messages);
+    } else {
+      // Build one message from flat connector fields
+      const from = str(raw.senderName) ?? str(raw.from) ?? 'Unknown';
+      const fromEmail = str(raw.senderEmail) ?? str(raw.fromEmail);
+      const recipients = isObj(raw.recipients) ? (raw.recipients as Record<string, unknown>) : {};
+      const toStr = str(recipients.to) ?? str(raw.to);
+      const ccStr = str(recipients.cc) ?? str(raw.cc);
+      const body = str(raw.body) ?? str(raw.bodyPreview) ?? str(raw.snippet) ?? str(raw.content) ?? '';
+      messages = [{
+        from,
+        fromEmail,
+        to: toStr ? [toStr] : undefined,
+        cc: ccStr ? [ccStr] : undefined,
+        timestamp: str(raw.timestamp) ?? '',
+        subject: str(raw.subject),
+        body,
+        isApprovalMoment: true,
+        attachments: parseAttachments(raw.attachments),
+      }];
+    }
+
     return {
-      providerType: (declared === 'outlook' || p === 'outlook') ? 'outlook' : 'gmail',
+      providerType: pt,
       subject: str(raw.subject) ?? '',
-      messages: parseEmailMessages(raw.messages),
+      messages,
       participants: parseParticipants(raw.participants),
       attachments: parseAttachments(raw.attachments),
-      threadId: str(raw.threadId),
+      threadId,
     };
   }
 
-  // Teams / Google Chat
+  // ── Microsoft Teams / Google Chat ──────────────────────────────────────────
   if (declared === 'microsoft_teams' || p === 'microsoft_teams' || p === 'teams' || declared === 'google_chat' || p === 'google_chat') {
     const pt: TeamsPayload['providerType'] = (p === 'google_chat' || declared === 'google_chat') ? 'google_chat' : 'microsoft_teams';
-    return {
-      providerType: pt,
-      team: str(raw.team),
-      channel: str(raw.channel),
-      messages: parseSlackMessages(raw.messages) as TeamsMessage[],
-      participants: parseParticipants(raw.participants),
-    };
+
+    // Resolve team/channel from canonical or old connector-prefixed keys
+    const team = str(raw.team) ?? str(raw.microsoftTeamName);
+    const channel = str(raw.channel) ?? str(raw.microsoftChannelName);
+
+    let messages: TeamsMessage[];
+    if (Array.isArray(raw.messages) && raw.messages.length > 0) {
+      messages = parseSlackMessages(raw.messages) as TeamsMessage[];
+    } else {
+      // Build one message from flat connector fields
+      const senderName = str(raw.senderName) ?? 'Unknown';
+      const senderEmail = str(raw.senderEmail);
+      const body = str(raw.body) ?? str(raw.content) ?? '';
+      messages = [{ senderName, senderEmail, timestamp: str(raw.timestamp) ?? '', content: body, isApprovalMoment: true }];
+    }
+
+    return { providerType: pt, team, channel, messages, participants: parseParticipants(raw.participants) };
   }
 
-  // Jira / ServiceNow / Asana / Monday
+  // ── Jira / ServiceNow / Asana / Monday ────────────────────────────────────
   if (['jira', 'servicenow', 'asana', 'monday'].includes(declared ?? '') || ['jira', 'servicenow', 'asana', 'monday'].includes(p)) {
     const pt = (declared ?? p) as JiraPayload['providerType'];
-    return {
-      providerType: pt,
-      issueKey: str(raw.issueKey),
-      issueTitle: str(raw.issueTitle),
-      project: str(raw.project),
-      issueType: str(raw.issueType),
-      priority: str(raw.priority),
-      status: str(raw.status),
-      resolution: str(raw.resolution),
-      assignee: str(raw.assignee),
-      reporter: str(raw.reporter),
-      comments: parseJiraComments(raw.comments),
-      approvals: Array.isArray(raw.approvals) ? raw.approvals.filter(isObj).map((a) => ({
+
+    // Resolve from canonical names or old Jira-prefixed connector keys
+    const issueKey = str(raw.issueKey) ?? str(raw.jiraIssueKey) ?? str(raw.requestId) ?? str(raw.changeRequestId);
+    const issueTitle = str(raw.issueTitle) ?? str(raw.jiraIssueTitle);
+    const project = str(raw.project) ?? str(raw.jiraProject);
+    const status = str(raw.status) ?? str(raw.jiraStatus) ?? str(raw.state);
+    const assignee = str(raw.assignee) ?? str(raw.approver) ?? str(raw.assignmentGroup);
+    const reporter = str(raw.reporter) ?? str(raw.actorName);
+    const issueUrl = str(raw.issueUrl) ?? str(raw.sourceLink);
+
+    // ServiceNow wraps the raw record as record.* — pick nested fields
+    const snRecord = isObj(raw.record) ? (raw.record as Record<string, unknown>) : {};
+    const resolvedIssueTitle = issueTitle ?? str(snRecord.short_description);
+
+    // Comments: structured array, single comment string (Jira comment event),
+    // status transition (Jira transition event), or ServiceNow nested comments.
+    let comments: JiraComment[] | undefined;
+    if (Array.isArray(raw.comments)) {
+      comments = parseJiraComments(raw.comments);
+    } else if (str(raw.comment)) {
+      comments = [{ author: reporter ?? 'Unknown', authorEmail: str(raw.actorEmail), timestamp: str(raw.timestamp) ?? '', body: str(raw.comment)!, isApprovalMoment: true }];
+    } else if (isObj(raw.transition)) {
+      const t = raw.transition as Record<string, unknown>;
+      const body = `Status changed from ${str(t.fromString) ?? 'unknown'} to ${str(t.toString) ?? 'unknown'}`;
+      comments = [{ author: reporter ?? 'Unknown', authorEmail: str(raw.actorEmail), timestamp: str(raw.timestamp) ?? '', body, isApprovalMoment: true }];
+    } else if (str(snRecord.comments)) {
+      comments = [{ author: assignee ?? 'Unknown', timestamp: str(raw.timestamp) ?? '', body: str(snRecord.comments)!, isApprovalMoment: true }];
+    }
+
+    // Approvals: structured array, or single flat approver from ServiceNow connector
+    let approvals: JiraApproval[] | undefined;
+    if (Array.isArray(raw.approvals)) {
+      approvals = raw.approvals.filter(isObj).map((a) => ({
         approver: String(a.approver ?? a.name ?? 'Unknown'),
         approverRole: str(a.approverRole ?? a.role),
         status: String(a.status ?? 'Unknown'),
         timestamp: str(a.timestamp),
-      })) : undefined,
+      }));
+    } else if (str(raw.approver)) {
+      approvals = [{ approver: str(raw.approver)!, status: str(raw.approval) ?? str(raw.state) ?? 'Unknown', timestamp: str(raw.timestamp) }];
+    }
+
+    return {
+      providerType: pt,
+      issueKey,
+      issueTitle: resolvedIssueTitle,
+      project,
+      issueType: str(raw.issueType),
+      priority: str(raw.priority),
+      status,
+      resolution: str(raw.resolution),
+      assignee,
+      reporter,
+      comments,
+      approvals,
       attachments: parseAttachments(raw.attachments),
       linkedIssues: parseLinkedIssues(raw.linkedIssues),
       participants: parseParticipants(raw.participants),
       changeHistoryCount: num(raw.changeHistoryCount),
-      issueUrl: str(raw.issueUrl),
+      issueUrl,
     };
   }
 
-  // Git platforms
+  // ── Git platforms (GitHub / GitLab / Azure DevOps) ─────────────────────────
   if (['github', 'gitlab', 'azure_devops'].includes(declared ?? '') || ['github', 'gitlab', 'azure_devops'].includes(p)) {
     const pt = (declared ?? p) as GitPayload['providerType'];
     return {
       providerType: pt,
       prNumber: num(raw.prNumber),
       prTitle: str(raw.prTitle),
-      prUrl: str(raw.prUrl),
+      prUrl: str(raw.prUrl) ?? str(raw.sourceLink),
       repository: str(raw.repository),
       author: str(raw.author),
       authorEmail: str(raw.authorEmail),
@@ -377,7 +483,21 @@ export function parseSourcePayload(rawPayload: unknown, platform?: string | null
     };
   }
 
-  // Legacy threadMessages (any unrecognised provider that still uses old format)
+  // ── Zoom (meeting transcript / recording) ──────────────────────────────────
+  // Zoom meetings don't fit the chat-thread or ticket model, so they are
+  // surfaced as a GenericPayload with the transcript as the primary content.
+  if (declared === 'zoom' || p === 'zoom') {
+    const participantCount = Array.isArray(raw.participants) ? raw.participants.length : 0;
+    const records: NonNullable<GenericPayload['records']> = [];
+    if (str(raw.hostName)) records.push({ label: 'Host', value: str(raw.hostEmail) ? `${str(raw.hostName)} <${str(raw.hostEmail)}>` : str(raw.hostName)! });
+    if (str(raw.meetingId)) records.push({ label: 'Meeting ID', value: str(raw.meetingId)! });
+    if (str(raw.sourceKind)) records.push({ label: 'Source Type', value: str(raw.sourceKind)!.replace(/_/g, ' ') });
+    if (participantCount > 0) records.push({ label: 'Participants', value: `${participantCount} attendees` });
+    if (str(raw.timestamp)) records.push({ label: 'Meeting Date', value: str(raw.timestamp)! });
+    return { providerType: 'generic', title: str(raw.meetingTitle) ?? 'Zoom Meeting', content: str(raw.transcriptSnippet) ?? undefined, records: records.length > 0 ? records : undefined };
+  }
+
+  // ── Legacy threadMessages (unrecognised provider using old format) ──────────
   if (Array.isArray(raw.threadMessages)) {
     return {
       providerType: 'slack',

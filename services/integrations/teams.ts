@@ -324,18 +324,24 @@ export function teamsMessageToJob(input: {
       body,
     ].filter(Boolean).join('\n'),
     rawPayload: {
-      sourcePlatform: 'teams',
+      providerType: 'microsoft_teams',
       microsoftTenantId: input.tenantId,
       microsoftTeamId: input.team.id,
-      microsoftTeamName: teamName,
+      team: teamName,
       microsoftChannelId: input.channel.id,
-      microsoftChannelName: channelName,
+      channel: channelName,
       microsoftMessageId: input.message.id,
-      senderName: sender,
-      senderUserId: input.message.from?.user?.id,
+      messages: [
+        {
+          senderName: sender,
+          timestamp: timestamp ?? '',
+          content: body,
+          isApprovalMoment: true,
+        },
+      ],
+      participants: [{ name: sender }],
       timestamp,
       sourceLink,
-      body,
     },
   };
 }

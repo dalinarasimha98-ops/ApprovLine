@@ -302,16 +302,27 @@ export function gmailMessageToJob(input: {
       .filter(Boolean)
       .join('\n'),
     rawPayload: {
-      sourcePlatform: 'gmail',
+      providerType: 'gmail',
       gmailMessageId: input.message.id,
-      gmailThreadId: input.message.threadId,
+      threadId: input.message.threadId,
       subject,
-      senderName: from.name,
-      senderEmail: from.email,
-      recipients: { to, cc },
+      messages: [
+        {
+          from: from.name || from.email || 'Unknown',
+          fromEmail: from.email,
+          to: to ? [to] : undefined,
+          cc: cc ? [cc] : undefined,
+          timestamp: timestamp ?? '',
+          subject,
+          body,
+          isApprovalMoment: true,
+        },
+      ],
+      participants: [
+        ...(from.email ? [{ name: from.name || from.email, email: from.email }] : []),
+      ],
       timestamp,
       sourceLink,
-      snippet: input.message.snippet,
     },
   };
 }

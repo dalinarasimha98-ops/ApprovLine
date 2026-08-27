@@ -335,19 +335,29 @@ export function outlookMessageToJob(input: {
       body,
     ].filter(Boolean).join('\n'),
     rawPayload: {
-      sourcePlatform: 'outlook',
+      providerType: 'outlook',
       microsoftTenantId: input.tenantId,
       accountEmail: input.accountEmail,
       outlookMessageId: input.message.id,
-      outlookInternetMessageId: input.message.internetMessageId,
-      outlookConversationId: input.message.conversationId,
+      threadId: input.message.conversationId,
       subject,
-      senderName,
-      senderEmail,
-      recipients: { to, cc },
+      messages: [
+        {
+          from: senderName,
+          fromEmail: senderEmail,
+          to: to ? [to] : undefined,
+          cc: cc ? [cc] : undefined,
+          timestamp: timestamp ?? '',
+          subject,
+          body,
+          isApprovalMoment: true,
+        },
+      ],
+      participants: [
+        ...(senderEmail ? [{ name: senderName, email: senderEmail }] : []),
+      ],
       timestamp,
       sourceLink,
-      bodyPreview: input.message.bodyPreview,
     },
   };
 }

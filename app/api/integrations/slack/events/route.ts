@@ -150,17 +150,23 @@ export async function POST(request: NextRequest) {
     message: event.text,
     sourceLink,
     rawPayload: {
-      ...payload,
-      evidence: {
-        teamId,
-        channel,
-        channelName: event.channel_name ?? channel,
-        messageTs,
-        senderUserId: userId,
-        senderName,
-        senderEmail,
-        sourceLink,
-      },
+      providerType: 'slack',
+      workspace: teamId,
+      channel,
+      channelName: event.channel_name ?? channel,
+      threadTs: optionalString(event.thread_ts),
+      messageTs,
+      messages: [
+        {
+          senderName: senderName ?? 'Unknown',
+          senderEmail,
+          timestamp: messageTs ? new Date(Number(messageTs.split('.')[0]) * 1000).toISOString() : new Date().toISOString(),
+          content: String(event.text ?? ''),
+          isApprovalMoment: true,
+        },
+      ],
+      sourceLink,
+      _slackEventId: eventId,
     },
   });
 
