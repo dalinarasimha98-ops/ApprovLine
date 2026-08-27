@@ -387,3 +387,46 @@ export const getApprovalManualBundle = cache(async (organizationId: string, appr
     })),
   };
 });
+
+// --- Context panel: recent approvals for left-panel navigation ---------------
+// Fetches a small set of recent approvals (excluding the current one) so the
+// detail page can show a navigation list without a full approvals-list query.
+
+const contextApprovalSelect = {
+  id: true,
+  subject: true,
+  status: true,
+  riskLevel: true,
+  sourcePlatform: true,
+  approverName: true,
+  createdAt: true,
+} satisfies Prisma.ApprovalRecordSelect;
+
+export type ContextApproval = Prisma.ApprovalRecordGetPayload<{ select: typeof contextApprovalSelect }>;
+
+function fetchContextApprovalsFresh(organizationId: string, excludeId: string) {
+  return withRetry(
+    'approval context list',
+    () =>
+      prisma.approvalRecord.findMany({
+        where: { organizationId, id: { not: excludeId } },
+        select: contextApprovalSelect,
+        orderBy: { createdAt: 'desc' },
+        take: 15,
+      }),
+    3000,
+  );
+}
+
+function getCachedContextApprovalsFetcher(excludeId: string) {
+  return unstable_cache(
+    (organizationId: string) => fetchContextApprovalsFresh(organizationId, excludeId),
+    ['approval-context-list', excludeId],
+    { revalidate: REVALIDATE_SECONDS, tags: [approvalDetailCacheTag(excludeId)] },
+  );
+}
+
+export const getContextApprovals = cache(async (organizationId: string, approvalId: string) => {
+  const records = await getCachedContextApprovalsFetcher(approvalId)(organizationId);
+  return records.map((r) => ({ ...r, createdAt: toDate(r.createdAt) }));
+});
