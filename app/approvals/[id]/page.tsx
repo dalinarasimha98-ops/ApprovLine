@@ -846,59 +846,58 @@ async function ManualApprovalSection({
 }) {
   if (!core.manualDetail) return null;
 
-  let bundle;
   try {
-    bundle = await getApprovalManualBundle(organizationId, core.id);
+    const bundle = await getApprovalManualBundle(organizationId, core.id);
+
+    return (
+      <ManualApprovalPanel
+        approval={{
+          id: core.id,
+          subject: core.subject,
+          status: core.status === 'NOT_A_DECISION' ? 'PENDING_REVIEW' : core.status,
+          approvalType: core.approvalType === 'NOT_APPROVAL' ? 'EXPLICIT' : core.approvalType,
+          approverName: core.approverName,
+          approverEmail: core.approverEmail,
+          approvalTimestamp: (core.approvalTimestamp ?? core.occurredAt ?? core.createdAt).toISOString(),
+          conditions: core.conditions,
+          department: core.department,
+          category: core.category,
+        }}
+        detail={{
+          ...core.manualDetail,
+          secondVerifiedAt: core.manualDetail.secondVerifiedAt?.toISOString() ?? null,
+        }}
+        evidence={bundle.evidence.map((item) => ({
+          ...item,
+          sourceTimestamp: item.sourceTimestamp?.toISOString() ?? new Date(0).toISOString(),
+          messageSource: {
+            ...item.messageSource,
+            receivedAt: item.messageSource.receivedAt?.toISOString() ?? new Date(0).toISOString(),
+            excerpt: evidenceExcerpt(item.messageSource.rawPayload).slice(0, 1200) || 'Source evidence is preserved in its original provider record.',
+          },
+        }))}
+        versions={bundle.versions.map((version) => ({
+          ...version,
+          createdAt: version.createdAt?.toISOString() ?? new Date(0).toISOString(),
+        }))}
+        confirmations={bundle.confirmations.map((confirmation) => ({
+          id: confirmation.id,
+          approverEmail: confirmation.approverEmail,
+          decision: confirmation.decision,
+          createdAt: confirmation.createdAt?.toISOString() ?? new Date(0).toISOString(),
+          respondedAt: confirmation.respondedAt?.toISOString() ?? null,
+          responseNote: confirmation.responseNote,
+          requestedByUser: confirmation.requestedByUser,
+        }))}
+        canManage={canManage}
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+      />
+    );
   } catch (error) {
     const correlationId = reportApprovalFailure(error, { action: 'manual_approval_bundle_lookup', approvalId: core.id, organizationId });
     return <SectionError approvalId={core.id} title="Manual approval detail temporarily unavailable" message="Evidence, versions, and confirmations did not load in time." correlationId={correlationId} />;
   }
-
-  return (
-    <ManualApprovalPanel
-      approval={{
-        id: core.id,
-        subject: core.subject,
-        status: core.status === 'NOT_A_DECISION' ? 'PENDING_REVIEW' : core.status,
-        approvalType: core.approvalType === 'NOT_APPROVAL' ? 'EXPLICIT' : core.approvalType,
-        approverName: core.approverName,
-        approverEmail: core.approverEmail,
-        approvalTimestamp: (core.approvalTimestamp ?? core.occurredAt ?? core.createdAt).toISOString(),
-        conditions: core.conditions,
-        department: core.department,
-        category: core.category,
-      }}
-      detail={{
-        ...core.manualDetail,
-        secondVerifiedAt: core.manualDetail.secondVerifiedAt?.toISOString() ?? null,
-      }}
-      evidence={bundle.evidence.map((item) => ({
-        ...item,
-        sourceTimestamp: item.sourceTimestamp.toISOString(),
-        messageSource: {
-          ...item.messageSource,
-          receivedAt: item.messageSource.receivedAt.toISOString(),
-          excerpt: evidenceExcerpt(item.messageSource.rawPayload).slice(0, 1200) || 'Source evidence is preserved in its original provider record.',
-        },
-      }))}
-      versions={bundle.versions.map((version) => ({
-        ...version,
-        createdAt: version.createdAt.toISOString(),
-      }))}
-      confirmations={bundle.confirmations.map((confirmation) => ({
-        id: confirmation.id,
-        approverEmail: confirmation.approverEmail,
-        decision: confirmation.decision,
-        createdAt: confirmation.createdAt.toISOString(),
-        respondedAt: confirmation.respondedAt?.toISOString() ?? null,
-        responseNote: confirmation.responseNote,
-        requestedByUser: confirmation.requestedByUser,
-      }))}
-      canManage={canManage}
-      currentUserId={currentUserId}
-      currentUserRole={currentUserRole}
-    />
-  );
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────
