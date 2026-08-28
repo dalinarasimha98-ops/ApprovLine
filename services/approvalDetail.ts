@@ -106,14 +106,14 @@ function deserializeCore(record: ApprovalCore): ApprovalCore {
 }
 
 function fetchCoreFresh(organizationId: string, approvalId: string) {
-  // 5000ms, not 3000ms: this query itself is fast (indexed, lean select) -
-  // the budget has to cover connection-pool queue wait under
-  // connection_limit=5 when several approval-detail pages load at once,
-  // not just execution time. See Sentry 6b20f1ffb7884ade93151f5e7d8e2fdf.
+  // 8000ms: covers connection-pool queue wait under connection_limit=5 when
+  // several approval-detail pages load concurrently (cold cache + pool
+  // pressure both need headroom). Previously 5000ms, raised after field
+  // reports of intermittent timeouts on first load.
   return withRetry(
     'approval detail core',
     () => prisma.approvalRecord.findFirst({ where: { id: approvalId, organizationId }, select: approvalCoreSelect }),
-    5000,
+    8000,
   );
 }
 
@@ -129,7 +129,16 @@ function getCachedCoreFetcher(approvalId: string) {
  *  in this file is fetched in parallel, independent Suspense boundaries. */
 export const getApprovalCore = cache(async (organizationId: string, approvalId: string) => {
   const record = await getCachedCoreFetcher(approvalId)(organizationId);
-  return record ? deserializeCore(record) : null;
+  if (record) return deserializeCore(record);
+
+  // unstable_cache can serve a stale null if a previous request hit a
+  // transient DB error and cached that null result. Do one unconditional
+  // fresh lookup before treating the record as truly absent. This also
+  // covers the rare race where the approval was just created and the
+  // read replica hasn't caught up yet.
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const fresh = await fetchCoreFresh(organizationId, approvalId);
+  return fresh ? deserializeCore(fresh) : null;
 });
 
 // --- Audit trail ------------------------------------------------------------
