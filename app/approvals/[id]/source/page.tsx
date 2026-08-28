@@ -48,60 +48,41 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
 
   const orgId = tenant.organization.id;
 
-  const result = await withRetry(
+  // Critical query: must succeed for the page to render.
+  const approvalResult = await withRetry(
     'approval source lookup',
     () =>
-      Promise.all([
-        prisma.approvalRecord.findFirst({
-          where: { id, organizationId: orgId },
-          select: {
-            subject: true,
-            sourceLink: true,
-            sourcePlatform: true,
-            approvalTimestamp: true,
-            occurredAt: true,
-            evidenceSnippet: true,
-            reasoning: true,
-            conditions: true,
-            approverName: true,
-            approverEmail: true,
-            confidence: true,
-            riskLevel: true,
-            status: true,
-            department: true,
-            category: true,
-            messageSource: {
-              select: { provider: true, channel: true, sender: true, senderEmail: true, receivedAt: true, rawPayload: true },
-            },
+      prisma.approvalRecord.findFirst({
+        where: { id, organizationId: orgId },
+        select: {
+          subject: true,
+          sourceLink: true,
+          sourcePlatform: true,
+          approvalTimestamp: true,
+          occurredAt: true,
+          evidenceSnippet: true,
+          reasoning: true,
+          conditions: true,
+          approverName: true,
+          approverEmail: true,
+          confidence: true,
+          riskLevel: true,
+          status: true,
+          department: true,
+          category: true,
+          messageSource: {
+            select: { provider: true, channel: true, sender: true, senderEmail: true, receivedAt: true, rawPayload: true },
           },
-        }),
-        prisma.canonicalEvidenceEvent.findFirst({
-          where: { approvalRecordId: id, organizationId: orgId },
-          orderBy: { occurredAt: 'desc' },
-          select: { id: true, providerKey: true, threadId: true, occurredAt: true, participants: true, attachments: true, links: true, metadata: true },
-        }),
-        prisma.unifiedEvidenceRecord.findFirst({
-          where: { primaryApprovalId: id, organizationId: orgId },
-          select: { id: true },
-        }),
-        prisma.classifierResult.findFirst({
-          where: { approvalRecordId: id, organizationId: orgId },
-          orderBy: { createdAt: 'desc' },
-          select: { approvalType: true, confidence: true, normalizedJson: true },
-        }),
-        prisma.manualApprovalDetail.findFirst({
-          where: { approvalRecordId: id, organizationId: orgId },
-          select: { kind: true, approverRole: true, communicationChannel: true, businessContext: true, supportingNotes: true, verificationStatus: true, location: true, confidenceLevel: true },
-        }),
-      ]),
+        },
+      }),
     7000,
   ).then(
-    ([approval, event, unified, classifier, manualDetail]) => ({ approval, event, unified, classifier, manualDetail, error: null as unknown }),
-    (error: unknown) => ({ approval: null, event: null, unified: null, classifier: null, manualDetail: null, error }),
+    (approval) => ({ approval, error: null as unknown }),
+    (error: unknown) => ({ approval: null, error }),
   );
 
-  if (result.error) {
-    const correlationId = reportApprovalFailure(result.error, {
+  if (approvalResult.error) {
+    const correlationId = reportApprovalFailure(approvalResult.error, {
       action: 'open_source', approvalId: id, organizationId: orgId, userId: tenant.session.userId,
     });
     return (
@@ -120,7 +101,7 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
     );
   }
 
-  if (!result.approval) {
+  if (!approvalResult.approval) {
     reportApprovalFailure(new Error('Approval source missing'), {
       action: 'open_source', approvalId: id, organizationId: orgId, userId: tenant.session.userId,
       reason: 'Approval was deleted or does not belong to this tenant.',
@@ -128,7 +109,31 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
     notFound();
   }
 
-  const { approval, event, unified, classifier, manualDetail } = result;
+  const approval = approvalResult.approval;
+
+  // Enrichment queries: each fails independently — a missing table or timeout
+  // on any one of these must not block the page from rendering with the data
+  // already loaded from the approval record above.
+  const [event, unified, classifier, manualDetail] = await Promise.all([
+    prisma.canonicalEvidenceEvent.findFirst({
+      where: { approvalRecordId: id, organizationId: orgId },
+      orderBy: { occurredAt: 'desc' },
+      select: { id: true, providerKey: true, threadId: true, occurredAt: true, participants: true, attachments: true, links: true, metadata: true },
+    }).catch(() => null),
+    prisma.unifiedEvidenceRecord.findFirst({
+      where: { primaryApprovalId: id, organizationId: orgId },
+      select: { id: true },
+    }).catch(() => null),
+    prisma.classifierResult.findFirst({
+      where: { approvalRecordId: id, organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+      select: { approvalType: true, confidence: true, normalizedJson: true },
+    }).catch(() => null),
+    prisma.manualApprovalDetail.findFirst({
+      where: { approvalRecordId: id, organizationId: orgId },
+      select: { kind: true, approverRole: true, communicationChannel: true, businessContext: true, supportingNotes: true, verificationStatus: true, location: true, confidenceLevel: true },
+    }).catch(() => null),
+  ]);
   const platform = approval.sourcePlatform ?? approval.messageSource?.provider ?? null;
   const externalUrl = getSafeEvidenceUrl(approval.sourceLink);
 
