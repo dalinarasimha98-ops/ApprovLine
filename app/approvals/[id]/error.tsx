@@ -4,7 +4,10 @@ import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 
 export default function ApprovalDetailError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { Sentry.captureException(error); }, [error]);
+  useEffect(() => {
+    console.error('[approval-detail] unhandled error reached boundary:', error.message, error.stack, error.digest);
+    Sentry.captureException(error);
+  }, [error]);
   return (
     <main className="grid min-h-screen place-items-center bg-[#030b18] p-6">
       <section className="w-full max-w-2xl rounded-2xl border border-[#1E2D4A] bg-[#0E1830] p-8">

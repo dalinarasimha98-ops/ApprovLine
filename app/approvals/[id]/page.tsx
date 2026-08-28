@@ -908,6 +908,7 @@ type ApprovalDetailPageProps = {
 
 export default async function ApprovalDetailPage({ params, searchParams }: ApprovalDetailPageProps) {
   const { id } = await params;
+  console.log('[approval-detail] rendering id:', id);
   const sp = await (searchParams ?? {});
 
   const tenant = await getDashboardTenant(4000);
@@ -921,6 +922,7 @@ export default async function ApprovalDetailPage({ params, searchParams }: Appro
   try {
     core = await getApprovalCore(organizationId, id);
   } catch (error) {
+    console.error('[approval-detail] getApprovalCore failed for id:', id, error instanceof Error ? error.message : error, error instanceof Error ? error.stack : undefined);
     const correlationId = reportApprovalFailure(error, {
       action: 'view_full_approval',
       approvalId: id,
