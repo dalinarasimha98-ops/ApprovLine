@@ -291,7 +291,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
                       <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[#2155d9]">{approval.confidence}% confidence</span>
-                      <span className="rounded-full bg-white px-2.5 py-1 text-slate-600">{approval.status.replaceAll('_', ' ')}</span>
+                      <span className="rounded-full bg-white px-2.5 py-1 text-slate-600">{approval.status?.replaceAll('_', ' ') ?? 'Unknown'}</span>
                       <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening approval..." className="rounded-full bg-white px-2.5 py-1 text-[#2155d9]">
                         View Full Approval
                       </PendingLink>

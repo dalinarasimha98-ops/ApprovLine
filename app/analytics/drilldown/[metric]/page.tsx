@@ -280,7 +280,7 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
                     <td className="px-4 py-3 capitalize text-slate-600">{approval.sourcePlatform ?? 'Unknown'}</td>
                     <td className="px-4 py-3 text-slate-500">{dateText(approval.approvalTimestamp ?? approval.createdAt)}</td>
                     <td className="px-4 py-3 font-black text-[#2155d9]">{approval.confidence}%</td>
-                    <td className="px-4 py-3 text-slate-600">{approval.status.replaceAll('_', ' ')}</td>
+                    <td className="px-4 py-3 text-slate-600">{approval.status?.replaceAll('_', ' ') ?? 'Unknown'}</td>
                     <td className="px-4 py-3">
                       <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening..." className="text-xs font-black text-[#2155d9] hover:underline">
                         View Full Approval

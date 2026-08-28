@@ -159,7 +159,7 @@ function GraphPreview({
               const to = entityMap.get(relationship.toEntityId);
               return (
                 <div key={relationship.id} className="rounded-xl bg-white/[0.06] p-3">
-                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">{relationship.relationshipType.replaceAll('_', ' ')}</p>
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">{relationship.relationshipType?.replaceAll('_', ' ') ?? 'Related'}</p>
                   <p className="mt-1 text-sm font-bold text-white">{from?.title ?? 'Entity'} → {to?.title ?? 'Entity'}</p>
                 </div>
               );

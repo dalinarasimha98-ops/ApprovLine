@@ -412,7 +412,7 @@ async function EvidenceResultsSection({
                   {/* Status badge */}
                   <div>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${verificationClass(record.verificationStatus)}`}>
-                      {record.verificationStatus.replaceAll('_', ' ')}
+                      {record.verificationStatus?.replaceAll('_', ' ') ?? 'Unknown'}
                     </span>
                     <p className="mt-1 text-[11px] text-[#3D5070]">{dateText(record.lastSeenAt)}</p>
                   </div>
@@ -531,7 +531,7 @@ async function EvidenceResultsSection({
                         <div className="mb-1 flex items-center gap-2">
                           <span className={`h-2 w-2 flex-shrink-0 rounded-full ${providerDot(provider)}`} />
                           <span className="flex-1 text-[11px] font-medium capitalize text-[#E8EEFF]">
-                            {provider.replaceAll('_', ' ')}
+                            {provider?.replaceAll('_', ' ') ?? 'Unknown'}
                           </span>
                           <span className="font-mono text-[11px] text-[#6B7FA8]">{count}</span>
                           <span className="w-8 text-right text-[10px] text-[#3D5070]">{pct}%</span>

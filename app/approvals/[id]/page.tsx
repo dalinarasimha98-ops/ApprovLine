@@ -612,7 +612,7 @@ async function TimelineTab({ organizationId, approvalId }: { organizationId: str
                   />
                   <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-bold text-[#E8EEFF]">{event.action.replaceAll('_', ' ')}</p>
+                      <p className="text-sm font-bold text-[#E8EEFF]">{event.action?.replaceAll('_', ' ') ?? 'Event'}</p>
                       <time className="text-xs font-medium text-[#6B7FA8]" dateTime={event.createdAt?.toISOString() ?? ''}>
                         {dateText(event.createdAt)}
                       </time>
@@ -778,7 +778,7 @@ async function RelatedTab({
                 <div>
                   <p className="text-sm font-bold text-[#E8EEFF]">{investigation.title}</p>
                   <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-[#6B7FA8]">
-                    {investigation.status.replaceAll('_', ' ')}
+                    {investigation.status?.replaceAll('_', ' ') ?? 'Unknown'}
                   </p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-[#3D5070]" aria-hidden="true" />
@@ -839,7 +839,7 @@ async function AuditTab({ organizationId, approvalId }: { organizationId: string
             auditLogs.map((event) => (
               <div key={event.id} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-[#E8EEFF]">{event.action.replaceAll('_', ' ')}</p>
+                  <p className="text-sm font-bold text-[#E8EEFF]">{event.action?.replaceAll('_', ' ') ?? 'Event'}</p>
                   <time className="text-xs font-medium text-[#6B7FA8]" dateTime={event.createdAt?.toISOString() ?? ''}>
                     {dateText(event.createdAt)}
                   </time>

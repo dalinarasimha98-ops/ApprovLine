@@ -38,7 +38,7 @@ function RelationshipCard({
 }) {
   return (
     <PendingLink href={href} pendingText="Opening related entity..." className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200">
-      <p className="text-[10px] font-black uppercase tracking-wide text-[#2155d9]">{label.replaceAll('_', ' ')}</p>
+      <p className="text-[10px] font-black uppercase tracking-wide text-[#2155d9]">{label?.replaceAll('_', ' ') ?? ''}</p>
       <p className="mt-2 text-sm font-black text-slate-950">
         {title}
         {demo ? <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#2155d9]">Demo</span> : null}
@@ -160,7 +160,7 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
               <div key={event.id} className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[160px_1fr]">
                 <div>
                   <p className="text-sm font-black text-slate-950">{dateText(event.occurredAt)}</p>
-                  <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-slate-500">{event.eventType.replaceAll('_', ' ')}</p>
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-slate-500">{event.eventType?.replaceAll('_', ' ') ?? 'Event'}</p>
                 </div>
                 <div>
                   <p className="text-sm font-black text-slate-950">{event.title}</p>
