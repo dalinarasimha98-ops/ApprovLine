@@ -186,68 +186,78 @@ async function ApprovalContextList({ organizationId, currentId }: { organization
 
 // ── Approval header ────────────────────────────────────────────────────────
 
-function ApprovalHeader({ core }: { core: ApprovalCore }) {
-  return (
-    <div className="shrink-0 border-b border-[#1E2D4A] bg-[#07111f]">
-      <div className="px-6 pb-5 pt-5">
-        {/* Mobile breadcrumb — left panel handles desktop navigation */}
-        <div className="mb-4 flex items-center gap-1.5 xl:hidden">
-          <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="text-xs font-semibold text-[#6B7FA8] hover:text-[#A8BAD8]">
-            Approvals
-          </PendingLink>
-          <ChevronRight className="h-3 w-3 text-[#3D5070]" aria-hidden="true" />
-          <span className="truncate text-xs font-semibold text-[#A8BAD8]">Approval Detail</span>
-        </div>
-
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#6B7FA8]">
-              {core.sourcePlatform ?? core.messageSource?.provider ?? 'Approval'} · Approval Record
-            </p>
-            <h2 className="text-xl font-bold leading-snug text-[#E8EEFF] sm:text-2xl">{core.subject}</h2>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className={`rounded-full border px-3 py-1 text-xs font-bold capitalize ${riskBadge(core.riskLevel)}`}>
-                {core.riskLevel ?? 'low'} risk
-              </span>
-              <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusBadge(core.status)}`}>
-                {core.status.replaceAll('_', ' ')}
-              </span>
-              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-400">
-                {core.confidence}% confidence
-              </span>
-              {core.sourceLink?.includes('demo') || core.sourceLink?.includes('TDEMO') ? (
-                <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-3 py-1 text-xs font-bold text-[#6B7FA8]">
-                  Demo data
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <div className="shrink-0">
-            <ApprovalActions approvalId={core.id} subject={core.subject} />
-          </div>
-        </div>
-
-        {core.status === 'PENDING_REVIEW' ? (
-          <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
-            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" aria-hidden="true" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-amber-300">Analyzing approval...</p>
-              <p className="text-xs text-amber-500">Classification is still processing. Refresh for the latest result.</p>
-            </div>
-            <PendingLink href={`/approvals/${core.id}`} pendingText="Refreshing..." className="shrink-0 rounded-lg border border-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/10">
-              Refresh
+async function ApprovalHeader({ core }: { core: ApprovalCore }) {
+  try {
+    return (
+      <div className="shrink-0 border-b border-[#1E2D4A] bg-[#07111f]">
+        <div className="px-6 pb-5 pt-5">
+          {/* Mobile breadcrumb — left panel handles desktop navigation */}
+          <div className="mb-4 flex items-center gap-1.5 xl:hidden">
+            <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="text-xs font-semibold text-[#6B7FA8] hover:text-[#A8BAD8]">
+              Approvals
             </PendingLink>
+            <ChevronRight className="h-3 w-3 text-[#3D5070]" aria-hidden="true" />
+            <span className="truncate text-xs font-semibold text-[#A8BAD8]">Approval Detail</span>
           </div>
-        ) : null}
+
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#6B7FA8]">
+                {core.sourcePlatform ?? core.messageSource?.provider ?? 'Approval'} · Approval Record
+              </p>
+              <h2 className="text-xl font-bold leading-snug text-[#E8EEFF] sm:text-2xl">{core.subject}</h2>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className={`rounded-full border px-3 py-1 text-xs font-bold capitalize ${riskBadge(core.riskLevel)}`}>
+                  {core.riskLevel ?? 'low'} risk
+                </span>
+                <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusBadge(core.status)}`}>
+                  {core.status?.replaceAll('_', ' ') ?? 'Unknown'}
+                </span>
+                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-400">
+                  {core.confidence}% confidence
+                </span>
+                {core.sourceLink?.includes('demo') || core.sourceLink?.includes('TDEMO') ? (
+                  <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-3 py-1 text-xs font-bold text-[#6B7FA8]">
+                    Demo data
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            <div className="shrink-0">
+              <ApprovalActions approvalId={core.id} subject={core.subject} />
+            </div>
+          </div>
+
+          {core.status === 'PENDING_REVIEW' ? (
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
+              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" aria-hidden="true" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-amber-300">Analyzing approval...</p>
+                <p className="text-xs text-amber-500">Classification is still processing. Refresh for the latest result.</p>
+              </div>
+              <PendingLink href={`/approvals/${core.id}`} pendingText="Refreshing..." className="shrink-0 rounded-lg border border-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/10">
+                Refresh
+              </PendingLink>
+            </div>
+          ) : null}
+        </div>
       </div>
-    </div>
-  );
+    );
+  } catch (error) {
+    console.error('[approval-detail] ApprovalHeader render error', error instanceof Error ? error.message : error);
+    return (
+      <div className="shrink-0 border-b border-[#1E2D4A] bg-[#07111f] px-6 py-5">
+        <p className="text-sm font-semibold text-[#6B7FA8]">Approval header temporarily unavailable</p>
+      </div>
+    );
+  }
 }
 
 // ── Right panel ────────────────────────────────────────────────────────────
 
-function RightPanel({ core }: { core: ApprovalCore }) {
-  const confidencePct = Math.min(100, Math.max(0, core.confidence));
+async function RightPanel({ core }: { core: ApprovalCore }) {
+  try {
+  const confidencePct = Math.min(100, Math.max(0, core.confidence ?? 0));
 
   return (
     <>
@@ -331,6 +341,10 @@ function RightPanel({ core }: { core: ApprovalCore }) {
       </div>
     </>
   );
+  } catch (error) {
+    console.error('[approval-detail] RightPanel render error', error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 // ── Unified evidence banner ────────────────────────────────────────────────
@@ -364,7 +378,7 @@ async function UnifiedEvidenceLinkBanner({ organizationId, approvalId }: { organ
 
 // ── Tab: Overview ──────────────────────────────────────────────────────────
 
-function OverviewTab({
+async function OverviewTab({
   core,
   organizationId,
   canManage,
@@ -377,65 +391,70 @@ function OverviewTab({
   currentUserId: string;
   currentUserRole: string;
 }) {
-  return (
-    <div className="grid gap-8 p-6">
-      {core.manualDetail ? (
-        <Suspense fallback={<TabSkeleton />}>
-          <ManualApprovalSection
-            organizationId={organizationId}
-            core={core}
-            canManage={canManage}
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-          />
-        </Suspense>
-      ) : null}
+  try {
+    return (
+      <div className="grid gap-8 p-6">
+        {core.manualDetail ? (
+          <Suspense fallback={<TabSkeleton />}>
+            <ManualApprovalSection
+              organizationId={organizationId}
+              core={core}
+              canManage={canManage}
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
+            />
+          </Suspense>
+        ) : null}
 
-      <section>
-        <div className="mb-4 flex items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Decision Metadata</p>
-          <span className="h-px flex-1 bg-[#1E2D4A]" />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          <MetricTile label="Approval ID" value={core.id} />
-          <MetricTile label="Approver" value={core.approverName ?? 'Unknown'} />
-          <MetricTile label="Department" value={core.department ?? 'Unassigned'} />
-          <MetricTile label="Source Platform" value={core.sourcePlatform ?? core.messageSource?.provider ?? 'Unknown'} />
-          <MetricTile label="Category" value={core.category ?? 'Unassigned'} />
-          <MetricTile label="Approval Type" value={core.approvalType.replaceAll('_', ' ')} />
-          <MetricTile label="Approval Timestamp" value={dateText(core.approvalTimestamp ?? core.occurredAt)} />
-        </div>
-      </section>
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Decision Metadata</p>
+            <span className="h-px flex-1 bg-[#1E2D4A]" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <MetricTile label="Approval ID" value={core.id} />
+            <MetricTile label="Approver" value={core.approverName ?? 'Unknown'} />
+            <MetricTile label="Department" value={core.department ?? 'Unassigned'} />
+            <MetricTile label="Source Platform" value={core.sourcePlatform ?? core.messageSource?.provider ?? 'Unknown'} />
+            <MetricTile label="Category" value={core.category ?? 'Unassigned'} />
+            <MetricTile label="Approval Type" value={core.approvalType?.replaceAll('_', ' ') ?? 'Unknown'} />
+            <MetricTile label="Approval Timestamp" value={dateText(core.approvalTimestamp ?? core.occurredAt)} />
+          </div>
+        </section>
 
-      <section>
-        <div className="mb-4 flex items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Message Source</p>
-          <span className="h-px flex-1 bg-[#1E2D4A]" />
-        </div>
-        <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
-          <dl className="grid gap-3 sm:grid-cols-2">
-            {([
-              ['Provider', core.messageSource?.provider ?? core.sourcePlatform ?? 'Unknown'],
-              ['Channel', core.messageSource?.channel ?? 'Not recorded'],
-              ['Sender', core.messageSource?.sender ?? core.approverName ?? 'Unknown'],
-              ['Sender Email', core.messageSource?.senderEmail ?? core.approverEmail ?? 'Not recorded'],
-              ['Received At', dateText(core.messageSource?.receivedAt)],
-            ] as [string, string][]).map(([label, value]) => (
-              <div key={label} className="flex flex-col gap-1 rounded-lg bg-[#0a1524] px-3 py-2.5">
-                <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#6B7FA8]">{label}</dt>
-                <dd className="text-sm font-semibold text-[#A8BAD8]">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
-    </div>
-  );
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Message Source</p>
+            <span className="h-px flex-1 bg-[#1E2D4A]" />
+          </div>
+          <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
+            <dl className="grid gap-3 sm:grid-cols-2">
+              {([
+                ['Provider', core.messageSource?.provider ?? core.sourcePlatform ?? 'Unknown'],
+                ['Channel', core.messageSource?.channel ?? 'Not recorded'],
+                ['Sender', core.messageSource?.sender ?? core.approverName ?? 'Unknown'],
+                ['Sender Email', core.messageSource?.senderEmail ?? core.approverEmail ?? 'Not recorded'],
+                ['Received At', dateText(core.messageSource?.receivedAt)],
+              ] as [string, string][]).map(([label, value]) => (
+                <div key={label} className="flex flex-col gap-1 rounded-lg bg-[#0a1524] px-3 py-2.5">
+                  <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#6B7FA8]">{label}</dt>
+                  <dd className="text-sm font-semibold text-[#A8BAD8]">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+      </div>
+    );
+  } catch (error) {
+    const correlationId = reportApprovalFailure(error, { action: 'overview_tab_render', approvalId: core.id, organizationId });
+    return <SectionError approvalId={core.id} title="Overview unavailable" message="The overview section could not be displayed." correlationId={correlationId} />;
+  }
 }
 
 // ── Tab: Evidence ──────────────────────────────────────────────────────────
 
-function EvidenceTab({
+async function EvidenceTab({
   core,
   threadPayload,
   externalUrl,
@@ -446,100 +465,114 @@ function EvidenceTab({
   externalUrl: string | null | undefined;
   organizationId: string;
 }) {
-  return (
-    <div className="grid gap-8 p-6">
-      <Suspense fallback={null}>
-        <UnifiedEvidenceLinkBanner organizationId={organizationId} approvalId={core.id} />
-      </Suspense>
+  try {
+    let rawPayloadText: string | null = null;
+    if (core.messageSource?.rawPayload) {
+      try {
+        rawPayloadText = JSON.stringify(core.messageSource.rawPayload, null, 2);
+      } catch {
+        rawPayloadText = null;
+      }
+    }
 
-      <section>
-        <div className="mb-4 flex items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">AI Reasoning</p>
-          <span className="h-px flex-1 bg-[#1E2D4A]" />
-        </div>
-        <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
-          <div className="grid gap-4 text-sm leading-relaxed text-[#A8BAD8]">
-            <p>
-              <span className="font-bold text-[#E8EEFF]">Reasoning: </span>
-              {core.reasoning}
-            </p>
-            {core.conditions ? (
-              <p>
-                <span className="font-bold text-[#E8EEFF]">Conditions: </span>
-                {core.conditions}
-              </p>
-            ) : null}
-            {core.businessImpact ? (
-              <p>
-                <span className="font-bold text-[#E8EEFF]">Business impact: </span>
-                {core.businessImpact}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </section>
+    return (
+      <div className="grid gap-8 p-6">
+        <Suspense fallback={null}>
+          <UnifiedEvidenceLinkBanner organizationId={organizationId} approvalId={core.id} />
+        </Suspense>
 
-      <section>
-        <div className="mb-4 flex items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Source Evidence</p>
-          <span className="h-px flex-1 bg-[#1E2D4A]" />
-        </div>
-        {threadPayload ? (
-          <EvidenceThread
-            payload={threadPayload}
-            platform={core.sourcePlatform ?? core.messageSource?.provider}
-            participantCount={new Set(threadPayload.threadMessages.map((m) => m.senderName)).size}
-            sourceUrl={externalUrl}
-            evidenceLinkPath={`/approvals/${core.id}/source`}
-          />
-        ) : core.evidenceSnippet || core.approverName ? (
-          <EvidenceMessageCard
-            platform={core.sourcePlatform ?? core.messageSource?.provider}
-            senderName={core.approverName ?? core.messageSource?.sender ?? 'Unknown approver'}
-            senderEmail={core.approverEmail ?? core.messageSource?.senderEmail}
-            timestamp={dateText(core.approvalTimestamp ?? core.occurredAt)}
-            content={core.evidenceSnippet}
-          />
-        ) : (
-          <div className="rounded-xl border border-dashed border-[#1E2D4A] p-8 text-center">
-            <p className="text-sm font-semibold text-[#6B7FA8]">No evidence snippet captured yet</p>
-          </div>
-        )}
-      </section>
-
-      {core.messageSource?.rawPayload ? (
         <section>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Raw Payload</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">AI Reasoning</p>
             <span className="h-px flex-1 bg-[#1E2D4A]" />
           </div>
-          <details className="rounded-xl border border-[#1E2D4A] bg-[#07111f]">
-            <summary className="cursor-pointer px-5 py-4 text-xs font-bold uppercase tracking-wide text-[#6B7FA8] hover:text-[#A8BAD8]">
-              View captured payload
-            </summary>
-            <pre className="max-h-80 overflow-auto border-t border-[#1E2D4A] p-5 text-xs leading-5 text-[#A8BAD8]">
-              {JSON.stringify(core.messageSource.rawPayload, null, 2)}
-            </pre>
-          </details>
+          <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
+            <div className="grid gap-4 text-sm leading-relaxed text-[#A8BAD8]">
+              <p>
+                <span className="font-bold text-[#E8EEFF]">Reasoning: </span>
+                {core.reasoning}
+              </p>
+              {core.conditions ? (
+                <p>
+                  <span className="font-bold text-[#E8EEFF]">Conditions: </span>
+                  {core.conditions}
+                </p>
+              ) : null}
+              {core.businessImpact ? (
+                <p>
+                  <span className="font-bold text-[#E8EEFF]">Business impact: </span>
+                  {core.businessImpact}
+                </p>
+              ) : null}
+            </div>
+          </div>
         </section>
-      ) : null}
 
-      <div className="flex flex-wrap gap-3">
-        <PendingLink
-          href={`/approvals/${core.id}/source`}
-          pendingText="Opening source..."
-          className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500"
-        >
-          Open Source
-          <ExternalLink className="h-4 w-4" aria-hidden="true" />
-        </PendingLink>
-        <CopyEvidenceLinkButton
-          path={`/approvals/${core.id}/source`}
-          className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-5 text-sm font-bold text-[#A8BAD8] hover:bg-[#0a1524]"
-        />
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Source Evidence</p>
+            <span className="h-px flex-1 bg-[#1E2D4A]" />
+          </div>
+          {threadPayload ? (
+            <EvidenceThread
+              payload={threadPayload}
+              platform={core.sourcePlatform ?? core.messageSource?.provider}
+              participantCount={new Set(threadPayload.threadMessages.map((m) => m.senderName)).size}
+              sourceUrl={externalUrl}
+              evidenceLinkPath={`/approvals/${core.id}/source`}
+            />
+          ) : core.evidenceSnippet || core.approverName ? (
+            <EvidenceMessageCard
+              platform={core.sourcePlatform ?? core.messageSource?.provider}
+              senderName={core.approverName ?? core.messageSource?.sender ?? 'Unknown approver'}
+              senderEmail={core.approverEmail ?? core.messageSource?.senderEmail}
+              timestamp={dateText(core.approvalTimestamp ?? core.occurredAt)}
+              content={core.evidenceSnippet}
+            />
+          ) : (
+            <div className="rounded-xl border border-dashed border-[#1E2D4A] p-8 text-center">
+              <p className="text-sm font-semibold text-[#6B7FA8]">No evidence snippet captured yet</p>
+            </div>
+          )}
+        </section>
+
+        {rawPayloadText ? (
+          <section>
+            <div className="mb-4 flex items-center gap-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Raw Payload</p>
+              <span className="h-px flex-1 bg-[#1E2D4A]" />
+            </div>
+            <details className="rounded-xl border border-[#1E2D4A] bg-[#07111f]">
+              <summary className="cursor-pointer px-5 py-4 text-xs font-bold uppercase tracking-wide text-[#6B7FA8] hover:text-[#A8BAD8]">
+                View captured payload
+              </summary>
+              <pre className="max-h-80 overflow-auto border-t border-[#1E2D4A] p-5 text-xs leading-5 text-[#A8BAD8]">
+                {rawPayloadText}
+              </pre>
+            </details>
+          </section>
+        ) : null}
+
+        <div className="flex flex-wrap gap-3">
+          <PendingLink
+            href={`/approvals/${core.id}/source`}
+            pendingText="Opening source..."
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500"
+          >
+            Open Source
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+          </PendingLink>
+          <CopyEvidenceLinkButton
+            path={`/approvals/${core.id}/source`}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-5 text-sm font-bold text-[#A8BAD8] hover:bg-[#0a1524]"
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  } catch (error) {
+    const correlationId = reportApprovalFailure(error, { action: 'evidence_tab_render', approvalId: core.id, organizationId });
+    return <SectionError approvalId={core.id} title="Evidence unavailable" message="The evidence section could not be displayed." correlationId={correlationId} />;
+  }
 }
 
 // ── Tab: Timeline ──────────────────────────────────────────────────────────
@@ -863,14 +896,36 @@ async function ManualApprovalSection({
           category: core.category,
         }}
         detail={{
-          ...core.manualDetail,
+          kind: core.manualDetail.kind,
+          approverRole: core.manualDetail.approverRole,
+          communicationChannel: core.manualDetail.communicationChannel,
+          location: core.manualDetail.location,
+          businessContext: core.manualDetail.businessContext,
+          relatedEntityType: core.manualDetail.relatedEntityType,
+          relatedEntityId: core.manualDetail.relatedEntityId,
+          supportingNotes: core.manualDetail.supportingNotes,
+          verificationStatus: core.manualDetail.verificationStatus,
+          confidenceLevel: core.manualDetail.confidenceLevel,
+          secondPersonRequired: core.manualDetail.secondPersonRequired,
+          secondVerifierUserId: core.manualDetail.secondVerifierUserId,
           secondVerifiedAt: core.manualDetail.secondVerifiedAt?.toISOString() ?? null,
+          secondVerificationNote: core.manualDetail.secondVerificationNote,
+          recorder: core.manualDetail.recorder,
+          secondVerifier: core.manualDetail.secondVerifier,
         }}
         evidence={bundle.evidence.map((item) => ({
-          ...item,
+          id: item.id,
+          origin: item.origin,
+          status: item.status,
+          confidence: item.confidence,
+          matchingReasons: item.matchingReasons,
           sourceTimestamp: item.sourceTimestamp?.toISOString() ?? new Date(0).toISOString(),
+          rejectionReason: item.rejectionReason,
           messageSource: {
-            ...item.messageSource,
+            provider: item.messageSource.provider,
+            channel: item.messageSource.channel,
+            sender: item.messageSource.sender,
+            senderEmail: item.messageSource.senderEmail,
             receivedAt: item.messageSource.receivedAt?.toISOString() ?? new Date(0).toISOString(),
             excerpt: evidenceExcerpt(item.messageSource.rawPayload).slice(0, 1200) || 'Source evidence is preserved in its original provider record.',
           },
@@ -991,21 +1046,25 @@ export default async function ApprovalDetailPage({ params, searchParams }: Appro
             initialTab={initialTab}
             panels={{
               overview: (
-                <OverviewTab
-                  core={core}
-                  organizationId={organizationId}
-                  canManage={canManageManualApprovals(tenant.user.role)}
-                  currentUserId={tenant.user.id}
-                  currentUserRole={tenant.user.role}
-                />
+                <Suspense fallback={<TabSkeleton />}>
+                  <OverviewTab
+                    core={core}
+                    organizationId={organizationId}
+                    canManage={canManageManualApprovals(tenant.user.role)}
+                    currentUserId={tenant.user.id}
+                    currentUserRole={tenant.user.role}
+                  />
+                </Suspense>
               ),
               evidence: (
-                <EvidenceTab
-                  core={core}
-                  threadPayload={threadPayload}
-                  externalUrl={externalUrl}
-                  organizationId={organizationId}
-                />
+                <Suspense fallback={<TabSkeleton />}>
+                  <EvidenceTab
+                    core={core}
+                    threadPayload={threadPayload}
+                    externalUrl={externalUrl}
+                    organizationId={organizationId}
+                  />
+                </Suspense>
               ),
               timeline: (
                 <Suspense fallback={<TabSkeleton />}>
