@@ -52,7 +52,9 @@ export function PendingLink({ href, children, pendingText = 'Redirecting...', cl
   // cause of a stuck SPA transition is never fully pinned down.
   useEffect(() => {
     if (!pending) return;
-    markNavigationPending();
+    // markNavigationPending() is called synchronously in markPending() below so
+    // AutoRetryOnDegraded's isNavigationPending() check is satisfied before the
+    // next setInterval tick — not after the next React paint.
     const timeout = setTimeout(() => {
       setPending(false);
       if (!isExternal) window.location.href = href;
@@ -68,7 +70,10 @@ export function PendingLink({ href, children, pendingText = 'Redirecting...', cl
   };
 
   const markPending = () => {
-    if (!isCurrentPage && !isExternal) setPending(true);
+    if (!isCurrentPage && !isExternal) {
+      markNavigationPending(); // sync — before React batches the state update
+      setPending(true);
+    }
   };
 
   return (

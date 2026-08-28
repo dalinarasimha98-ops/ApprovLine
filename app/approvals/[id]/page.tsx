@@ -545,62 +545,62 @@ function EvidenceTab({
 // ── Tab: Timeline ──────────────────────────────────────────────────────────
 
 async function TimelineTab({ organizationId, approvalId }: { organizationId: string; approvalId: string }) {
-  let auditLogs;
   try {
-    auditLogs = await getApprovalAuditTrail(organizationId, approvalId);
+    const auditLogs = await getApprovalAuditTrail(organizationId, approvalId);
+    const sorted = [...auditLogs].sort((a, b) =>
+      (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0),
+    );
+
+    return (
+      <div className="p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Timeline</p>
+            <span className="h-px w-8 bg-[#1E2D4A]" />
+          </div>
+          <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-2.5 py-1 text-[10px] font-bold text-[#6B7FA8]">
+            {sorted.length} events
+          </span>
+        </div>
+        {sorted.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[#1E2D4A] p-10 text-center">
+            <p className="text-sm font-semibold text-[#6B7FA8]">No timeline events recorded yet</p>
+            <p className="mt-1 text-xs text-[#3D5070]">Events appear here as the approval is processed</p>
+          </div>
+        ) : (
+          <div className="relative ml-3">
+            <div className="absolute inset-y-0 left-0 w-px bg-[#1E2D4A]" aria-hidden="true" />
+            <div className="grid gap-5">
+              {sorted.map((event) => (
+                <div key={event.id} className="relative pl-7">
+                  <div
+                    className="absolute -left-[4.5px] top-[6px] h-2.5 w-2.5 rounded-full border-2 border-violet-500/40 bg-[#030b18] ring-2 ring-[#030b18]"
+                    aria-hidden="true"
+                  />
+                  <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-bold text-[#E8EEFF]">{event.action.replaceAll('_', ' ')}</p>
+                      <time className="text-xs font-medium text-[#6B7FA8]" dateTime={event.createdAt?.toISOString() ?? ''}>
+                        {dateText(event.createdAt)}
+                      </time>
+                    </div>
+                    {event.metadata ? (
+                      <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-[#07111f] p-3 text-xs text-[#6B7FA8]">
+                        {JSON.stringify(event.metadata, null, 2)}
+                      </pre>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   } catch (error) {
     const correlationId = reportApprovalFailure(error, { action: 'timeline_lookup', approvalId, organizationId });
     return <SectionError approvalId={approvalId} title="Timeline unavailable" message="Audit events did not load in time." correlationId={correlationId} />;
   }
-
-  const sorted = [...auditLogs].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-
-  return (
-    <div className="p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Timeline</p>
-          <span className="h-px w-8 bg-[#1E2D4A]" />
-        </div>
-        <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-2.5 py-1 text-[10px] font-bold text-[#6B7FA8]">
-          {sorted.length} events
-        </span>
-      </div>
-      {sorted.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#1E2D4A] p-10 text-center">
-          <p className="text-sm font-semibold text-[#6B7FA8]">No timeline events recorded yet</p>
-          <p className="mt-1 text-xs text-[#3D5070]">Events appear here as the approval is processed</p>
-        </div>
-      ) : (
-        <div className="relative ml-3">
-          <div className="absolute inset-y-0 left-0 w-px bg-[#1E2D4A]" aria-hidden="true" />
-          <div className="grid gap-5">
-            {sorted.map((event) => (
-              <div key={event.id} className="relative pl-7">
-                <div
-                  className="absolute -left-[4.5px] top-[6px] h-2.5 w-2.5 rounded-full border-2 border-violet-500/40 bg-[#030b18] ring-2 ring-[#030b18]"
-                  aria-hidden="true"
-                />
-                <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-bold text-[#E8EEFF]">{event.action.replaceAll('_', ' ')}</p>
-                    <time className="text-xs font-medium text-[#6B7FA8]" dateTime={event.createdAt.toISOString()}>
-                      {dateText(event.createdAt)}
-                    </time>
-                  </div>
-                  {event.metadata ? (
-                    <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-[#07111f] p-3 text-xs text-[#6B7FA8]">
-                      {JSON.stringify(event.metadata, null, 2)}
-                    </pre>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ── Tab: AI Analysis ───────────────────────────────────────────────────────
@@ -783,50 +783,49 @@ async function RelatedTab({
 // ── Tab: Audit Trail ───────────────────────────────────────────────────────
 
 async function AuditTab({ organizationId, approvalId }: { organizationId: string; approvalId: string }) {
-  let auditLogs;
   try {
-    auditLogs = await getApprovalAuditTrail(organizationId, approvalId);
+    const auditLogs = await getApprovalAuditTrail(organizationId, approvalId);
+
+    return (
+      <div className="p-6">
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Audit Trail</p>
+            <span className="h-px w-8 bg-[#1E2D4A]" />
+          </div>
+          <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-2.5 py-1 text-[10px] font-bold text-[#6B7FA8]">
+            {auditLogs.length} events
+          </span>
+        </div>
+        <div className="grid gap-2">
+          {auditLogs.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[#1E2D4A] p-10 text-center">
+              <p className="text-sm font-semibold text-[#6B7FA8]">No audit events recorded yet</p>
+            </div>
+          ) : (
+            auditLogs.map((event) => (
+              <div key={event.id} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-[#E8EEFF]">{event.action.replaceAll('_', ' ')}</p>
+                  <time className="text-xs font-medium text-[#6B7FA8]" dateTime={event.createdAt?.toISOString() ?? ''}>
+                    {dateText(event.createdAt)}
+                  </time>
+                </div>
+                {event.metadata ? (
+                  <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-[#07111f] p-3 text-xs text-[#6B7FA8]">
+                    {JSON.stringify(event.metadata, null, 2)}
+                  </pre>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
   } catch (error) {
     const correlationId = reportApprovalFailure(error, { action: 'audit_trail_lookup', approvalId, organizationId });
     return <SectionError approvalId={approvalId} title="Audit trail unavailable" message="Audit events did not load in time." correlationId={correlationId} />;
   }
-
-  return (
-    <div className="p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Audit Trail</p>
-          <span className="h-px w-8 bg-[#1E2D4A]" />
-        </div>
-        <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-2.5 py-1 text-[10px] font-bold text-[#6B7FA8]">
-          {auditLogs.length} events
-        </span>
-      </div>
-      <div className="grid gap-2">
-        {auditLogs.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#1E2D4A] p-10 text-center">
-            <p className="text-sm font-semibold text-[#6B7FA8]">No audit events recorded yet</p>
-          </div>
-        ) : (
-          auditLogs.map((event) => (
-            <div key={event.id} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-bold text-[#E8EEFF]">{event.action.replaceAll('_', ' ')}</p>
-                <time className="text-xs font-medium text-[#6B7FA8]" dateTime={event.createdAt.toISOString()}>
-                  {dateText(event.createdAt)}
-                </time>
-              </div>
-              {event.metadata ? (
-                <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-[#07111f] p-3 text-xs text-[#6B7FA8]">
-                  {JSON.stringify(event.metadata, null, 2)}
-                </pre>
-              ) : null}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
 }
 
 // ── Manual approval section ────────────────────────────────────────────────
