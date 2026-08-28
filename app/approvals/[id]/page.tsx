@@ -911,7 +911,15 @@ export default async function ApprovalDetailPage({ params, searchParams }: Appro
   console.log('[approval-detail] rendering id:', id);
   const sp = await (searchParams ?? {});
 
-  const tenant = await getDashboardTenant(4000);
+  let tenant: Awaited<ReturnType<typeof getDashboardTenant>>;
+  try {
+    tenant = await getDashboardTenant(4000);
+  } catch (error) {
+    // auth() (inside getDashboardTenant) can throw on Clerk service errors; redirect to sign-in
+    // rather than letting the uncaught exception reach error.tsx.
+    console.error('[approval-detail] getDashboardTenant threw unexpectedly:', error instanceof Error ? error.message : error);
+    redirect('/sign-in');
+  }
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization) redirect('/dashboard');

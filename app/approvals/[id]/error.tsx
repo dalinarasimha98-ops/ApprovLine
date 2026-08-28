@@ -14,6 +14,12 @@ export default function ApprovalDetailError({ error, reset }: { error: Error & {
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-400">Approval unavailable</p>
         <h1 className="mt-2 text-2xl font-bold text-[#E8EEFF]">This approval could not be displayed</h1>
         <p className="mt-3 text-sm leading-6 text-[#6B7FA8]">Your workspace is still available. Retry this record or return to Approval History.</p>
+        {(error.message || error.digest) && (
+          <div className="mt-4 rounded-lg border border-[#1E2D4A] bg-[#07111f] p-3">
+            {error.message && <p className="font-mono text-xs text-amber-400 break-all">{error.message}</p>}
+            {error.digest && <p className="mt-1 font-mono text-[10px] text-[#3D5070]">digest: {error.digest}</p>}
+          </div>
+        )}
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"
