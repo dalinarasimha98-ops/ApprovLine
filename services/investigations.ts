@@ -123,24 +123,102 @@ export async function getInvestigationMetrics(organizationId: string) {
     Promise.all([
       prisma.investigationCase.count({ where: { organizationId, status: 'OPEN' } }),
       prisma.investigationCase.count({ where: { organizationId, status: 'CLOSED' } }),
-    ]).catch(() => [0, 0] as const),
+      prisma.investigationCase.count({ where: { organizationId, status: 'IN_PROGRESS' } }),
+      prisma.investigationCase.count({ where: { organizationId, status: 'RESOLVED' } }),
+      prisma.investigationCase.count({ where: { organizationId, status: 'ESCALATED' } }),
+      prisma.investigationCase.count({ where: { organizationId, OR: [{ riskLevel: 'high' }, { riskLevel: 'critical' }] } }),
+    ]).catch(() => [0, 0, 0, 0, 0, 0] as const),
     prisma.approvalRecord.count({ where: { organizationId, OR: [{ riskLevel: 'high' }, { riskLevel: 'critical' }] } }),
     prisma.approvalRecord.count({ where: { organizationId, status: 'PENDING_REVIEW' } }),
     prisma.approvalRecord.count({ where: { organizationId, approvalType: 'CONDITIONAL' } }),
     prisma.approvalRecord.count({ where: { organizationId, OR: [{ evidenceSnippet: null }, { sourceLink: null }] } }),
   ]);
-  const [openInvestigations, closedInvestigations] = investigationCounts;
+  const [openInvestigations, closedInvestigations, inProgressInvestigations, resolvedInvestigations, escalatedInvestigations, highRiskInvestigations] = investigationCounts;
+  const totalInvestigations = openInvestigations + closedInvestigations + inProgressInvestigations + resolvedInvestigations + escalatedInvestigations;
 
-  return { openInvestigations, closedInvestigations, highRiskApprovals, missingApprovals, conditionalApprovals, approvalsWithoutEvidence };
+  return {
+    openInvestigations,
+    closedInvestigations,
+    inProgressInvestigations,
+    resolvedInvestigations,
+    escalatedInvestigations,
+    totalInvestigations,
+    highRiskInvestigations,
+    highRiskApprovals,
+    missingApprovals,
+    conditionalApprovals,
+    approvalsWithoutEvidence,
+  };
+}
+
+export async function getInvestigationInsights(organizationId: string) {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const [allCases, recentCases, resolvedWithTime] = await Promise.all([
+    prisma.investigationCase.findMany({
+      where: { organizationId },
+      select: { type: true, riskLevel: true, status: true, createdAt: true, resolvedAt: true },
+    }).catch(() => [] as Array<{ type: string | null; riskLevel: string | null; status: string; createdAt: Date; resolvedAt: Date | null }>),
+    prisma.investigationCase.findMany({
+      where: { organizationId, createdAt: { gte: thirtyDaysAgo } },
+      select: { createdAt: true, resolvedAt: true, status: true },
+      orderBy: { createdAt: 'asc' },
+    }).catch(() => [] as Array<{ createdAt: Date; resolvedAt: Date | null; status: string }>),
+    prisma.investigationCase.findMany({
+      where: { organizationId, resolvedAt: { not: null }, status: { in: ['RESOLVED', 'CLOSED'] } },
+      select: { createdAt: true, resolvedAt: true },
+    }).catch(() => [] as Array<{ createdAt: Date; resolvedAt: Date | null }>),
+  ]);
+
+  const riskDistribution = {
+    high: allCases.filter((c) => c.riskLevel === 'high' || c.riskLevel === 'critical').length,
+    medium: allCases.filter((c) => c.riskLevel === 'medium').length,
+    low: allCases.filter((c) => !c.riskLevel || c.riskLevel === 'low').length,
+  };
+
+  const typeDistribution: Record<string, number> = {};
+  for (const c of allCases) {
+    const key = c.type ?? 'Other';
+    typeDistribution[key] = (typeDistribution[key] ?? 0) + 1;
+  }
+
+  const avgResolutionMs = resolvedWithTime.length
+    ? resolvedWithTime.reduce((sum, c) => sum + (c.resolvedAt!.getTime() - c.createdAt.getTime()), 0) / resolvedWithTime.length
+    : 0;
+  const avgResolutionDays = Math.round((avgResolutionMs / (1000 * 60 * 60 * 24)) * 10) / 10;
+
+  // Group by week for trend (last 4 weeks)
+  const weekBuckets: Record<string, { created: number; resolved: number }> = {};
+  for (let week = 3; week >= 0; week--) {
+    const label = `W-${week}`;
+    weekBuckets[label] = { created: 0, resolved: 0 };
+  }
+  for (const c of recentCases) {
+    const daysAgo = Math.floor((Date.now() - c.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    const weekIndex = Math.min(3, Math.floor(daysAgo / 7));
+    const label = `W-${weekIndex}`;
+    if (weekBuckets[label]) weekBuckets[label].created += 1;
+    if (c.resolvedAt) {
+      const resolvedDaysAgo = Math.floor((Date.now() - c.resolvedAt.getTime()) / (1000 * 60 * 60 * 24));
+      const resolvedWeekIndex = Math.min(3, Math.floor(resolvedDaysAgo / 7));
+      const resolvedLabel = `W-${resolvedWeekIndex}`;
+      if (weekBuckets[resolvedLabel]) weekBuckets[resolvedLabel].resolved += 1;
+    }
+  }
+
+  return { riskDistribution, typeDistribution, avgResolutionDays, weeklyTrend: weekBuckets };
 }
 
 export async function createInvestigationCase(input: {
   organizationId: string;
   title?: string;
+  type?: string;
   approvalIds: string[];
   department?: string;
   dateRangeStart?: Date;
   dateRangeEnd?: Date;
+  createdByUserId?: string;
+  assignedToUserId?: string;
 }) {
   const approvals = await prisma.approvalRecord.findMany({
     where: {
@@ -168,11 +246,14 @@ export async function createInvestigationCase(input: {
     data: {
       organizationId: input.organizationId,
       title,
+      type: input.type,
       department: input.department || approvals[0]?.department,
       riskLevel: summary.riskLevel.toLowerCase(),
       summary: summary.whatHappened,
       dateRangeStart: input.dateRangeStart,
       dateRangeEnd: input.dateRangeEnd,
+      createdByUserId: input.createdByUserId,
+      assignedToUserId: input.assignedToUserId,
       metadata: {
         demo: approvals.some((item) => item.sourceLink?.includes('demo') || item.sourceLink?.includes('TDEMO')),
         aiSummary: summary,

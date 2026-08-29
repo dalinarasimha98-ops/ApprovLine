@@ -204,6 +204,9 @@ enum SubscriptionStatus {
 
 enum InvestigationStatus {
   OPEN
+  IN_PROGRESS
+  ESCALATED
+  RESOLVED
   CLOSED
 }
 
@@ -320,6 +323,8 @@ model User {
   approvals                      ApprovalRecord[]              @relation("ApprovalApprover")
   auditLogs                      AuditLog[]
   investigationNotes             InvestigationNote[]
+  assignedInvestigations         InvestigationCase[]           @relation("InvestigationAssignee")
+  createdInvestigations          InvestigationCase[]           @relation("InvestigationCreator")
   pilotInvites                   PilotInvite[]                 @relation("PilotInviteInviter")
   pilotFeedback                  PilotFeedback[]
   pilotActivityLogs              PilotActivityLog[]
@@ -1136,25 +1141,34 @@ model PlaybookQuery {
 }
 
 model InvestigationCase {
-  id             String                  @id @default(cuid())
-  organizationId String
-  title          String
-  status         InvestigationStatus     @default(OPEN)
-  department     String?
-  riskLevel      String?
-  summary        String?
-  dateRangeStart DateTime?
-  dateRangeEnd   DateTime?
-  metadata       Json?
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
-  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  approvals      InvestigationApproval[]
-  notes          InvestigationNote[]
+  id               String                  @id @default(cuid())
+  organizationId   String
+  title            String
+  status           InvestigationStatus     @default(OPEN)
+  type             String?
+  department       String?
+  riskLevel        String?
+  summary          String?
+  dateRangeStart   DateTime?
+  dateRangeEnd     DateTime?
+  resolvedAt       DateTime?
+  assignedToUserId String?
+  createdByUserId  String?
+  metadata         Json?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  organization     Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedTo       User?                   @relation("InvestigationAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdBy        User?                   @relation("InvestigationCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  approvals        InvestigationApproval[]
+  notes            InvestigationNote[]
 
   @@index([organizationId, status, createdAt])
   @@index([organizationId, department])
   @@index([organizationId, riskLevel])
+  @@index([organizationId, type])
+  @@index([assignedToUserId])
+  @@index([resolvedAt])
 }
 
 model InvestigationApproval {
