@@ -306,6 +306,7 @@ export function gmailMessageToJob(input: {
       gmailMessageId: input.message.id,
       threadId: input.message.threadId,
       subject,
+      ...(to || cc ? { recipients: { ...(to ? { to } : {}), ...(cc ? { cc } : {}) } } : {}),
       messages: [
         {
           from: from.name || from.email || 'Unknown',
