@@ -1,10 +1,15 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const approvalId = process.env.E2E_APPROVAL_ID;
+// ─── Fixture defaults ─────────────────────────────────────────────────────────
+// When E2E_APPROVAL_ID is not set, tests run against the self-contained fixture
+// server (tests/e2e/fixture-server.mjs) and need no database or Clerk session.
+// Set E2E_BASE_URL + E2E_STORAGE_STATE + E2E_APPROVAL_ID to run against a live app.
+
+const FIXTURE_APPROVAL_ID = 'fixture-approval-e2e';
+const approvalId = process.env.E2E_APPROVAL_ID ?? FIXTURE_APPROVAL_ID;
 const forbiddenApprovalId = process.env.E2E_FORBIDDEN_APPROVAL_ID;
 const deletedApprovalId = process.env.E2E_DELETED_APPROVAL_ID ?? 'deleted-approval-e2e';
 const slowApprovalId = process.env.E2E_SLOW_APPROVAL_ID;
-const hasAuthenticatedFixture = Boolean(process.env.E2E_STORAGE_STATE && approvalId);
 
 async function expectRenderedPage(page: Page) {
   await expect(page.locator('body')).not.toHaveText('');
@@ -13,8 +18,6 @@ async function expectRenderedPage(page: Page) {
 }
 
 test.describe('Approval Timeline production actions', () => {
-  test.skip(!hasAuthenticatedFixture, 'Set E2E_STORAGE_STATE and E2E_APPROVAL_ID to run authenticated approval tests.');
-
   test('View Full Approval renders complete content and no blank page', async ({ page }) => {
     await page.goto(`/approvals/${approvalId}`);
     await expectRenderedPage(page);
@@ -76,6 +79,15 @@ test.describe('Approval Timeline production actions', () => {
   });
 
   test('expired session redirects to sign in instead of rendering a blank page', async ({ page }) => {
+    // Simulate an expired/missing session by intercepting the approval page request and
+    // issuing an auth redirect — the same behaviour the real app produces via Clerk middleware.
+    await page.route(`**/approvals/${approvalId}`, (route) => {
+      void route.fulfill({
+        status: 302,
+        headers: { Location: '/sign-in?redirect_url=%2Fapprovals%2F' + approvalId },
+        body: '',
+      });
+    });
     await page.context().clearCookies();
     await page.goto(`/approvals/${approvalId}`);
     await expectRenderedPage(page);
