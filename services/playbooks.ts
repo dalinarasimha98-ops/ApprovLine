@@ -309,6 +309,8 @@ export async function indexPlaybookDocument(input: {
   content: string;
   metadata?: Record<string, unknown>;
   category?: string;
+  replacesId?: string;
+  versionNumber?: number;
 }) {
   const contentHash = sha256(input.content);
   const document = await prisma.playbookDocument.create({
@@ -319,6 +321,8 @@ export async function indexPlaybookDocument(input: {
       fileType: input.fileType,
       status: "INDEXING",
       contentHash,
+      versionNumber: input.versionNumber ?? 1,
+      replacesId: input.replacesId ?? null,
       metadata: input.metadata as Prisma.InputJsonValue,
     },
   });

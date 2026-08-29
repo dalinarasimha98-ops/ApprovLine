@@ -53,6 +53,12 @@ type ApprovalWithEvidence = ApprovalRecord & {
 };
 
 const suggestions = [
+  'What is our approval policy for purchases above $50,000?',
+  'Who needs to approve a new vendor contract?',
+  'What does the Procurement Playbook require?',
+  'Guide me through onboarding a new SaaS vendor.',
+  'What documents do I need before submitting this approval?',
+  'Which approvals require Legal review?',
   'Who approved Vendor ABC?',
   'Show all approvals above $50,000.',
   'Which approvals violated procurement policy?',
@@ -61,7 +67,7 @@ const suggestions = [
   'What approvals are missing Finance sign-off?',
   'Which departments have the highest compliance violations?',
   'Show all approvals from Slack last month.',
-  'Summarize all high-risk approvals this quarter.',
+  'What can I do from this page?',
 ];
 
 const sourceLabels: Record<string, string> = {
@@ -118,10 +124,16 @@ function tokenize(question: string) {
 
 function detectIntent(question: string) {
   const lower = question.toLowerCase();
+  // Policy/playbook direct questions — checked before generic compliance
+  if (/\b(what (is|does|do|are) (our|the|this)|what('s| is) (our|the)|policy (for|on|about|require|say)|playbook (say|require|cover|define)|which (policy|playbook|policies)|policy version|compare (policy|version|playbook)|what (policy|playbook))\b/.test(lower)) return 'policy_lookup';
+  // Guidance/workflow questions
+  if (/\b(guide me|how (do|should) i|walk me through|step.by.step|what (do i|should i) (do|need)|what('s| is) the (process|workflow|path)|how (does|do) (the |an? )?approval|what (happens|should happen)|what (documents?|evidence) (do i|should i|are needed|required))\b/.test(lower)) return 'approval_guidance';
+  // ApprovLine product help
+  if (/\b(help me understand|explain (this|approvline|how)|what (can|could) (i|we) do|what (is|are) approvline|how (does|do) approvline|from this page|this page|can approvline|getting started)\b/.test(lower)) return 'approvline_help';
   if (/\b(who approved|approver|approved by)\b/.test(lower)) return 'approver_lookup';
   if (/\b(rejected|denied|not approved)\b/.test(lower)) return 'rejection_lookup';
-  if (/\b(missing|finance sign-off|required|evidence missing)\b/.test(lower)) return 'missing_approval';
-  if (/\b(violated|violation|non-compliant|non compliant|compliance|policy)\b/.test(lower)) return 'compliance_policy';
+  if (/\b(missing|finance sign-off|evidence missing)\b/.test(lower)) return 'missing_approval';
+  if (/\b(violated|violation|non-compliant|non compliant|compliance)\b/.test(lower)) return 'compliance_policy';
   if (/\b(high-risk|high risk|risky|risk)\b/.test(lower)) return 'risk_summary';
   if (/\b(investigation|flagged|case)\b/.test(lower)) return 'investigation';
   if (/\b(vendor|contract|supplier)\b/.test(lower)) return 'vendor_intelligence';
@@ -415,13 +427,96 @@ function memoryEvidenceLines(memory: Awaited<ReturnType<typeof queryMemoryGraphF
   });
 }
 
+function answerPolicy(policies: Awaited<ReturnType<typeof searchPlaybookChunks>>, _question: string): string {
+  if (policies.length === 0) {
+    return 'ApprovLine could not find a matching organizational policy for this question. Upload the relevant policy document to the Playbook Library to receive grounded, source-cited answers.';
+  }
+  const top = policies[0];
+  const excerpt = top.content.slice(0, 380).trim();
+  const others = policies.slice(1, 3).map((s) => `${s.documentName} (${s.sectionTitle})`);
+  let answer = `According to ${top.documentName} — ${top.sectionTitle}: ${excerpt}${top.content.length > 380 ? '…' : ''}`;
+  if (others.length > 0) {
+    answer += ` Additional policies may also apply: ${others.join(' and ')}.`;
+  }
+  return answer;
+}
+
+function answerApprovalGuidance(policies: Awaited<ReturnType<typeof searchPlaybookChunks>>, question: string): string {
+  if (policies.length === 0) {
+    return 'To provide a step-by-step approval path, ApprovLine needs your organizational playbooks. Upload your procurement, finance, or relevant policy to the Playbook Library, then ask again for a guided approval path. You can also use Playbook AI Advisory for full AI-powered guidance.';
+  }
+  const docName = policies[0].documentName;
+  const allText = policies.slice(0, 3).map((s) => s.content).join(' ').toLowerCase();
+  const approverKeywords: [string, string][] = [
+    ['cfo', 'CFO'],
+    ['chief financial', 'CFO'],
+    ['finance director', 'Finance Director'],
+    ['finance manager', 'Finance Manager'],
+    ['legal', 'Legal Counsel'],
+    ['general counsel', 'General Counsel'],
+    ['security', 'Security / CISO'],
+    ['ciso', 'CISO'],
+    ['procurement', 'Procurement Manager'],
+    ['board', 'Board Approval'],
+    ['committee', 'Committee Review'],
+  ];
+  const approvers: string[] = [];
+  for (const [kw, label] of approverKeywords) {
+    if (allText.includes(kw) && !approvers.includes(label)) approvers.push(label);
+  }
+  const lowerQ = question.toLowerCase();
+  if (/vendor|supplier|onboard/.test(lowerQ) && !approvers.includes('Procurement Manager')) {
+    approvers.unshift('Procurement Manager');
+  }
+  const steps = [
+    '1. Submit a complete approval request with supporting documentation and business justification.',
+    ...approvers.slice(0, 4).map((a, i) => `${i + 2}. Obtain ${a} approval.`),
+    `${approvers.length + 2}. Record the final decision and evidence in ApprovLine for audit trail.`,
+  ];
+  return `Based on ${docName}, here is the recommended approval path:\n\n${steps.join('\n')}\n\nOpen the policy citations below for specific thresholds, required evidence, and escalation conditions.`;
+}
+
+function answerApprovLineHelp(question: string): string {
+  const lower = question.toLowerCase();
+  if (/playbook|policy/.test(lower)) {
+    return 'Playbook AI Advisory in ApprovLine analyzes your uploaded policy documents to guide approvals. Navigate to Playbooks, upload a policy PDF or DOCX, then ask AI Advisor about any approval type to receive a step-by-step path grounded in your actual policies.';
+  }
+  if (/approval|workflow|process/.test(lower)) {
+    return 'ApprovLine captures approval decisions from Slack, Gmail, Teams, Outlook, Jira, Zoom, and enterprise systems (SAP, Oracle, Coupa, Workday, Salesforce). Each approval is classified, evaluated against your policies, and paired with an auditable evidence trail. Connect integrations under Settings → Integrations to start ingesting approvals.';
+  }
+  if (/evidence|audit|trail/.test(lower)) {
+    return 'Every captured approval in ApprovLine is linked to its source evidence — message links, attachments, email threads, and compliance evaluations. The Evidence Platform unifies these into a single auditable record per approval. View them under the Evidence tab or open any approval to see its evidence trail.';
+  }
+  if (/investigation|flag|case/.test(lower)) {
+    return 'The Investigation Center lets you flag approvals for review, attach notes and evidence, track case status (Open → Under Review → Closed), and export a full audit-ready case report. Open any approval record and click "Add to Investigation" to begin.';
+  }
+  if (/memory|graph|entity/.test(lower)) {
+    return 'The Memory Graph maps relationships between approvals, approvers, vendors, policies, risks, and investigation cases. It surfaces hidden patterns — like a vendor appearing in multiple high-risk approvals — that linear search misses. Explore it under Memory Graph in the navigation.';
+  }
+  if (/analytics|dashboard|roi|report/.test(lower)) {
+    return 'ApprovLine Analytics surfaces approval volume trends, compliance scores, department-level risk, time-to-approval patterns, and executive ROI metrics. The AI Copilot can also generate real-time summaries — try asking "Summarize high-risk approvals this quarter".';
+  }
+  return 'ApprovLine is an AI-powered approval intelligence platform. It captures decisions from your communications tools and enterprise systems, classifies them against your policies, and maintains an auditable evidence trail per approval. Use the main navigation to explore: Approvals, Evidence, Playbooks, Memory Graph, Analytics, and the Investigation Center.';
+}
+
 function recommendedActions(intent: string, approvals: ApprovalWithEvidence[], policies: Awaited<ReturnType<typeof searchPlaybookChunks>>) {
   const actions = new Set<string>();
-  if (approvals.some((approval) => approval.riskLevel === 'high' || approval.riskLevel === 'critical')) actions.add('Open the high-risk approval and review its evidence trail.');
-  if (approvals.some((approval) => !approval.sourceLink || !approval.evidenceSnippet)) actions.add('Attach or verify missing source evidence before audit export.');
-  if (approvals.some((approval) => approval.complianceEvaluations.some((item) => item.status !== 'Compliant'))) actions.add('Review the triggered playbook rule and resolve missing approvers or evidence.');
-  if (intent === 'investigation') actions.add('Create or open an investigation case for the related approval records.');
-  if (policies.length === 0) actions.add('Upload the relevant playbook to improve policy-backed answers.');
+  if (intent === 'policy_lookup') {
+    actions.add(policies.length > 0 ? 'Open the cited policy section for full thresholds and requirements.' : 'Upload your organizational policy to Playbook AI for grounded answers.');
+    if (policies.length > 1) actions.add('Check whether multiple conflicting policies apply to this request.');
+  } else if (intent === 'approval_guidance') {
+    actions.add('Visit Playbook AI Advisory for a complete, AI-generated approval path tailored to your request.');
+    if (policies.length > 0) actions.add('Review the cited policy sections for specific evidence and escalation requirements.');
+  } else if (intent === 'approvline_help') {
+    actions.add('Explore the navigation to find the feature relevant to your question.');
+    actions.add('Upload a policy document to Playbook AI to enable AI-guided approvals.');
+  } else {
+    if (approvals.some((approval) => approval.riskLevel === 'high' || approval.riskLevel === 'critical')) actions.add('Open the high-risk approval and review its evidence trail.');
+    if (approvals.some((approval) => !approval.sourceLink || !approval.evidenceSnippet)) actions.add('Attach or verify missing source evidence before audit export.');
+    if (approvals.some((approval) => approval.complianceEvaluations.some((item) => item.status !== 'Compliant'))) actions.add('Review the triggered playbook rule and resolve missing approvers or evidence.');
+    if (intent === 'investigation') actions.add('Create or open an investigation case for the related approval records.');
+    if (policies.length === 0 && intent !== 'executive_intelligence') actions.add('Upload the relevant playbook to improve policy-backed answers.');
+  }
   if (actions.size === 0) actions.add('Open the cited records to validate the decision trail before sharing externally.');
   return [...actions].slice(0, 4);
 }
@@ -481,6 +576,9 @@ export async function answerCopilotQuestion(input: {
   if (intent === 'investigation') answer = answerInvestigation(investigations, approvals);
   if (intent === 'vendor_intelligence') answer = answerList(approvals, 'vendor-related approvals');
   if (intent === 'department_intelligence') answer = answerList(approvals, 'department-related approvals');
+  if (intent === 'policy_lookup') answer = answerPolicy(policies, question);
+  if (intent === 'approval_guidance') answer = answerApprovalGuidance(policies, question);
+  if (intent === 'approvline_help') answer = answerApprovLineHelp(question);
   if (approvals.length === 0 && memory.length > 0) {
     const top = memory
       .slice(0, 4)

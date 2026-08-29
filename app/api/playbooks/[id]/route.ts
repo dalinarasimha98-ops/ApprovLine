@@ -19,7 +19,11 @@ export async function GET(
   const { id } = await params;
   const document = await prisma.playbookDocument.findFirst({
     where: { id, organizationId: tenant.organization.id },
-    include: { _count: { select: { chunks: true, rules: true } } },
+    include: {
+      _count: { select: { chunks: true, rules: true } },
+      previousVersion: { select: { id: true, name: true, versionNumber: true, status: true, archivedAt: true } },
+      newerVersions: { select: { id: true, name: true, versionNumber: true, status: true, uploadedAt: true } },
+    },
   });
   if (!document) return NextResponse.json({ error: 'Playbook not found.' }, { status: 404 });
 

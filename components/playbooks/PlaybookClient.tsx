@@ -16,6 +16,9 @@ type PlaybookDocument = {
   status: string;
   uploadedAt: string | Date;
   lastIndexedAt: string | Date | null;
+  archivedAt?: string | Date | null;
+  versionNumber?: number | null;
+  replacesId?: string | null;
   metadata: unknown;
   ownerUserId?: string | null;
   _count: { chunks: number; rules: number };
@@ -165,6 +168,8 @@ function complianceBg(score: number) {
 function statusBadge(status: string) {
   if (status === 'READY') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
   if (status === 'ERROR') return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+  if (status === 'ARCHIVED') return 'bg-[#1E2D4A] text-[#3D5070] border-[#1E2D4A]';
+  if (status === 'SUPERSEDED') return 'bg-[#1E2D4A] text-[#6B7FA8] border-[#1E2D4A]';
   return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
 }
 
@@ -172,6 +177,8 @@ function statusLabel(status: string) {
   if (status === 'READY') return 'Active';
   if (status === 'ERROR') return 'Error';
   if (status === 'INDEXING') return 'Indexing';
+  if (status === 'ARCHIVED') return 'Archived';
+  if (status === 'SUPERSEDED') return 'Superseded';
   return 'Processing';
 }
 
@@ -319,7 +326,11 @@ export function PlaybookClient({
   const [activeTab, setActiveTab] = useState<'all' | 'mine' | 'department' | 'shared'>('all');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadCategory, setUploadCategory] = useState('Procurement');
+  const [replaceTarget, setReplaceTarget] = useState<PlaybookDocument | null>(null);
+  const [replaceCategory, setReplaceCategory] = useState('Procurement');
+  const [showArchived, setShowArchived] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const replaceFileRef = useRef<HTMLInputElement>(null);
 
   // ─── Data helpers ──────────────────────────────────────────────────────────
 
@@ -383,6 +394,43 @@ export function PlaybookClient({
     }
   }
 
+  async function archiveDocument(id: string) {
+    setBusy(`archive-${id}`);
+    setError(null);
+    try {
+      const response = await fetch(`/api/playbooks/${id}/archive`, { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? 'Archive failed.');
+      setDocuments((prev) => prev.map((d) => d.id === id ? { ...d, status: 'ARCHIVED', archivedAt: new Date() } : d));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Archive failed.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function replaceDocument() {
+    const file = replaceFileRef.current?.files?.[0];
+    if (!file || !replaceTarget) return;
+    setBusy('replace');
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('category', replaceCategory);
+      const response = await fetch(`/api/playbooks/${replaceTarget.id}/replace`, { method: 'POST', body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? 'Replace failed.');
+      setReplaceTarget(null);
+      if (replaceFileRef.current) replaceFileRef.current.value = '';
+      await refreshLibrary();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Replace failed.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function ask(q: string) {
     const trimmed = q.trim();
     if (trimmed.length < 5) return;
@@ -440,14 +488,16 @@ export function PlaybookClient({
   // ─── Filtered documents ────────────────────────────────────────────────────
 
   const filteredDocs = useMemo(() => {
-    if (activeTab === 'mine') return documents.filter((d) => d.ownerUserId === currentUserId);
-    if (activeTab === 'department') return documents.filter((d) => {
+    const visibleStatuses = showArchived ? undefined : new Set(['READY', 'INDEXING', 'UPLOADED', 'ERROR', 'PROCESSING']);
+    const base = visibleStatuses ? documents.filter((d) => visibleStatuses.has(d.status)) : documents;
+    if (activeTab === 'mine') return base.filter((d) => d.ownerUserId === currentUserId);
+    if (activeTab === 'department') return base.filter((d) => {
       const cat = docCategory(d.metadata);
       return CATEGORIES.includes(cat);
     });
-    if (activeTab === 'shared') return documents.filter((d) => d.ownerUserId !== currentUserId && d.status === 'READY');
-    return documents;
-  }, [documents, activeTab, currentUserId]);
+    if (activeTab === 'shared') return base.filter((d) => d.ownerUserId !== currentUserId && d.status === 'READY');
+    return base;
+  }, [documents, activeTab, currentUserId, showArchived]);
 
   // ─── Insights derivation ───────────────────────────────────────────────────
 
@@ -600,8 +650,15 @@ export function PlaybookClient({
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-400">Playbooks &amp; Policies</p>
               </div>
-              {canManage ? (
-                <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowArchived((v) => !v)}
+                  className={`h-9 rounded-xl border px-4 text-xs font-bold transition ${showArchived ? 'border-violet-500/40 bg-violet-500/10 text-violet-400' : 'border-[#1E2D4A] bg-[#0E1830] text-[#6B7FA8] hover:text-[#E8EEFF]'}`}
+                >
+                  {showArchived ? 'Hide Archived' : 'Show Archived'}
+                </button>
+                {canManage ? (
                   <button
                     type="button"
                     onClick={evaluateApprovals}
@@ -610,8 +667,8 @@ export function PlaybookClient({
                   >
                     {busy === 'evaluate' ? 'Evaluating...' : 'Evaluate Approvals'}
                   </button>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
 
             {/* Tabs */}
@@ -703,8 +760,8 @@ export function PlaybookClient({
                             </div>
                           </td>
                           <td className="py-4 pr-4 text-xs font-semibold text-[#6B7FA8]">{cat}</td>
-                          <td className="py-4 pr-4 text-xs font-mono text-[#6B7FA8]">v1.0</td>
-                          <td className="py-4 pr-4 text-xs text-[#6B7FA8]">{fmtDate(doc.lastIndexedAt ?? doc.uploadedAt)}</td>
+                          <td className="py-4 pr-4 text-xs font-mono text-[#6B7FA8]">v{doc.versionNumber ?? 1}.0</td>
+                          <td className="py-4 pr-4 text-xs text-[#6B7FA8]">{fmtDate(doc.status === 'ARCHIVED' ? (doc.archivedAt ?? doc.uploadedAt) : (doc.lastIndexedAt ?? doc.uploadedAt))}</td>
                           <td className="py-4 pr-4">
                             {score !== null ? (
                               <div className="flex items-center gap-2">
@@ -726,16 +783,41 @@ export function PlaybookClient({
                             </span>
                           </td>
                           <td className="py-4">
-                            {canManage ? (
-                              <button
-                                type="button"
-                                onClick={() => deleteDocument(doc.id)}
-                                disabled={busy !== null}
-                                className="text-[11px] font-black text-[#3D5070] hover:text-rose-400 disabled:cursor-wait"
-                              >
-                                {busy === doc.id ? 'Deleting...' : 'Delete'}
-                              </button>
-                            ) : <span className="text-[11px] text-[#3D5070]">—</span>}
+                            {canManage && doc.status !== 'ARCHIVED' && doc.status !== 'SUPERSEDED' ? (
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReplaceTarget(doc);
+                                    setReplaceCategory(docCategory(doc.metadata) !== 'General' ? docCategory(doc.metadata) : 'Procurement');
+                                  }}
+                                  disabled={busy !== null}
+                                  className="text-[11px] font-black text-[#6B7FA8] hover:text-violet-400 disabled:cursor-wait"
+                                >
+                                  Replace
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => archiveDocument(doc.id)}
+                                  disabled={busy !== null}
+                                  className="text-[11px] font-black text-[#3D5070] hover:text-amber-400 disabled:cursor-wait"
+                                >
+                                  {busy === `archive-${doc.id}` ? 'Archiving...' : 'Archive'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteDocument(doc.id)}
+                                  disabled={busy !== null}
+                                  className="text-[11px] font-black text-[#3D5070] hover:text-rose-400 disabled:cursor-wait"
+                                >
+                                  {busy === doc.id ? 'Deleting...' : 'Delete'}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-[#3D5070]">
+                                {doc.status === 'ARCHIVED' ? 'Archived' : doc.status === 'SUPERSEDED' ? 'Superseded' : '—'}
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -1032,6 +1114,79 @@ export function PlaybookClient({
           </div>
         </div>
       </div>
+
+      {/* ── Replace Document Modal ── */}
+      {replaceTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setReplaceTarget(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-[#1E2D4A] bg-[#07111f] p-6 shadow-2xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-black text-[#E8EEFF]">Replace Document</h3>
+                <p className="mt-1 text-xs text-[#6B7FA8]">
+                  Uploading a new version will archive the current file and make the new one active.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplaceTarget(null)}
+                className="rounded-lg p-1.5 text-[#3D5070] hover:bg-[#0E1830] hover:text-[#6B7FA8]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-3">
+              <p className="text-[11px] font-black uppercase tracking-wide text-[#3D5070]">Current Version</p>
+              <p className="mt-1 text-sm font-bold text-[#E8EEFF]">{replaceTarget.name}</p>
+              <p className="text-xs text-[#6B7FA8]">v{replaceTarget.versionNumber ?? 1}.0 · {docCategory(replaceTarget.metadata)} · Uploaded {fmtDate(replaceTarget.uploadedAt)}</p>
+            </div>
+
+            <div className="mt-5 grid gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#6B7FA8]">Category</label>
+                <select
+                  value={replaceCategory}
+                  onChange={(e) => setReplaceCategory(e.target.value)}
+                  className="h-11 w-full rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
+                >
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#6B7FA8]">New Document</label>
+                <input
+                  ref={replaceFileRef}
+                  type="file"
+                  accept=".pdf,.docx,.txt,.md,.markdown"
+                  className="block w-full rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-3 py-3 text-sm font-semibold text-[#E8EEFF] file:mr-3 file:rounded-lg file:border-0 file:bg-violet-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
+                />
+              </div>
+              {error ? (
+                <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 text-xs font-semibold text-rose-300">{error}</p>
+              ) : null}
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setReplaceTarget(null)}
+                className="flex-1 rounded-xl border border-[#1E2D4A] py-2.5 text-sm font-bold text-[#6B7FA8] hover:text-[#E8EEFF]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={replaceDocument}
+                disabled={busy === 'replace'}
+                className="flex-1 rounded-xl bg-violet-600 py-2.5 text-sm font-bold text-white hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60"
+              >
+                {busy === 'replace' ? 'Uploading...' : 'Upload New Version'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* ── Upload Modal ── */}
       {uploadOpen ? (

@@ -1015,24 +1015,31 @@ enum PlaybookStatus {
   INDEXING
   READY
   ERROR
+  ARCHIVED
+  SUPERSEDED
 }
 
 model PlaybookDocument {
-  id             String          @id @default(cuid())
-  organizationId String
-  ownerUserId    String?
-  name           String
-  fileType       String
-  status         PlaybookStatus  @default(UPLOADED)
-  contentHash    String
-  metadata       Json?
-  uploadedAt     DateTime        @default(now())
-  lastIndexedAt  DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  chunks         PlaybookChunk[]
-  rules          PlaybookRule[]
+  id              String             @id @default(cuid())
+  organizationId  String
+  ownerUserId     String?
+  name            String
+  fileType        String
+  status          PlaybookStatus     @default(UPLOADED)
+  versionNumber   Int                @default(1)
+  contentHash     String
+  metadata        Json?
+  uploadedAt      DateTime           @default(now())
+  lastIndexedAt   DateTime?
+  archivedAt      DateTime?
+  replacesId      String?            @unique
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  chunks          PlaybookChunk[]
+  rules           PlaybookRule[]
+  previousVersion PlaybookDocument?  @relation("DocVersionChain", fields: [replacesId], references: [id])
+  newerVersions   PlaybookDocument[] @relation("DocVersionChain")
 
   @@index([organizationId, status, uploadedAt])
   @@index([organizationId, contentHash])
