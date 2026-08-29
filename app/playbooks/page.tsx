@@ -40,16 +40,32 @@ export default async function PlaybooksPage() {
         'playbooks recent queries',
         prisma.playbookQuery.findMany({
           where: { organizationId: tenant.organization.id },
+          select: {
+            id: true,
+            question: true,
+            answer: true,
+            confidence: true,
+            createdAt: true,
+            actorUserId: true,
+          },
           orderBy: { createdAt: 'desc' },
-          take: 5,
+          take: 10,
         }),
         2500,
       ).catch(() => [])
     : [];
 
+  const canManage = tenant.user?.role === 'OWNER' || tenant.user?.role === 'ADMIN';
+
   return (
     <DashboardShell>
-      <PlaybookClient initialDocuments={documents} initialQueries={recentQueries} initialInsights={insights} />
+      <PlaybookClient
+        initialDocuments={documents}
+        initialQueries={recentQueries}
+        initialInsights={insights}
+        currentUserId={tenant.user?.id ?? null}
+        canManage={canManage}
+      />
     </DashboardShell>
   );
 }

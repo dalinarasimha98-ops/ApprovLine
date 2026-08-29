@@ -5,6 +5,27 @@ import { hasAnyRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const tenant = await getDashboardTenant(4000);
+  if (tenant.status === 'unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!tenant.organization || !tenant.user) return NextResponse.json({ error: tenant.error ?? 'Workspace unavailable.' }, { status: 503 });
+  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN', 'AUDITOR'])) {
+    return NextResponse.json({ error: 'Your workspace role cannot access playbooks.' }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const document = await prisma.playbookDocument.findFirst({
+    where: { id, organizationId: tenant.organization.id },
+    include: { _count: { select: { chunks: true, rules: true } } },
+  });
+  if (!document) return NextResponse.json({ error: 'Playbook not found.' }, { status: 404 });
+
+  return NextResponse.json({ document });
+}
+
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
