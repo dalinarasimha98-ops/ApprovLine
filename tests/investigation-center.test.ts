@@ -86,7 +86,7 @@ test('timelineForApproval returns chronological events', () => {
     messageSource: null,
     approvalType: 'EXPLICIT',
     conditions: null,
-  } as Parameters<typeof timelineForApproval>[0];
+  } as unknown as Parameters<typeof timelineForApproval>[0];
   const events = timelineForApproval(approval);
   assert.ok(Array.isArray(events));
   assert.ok(events.length > 0);
