@@ -7,7 +7,6 @@ import { hasAnyRole } from '@/lib/rbac';
 import { enforcePageRole } from '@/lib/rbac';
 import { ensureMemoryStorage } from '@/services/memory-storage';
 import { rebuildMemoryGraphForOrganization } from '@/services/memory';
-import { isMigrationError } from '@/lib/prisma-errors';
 import { MemoryGraphWorkspace } from '@/components/memory/MemoryGraphWorkspace';
 
 export const dynamic = 'force-dynamic';
@@ -48,7 +47,6 @@ export default async function MemoryPage({ searchParams }: MemoryPageProps) {
   let normalizedEntities: import('@/components/memory/MemoryGraphWorkspace').GraphEntity[] = [];
   let normalizedRelationships: import('@/components/memory/MemoryGraphWorkspace').GraphRelationship[] = [];
   let initialTotal = 0;
-  let setupRequired = false;
 
   try {
     await ensureMemoryStorage();
@@ -108,10 +106,8 @@ export default async function MemoryPage({ searchParams }: MemoryPageProps) {
         evidenceSnippet: r.evidenceSnippet,
       }));
     }
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : '';
-    if (isMigrationError(msg)) setupRequired = true;
-    // Non-migration errors: pass empty initial state; client fetches on mount
+  } catch {
+    // Any SSR error (missing tables, timeout, etc.) — client workspace fetches on mount
   }
 
   return (
@@ -140,16 +136,6 @@ export default async function MemoryPage({ searchParams }: MemoryPageProps) {
             </form>
           </div>
         </div>
-
-        {/* Migration not ready */}
-        {setupRequired && (
-          <div className="mx-5 mt-4 rounded-lg bg-amber-950/40 border border-amber-900/50 px-4 py-3 flex-shrink-0">
-            <p className="text-xs font-bold text-amber-400 uppercase tracking-wide">Database migration required</p>
-            <p className="mt-1 text-xs text-amber-300/80">
-              Memory Graph tables are not yet provisioned. Run <code className="rounded bg-amber-900/40 px-1.5 py-0.5 font-mono">npm run db:deploy</code> to enable this feature.
-            </p>
-          </div>
-        )}
 
         {/* Interactive workspace */}
         <div className="flex-1 min-h-0" style={{ height: 'calc(100vh - 160px)' }}>
