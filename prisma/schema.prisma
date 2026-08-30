@@ -235,6 +235,29 @@ enum MemoryEntityType {
   MESSAGE
 }
 
+enum MarketplaceProviderStatus {
+  DRAFT
+  BETA
+  AVAILABLE
+  DEPRECATED
+  COMING_SOON
+}
+
+enum IntegrationRequestStatus {
+  PENDING
+  UNDER_REVIEW
+  PLANNED
+  IN_DEVELOPMENT
+  AVAILABLE
+  REJECTED
+}
+
+enum IntegrationRequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model Organization {
   id                       String                         @id @default(cuid())
   clerkOrgId               String?                        @unique
@@ -303,6 +326,8 @@ model Organization {
   unifiedEvidenceRecords   UnifiedEvidenceRecord[]
   evidenceProviderHealth   EvidenceProviderHealth[]
   evidenceFailures         EvidenceProcessingFailure[]
+  tenantProviderAccess     TenantProviderAccess[]
+  integrationRequests      IntegrationRequest[]
 
   @@index([onboardedAt])
   @@index([onboardingStep])
@@ -1533,4 +1558,67 @@ model MemoryTimelineEvent {
   @@index([organizationId, occurredAt])
   @@index([organizationId, eventType])
   @@index([entityId, occurredAt])
+}
+
+// Integration Marketplace models
+
+model MarketplaceProvider {
+  id           String                    @id @default(cuid())
+  slug         String                    @unique
+  displayName  String
+  category     String
+  description  String
+  logoUrl      String?
+  websiteUrl   String?
+  status       MarketplaceProviderStatus @default(AVAILABLE)
+  isNative     Boolean                   @default(false)
+  capabilities Json?
+  requestCount Int                       @default(0)
+  sortOrder    Int                       @default(0)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  tenantAccess TenantProviderAccess[]
+  requests     IntegrationRequest[]
+
+  @@index([status])
+  @@index([category])
+  @@index([sortOrder])
+}
+
+model TenantProviderAccess {
+  id             String              @id @default(cuid())
+  organizationId String
+  providerSlug   String
+  enabledAt      DateTime            @default(now())
+  enabledBy      String?
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider       MarketplaceProvider @relation(fields: [providerSlug], references: [slug], onDelete: Cascade)
+
+  @@unique([organizationId, providerSlug])
+  @@index([organizationId])
+  @@index([providerSlug])
+}
+
+model IntegrationRequest {
+  id                String                     @id @default(cuid())
+  organizationId    String
+  requestedByUserId String?
+  providerSlug      String?
+  providerName      String
+  providerWebsite   String?
+  category          String?
+  reason            String
+  evidenceType      String?
+  userCount         Int?
+  priority          IntegrationRequestPriority @default(MEDIUM)
+  status            IntegrationRequestStatus   @default(PENDING)
+  founderNotes      String?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  organization      Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider          MarketplaceProvider?       @relation(fields: [providerSlug], references: [slug], onDelete: SetNull)
+
+  @@index([organizationId, status, createdAt])
+  @@index([providerSlug, status])
+  @@index([status, priority, createdAt])
 }

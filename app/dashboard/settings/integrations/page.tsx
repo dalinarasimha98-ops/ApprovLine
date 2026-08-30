@@ -7,6 +7,7 @@ import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { ConfirmSubmitButton } from '@/components/system/ConfirmSubmitButton';
 import type { Prisma } from '@prisma/client';
 import { enforcePageRole } from '@/lib/rbac';
+import { MarketplaceSection } from '@/components/integrations/MarketplaceSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -331,7 +332,7 @@ function IntegrationTile({
 export default async function IntegrationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ slack?: string; gmail?: string; outlook?: string; teams?: string; jira?: string; servicenow?: string; zoom?: string; reason?: string }>;
+  searchParams: Promise<{ slack?: string; gmail?: string; outlook?: string; teams?: string; jira?: string; servicenow?: string; zoom?: string; reason?: string; tab?: string }>;
 }) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
@@ -381,9 +382,9 @@ export default async function IntegrationsPage({
     <section className="mx-auto grid w-full max-w-6xl gap-10 pb-10">
       <div>
         <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2155d9]">Integrations</p>
-        <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Connect approval sources</h2>
+        <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Integration Marketplace</h2>
         <p className="mt-2 max-w-2xl text-base font-semibold leading-7 text-slate-500">
-          Choose where ApprovLine should capture decisions. Slack, Gmail, Outlook, Microsoft Teams, Jira, ServiceNow, and Zoom are available now; the rest are staged for rollout.
+          Connect approval sources, browse upcoming integrations, or use the Universal Gateway for any system with a webhook or API.
         </p>
       </div>
 
@@ -406,21 +407,30 @@ export default async function IntegrationsPage({
         </div>
       ))}
 
-      {sections.map((section) => (
-        <div key={section.title} className="grid gap-5">
-          <h3 className="text-xl font-black uppercase tracking-[0.08em] text-slate-500">{section.title}</h3>
-          <div className="grid gap-5 lg:grid-cols-2">
-            {section.cards.map((card) => (
-              <IntegrationTile
-                key={card.key}
-                card={card}
-                status={card.provider ? statusByProvider.get(card.provider) ?? 'NOT_CONNECTED' : 'NOT_CONNECTED'}
-                integration={card.provider ? integrationByProvider.get(card.provider) : undefined}
-              />
-            ))}
-          </div>
+      {/* ── Available / Connected ─────────────────────────────────────────── */}
+      <div>
+        <h3 className="mb-5 text-xl font-black uppercase tracking-[0.08em] text-slate-500">Available Now</h3>
+        <div className="grid gap-10">
+          {sections.map((section) => (
+            <div key={section.title} className="grid gap-5">
+              <h4 className="text-base font-black uppercase tracking-[0.08em] text-slate-400">{section.title}</h4>
+              <div className="grid gap-5 lg:grid-cols-2">
+                {section.cards.map((card) => (
+                  <IntegrationTile
+                    key={card.key}
+                    card={card}
+                    status={card.provider ? statusByProvider.get(card.provider) ?? 'NOT_CONNECTED' : 'NOT_CONNECTED'}
+                    integration={card.provider ? integrationByProvider.get(card.provider) : undefined}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
+
+      {/* ── Marketplace: Coming Soon + Request + Generic Connector ─────────── */}
+      <MarketplaceSection />
     </section>
   );
 }
