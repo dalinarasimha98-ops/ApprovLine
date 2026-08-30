@@ -7,31 +7,29 @@ type Props = {
 };
 
 /**
- * Semi-circular arc gauge. The arc sweeps from 180° to 360° (left to right
- * through the top). `value` is 0–100; the arc fills proportionally.
+ * Semi-circular speedometer gauge.
  *
- * Text is positioned inside the visible arc hole (above the base endpoints)
- * so it is never clipped by the viewBox.
+ * Arc sweeps from the LEFT endpoint (9 o'clock, 270°) clockwise through the
+ * TOP (12 o'clock) to the RIGHT endpoint (3 o'clock, 90°). The bottom of the
+ * circle is clipped by the viewBox, giving the familiar half-circle look.
+ *
+ * `value` is 0–100 and fills the arc proportionally left → right.
  */
 export function SVGArcGauge({
   value,
   label,
   sublabel,
   size = 180,
-  color = '#7C3AED',
 }: Props) {
   const cx = size / 2;
-  const cy = size * 0.65; // push center down so the bottom of the arc is clipped naturally
-  const r = size * 0.38;
-  const strokeWidth = size * 0.1;
-  const trackColor = '#1E2D4A';
+  const sw = size * 0.1;       // stroke width
+  const r = size * 0.42;       // radius
+  const cy = r + sw / 2 + 6;  // center: r + stroke-clearance above + top padding
+  const viewH = cy + sw / 2 + 6; // viewBox height: just past the arc endpoints
 
-  // ViewBox height: just past the arc base endpoints (at y=cy)
-  const viewH = cy + strokeWidth / 2 + 6;
-
-  const startAngle = 180;
-  const endAngle = 360;
-  const sweepAngle = (value / 100) * (endAngle - startAngle);
+  // Arc from left (270°) clockwise through top (360°) to right (270°+180°=450°)
+  const startAngle = 270;
+  const sweepAngle = (value / 100) * 180;
 
   function polarToCartesian(angleDeg: number) {
     const rad = ((angleDeg - 90) * Math.PI) / 180;
@@ -42,61 +40,58 @@ export function SVGArcGauge({
     const s = polarToCartesian(start);
     const e = polarToCartesian(Math.min(end, start + 359.99));
     const large = end - start > 180 ? 1 : 0;
-    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
+    return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
   }
 
-  const trackPath = describeArc(startAngle, endAngle);
-  const fillPath = sweepAngle > 0 ? describeArc(startAngle, startAngle + sweepAngle) : null;
+  // Full 180° track + proportional fill
+  const trackPath = describeArc(startAngle, startAngle + 180);
+  const fillPath = sweepAngle > 0.5 ? describeArc(startAngle, startAngle + sweepAngle) : null;
 
   // Color by value
-  let arcColor = color;
+  let arcColor = '#10B981'; // green ≥ 75
   if (value < 50) arcColor = '#EF4444';
   else if (value < 75) arcColor = '#F59E0B';
-  else arcColor = '#10B981';
 
-  // Text sits inside the visible arc hole (from cy-r at top to cy at base).
-  // Position value text at ~35% down from top, label at ~70% — both inside viewBox.
-  const valueY = cy - r * 0.38;
-  const labelY = cy - r * 0.1;
+  // Text: centered in the visible arc hole (between top of arc and endpoints)
+  // Hole spans y=[cy-r, cy]; centre at cy-r/2
+  const holeCenter = cy - r * 0.5;
+  const valueY = holeCenter - size * 0.02;
+  const labelY = holeCenter + size * 0.09;
 
   return (
     <div className="flex flex-col items-center w-full">
-      {/* No explicit height — let w-full + viewBox aspect ratio drive the size */}
-      <svg
-        viewBox={`0 0 ${size} ${viewH}`}
-        className="w-full"
-      >
-        {/* Track */}
+      <svg viewBox={`0 0 ${size} ${viewH.toFixed(1)}`} className="w-full">
+        {/* Gray track */}
         <path
           d={trackPath}
           fill="none"
-          stroke={trackColor}
-          strokeWidth={strokeWidth}
+          stroke="#1E2D4A"
+          strokeWidth={sw}
           strokeLinecap="round"
         />
-        {/* Value arc */}
+        {/* Colored fill */}
         {fillPath && (
           <path
             d={fillPath}
             fill="none"
             stroke={arcColor}
-            strokeWidth={strokeWidth}
+            strokeWidth={sw}
             strokeLinecap="round"
           />
         )}
-        {/* Value percentage */}
+        {/* Percentage */}
         <text
           x={cx}
           y={valueY}
           textAnchor="middle"
           dominantBaseline="central"
-          fontSize={size * 0.22}
+          fontSize={size * 0.2}
           fontWeight="900"
           fill="white"
         >
           {value}%
         </text>
-        {/* Label below value, still inside hole */}
+        {/* Label */}
         {label && (
           <text
             x={cx}
