@@ -101,30 +101,20 @@ function SectionHeader({
 
 function ConnectorBars({ items }: { items: CoreAnalytics['connectorActivity'] }) {
   const max = Math.max(...items.map((i) => i.count), 1);
-  const statusColor = (s: string) =>
-    s === 'CONNECTED' ? 'bg-emerald-400' :
-    s === 'ERROR' || s === 'NEEDS_REAUTH' ? 'bg-red-400' :
-    'bg-slate-500';
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2.5">
       {items.length === 0 ? (
         <p className="text-xs font-semibold text-slate-500">No connector data yet. Connect integrations to see activity.</p>
       ) : items.map((item) => (
-        <div key={item.name} className="grid gap-1.5">
+        <div key={item.name} className="grid gap-1">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${statusColor(item.status)}`} />
-              <span className="text-xs font-semibold text-slate-300">{item.name}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white">{numberFormat(item.count)}</span>
-              <span className="w-8 text-right text-[10px] text-slate-500">{item.percentage}%</span>
-            </div>
+            <span className="text-[11px] font-semibold text-slate-300">{item.name}</span>
+            <span className="text-[11px] font-bold text-slate-400">{item.percentage}%</span>
           </div>
           <div className="h-1.5 rounded-full bg-[#1E2D4A]">
             <div
-              className="h-1.5 rounded-full bg-violet-500"
+              className="h-1.5 rounded-full bg-blue-500"
               style={{ width: `${Math.max(2, (item.count / max) * 100)}%` }}
             />
           </div>
@@ -142,32 +132,30 @@ function CategoryBars({ items }: { items: Array<{ name: string; count: number }>
   const total = Math.max(items.reduce((s, i) => s + i.count, 0), 1);
   const max = Math.max(...items.map((i) => i.count), 1);
 
-  const COLORS = ['#7C3AED', '#2563EB', '#059669', '#D97706', '#DC2626', '#0891B2', '#9333EA', '#65A30D'];
-
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2.5">
       {items.length === 0 ? (
         <p className="text-xs font-semibold text-slate-500">Categories appear once approvals are captured.</p>
-      ) : items.map((item, idx) => (
-        <div key={item.name} className="grid gap-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-300">{item.name}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white">{numberFormat(item.count)}</span>
-              <span className="w-8 text-right text-[10px] text-slate-500">{Math.round((item.count / total) * 100)}%</span>
+      ) : items.map((item) => {
+        const pct = Math.round((item.count / total) * 100);
+        return (
+          <div key={item.name} className="grid gap-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-300">{item.name}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
+                <span className="w-10 text-right text-[11px] font-bold text-white">{numberFormat(item.count)}</span>
+              </div>
+            </div>
+            <div className="h-1.5 rounded-full bg-[#1E2D4A]">
+              <div
+                className="h-1.5 rounded-full bg-violet-500"
+                style={{ width: `${Math.max(2, (item.count / max) * 100)}%` }}
+              />
             </div>
           </div>
-          <div className="h-1.5 rounded-full bg-[#1E2D4A]">
-            <div
-              className="h-1.5 rounded-full"
-              style={{
-                width: `${Math.max(2, (item.count / max) * 100)}%`,
-                backgroundColor: COLORS[idx % COLORS.length],
-              }}
-            />
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -492,30 +480,32 @@ async function ExecutiveDashboardSection({
                 href="/analytics/drilldown/high-risk-approvals"
                 hrefLabel="View details →"
               />
-              <div className="mt-3 flex justify-center">
-                <SVGDonutChart
-                  segments={riskSegments.length > 0 ? riskSegments : [{ label: 'No data', value: 1, color: '#1E2D4A' }]}
-                  size={120}
-                  strokeWidth={20}
-                  centerLabel={numberFormat(total)}
-                  centerSublabel="total"
-                />
-              </div>
-              {riskSegments.length > 0 && (
-                <div className="mt-3 grid gap-1.5">
-                  {riskSegments.map((seg) => {
+              <div className="mt-3 flex items-center gap-4">
+                <div className="flex-shrink-0">
+                  <SVGDonutChart
+                    segments={riskSegments.length > 0 ? riskSegments : [{ label: 'No data', value: 1, color: '#1E2D4A' }]}
+                    size={130}
+                    strokeWidth={22}
+                    centerLabel={numberFormat(total)}
+                    centerSublabel="total"
+                  />
+                </div>
+                <div className="flex-1 grid gap-2">
+                  {riskSegments.length > 0 ? riskSegments.map((seg) => {
                     const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
                     return (
                       <div key={seg.label} className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 flex-shrink-0 rounded-sm" style={{ backgroundColor: seg.color }} />
+                        <div className="h-2.5 w-2.5 flex-shrink-0 rounded-sm" style={{ backgroundColor: seg.color }} />
                         <span className="flex-1 text-[11px] font-semibold text-slate-300">{seg.label} Risk</span>
                         <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
                         <span className="w-10 text-right text-[10px] text-slate-500">({numberFormat(seg.value)})</span>
                       </div>
                     );
-                  })}
+                  }) : (
+                    <p className="text-[11px] text-slate-500">No risk data yet.</p>
+                  )}
                 </div>
-              )}
+              </div>
             </DarkCard>
 
             <DarkCard>
@@ -568,18 +558,30 @@ async function ExecutiveDashboardSection({
             </DarkCard>
           </div>
 
-          {/* Row 3: Monthly bar chart + Connector activity */}
-          <div className="grid gap-5 lg:grid-cols-2">
+          {/* Row 3: Bar chart + Top categories + Connector activity */}
+          <div className="grid gap-5 lg:grid-cols-3">
             <DarkCard>
               <SectionHeader
                 label="Volume"
                 title="Approval Value Over Time"
-                subtitle="6-month view — approval count per month"
+                subtitle="Monthly approval counts"
                 href="/api/export/analytics?format=csv"
                 hrefLabel="View full report →"
               />
               <div className="mt-4">
-                <SVGBarChart data={barData} height={180} color="#7C3AED" />
+                <SVGBarChart data={barData} height={160} color="#7C3AED" />
+              </div>
+            </DarkCard>
+
+            <DarkCard>
+              <SectionHeader
+                label="Categories"
+                title="Top Approval Categories"
+                href="/approvals"
+                hrefLabel="View all →"
+              />
+              <div className="mt-4">
+                <CategoryBars items={report.approvals.byDepartment} />
               </div>
             </DarkCard>
 
@@ -587,7 +589,6 @@ async function ExecutiveDashboardSection({
               <SectionHeader
                 label="Sources"
                 title="Connector Activity"
-                subtitle="Approvals by source integration"
                 href="/integrations"
                 hrefLabel="View all →"
               />
@@ -596,20 +597,6 @@ async function ExecutiveDashboardSection({
               </div>
             </DarkCard>
           </div>
-
-          {/* Row 4: Top categories */}
-          <DarkCard>
-            <SectionHeader
-              label="Categories"
-              title="Top Approval Categories"
-              subtitle="Approvals grouped by category"
-              href="/approvals"
-              hrefLabel="View all →"
-            />
-            <div className="mt-4">
-              <CategoryBars items={report.approvals.byDepartment} />
-            </div>
-          </DarkCard>
 
         </div>
 
@@ -680,10 +667,9 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
           <div className="flex flex-col gap-4 pt-1">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-400">ApprovLine</p>
-                <h1 className="mt-1 text-2xl font-black tracking-tight text-white">Executive Analytics</h1>
+                <h1 className="text-2xl font-black tracking-tight text-white">Executive Analytics</h1>
                 <p className="mt-1 text-sm font-medium text-slate-400">
-                  Approval intelligence, risk signals, and compliance posture — boardroom-ready.
+                  Strategic intelligence for smarter, faster and safer decisions across your organization.
                 </p>
               </div>
 
@@ -703,8 +689,11 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
                   <PendingLink
                     href={`/api/export/analytics?format=csv${requestedDemo ? '&demo=1' : ''}`}
                     pendingText="Preparing..."
-                    className="inline-flex h-8 items-center justify-center rounded-lg border border-[#1E2D4A] bg-[#0D1526] px-3 text-xs font-bold text-slate-300 hover:bg-[#1a2a45] transition-colors"
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 text-xs font-bold text-white hover:bg-violet-500 transition-colors"
                   >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                     Export Report
                   </PendingLink>
                   {!requestedDemo && (
