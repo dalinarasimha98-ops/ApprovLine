@@ -68,26 +68,26 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CardTitle({ children }: { children: React.ReactNode }) {
+function CardTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <h3 className="mt-1 text-sm font-bold text-white">{children}</h3>
+    <h3 className={`text-sm font-bold text-white ${className}`}>{children}</h3>
   );
 }
 
 function SectionHeader({
   label, title, subtitle, href, hrefLabel,
 }: {
-  label: string; title: string; subtitle?: string; href?: string; hrefLabel?: string;
+  label?: string; title: string; subtitle?: string; href?: string; hrefLabel?: string;
 }) {
   return (
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0">
-        <SectionLabel>{label}</SectionLabel>
-        <CardTitle>{title}</CardTitle>
+        {label && <SectionLabel>{label}</SectionLabel>}
+        <CardTitle className={label ? 'mt-1' : ''}>{title}</CardTitle>
         {subtitle && <p className="mt-0.5 text-[10px] text-slate-500">{subtitle}</p>}
       </div>
       {href && (
-        <Link href={href} className="mt-1 flex-shrink-0 text-[10px] font-bold text-violet-400 transition-colors hover:text-violet-300">
+        <Link href={href} className="mt-0.5 flex-shrink-0 text-[10px] font-bold text-violet-400 transition-colors hover:text-violet-300">
           {hrefLabel ?? 'View all →'}
         </Link>
       )}
@@ -470,16 +470,26 @@ async function ExecutiveDashboardSection({
         {/* Left column */}
         <div className="grid gap-5">
           {/* Row 1: Line chart + Department donut */}
-          <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+          <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">
             <DarkCard>
-              <SectionHeader
-                label="Approval Volume"
-                title="Approval Volume Trend"
-                subtitle="Approved, Pending, Rejected"
-                href="/approvals"
-                hrefLabel="View all approvals →"
-              />
-              <div className="mt-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <CardTitle>Approval Volume Trend</CardTitle>
+                </div>
+                <Link href="/approvals" className="mt-0.5 flex-shrink-0 text-[10px] font-bold text-violet-400 transition-colors hover:text-violet-300">
+                  View all approvals →
+                </Link>
+              </div>
+              {/* Inline legend chips */}
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                {lineSeries.map((s) => (
+                  <div key={s.key} className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                    <span className="text-[10px] font-semibold text-slate-400">{s.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3">
                 <SVGLineChart
                   data={lineData}
                   series={lineSeries}
@@ -491,7 +501,6 @@ async function ExecutiveDashboardSection({
 
             <DarkCard>
               <SectionHeader
-                label="Department"
                 title="Approvals by Department"
                 href="/approvals"
               />
@@ -533,7 +542,6 @@ async function ExecutiveDashboardSection({
           <div className="grid gap-5 lg:grid-cols-3">
             <DarkCard>
               <SectionHeader
-                label="Risk"
                 title="Risk Distribution"
                 href="/analytics/drilldown/high-risk-approvals"
                 hrefLabel="View details →"
@@ -573,10 +581,9 @@ async function ExecutiveDashboardSection({
 
             <DarkCard>
               <SectionHeader
-                label="Investigations"
-                title="Overview"
+                title="Investigation Overview"
                 href="/investigations"
-                hrefLabel="View all →"
+                hrefLabel="View all investigations →"
               />
               {report.investigationMetrics.total === 0 ? (
                 <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] py-8 text-center">
@@ -643,7 +650,6 @@ async function ExecutiveDashboardSection({
 
             <DarkCard className="flex flex-col">
               <SectionHeader
-                label="Evidence"
                 title="Evidence Coverage"
                 href="/analytics/drilldown/traceability"
                 hrefLabel="View details →"
@@ -685,7 +691,6 @@ async function ExecutiveDashboardSection({
           <div className="grid gap-5 lg:grid-cols-3">
             <DarkCard>
               <SectionHeader
-                label="Volume"
                 title="Approval Value Over Time"
                 subtitle="Monthly approval counts"
                 href="/api/export/analytics?format=csv"
@@ -698,7 +703,6 @@ async function ExecutiveDashboardSection({
 
             <DarkCard>
               <SectionHeader
-                label="Categories"
                 title="Top Approval Categories"
                 href="/approvals"
                 hrefLabel="View all →"
@@ -710,7 +714,6 @@ async function ExecutiveDashboardSection({
 
             <DarkCard>
               <SectionHeader
-                label="Sources"
                 title="Connector Activity"
                 href="/integrations"
                 hrefLabel="View all →"
