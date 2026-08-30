@@ -648,13 +648,13 @@ async function ExecutiveDashboardSection({
                 href="/analytics/drilldown/traceability"
                 hrefLabel="View details →"
               />
-              <div className="mt-3 flex flex-1 w-full flex-col items-center justify-center gap-2">
+              <div className="mt-4 flex flex-1 w-full flex-col items-center justify-center gap-3">
                 <SVGArcGauge
                   value={report.evidenceCoverage}
                   label="Coverage"
-                  size={140}
                 />
-                {prev && (() => {
+                {(() => {
+                  if (!prev) return null;
                   const change = pctChange(report.evidenceCoverage, prev.evidenceCoverage);
                   if (!change) return null;
                   const isPos = !change.startsWith('-');
@@ -664,21 +664,19 @@ async function ExecutiveDashboardSection({
                     </p>
                   );
                 })()}
-              </div>
-              {/* Evidence counts below gauge */}
-              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[#1E2D4A] pt-3">
-                <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-[#1E2D4A] bg-[#0A0E1A] px-2 py-1.5 hover:border-[#2A3F66] transition-colors">
-                  <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">Evidence Events</span>
-                  <span className="mt-0.5 text-sm font-black text-white">
-                    {report.evidenceMetrics.totalEvents > 0 ? numberFormat(report.evidenceMetrics.totalEvents) : '—'}
-                  </span>
-                </Link>
-                <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-[#1E2D4A] bg-[#0A0E1A] px-2 py-1.5 hover:border-[#2A3F66] transition-colors">
-                  <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">Unified Records</span>
-                  <span className="mt-0.5 text-sm font-black text-white">
-                    {report.evidenceMetrics.unifiedRecords > 0 ? numberFormat(report.evidenceMetrics.unifiedRecords) : '—'}
-                  </span>
-                </Link>
+                {/* Show evidence counts only when they have real data */}
+                {(report.evidenceMetrics.totalEvents > 0 || report.evidenceMetrics.unifiedRecords > 0) && (
+                  <div className="w-full grid grid-cols-2 gap-2 border-t border-[#1E2D4A] pt-3">
+                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-[#1E2D4A] bg-[#0A0E1A] px-2 py-1.5 hover:border-[#2A3F66] transition-colors">
+                      <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">Evidence Events</span>
+                      <span className="mt-0.5 text-sm font-black text-white">{numberFormat(report.evidenceMetrics.totalEvents)}</span>
+                    </Link>
+                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-[#1E2D4A] bg-[#0A0E1A] px-2 py-1.5 hover:border-[#2A3F66] transition-colors">
+                      <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">Unified Records</span>
+                      <span className="mt-0.5 text-sm font-black text-white">{numberFormat(report.evidenceMetrics.unifiedRecords)}</span>
+                    </Link>
+                  </div>
+                )}
               </div>
             </DarkCard>
           </div>
