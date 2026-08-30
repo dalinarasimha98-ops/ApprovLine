@@ -7,10 +7,8 @@ import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { getDashboardTenant } from '@/lib/auth';
 import {
   getCoreAnalytics,
-  getPlaybookAnalytics,
   generateAIInsights,
   type CoreAnalytics,
-  type PlaybookAnalyticsSection,
   type DateRange,
 } from '@/services/analytics';
 import { prisma } from '@/lib/prisma';
@@ -232,7 +230,6 @@ async function ExecutiveDashboardSection({
   const total = report.approvals.total;
   const highRisk = report.riskReduction.highRiskApprovalsDetected;
   const hasNoLiveData = !requestedDemo && total === 0;
-  const exportSuffix = report.demoProjection ? '&demo=1' : '';
 
   // KPI icon helpers (inline SVG to avoid import)
   const icons = {
@@ -529,133 +526,6 @@ async function ExecutiveDashboardSection({
             </div>
           </DarkCard>
 
-          {/* Legacy export / playbook sections preserved below this fold */}
-          <div className="rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5">
-            <SectionLabel>Export</SectionLabel>
-            <CardTitle>Export Executive Report</CardTitle>
-            <p className="mt-1 text-xs font-semibold text-slate-400">Exports include the executive summary, ROI metrics, trends, risk summary, compliance scores, integration insights, and Playbook AI findings.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <PendingLink
-                href={`/api/export/analytics?format=pdf${exportSuffix}`}
-                pendingText="Preparing PDF..."
-                className="inline-flex h-9 items-center justify-center rounded-xl bg-violet-600 px-5 text-sm font-bold text-white shadow-sm hover:bg-violet-500"
-              >
-                Export PDF
-              </PendingLink>
-              <PendingLink
-                href={`/api/export/analytics?format=csv${exportSuffix}`}
-                pendingText="Preparing CSV..."
-                className="inline-flex h-9 items-center justify-center rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] px-5 text-sm font-bold text-slate-200 hover:bg-[#1a2a45]"
-              >
-                Export CSV
-              </PendingLink>
-              <PendingLink
-                href="/analytics/drilldown/approvals-captured"
-                pendingText="Opening..."
-                className="inline-flex h-9 items-center justify-center rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] px-5 text-sm font-bold text-slate-200 hover:bg-[#1a2a45]"
-              >
-                View All Approvals
-              </PendingLink>
-            </div>
-          </div>
-
-          {/* Compliance readiness drilldown */}
-          <div className="grid gap-5 lg:grid-cols-3">
-            <PendingLink
-              href="/analytics/drilldown/compliance-readiness"
-              pendingText="Opening..."
-              className="col-span-1 block rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 transition hover:border-[#2A3F66]"
-            >
-              <SectionLabel>Compliance</SectionLabel>
-              <CardTitle>Audit Posture</CardTitle>
-              <div className="mt-4 grid gap-3">
-                {[
-                  { label: 'Audit completeness', value: report.complianceReadiness.auditCompleteness },
-                  { label: 'Evidence coverage', value: report.complianceReadiness.evidenceCoverage },
-                  { label: 'Approval traceability', value: report.complianceReadiness.approvalTraceability },
-                ].map(({ label, value }) => (
-                  <div key={label} className="grid gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-400">{label}</span>
-                      <span className="text-xs font-black text-white">{value}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-[#1E2D4A]">
-                      <div
-                        className="h-1.5 rounded-full bg-emerald-500"
-                        style={{ width: `${Math.min(100, value)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 text-[10px] font-black uppercase tracking-wide text-violet-400">View readiness details &rarr;</p>
-            </PendingLink>
-
-            <PendingLink
-              href="/analytics/drilldown/high-risk-approvals"
-              pendingText="Opening..."
-              className="col-span-1 block rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 transition hover:border-[#2A3F66]"
-            >
-              <SectionLabel>Risk Reduction</SectionLabel>
-              <CardTitle>Controls Surfaced</CardTitle>
-              <div className="mt-4 grid gap-2">
-                {[
-                  { label: 'Missing approvals', value: report.riskReduction.missingApprovalsDetected },
-                  { label: 'Conditional approvals', value: report.riskReduction.conditionalApprovalsDetected },
-                  { label: 'High-risk detected', value: report.riskReduction.highRiskApprovalsDetected },
-                  { label: 'Without evidence', value: report.riskReduction.approvalsWithoutEvidence },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
-                    <span className="text-xs font-semibold text-slate-400">{label}</span>
-                    <span className="text-sm font-black text-white">{numberFormat(value)}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 text-[10px] font-black uppercase tracking-wide text-violet-400">View high-risk records &rarr;</p>
-            </PendingLink>
-
-            <PendingLink
-              href="/analytics/drilldown/integration-insights"
-              pendingText="Opening..."
-              className="col-span-1 block rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 transition hover:border-[#2A3F66]"
-            >
-              <SectionLabel>Integrations</SectionLabel>
-              <CardTitle>Source Contribution</CardTitle>
-              <div className="mt-4 grid gap-2">
-                {[
-                  ['Slack', report.integrations.slackApprovals],
-                  ['Gmail', report.integrations.gmailApprovals],
-                  ['Teams', report.integrations.teamsApprovals],
-                  ['Jira', report.integrations.jiraApprovals],
-                  ['Outlook', report.integrations.outlookApprovals],
-                  ['ServiceNow', report.integrations.serviceNowApprovals],
-                  ['Zoom', report.integrations.zoomApprovals],
-                ].map(([label, value]) => (
-                  <div key={label as string} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
-                    <span className="text-xs font-semibold text-slate-400">{label}</span>
-                    <span className="text-sm font-black text-white">{numberFormat(value as number)}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 text-[10px] font-black uppercase tracking-wide text-violet-400">View integration details &rarr;</p>
-            </PendingLink>
-          </div>
-
-          {/* Time saved */}
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              { label: 'Manual search', value: `${numberFormat(report.timeSaved.manualSearchHours)} hrs`, help: 'Search time avoided across Slack, Gmail, and tools.' },
-              { label: 'Audit prep', value: `${numberFormat(report.timeSaved.auditPreparationHours)} hrs`, help: 'Evidence reconstruction and audit prep avoided.' },
-              { label: 'Retrieval', value: `${numberFormat(report.timeSaved.retrievalHours)} hrs`, help: 'Approval lookup and source-link retrieval time avoided.' },
-            ].map(({ label, value, help }) => (
-              <DarkCard key={label}>
-                <SectionLabel>Time Saved</SectionLabel>
-                <p className="mt-2 text-2xl font-black text-white">{value}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-400">{label}</p>
-                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">{help}</p>
-              </DarkCard>
-            ))}
-          </div>
         </div>
 
         {/* Right: AI Insights Panel */}
@@ -666,79 +536,6 @@ async function ExecutiveDashboardSection({
         </div>
       </div>
     </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Playbook AI section (preserved from original)
-// ---------------------------------------------------------------------------
-
-async function PlaybookSection({ organizationId, requestedDemo }: { organizationId: string; requestedDemo: boolean }) {
-  const startedAt = Date.now();
-  let report: PlaybookAnalyticsSection;
-  try {
-    report = await getPlaybookAnalytics(organizationId, { demoProjection: requestedDemo });
-    recordPerformance('/analytics/playbook', Date.now() - startedAt, 200);
-  } catch (error) {
-    recordPerformance('/analytics/playbook', Date.now() - startedAt, 504);
-    return (
-      <SectionUnavailable
-        title="Playbook AI insights unavailable"
-        message={error instanceof Error ? error.message : 'The playbook analytics query did not complete.'}
-      />
-    );
-  }
-
-  return (
-    <DarkCard>
-      {report.degraded && <DegradedNotice label="Playbook AI insights" />}
-      <SectionLabel>Playbook AI</SectionLabel>
-      <CardTitle>Policy Intelligence</CardTitle>
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
-        <div>
-          <p className="text-xs font-black text-white">
-            {numberFormat(report.playbookAi.questionsAsked)} questions asked
-          </p>
-          <div className="mt-3 grid gap-2">
-            {report.playbookAi.mostReferencedPolicies.length === 0 ? (
-              <p className="text-xs font-semibold text-slate-500">Referenced policies appear after Playbook AI answers questions.</p>
-            ) : report.playbookAi.mostReferencedPolicies.map((item) => (
-              <div key={item.name} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
-                <span className="text-xs font-semibold text-slate-300">{item.name}</span>
-                <span className="text-xs font-black text-white">{numberFormat(item.count)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="grid gap-4">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500 mb-2">Missing policy areas</p>
-            <div className="flex flex-wrap gap-2">
-              {(report.playbookAi.missingPolicyAreas.length ? report.playbookAi.missingPolicyAreas : ['No missing policy areas detected']).map((item) => (
-                <span key={item} className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-400">
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500 mb-2">Approval bottlenecks</p>
-            {report.playbookAi.approvalBottlenecks.length === 0 ? (
-              <p className="text-xs font-semibold text-slate-500">Bottlenecks appear when conditional or pending records exist.</p>
-            ) : (
-              <div className="grid gap-2">
-                {report.playbookAi.approvalBottlenecks.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
-                    <span className="text-xs font-semibold text-slate-300">{item.name}</span>
-                    <span className="text-xs font-black text-white">{numberFormat(item.count)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </DarkCard>
   );
 }
 
@@ -849,10 +646,6 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
             />
           </Suspense>
 
-          {/* Playbook AI section */}
-          <Suspense fallback={<div className="h-48 animate-pulse rounded-2xl border border-[#1E2D4A] bg-[#0D1526]" />}>
-            <PlaybookSection organizationId={organizationId} requestedDemo={requestedDemo} />
-          </Suspense>
         </section>
       </div>
     </DashboardShell>
