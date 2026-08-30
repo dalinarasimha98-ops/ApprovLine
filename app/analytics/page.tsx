@@ -574,9 +574,9 @@ async function ExecutiveDashboardSection({
             <DarkCard>
               <SectionHeader
                 label="Investigations"
-                title="Investigation Overview"
+                title="Overview"
                 href="/investigations"
-                hrefLabel="View all investigations →"
+                hrefLabel="View all →"
               />
               {report.investigationMetrics.total === 0 ? (
                 <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] py-8 text-center">
@@ -598,28 +598,28 @@ async function ExecutiveDashboardSection({
                 const invStats = [
                   { label: 'Total', value: report.investigationMetrics.total, color: '#7C3AED', status: '', iconPath: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', trendUp: true, trendPct: null },
                   { label: 'Open', value: report.investigationMetrics.open, color: '#3B82F6', status: 'OPEN', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', trendUp: true, trendPct: Math.round((report.investigationMetrics.open / invTotal) * 100) },
-                  { label: 'In Progress', value: report.investigationMetrics.inProgress, color: '#8B5CF6', status: 'IN_PROGRESS', iconPath: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', trendUp: false, trendPct: Math.round((report.investigationMetrics.inProgress / invTotal) * 100) },
+                  { label: 'In Prog.', value: report.investigationMetrics.inProgress, color: '#8B5CF6', status: 'IN_PROGRESS', iconPath: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', trendUp: false, trendPct: Math.round((report.investigationMetrics.inProgress / invTotal) * 100) },
                   { label: 'Resolved', value: report.investigationMetrics.resolved, color: '#10B981', status: 'RESOLVED', iconPath: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', trendUp: true, trendPct: Math.round((report.investigationMetrics.resolved / invTotal) * 100) },
                   { label: 'Closed', value: report.investigationMetrics.closed, color: '#64748B', status: 'CLOSED', iconPath: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z', trendUp: false, trendPct: Math.round((report.investigationMetrics.closed / invTotal) * 100) },
                 ];
                 return (
                   <>
-                    <div className="mt-4 grid grid-cols-5 gap-2">
+                    <div className="mt-3 grid grid-cols-5 gap-1.5">
                       {invStats.map(({ label, value, color, status, iconPath, trendUp, trendPct }) => (
                         <Link
                           key={label}
                           href={`/investigations${status ? `?status=${status}` : ''}`}
-                          className="flex flex-col items-center rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] p-3 text-center transition-colors hover:border-[#2A3F66]"
+                          className="flex flex-col items-center rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] px-1 py-2.5 text-center transition-colors hover:border-[#2A3F66]"
                         >
-                          <div className="mb-2 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${color}20` }}>
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={2}>
+                          <div className="mb-1.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${color}20` }}>
+                            <svg className="h-4.5 w-4.5 h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d={iconPath} />
                             </svg>
                           </div>
-                          <span className="text-[10px] font-semibold leading-tight text-slate-500">{label}</span>
-                          <span className="mt-1 text-xl font-black text-white leading-none">{numberFormat(value)}</span>
+                          <span className="text-[9px] font-semibold leading-snug text-slate-500 whitespace-nowrap">{label}</span>
+                          <span className="mt-0.5 text-lg font-black text-white leading-none">{numberFormat(value)}</span>
                           {trendPct !== null && (
-                            <div className={`mt-1.5 flex items-center gap-0.5 text-[10px] font-bold ${trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                            <div className={`mt-1 flex items-center gap-0.5 text-[9px] font-bold ${trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
                               <span>{trendUp ? '↗' : '↘'}</span>
                               <span>{trendPct}%</span>
                             </div>
