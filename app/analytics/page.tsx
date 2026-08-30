@@ -297,20 +297,24 @@ async function ExecutiveDashboardSection({
     ),
   };
 
-  // Department donut colors
+  // Department donut colors — distinct palette matching reference
   const DEPT_COLORS: Record<string, string> = {
-    Finance: '#2563EB',
-    Procurement: '#7C3AED',
-    Engineering: '#0891B2',
-    Legal: '#4F46E5',
-    Operations: '#D97706',
-    HR: '#059669',
+    Finance: '#22C55E',
+    Procurement: '#3B82F6',
+    Engineering: '#6366F1',
+    Legal: '#F87171',
+    Operations: '#F59E0B',
+    HR: '#14B8A6',
+    Compliance: '#A78BFA',
+    Marketing: '#FB923C',
+    Security: '#818CF8',
     Unassigned: '#475569',
   };
-  const deptSegments = report.departmentBreakdown.map((d) => ({
+  const DEPT_FALLBACK_COLORS = ['#22C55E','#3B82F6','#6366F1','#F87171','#F59E0B','#14B8A6','#A78BFA','#FB923C','#818CF8'];
+  const deptSegments = report.departmentBreakdown.map((d, i) => ({
     label: d.name,
     value: d.count,
-    color: DEPT_COLORS[d.name] ?? '#6366F1',
+    color: DEPT_COLORS[d.name] ?? DEPT_FALLBACK_COLORS[i % DEPT_FALLBACK_COLORS.length],
   }));
 
   // Risk distribution donut
@@ -491,29 +495,32 @@ async function ExecutiveDashboardSection({
                 title="Approvals by Department"
                 href="/approvals"
               />
-              <div className="mt-4 flex items-center gap-4">
+              <div className="mt-4 flex items-start gap-5">
                 <div className="flex-shrink-0">
                   <SVGDonutChart
-                    segments={deptSegments}
-                    size={120}
-                    strokeWidth={20}
+                    segments={deptSegments.length > 0 ? deptSegments : [{ label: 'No data', value: 1, color: '#1E2D4A' }]}
+                    size={140}
+                    strokeWidth={24}
                     centerLabel={numberFormat(total)}
-                    centerSublabel="total"
+                    centerSublabel="Total"
+                    showLegend={false}
                   />
                 </div>
-                <div className="min-w-0 flex-1 grid gap-1.5">
-                  {deptSegments.map((seg) => {
+                <div className="min-w-0 flex-1 grid gap-1">
+                  {deptSegments.length === 0 ? (
+                    <p className="text-[11px] text-slate-500">No department data yet.</p>
+                  ) : deptSegments.map((seg) => {
                     const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
                     return (
                       <Link
                         key={seg.label}
                         href={`/approvals?department=${encodeURIComponent(seg.label)}`}
-                        className="flex items-center gap-1.5 rounded-md px-1 py-0.5 transition-colors hover:bg-[#1E2D4A]/50"
+                        className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-[#1E2D4A]/60"
                       >
-                        <div className="h-2 w-2 flex-shrink-0 rounded-sm" style={{ backgroundColor: seg.color }} />
+                        <div className="h-2.5 w-2.5 flex-shrink-0 rounded-sm" style={{ backgroundColor: seg.color }} />
                         <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-slate-300">{seg.label}</span>
-                        <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
-                        <span className="w-10 text-right text-[10px] text-slate-500">({numberFormat(seg.value)})</span>
+                        <span className="text-[11px] font-bold text-white">{pct}%</span>
+                        <span className="w-9 text-right text-[10px] text-slate-500">({numberFormat(seg.value)})</span>
                       </Link>
                     );
                   })}
