@@ -1,434 +1,679 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
-import { RefreshButton } from '@/components/system/RefreshButton';
-import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
-import { getCoreAnalytics, getPlaybookAnalytics, type CoreAnalytics, type PlaybookAnalyticsSection } from '@/services/analytics';
+import {
+  getCoreAnalytics,
+  getPlaybookAnalytics,
+  generateAIInsights,
+  type CoreAnalytics,
+  type PlaybookAnalyticsSection,
+  type DateRange,
+} from '@/services/analytics';
+import { prisma } from '@/lib/prisma';
 import { recordPerformance } from '@/lib/performance';
+import { withTimeout } from '@/lib/performance';
 import { enforcePageRole } from '@/lib/rbac';
+import { AnalyticsDatePicker } from '@/components/analytics/AnalyticsDatePicker';
+import { AnalyticsFilters } from '@/components/analytics/AnalyticsFilters';
+import { SVGLineChart } from '@/components/analytics/SVGLineChart';
+import { SVGDonutChart } from '@/components/analytics/SVGDonutChart';
+import { SVGBarChart } from '@/components/analytics/SVGBarChart';
+import { SVGArcGauge } from '@/components/analytics/SVGArcGauge';
+import { KPICard } from '@/components/analytics/KPICard';
+import { AIInsightsPanel } from '@/components/analytics/AIInsightsPanel';
 
 export const dynamic = 'force-dynamic';
 
 type AnalyticsPageProps = {
-  searchParams: Promise<{ demo?: string }>;
+  searchParams: Promise<{
+    demo?: string;
+    from?: string;
+    to?: string;
+    prevFrom?: string;
+    prevTo?: string;
+    department?: string;
+    riskLevel?: string;
+    status?: string;
+    source?: string;
+  }>;
 };
 
-function numberFormat(value: number) {
-  return new Intl.NumberFormat('en-US').format(value);
+function numberFormat(n: number) {
+  return new Intl.NumberFormat('en-US').format(n);
 }
 
-function MetricCard({
-  label,
-  value,
-  help,
-  tone = 'blue',
-  href,
-}: {
-  label: string;
-  value: string;
-  help: string;
-  tone?: 'blue' | 'dark' | 'amber' | 'green';
-  href?: string;
-}) {
-  const toneClass = {
-    blue: 'bg-blue-50 text-[#2155d9]',
-    dark: 'bg-slate-950 text-white',
-    amber: 'bg-amber-50 text-amber-800',
-    green: 'bg-emerald-50 text-emerald-700',
-  }[tone];
-
-  const content = (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className={`mb-4 inline-flex rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${toneClass}`}>{label}</div>
-      <p className="text-3xl font-black tracking-tight text-slate-950">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-500">{help}</p>
-      {href ? <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View details &gt;</p> : null}
-    </div>
-  );
-
-  if (!href) return content;
-
-  return (
-    <PendingLink href={href} pendingText="Opening details..." className="block transition hover:-translate-y-0.5 hover:shadow-md">
-      {content}
-    </PendingLink>
-  );
+function pctChange(current: number | undefined, previous: number | undefined): string | null {
+  if (current === undefined || previous === undefined || previous === 0) return null;
+  const pct = Math.round(((current - previous) / previous) * 100);
+  return `${pct >= 0 ? '+' : ''}${pct}%`;
 }
 
-function ProgressRow({ label, value }: { label: string; value: number }) {
+// ---------------------------------------------------------------------------
+// Card wrappers
+// ---------------------------------------------------------------------------
+
+function DarkCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="grid gap-2">
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-bold text-slate-700">{label}</span>
-        <span className="font-black text-slate-950">{value}%</span>
-      </div>
-      <div className="h-2.5 rounded-full bg-slate-100">
-        <div className="h-2.5 rounded-full bg-[#2155d9]" style={{ width: `${Math.min(100, value)}%` }} />
-      </div>
+    <div className={`rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 ${className}`}>
+      {children}
     </div>
   );
 }
 
-function CountList({ items, empty }: { items: Array<{ name: string; count: number }>; empty: string }) {
-  if (items.length === 0) return <p className="rounded-xl border border-dashed border-slate-200 p-4 text-sm font-semibold text-slate-500">{empty}</p>;
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-400">{children}</p>
+  );
+}
+
+function CardTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="mt-1 text-sm font-bold text-white">{children}</h3>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Connector activity horizontal bars
+// ---------------------------------------------------------------------------
+
+function ConnectorBars({ items }: { items: CoreAnalytics['connectorActivity'] }) {
+  const max = Math.max(...items.map((i) => i.count), 1);
+  const statusColor = (s: string) =>
+    s === 'CONNECTED' ? 'bg-emerald-400' :
+    s === 'ERROR' || s === 'NEEDS_REAUTH' ? 'bg-red-400' :
+    'bg-slate-500';
+
   return (
     <div className="grid gap-3">
-      {items.map((item) => (
-        <div key={item.name} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-          <span className="text-sm font-bold text-slate-700">{item.name}</span>
-          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-950 shadow-sm">{numberFormat(item.count)}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TrendChart({ data }: { data: Array<{ name: string; count: number }> }) {
-  const max = Math.max(...data.map((item) => item.count), 1);
-  return (
-    <div className="grid min-h-64 grid-cols-6 items-end gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-      {data.map((item) => (
-        <div key={item.name} className="grid gap-2 text-center">
-          <div className="flex h-44 items-end">
+      {items.length === 0 ? (
+        <p className="text-xs font-semibold text-slate-500">No connector data yet. Connect integrations to see activity.</p>
+      ) : items.map((item) => (
+        <div key={item.name} className="grid gap-1.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${statusColor(item.status)}`} />
+              <span className="text-xs font-semibold text-slate-300">{item.name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white">{numberFormat(item.count)}</span>
+              <span className="w-8 text-right text-[10px] text-slate-500">{item.percentage}%</span>
+            </div>
+          </div>
+          <div className="h-1.5 rounded-full bg-[#1E2D4A]">
             <div
-              className="w-full rounded-t-xl bg-gradient-to-t from-[#2155d9] to-[#74a0ff] shadow-sm"
-              style={{ height: `${Math.max(12, (item.count / max) * 100)}%` }}
-              title={`${item.name}: ${item.count}`}
+              className="h-1.5 rounded-full bg-violet-500"
+              style={{ width: `${Math.max(2, (item.count / max) * 100)}%` }}
             />
           </div>
-          <span className="text-xs font-black text-slate-500">{item.name}</span>
-          <span className="text-xs font-black text-slate-950">{numberFormat(item.count)}</span>
         </div>
       ))}
     </div>
   );
 }
 
-function DepartmentTable({ items }: { items: Array<{ name: string; count: number }> }) {
-  if (items.length === 0) {
-    return <p className="rounded-xl border border-dashed border-slate-200 p-4 text-sm font-semibold text-slate-500">Department analytics appear after approvals are captured.</p>;
-  }
-  const total = Math.max(items.reduce((sum, item) => sum + item.count, 0), 1);
+// ---------------------------------------------------------------------------
+// Category horizontal bars
+// ---------------------------------------------------------------------------
+
+function CategoryBars({ items }: { items: Array<{ name: string; count: number }> }) {
+  const total = Math.max(items.reduce((s, i) => s + i.count, 0), 1);
+  const max = Math.max(...items.map((i) => i.count), 1);
+
+  const COLORS = ['#7C3AED', '#2563EB', '#059669', '#D97706', '#DC2626', '#0891B2', '#9333EA', '#65A30D'];
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200">
-      <table className="w-full border-collapse text-left text-sm">
-        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-          <tr>
-            <th className="px-4 py-3">Department</th>
-            <th className="px-4 py-3">Approvals</th>
-            <th className="px-4 py-3">Share</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.name} className="border-t border-slate-100">
-              <td className="px-4 py-3 font-black text-slate-950">{item.name}</td>
-              <td className="px-4 py-3 font-semibold text-slate-600">{numberFormat(item.count)}</td>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-full rounded-full bg-slate-100">
-                    <div className="h-2 rounded-full bg-[#2155d9]" style={{ width: `${Math.round((item.count / total) * 100)}%` }} />
-                  </div>
-                  <span className="w-10 text-right text-xs font-black text-slate-500">{Math.round((item.count / total) * 100)}%</span>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="grid gap-3">
+      {items.length === 0 ? (
+        <p className="text-xs font-semibold text-slate-500">Categories appear once approvals are captured.</p>
+      ) : items.map((item, idx) => (
+        <div key={item.name} className="grid gap-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-300">{item.name}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white">{numberFormat(item.count)}</span>
+              <span className="w-8 text-right text-[10px] text-slate-500">{Math.round((item.count / total) * 100)}%</span>
+            </div>
+          </div>
+          <div className="h-1.5 rounded-full bg-[#1E2D4A]">
+            <div
+              className="h-1.5 rounded-full"
+              style={{
+                width: `${Math.max(2, (item.count / max) * 100)}%`,
+                backgroundColor: COLORS[idx % COLORS.length],
+              }}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Degraded / unavailable notices
+// ---------------------------------------------------------------------------
 
 function DegradedNotice({ label }: { label: string }) {
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-900">
-      {label}: showing the last successfully loaded data while the live query recovers.
-    </div>
-  );
-}
-
-function ReportPreview({ report, exportSuffix }: { report: CoreAnalytics; exportSuffix: string }) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2155d9]">Executive ROI Report Preview</p>
-          <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Preview the exact business summary before exporting.</h3>
-          <p className="mt-3 max-w-4xl text-base leading-7 text-slate-600">{report.summary}</p>
-        </div>
-        <div className="rounded-2xl bg-[#07111f] px-5 py-4 text-white">
-          <p className="text-xs font-black uppercase tracking-wide text-blue-200">Readiness</p>
-          <p className="mt-1 text-3xl font-black">{report.complianceReadiness.approvalTraceability}%</p>
-          <p className="text-xs font-semibold text-slate-300">approval traceability</p>
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Captured" value={numberFormat(report.approvals.total)} help="Approval decisions available for executive review." href="/analytics/drilldown/approvals-captured" />
-        <MetricCard label="Hours saved" value={`${numberFormat(report.timeSaved.totalHours)} hrs`} help="Estimated manual audit and retrieval effort avoided." tone="green" href="/analytics/drilldown/time-saved" />
-        <MetricCard label="Risk surfaced" value={numberFormat(report.riskReduction.highRiskApprovalsDetected)} help="High-risk approval records identified for control review." tone="amber" href="/analytics/drilldown/high-risk-approvals" />
-        <MetricCard label="Coverage" value={`${report.complianceReadiness.evidenceCoverage}%`} help="Approval records with usable evidence links or snippets." tone="dark" href="/analytics/drilldown/traceability" />
-      </div>
-
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <div>
-          <p className="mb-3 text-sm font-black text-slate-950">Approval trends</p>
-          <TrendChart data={report.approvals.trends} />
-        </div>
-        <div>
-          <p className="mb-3 text-sm font-black text-slate-950">High-risk approval summary</p>
-          <CountList items={report.highRiskSummary} empty="No high-risk approval records detected yet." />
-        </div>
-      </div>
-
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <div>
-          <p className="mb-3 text-sm font-black text-slate-950">Department breakdown</p>
-          <DepartmentTable items={report.approvals.byDepartment} />
-        </div>
-          <PendingLink href="/analytics/drilldown/compliance-readiness" pendingText="Opening compliance details..." className="block rounded-2xl border border-slate-200 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
-            <p className="text-sm font-black text-slate-950">Compliance score</p>
-            <div className="mt-5 grid gap-5">
-              <ProgressRow label="Audit completeness" value={report.complianceReadiness.auditCompleteness} />
-              <ProgressRow label="Evidence coverage" value={report.complianceReadiness.evidenceCoverage} />
-              <ProgressRow label="Approval traceability" value={report.complianceReadiness.approvalTraceability} />
-            </div>
-            <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View details &gt;</p>
-          </PendingLink>
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <p className="text-sm font-black text-slate-950">Export this preview</p>
-        <p className="mt-1 text-sm font-semibold text-slate-500">Exports include the executive summary, ROI metrics, trends, risk summary, compliance scores, integration insights, and Playbook AI findings.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <PendingLink href={`/api/export/analytics?format=pdf${exportSuffix}`} pendingText="Preparing PDF..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
-            Export PDF
-          </PendingLink>
-          <PendingLink href={`/api/export/analytics?format=csv${exportSuffix}`} pendingText="Preparing CSV..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50">
-            Export CSV
-          </PendingLink>
-        </div>
-      </div>
+    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-xs font-bold text-amber-300">
+      {label}: showing last successfully loaded data while the live query recovers.
     </div>
   );
 }
 
 function SectionUnavailable({ title, message }: { title: string; message: string }) {
   return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-wide">{title}</p>
-      <p className="mt-2 text-sm font-semibold">{message}</p>
+    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5">
+      <p className="text-xs font-black uppercase tracking-wide text-amber-300">{title}</p>
+      <p className="mt-2 text-sm font-semibold text-amber-200">{message}</p>
     </div>
   );
 }
 
-/**
- * Core ROI metrics: captured approvals, time saved, risk, compliance,
- * integrations, trends. One cached, timeout-guarded fetch
- * (getCoreAnalytics) - if it fails entirely (no live or stale data
- * available), this renders its own unavailable state without affecting
- * the Playbook AI section below.
- */
-async function CoreAnalyticsSection({ organizationId, requestedDemo }: { organizationId: string; requestedDemo: boolean }) {
+// ---------------------------------------------------------------------------
+// Main dashboard section (core analytics)
+// ---------------------------------------------------------------------------
+
+async function ExecutiveDashboardSection({
+  organizationId,
+  requestedDemo,
+  dateRange,
+  prevDateRange,
+}: {
+  organizationId: string;
+  requestedDemo: boolean;
+  dateRange?: DateRange;
+  prevDateRange?: DateRange;
+}) {
   const startedAt = Date.now();
-  let liveReport: CoreAnalytics;
+  let report: CoreAnalytics;
   try {
-    liveReport = await getCoreAnalytics(organizationId, { demoProjection: requestedDemo });
+    report = await getCoreAnalytics(organizationId, {
+      demoProjection: requestedDemo,
+      dateRange,
+      prevDateRange,
+    });
     recordPerformance('/analytics/core', Date.now() - startedAt, 200);
   } catch (error) {
     recordPerformance('/analytics/core', Date.now() - startedAt, 504);
     return (
       <SectionUnavailable
-        title="Core approval metrics unavailable"
-        message={error instanceof Error ? error.message : 'The analytics query did not complete. Other sections on this page are unaffected.'}
+        title="Core analytics unavailable"
+        message={error instanceof Error ? error.message : 'The analytics query did not complete. Please retry.'}
       />
     );
   }
 
-  // Demo projection is opt-in only (?demo=1) - it must never turn on by
-  // itself. An earlier version silently swapped in scaled demo numbers
-  // whenever the live total was 0, which is exactly the kind of surprise
-  // that led to this page being reported as "showing fake data": a real
-  // workspace legitimately at zero approvals looked identical to one
-  // showing synthetic projections, with only a banner (easy to miss) as
-  // the difference. A workspace with zero approvals now gets a real,
-  // honest empty state instead - the "Use demo analytics" button below is
-  // still there for anyone who wants the preview on purpose.
-  const report = liveReport;
-  const hasNoLiveData = !requestedDemo && report.approvals.total === 0;
+  const insights = generateAIInsights(report);
+
+  // Fetch top high-risk approvals for the panel
+  const highRiskApprovals = await withTimeout(
+    'analytics:highRisk',
+    prisma.approvalRecord.findMany({
+      where: {
+        organizationId,
+        OR: [{ riskLevel: 'high' }, { riskLevel: 'critical' }],
+        ...(dateRange
+          ? { createdAt: { gte: dateRange.from, lte: dateRange.to } }
+          : {}),
+      },
+      select: { id: true, subject: true, riskLevel: true, department: true, approverName: true },
+      orderBy: [{ riskLevel: 'desc' }, { createdAt: 'desc' }],
+      take: 5,
+    }),
+    2000,
+  ).catch(() => []);
+
+  const prev = report.prevPeriod;
+  const total = report.approvals.total;
+  const highRisk = report.riskReduction.highRiskApprovalsDetected;
+  const hasNoLiveData = !requestedDemo && total === 0;
   const exportSuffix = report.demoProjection ? '&demo=1' : '';
+
+  // KPI icon helpers (inline SVG to avoid import)
+  const icons = {
+    approvals: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    value: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    time: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    risk: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    ),
+    evidence: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+    compliance: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    ),
+  };
+
+  // Department donut colors
+  const DEPT_COLORS: Record<string, string> = {
+    Finance: '#2563EB',
+    Procurement: '#7C3AED',
+    Engineering: '#0891B2',
+    Legal: '#4F46E5',
+    Operations: '#D97706',
+    HR: '#059669',
+    Unassigned: '#475569',
+  };
+  const deptSegments = report.departmentBreakdown.map((d) => ({
+    label: d.name,
+    value: d.count,
+    color: DEPT_COLORS[d.name] ?? '#6366F1',
+  }));
+
+  // Risk distribution donut
+  const riskSegments = [
+    { label: 'Low', value: report.approvals.total > 0 ? Math.max(0, report.approvals.total - report.riskReduction.highRiskApprovalsDetected - report.riskReduction.conditionalApprovalsDetected) : 0, color: '#10B981' },
+    { label: 'Medium', value: report.riskReduction.conditionalApprovalsDetected, color: '#F59E0B' },
+    { label: 'High', value: highRisk, color: '#EF4444' },
+    { label: 'Critical', value: 0, color: '#991B1B' }, // critical is included in highRisk
+  ].filter((s) => s.value > 0);
+
+  // Time series for line chart
+  const lineData = report.timeSeries.map((p) => ({
+    label: p.label,
+    approved: p.approved,
+    rejected: p.rejected,
+    pending: p.pending,
+  }));
+  const lineSeries = [
+    { key: 'approved', color: '#10B981', label: 'Approved' },
+    { key: 'pending', color: '#7C3AED', label: 'Pending' },
+    { key: 'rejected', color: '#EF4444', label: 'Rejected' },
+  ];
+
+  // Bar chart for approval volume by month
+  const barData = report.approvals.trends.map((t) => ({ label: t.name, value: t.count }));
 
   return (
     <>
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-[#07111f] p-6 text-white shadow-sm sm:p-7">
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+      {/* Demo mode banner */}
+      {report.demoProjection && (
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border-2 border-violet-500/50 bg-violet-500/10 p-4 sm:flex-row sm:items-center">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-200">Executive ROI Dashboard</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Boardroom-ready business value view</h2>
-            <p className="mt-3 max-w-4xl text-base leading-7 text-slate-200">
-              See the full ApprovLine ROI story before exporting: captured approvals, risk reduction, time saved, compliance readiness, integrations, and Playbook AI insights.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {['CEO', 'CFO', 'CTO', 'Head of Legal', 'Compliance Officer', 'Procurement Head'].map((role) => (
-                <span key={role} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-black text-blue-100">{role}</span>
-              ))}
-            </div>
+            <h3 className="font-black text-white">Demo analytics preview — synthetic numbers only</h3>
+            <p className="mt-1 text-sm font-semibold text-slate-300">Use this for sales conversations. Every figure is scaled/fabricated.</p>
           </div>
-          <div className={`rounded-2xl border p-4 ${report.demoProjection ? 'border-amber-400/60 bg-amber-400/10' : 'border-white/10 bg-white/[0.06]'}`}>
-            <p className={`text-xs font-black uppercase tracking-wide ${report.demoProjection ? 'text-amber-300' : 'text-blue-200'}`}>Report mode</p>
-            <p className="mt-1 text-sm font-bold text-white">{report.demoProjection ? '⚠ Demo preview (synthetic numbers)' : 'Live workspace (real data)'}</p>
-            <p className="mt-1 text-xs font-semibold text-slate-300">Generated {new Date(report.generatedAt).toLocaleString()}</p>
-          </div>
-        </div>
-      </div>
-
-      {report.degraded ? <DegradedNotice label="Core approval metrics" /> : null}
-
-      {report.demoProjection ? (
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border-2 border-[#2155d9] bg-blue-50 p-4 shadow-sm sm:flex-row sm:items-center">
-          <div>
-            <h3 className="font-black text-slate-950">⚠ Demo analytics preview enabled — these numbers are a synthetic projection, not your real data</h3>
-            <p className="mt-1 text-sm font-semibold text-slate-600">Use this customer-ready preview for sales conversations. Every figure below is scaled/fabricated for presentation purposes.</p>
-          </div>
-          <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
+          <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex h-9 items-center justify-center rounded-lg border border-[#1E2D4A] bg-[#0D1526] px-4 text-sm font-bold text-slate-200 hover:bg-[#1a2a45]">
             View live data
           </PendingLink>
         </div>
-      ) : hasNoLiveData ? (
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm sm:flex-row sm:items-center">
+      )}
+
+      {hasNoLiveData && (
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-4 sm:flex-row sm:items-center">
           <div>
-            <h3 className="font-black text-slate-950">No approvals captured yet</h3>
-            <p className="mt-1 text-sm font-semibold text-slate-600">These are your real, live numbers - they are zero because no approvals have been captured for this workspace yet. Connect Slack, Gmail, or another integration, or preview a customer-ready demo instead.</p>
+            <h3 className="font-black text-white">No approvals captured yet</h3>
+            <p className="mt-1 text-sm font-semibold text-slate-400">These are your real, live numbers — zero because no approvals have been captured. Connect an integration to start.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
-              Preview demo analytics
+            <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex h-9 items-center justify-center rounded-lg bg-violet-600 px-4 text-sm font-bold text-white hover:bg-violet-500">
+              Preview demo
             </PendingLink>
             <form action="/api/demo/seed" method="post">
-              <FormSubmitButton pendingText="Generating..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
+              <FormSubmitButton pendingText="Generating..." className="inline-flex h-9 items-center justify-center rounded-lg border border-[#1E2D4A] bg-[#0D1526] px-4 text-sm font-bold text-slate-200">
                 Generate demo data
               </FormSubmitButton>
             </form>
           </div>
         </div>
-      ) : (
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm sm:flex-row sm:items-center">
-          <div>
-            <h3 className="font-black text-slate-950">Want to present a fuller customer story?</h3>
-            <p className="mt-1 text-sm font-semibold text-slate-600">Switch to demo preview to show realistic monthly executive ROI projections.</p>
-          </div>
-          <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex min-h-0 h-10 items-center justify-center rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
-            Use demo analytics
-          </PendingLink>
-        </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Approvals captured" value={numberFormat(report.approvals.total)} help="Total approval and rejection decisions in the executive reporting window." href="/analytics/drilldown/approvals-captured" />
-        <MetricCard label="Time saved" value={`${numberFormat(report.timeSaved.totalHours)} hrs`} help="Manual search, retrieval, and audit preparation effort avoided." tone="green" href="/analytics/drilldown/time-saved" />
-        <MetricCard label="High-risk approvals" value={numberFormat(report.riskReduction.highRiskApprovalsDetected)} help="Security, compliance, legal, finance, and procurement decisions surfaced." tone="amber" href="/analytics/drilldown/high-risk-approvals" />
-        <MetricCard label="Traceability" value={`${report.complianceReadiness.approvalTraceability}%`} help="Records with approver, source, timestamp, and decision context." tone="dark" href="/analytics/drilldown/traceability" />
+      {report.degraded && <DegradedNotice label="Core analytics" />}
+
+      {/* 6 KPI Cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+        <KPICard
+          title="Total Approvals"
+          value={numberFormat(total)}
+          icon={icons.approvals}
+          accentColor="#7C3AED"
+          currentNumeric={total}
+          prevValue={prev?.total}
+          href="/analytics/drilldown/approvals-captured"
+          trendLabel={prev ? `${pctChange(total, prev.total) ?? '—'} vs previous period` : undefined}
+        />
+        <KPICard
+          title="Approved Value"
+          value={report.totalValue !== null ? `$${numberFormat(Math.round(report.totalValue / 1000))}K` : '—'}
+          icon={icons.value}
+          accentColor="#059669"
+          href="/analytics/drilldown/approvals-captured"
+          trendLabel={report.totalValue === null ? 'No value data' : undefined}
+        />
+        <KPICard
+          title="Avg Approval Time"
+          value={`${report.avgApprovalTimeHours}`}
+          unit="hrs"
+          icon={icons.time}
+          accentColor="#0891B2"
+          currentNumeric={report.avgApprovalTimeHours}
+          prevValue={prev?.avgApprovalTimeHours}
+          trendLabel={prev ? `${pctChange(report.avgApprovalTimeHours, prev.avgApprovalTimeHours) ?? '—'} vs previous period` : undefined}
+        />
+        <KPICard
+          title="High Risk Approvals"
+          value={numberFormat(highRisk)}
+          icon={icons.risk}
+          accentColor="#EF4444"
+          currentNumeric={highRisk}
+          prevValue={prev?.highRisk}
+          href="/analytics/drilldown/high-risk-approvals"
+          trendLabel={prev ? `${pctChange(highRisk, prev.highRisk) ?? '—'} vs previous period` : undefined}
+        />
+        <KPICard
+          title="Evidence Coverage"
+          value={`${report.evidenceCoverage}`}
+          unit="%"
+          icon={icons.evidence}
+          accentColor="#F59E0B"
+          currentNumeric={report.evidenceCoverage}
+          prevValue={prev?.evidenceCoverage}
+          href="/analytics/drilldown/traceability"
+          trendLabel={prev ? `${pctChange(report.evidenceCoverage, prev.evidenceCoverage) ?? '—'} vs previous period` : undefined}
+        />
+        <KPICard
+          title="Compliance Score"
+          value={`${report.complianceScore}`}
+          unit="%"
+          icon={icons.compliance}
+          accentColor="#10B981"
+          currentNumeric={report.complianceScore}
+          prevValue={prev?.complianceScore}
+          href="/analytics/drilldown/compliance-readiness"
+          trendLabel={prev ? `${pctChange(report.complianceScore, prev.complianceScore) ?? '—'} vs previous period` : undefined}
+        />
       </div>
 
-      <ReportPreview report={report} exportSuffix={exportSuffix} />
-
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <PendingLink href="/analytics/drilldown/approval-categories" pendingText="Opening category details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Approvals captured</p>
-          <h3 className="mt-1 text-lg font-black text-slate-950">Approvals by department</h3>
-          <div className="mt-5">
-            <DepartmentTable items={report.approvals.byDepartment} />
-          </div>
-          <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View department and category details &gt;</p>
-        </PendingLink>
-
-        <PendingLink href="/analytics/drilldown/integration-insights" pendingText="Opening integration details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Approvals by source</p>
-          <h3 className="mt-1 text-lg font-black text-slate-950">Integration contribution</h3>
-          <div className="mt-5">
-            <CountList items={report.approvals.bySource} empty="Source data appears after Slack or Gmail ingestion runs." />
-          </div>
-          <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View integration details &gt;</p>
-        </PendingLink>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Time saved</p>
-          <h3 className="mt-1 text-lg font-black text-slate-950">Operational effort avoided</h3>
-          <div className="mt-5 grid gap-3">
-            <MetricCard label="Manual search" value={`${numberFormat(report.timeSaved.manualSearchHours)} hrs`} help="Time avoided searching Slack, Gmail, and audit trails." />
-            <MetricCard label="Audit prep" value={`${numberFormat(report.timeSaved.auditPreparationHours)} hrs`} help="Evidence reconstruction effort avoided." />
-            <MetricCard label="Retrieval" value={`${numberFormat(report.timeSaved.retrievalHours)} hrs`} help="Approval lookup and source-link retrieval time avoided." />
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Risk reduction</p>
-          <h3 className="mt-1 text-lg font-black text-slate-950">Controls surfaced</h3>
-          <div className="mt-5 grid gap-3">
-            {[
-              ['Missing approvals detected', report.riskReduction.missingApprovalsDetected],
-              ['Conditional approvals detected', report.riskReduction.conditionalApprovalsDetected],
-              ['High-risk approvals detected', report.riskReduction.highRiskApprovalsDetected],
-              ['Approvals without evidence', report.riskReduction.approvalsWithoutEvidence],
-            ].map(([label, value]) => (
-              <div key={label as string} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-                <span className="text-sm font-bold text-slate-700">{label}</span>
-                <span className="text-lg font-black text-slate-950">{numberFormat(value as number)}</span>
+      {/* Main content + AI panel */}
+      <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+        {/* Left column */}
+        <div className="grid gap-5">
+          {/* Row 1: Line chart + Department donut */}
+          <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+            <DarkCard>
+              <SectionLabel>Approval Volume</SectionLabel>
+              <CardTitle>Approval Volume Trend</CardTitle>
+              <p className="mt-0.5 text-[10px] text-slate-500">Last 30 days — Approved, Pending, Rejected</p>
+              <div className="mt-4">
+                <SVGLineChart
+                  data={lineData}
+                  series={lineSeries}
+                  height={200}
+                  labelEvery={7}
+                />
               </div>
+            </DarkCard>
+
+            <DarkCard>
+              <SectionLabel>Department</SectionLabel>
+              <CardTitle>Approvals by Department</CardTitle>
+              <div className="mt-4 flex justify-center">
+                <SVGDonutChart
+                  segments={deptSegments}
+                  size={140}
+                  strokeWidth={24}
+                  centerLabel={numberFormat(total)}
+                  centerSublabel="total"
+                />
+              </div>
+            </DarkCard>
+          </div>
+
+          {/* Row 2: Risk Donut + Investigation Overview + Evidence Gauge */}
+          <div className="grid gap-5 lg:grid-cols-3">
+            <DarkCard>
+              <SectionLabel>Risk</SectionLabel>
+              <CardTitle>Risk Distribution</CardTitle>
+              <div className="mt-4 flex justify-center">
+                <SVGDonutChart
+                  segments={riskSegments.length > 0 ? riskSegments : [{ label: 'No data', value: 1, color: '#1E2D4A' }]}
+                  size={130}
+                  strokeWidth={22}
+                  centerLabel={numberFormat(total)}
+                  centerSublabel="total"
+                />
+              </div>
+            </DarkCard>
+
+            <DarkCard>
+              <SectionLabel>Investigations</SectionLabel>
+              <CardTitle>Investigation Overview</CardTitle>
+              <div className="mt-4 grid gap-2">
+                {[
+                  { label: 'Total', value: report.investigationMetrics.total, color: 'text-white' },
+                  { label: 'Open', value: report.investigationMetrics.open, color: 'text-blue-400' },
+                  { label: 'In Progress', value: report.investigationMetrics.inProgress, color: 'text-violet-400' },
+                  { label: 'Escalated', value: report.investigationMetrics.escalated, color: 'text-red-400' },
+                  { label: 'Resolved', value: report.investigationMetrics.resolved, color: 'text-emerald-400' },
+                  { label: 'Closed', value: report.investigationMetrics.closed, color: 'text-slate-400' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
+                    <span className="text-xs font-semibold text-slate-400">{label}</span>
+                    <Link
+                      href={`/investigations${label !== 'Total' ? `?status=${label.toUpperCase().replace(' ', '_')}` : ''}`}
+                      className={`text-sm font-black transition-opacity hover:opacity-70 ${color}`}
+                    >
+                      {numberFormat(value)}
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </DarkCard>
+
+            <DarkCard className="flex flex-col items-center justify-center">
+              <SectionLabel>Evidence</SectionLabel>
+              <CardTitle>Evidence Coverage</CardTitle>
+              <div className="mt-4 w-full">
+                <SVGArcGauge
+                  value={report.evidenceCoverage}
+                  label="Evidence Coverage"
+                  sublabel={prev ? `${pctChange(report.evidenceCoverage, prev.evidenceCoverage) ?? '—'} vs previous period` : undefined}
+                  size={160}
+                />
+              </div>
+            </DarkCard>
+          </div>
+
+          {/* Row 3: Monthly bar chart + Connector activity */}
+          <div className="grid gap-5 lg:grid-cols-2">
+            <DarkCard>
+              <SectionLabel>Volume</SectionLabel>
+              <CardTitle>Approval Volume by Month</CardTitle>
+              <p className="mt-0.5 text-[10px] text-slate-500">6-month view — approval count per month</p>
+              <div className="mt-4">
+                <SVGBarChart data={barData} height={180} color="#7C3AED" />
+              </div>
+            </DarkCard>
+
+            <DarkCard>
+              <SectionLabel>Sources</SectionLabel>
+              <CardTitle>Connector Activity</CardTitle>
+              <p className="mt-0.5 text-[10px] text-slate-500">Approvals by source integration</p>
+              <div className="mt-4">
+                <ConnectorBars items={report.connectorActivity} />
+              </div>
+            </DarkCard>
+          </div>
+
+          {/* Row 4: Top categories */}
+          <DarkCard>
+            <SectionLabel>Categories</SectionLabel>
+            <CardTitle>Top Approval Categories</CardTitle>
+            <p className="mt-0.5 text-[10px] text-slate-500">Approvals grouped by category</p>
+            <div className="mt-4">
+              <CategoryBars items={report.approvals.byDepartment} />
+            </div>
+          </DarkCard>
+
+          {/* Legacy export / playbook sections preserved below this fold */}
+          <div className="rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5">
+            <SectionLabel>Export</SectionLabel>
+            <CardTitle>Export Executive Report</CardTitle>
+            <p className="mt-1 text-xs font-semibold text-slate-400">Exports include the executive summary, ROI metrics, trends, risk summary, compliance scores, integration insights, and Playbook AI findings.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <PendingLink
+                href={`/api/export/analytics?format=pdf${exportSuffix}`}
+                pendingText="Preparing PDF..."
+                className="inline-flex h-9 items-center justify-center rounded-xl bg-violet-600 px-5 text-sm font-bold text-white shadow-sm hover:bg-violet-500"
+              >
+                Export PDF
+              </PendingLink>
+              <PendingLink
+                href={`/api/export/analytics?format=csv${exportSuffix}`}
+                pendingText="Preparing CSV..."
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] px-5 text-sm font-bold text-slate-200 hover:bg-[#1a2a45]"
+              >
+                Export CSV
+              </PendingLink>
+              <PendingLink
+                href="/analytics/drilldown/approvals-captured"
+                pendingText="Opening..."
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] px-5 text-sm font-bold text-slate-200 hover:bg-[#1a2a45]"
+              >
+                View All Approvals
+              </PendingLink>
+            </div>
+          </div>
+
+          {/* Compliance readiness drilldown */}
+          <div className="grid gap-5 lg:grid-cols-3">
+            <PendingLink
+              href="/analytics/drilldown/compliance-readiness"
+              pendingText="Opening..."
+              className="col-span-1 block rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 transition hover:border-[#2A3F66]"
+            >
+              <SectionLabel>Compliance</SectionLabel>
+              <CardTitle>Audit Posture</CardTitle>
+              <div className="mt-4 grid gap-3">
+                {[
+                  { label: 'Audit completeness', value: report.complianceReadiness.auditCompleteness },
+                  { label: 'Evidence coverage', value: report.complianceReadiness.evidenceCoverage },
+                  { label: 'Approval traceability', value: report.complianceReadiness.approvalTraceability },
+                ].map(({ label, value }) => (
+                  <div key={label} className="grid gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-400">{label}</span>
+                      <span className="text-xs font-black text-white">{value}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-[#1E2D4A]">
+                      <div
+                        className="h-1.5 rounded-full bg-emerald-500"
+                        style={{ width: `${Math.min(100, value)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-[10px] font-black uppercase tracking-wide text-violet-400">View readiness details &rarr;</p>
+            </PendingLink>
+
+            <PendingLink
+              href="/analytics/drilldown/high-risk-approvals"
+              pendingText="Opening..."
+              className="col-span-1 block rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 transition hover:border-[#2A3F66]"
+            >
+              <SectionLabel>Risk Reduction</SectionLabel>
+              <CardTitle>Controls Surfaced</CardTitle>
+              <div className="mt-4 grid gap-2">
+                {[
+                  { label: 'Missing approvals', value: report.riskReduction.missingApprovalsDetected },
+                  { label: 'Conditional approvals', value: report.riskReduction.conditionalApprovalsDetected },
+                  { label: 'High-risk detected', value: report.riskReduction.highRiskApprovalsDetected },
+                  { label: 'Without evidence', value: report.riskReduction.approvalsWithoutEvidence },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
+                    <span className="text-xs font-semibold text-slate-400">{label}</span>
+                    <span className="text-sm font-black text-white">{numberFormat(value)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-[10px] font-black uppercase tracking-wide text-violet-400">View high-risk records &rarr;</p>
+            </PendingLink>
+
+            <PendingLink
+              href="/analytics/drilldown/integration-insights"
+              pendingText="Opening..."
+              className="col-span-1 block rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 transition hover:border-[#2A3F66]"
+            >
+              <SectionLabel>Integrations</SectionLabel>
+              <CardTitle>Source Contribution</CardTitle>
+              <div className="mt-4 grid gap-2">
+                {[
+                  ['Slack', report.integrations.slackApprovals],
+                  ['Gmail', report.integrations.gmailApprovals],
+                  ['Teams', report.integrations.teamsApprovals],
+                  ['Jira', report.integrations.jiraApprovals],
+                  ['Outlook', report.integrations.outlookApprovals],
+                  ['ServiceNow', report.integrations.serviceNowApprovals],
+                  ['Zoom', report.integrations.zoomApprovals],
+                ].map(([label, value]) => (
+                  <div key={label as string} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
+                    <span className="text-xs font-semibold text-slate-400">{label}</span>
+                    <span className="text-sm font-black text-white">{numberFormat(value as number)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-[10px] font-black uppercase tracking-wide text-violet-400">View integration details &rarr;</p>
+            </PendingLink>
+          </div>
+
+          {/* Time saved */}
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              { label: 'Manual search', value: `${numberFormat(report.timeSaved.manualSearchHours)} hrs`, help: 'Search time avoided across Slack, Gmail, and tools.' },
+              { label: 'Audit prep', value: `${numberFormat(report.timeSaved.auditPreparationHours)} hrs`, help: 'Evidence reconstruction and audit prep avoided.' },
+              { label: 'Retrieval', value: `${numberFormat(report.timeSaved.retrievalHours)} hrs`, help: 'Approval lookup and source-link retrieval time avoided.' },
+            ].map(({ label, value, help }) => (
+              <DarkCard key={label}>
+                <SectionLabel>Time Saved</SectionLabel>
+                <p className="mt-2 text-2xl font-black text-white">{value}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-400">{label}</p>
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-500">{help}</p>
+              </DarkCard>
             ))}
           </div>
         </div>
 
-        <PendingLink href="/analytics/drilldown/compliance-readiness" pendingText="Opening compliance details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Compliance readiness</p>
-          <h3 className="mt-1 text-lg font-black text-slate-950">Audit posture</h3>
-          <div className="mt-5 grid gap-5">
-            <ProgressRow label="Audit completeness" value={report.complianceReadiness.auditCompleteness} />
-            <ProgressRow label="Evidence coverage" value={report.complianceReadiness.evidenceCoverage} />
-            <ProgressRow label="Approval traceability" value={report.complianceReadiness.approvalTraceability} />
-          </div>
-          <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View readiness details &gt;</p>
-        </PendingLink>
-      </div>
-
-      <PendingLink href="/analytics/drilldown/integration-insights" pendingText="Opening integration details..." className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-        <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Integration insights</p>
-        <h3 className="mt-1 text-lg font-black text-slate-950">Connector contribution</h3>
-        <div className="mt-5 grid gap-3">
-          {[
-            ['Slack approvals', report.integrations.slackApprovals],
-            ['Gmail approvals', report.integrations.gmailApprovals],
-            ['Teams approvals', report.integrations.teamsApprovals],
-            ['Jira approvals', report.integrations.jiraApprovals],
-            ['Outlook approvals', report.integrations.outlookApprovals],
-            ['ServiceNow approvals', report.integrations.serviceNowApprovals],
-            ['Zoom approvals', report.integrations.zoomApprovals],
-          ].map(([label, value]) => (
-            <div key={label as string} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-              <span className="font-bold text-slate-700">{label}</span>
-              <span className="font-black text-slate-950">{numberFormat(value as number)}</span>
-            </div>
-          ))}
+        {/* Right: AI Insights Panel */}
+        <div className="xl:sticky xl:top-6 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto">
+          <DarkCard>
+            <AIInsightsPanel insights={insights} highRiskApprovals={highRiskApprovals} />
+          </DarkCard>
         </div>
-        <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#2155d9]">View integration approvals &gt;</p>
-      </PendingLink>
+      </div>
     </>
   );
 }
 
-/**
- * Playbook AI insights: questions asked, referenced policies, missing
- * policy areas, approval bottlenecks. Backed by getPlaybookAnalytics(),
- * a fetch entirely independent of CoreAnalyticsSection's - if this one
- * fails or is slow, the Core section above is unaffected and vice versa.
- */
-async function PlaybookAnalyticsSection({ organizationId, requestedDemo }: { organizationId: string; requestedDemo: boolean }) {
+// ---------------------------------------------------------------------------
+// Playbook AI section (preserved from original)
+// ---------------------------------------------------------------------------
+
+async function PlaybookSection({ organizationId, requestedDemo }: { organizationId: string; requestedDemo: boolean }) {
   const startedAt = Date.now();
   let report: PlaybookAnalyticsSection;
   try {
@@ -439,47 +684,87 @@ async function PlaybookAnalyticsSection({ organizationId, requestedDemo }: { org
     return (
       <SectionUnavailable
         title="Playbook AI insights unavailable"
-        message={error instanceof Error ? error.message : 'The playbook analytics query did not complete. Other sections on this page are unaffected.'}
+        message={error instanceof Error ? error.message : 'The playbook analytics query did not complete.'}
       />
     );
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      {report.degraded ? (
-        <div className="mb-4">
-          <DegradedNotice label="Playbook AI insights" />
-        </div>
-      ) : null}
-      <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Playbook AI insights</p>
-      <h3 className="mt-1 text-lg font-black text-slate-950">Policy intelligence</h3>
+    <DarkCard>
+      {report.degraded && <DegradedNotice label="Playbook AI insights" />}
+      <SectionLabel>Playbook AI</SectionLabel>
+      <CardTitle>Policy Intelligence</CardTitle>
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <div>
-          <p className="text-sm font-black text-slate-950">{numberFormat(report.playbookAi.questionsAsked)} questions asked</p>
-          <div className="mt-3">
-            <CountList items={report.playbookAi.mostReferencedPolicies} empty="Referenced policies appear after Playbook AI answers questions." />
+          <p className="text-xs font-black text-white">
+            {numberFormat(report.playbookAi.questionsAsked)} questions asked
+          </p>
+          <div className="mt-3 grid gap-2">
+            {report.playbookAi.mostReferencedPolicies.length === 0 ? (
+              <p className="text-xs font-semibold text-slate-500">Referenced policies appear after Playbook AI answers questions.</p>
+            ) : report.playbookAi.mostReferencedPolicies.map((item) => (
+              <div key={item.name} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
+                <span className="text-xs font-semibold text-slate-300">{item.name}</span>
+                <span className="text-xs font-black text-white">{numberFormat(item.count)}</span>
+              </div>
+            ))}
           </div>
         </div>
         <div className="grid gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Missing policy areas</p>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500 mb-2">Missing policy areas</p>
+            <div className="flex flex-wrap gap-2">
               {(report.playbookAi.missingPolicyAreas.length ? report.playbookAi.missingPolicyAreas : ['No missing policy areas detected']).map((item) => (
-                <span key={item} className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">{item}</span>
+                <span key={item} className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-400">
+                  {item}
+                </span>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Approval bottlenecks</p>
-            <div className="mt-2">
-              <CountList items={report.playbookAi.approvalBottlenecks} empty="Bottlenecks appear when conditional or pending records exist." />
-            </div>
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500 mb-2">Approval bottlenecks</p>
+            {report.playbookAi.approvalBottlenecks.length === 0 ? (
+              <p className="text-xs font-semibold text-slate-500">Bottlenecks appear when conditional or pending records exist.</p>
+            ) : (
+              <div className="grid gap-2">
+                {report.playbookAi.approvalBottlenecks.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
+                    <span className="text-xs font-semibold text-slate-300">{item.name}</span>
+                    <span className="text-xs font-black text-white">{numberFormat(item.count)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+      </div>
+    </DarkCard>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page skeleton
+// ---------------------------------------------------------------------------
+
+function DashboardSkeleton() {
+  return (
+    <div className="grid gap-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-32 animate-pulse rounded-2xl border border-[#1E2D4A] bg-[#0D1526]" />
+        ))}
+      </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="h-64 animate-pulse rounded-2xl border border-[#1E2D4A] bg-[#0D1526]" />
+        <div className="h-64 animate-pulse rounded-2xl border border-[#1E2D4A] bg-[#0D1526]" />
       </div>
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps) {
   const tenant = await getDashboardTenant();
@@ -492,21 +777,84 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const requestedDemo = query.demo === '1';
   const organizationId = tenant.organization.id;
 
+  // Parse date range from URL params
+  const fromStr = query.from;
+  const toStr = query.to;
+  const prevFromStr = query.prevFrom;
+  const prevToStr = query.prevTo;
+
+  const dateRange: DateRange | undefined =
+    fromStr && toStr ? { from: new Date(fromStr), to: new Date(toStr) } : undefined;
+  const prevDateRange: DateRange | undefined =
+    prevFromStr && prevToStr ? { from: new Date(prevFromStr), to: new Date(prevToStr) } : undefined;
+
+  const compareEnabled = Boolean(prevFromStr && prevToStr);
+
   return (
     <DashboardShell>
-      <section className="grid gap-6">
-        <div className="flex items-center justify-end">
-          <RefreshButton />
-        </div>
+      <div className="min-h-screen" style={{ background: '#0A0E1A' }}>
+        <section className="grid gap-5 px-1 pb-10">
+          {/* Header */}
+          <div className="flex flex-col gap-4 pt-1">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-400">ApprovLine</p>
+                <h1 className="mt-1 text-2xl font-black tracking-tight text-white">Executive Analytics</h1>
+                <p className="mt-1 text-sm font-medium text-slate-400">
+                  Approval intelligence, risk signals, and compliance posture — boardroom-ready.
+                </p>
+              </div>
 
-        <Suspense fallback={<CardSkeleton rows={4} />}>
-          <CoreAnalyticsSection organizationId={organizationId} requestedDemo={requestedDemo} />
-        </Suspense>
+              <div className="flex flex-col gap-2">
+                <AnalyticsDatePicker
+                  currentFrom={fromStr}
+                  currentTo={toStr}
+                  compareEnabled={compareEnabled}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <AnalyticsFilters
+                    currentDepartment={query.department}
+                    currentRiskLevel={query.riskLevel}
+                    currentStatus={query.status}
+                    currentSource={query.source}
+                  />
+                  <PendingLink
+                    href={`/api/export/analytics?format=csv${requestedDemo ? '&demo=1' : ''}`}
+                    pendingText="Preparing..."
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-[#1E2D4A] bg-[#0D1526] px-3 text-xs font-bold text-slate-300 hover:bg-[#1a2a45] transition-colors"
+                  >
+                    Export Report
+                  </PendingLink>
+                  {!requestedDemo && (
+                    <PendingLink
+                      href="/analytics?demo=1"
+                      pendingText="Loading..."
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 text-xs font-bold text-violet-300 hover:bg-violet-500/20 transition-colors"
+                    >
+                      Demo Mode
+                    </PendingLink>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <Suspense fallback={<CardSkeleton rows={3} />}>
-          <PlaybookAnalyticsSection organizationId={organizationId} requestedDemo={requestedDemo} />
-        </Suspense>
-      </section>
+          {/* Main dashboard */}
+          <Suspense fallback={<DashboardSkeleton />}>
+            <ExecutiveDashboardSection
+              organizationId={organizationId}
+              requestedDemo={requestedDemo}
+              dateRange={dateRange}
+              prevDateRange={prevDateRange}
+            />
+          </Suspense>
+
+          {/* Playbook AI section */}
+          <Suspense fallback={<div className="h-48 animate-pulse rounded-2xl border border-[#1E2D4A] bg-[#0D1526]" />}>
+            <PlaybookSection organizationId={organizationId} requestedDemo={requestedDemo} />
+          </Suspense>
+        </section>
+      </div>
     </DashboardShell>
   );
 }
