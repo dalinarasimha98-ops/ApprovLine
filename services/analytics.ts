@@ -25,6 +25,10 @@ export type ExecutiveInsight = {
   metric: string;
   metricValue: string;
   drilldownHref: string;
+  // Structured executive breakdown (all optional for backward compat)
+  whatHappened?: string;
+  whyItMatters?: string;
+  action?: string;
 };
 
 export type ExecutiveAnalytics = {
@@ -82,6 +86,12 @@ export type InvestigationMetrics = {
   resolved: number;
   closed: number;
   escalated: number;
+  avgResolutionHours: number | null;
+};
+
+export type EvidenceMetrics = {
+  totalEvents: number;
+  unifiedRecords: number;
 };
 
 export type TimeSeriesPoint = {
@@ -121,6 +131,7 @@ export type CoreAnalytics = Omit<ExecutiveAnalytics, 'playbookAi'> & {
   complianceScore: number;
   totalValue: number | null;
   investigationMetrics: InvestigationMetrics;
+  evidenceMetrics: EvidenceMetrics;
   timeSeries: TimeSeriesPoint[];
   departmentBreakdown: DepartmentBreakdownItem[];
   connectorActivity: ConnectorActivityItem[];
@@ -344,7 +355,7 @@ async function fetchCoreAnalyticsFresh(
   // throw makes this function reject instead, so getCoreAnalytics's
   // withStaleFallback can correctly serve the last real value (or a
   // genuine "temporarily unavailable" state) rather than a fake zero.
-  const [approvalsRaw, integrationCount, investigationRaw, connectorRaw] = await Promise.all([
+  const [approvalsRaw, integrationCount, investigationRaw, connectorRaw, evidenceEventCount, unifiedRecordCount, resolvedInvestigations] = await Promise.all([
     timedQuery(
       'core:approvals',
       prisma.approvalRecord.findMany({
@@ -386,6 +397,16 @@ async function fetchCoreAnalyticsFresh(
         select: { provider: true, status: true },
       }),
     ).catch(() => [] as Array<{ provider: string; status: string }>),
+    timedQuery('core:evidenceEvents', prisma.canonicalEvidenceEvent.count({ where: { organizationId } })).catch(() => 0),
+    timedQuery('core:unifiedRecords', prisma.unifiedEvidenceRecord.count({ where: { organizationId } })).catch(() => 0),
+    timedQuery(
+      'core:resolvedInvestigations',
+      prisma.investigationCase.findMany({
+        where: { organizationId, resolvedAt: { not: null } },
+        select: { createdAt: true, resolvedAt: true },
+        take: 100,
+      }),
+    ).catch(() => [] as Array<{ createdAt: Date; resolvedAt: Date | null }>),
   ]);
 
   // Every ApprovalRecord for this org counts toward the live total, seeded
@@ -473,6 +494,15 @@ async function fetchCoreAnalyticsFresh(
   for (const row of investigationRaw) {
     invMap.set(row.status, row._count._all);
   }
+  // Average resolution time from cases that have a resolvedAt timestamp
+  let avgResolutionHours: number | null = null;
+  const resolvedWithTime = resolvedInvestigations.filter((i) => i.resolvedAt != null);
+  if (resolvedWithTime.length > 0) {
+    const totalMs = resolvedWithTime.reduce((sum, i) => {
+      return sum + Math.abs((i.resolvedAt as Date).getTime() - i.createdAt.getTime());
+    }, 0);
+    avgResolutionHours = Math.round((totalMs / resolvedWithTime.length / (1000 * 60 * 60)) * 10) / 10;
+  }
   const investigationMetrics: InvestigationMetrics = {
     total: [...invMap.values()].reduce((s, v) => s + v, 0),
     open: invMap.get('OPEN') ?? 0,
@@ -480,6 +510,13 @@ async function fetchCoreAnalyticsFresh(
     resolved: invMap.get('RESOLVED') ?? 0,
     closed: invMap.get('CLOSED') ?? 0,
     escalated: invMap.get('ESCALATED') ?? 0,
+    avgResolutionHours,
+  };
+
+  // Evidence platform metrics
+  const evidenceMetrics: EvidenceMetrics = {
+    totalEvents: evidenceEventCount,
+    unifiedRecords: unifiedRecordCount,
   };
 
   // 30-day time series
@@ -587,6 +624,7 @@ async function fetchCoreAnalyticsFresh(
     complianceScore,
     totalValue,
     investigationMetrics,
+    evidenceMetrics,
     timeSeries,
     departmentBreakdown,
     connectorActivity,
@@ -753,20 +791,30 @@ export function generateAIInsights(analytics: CoreAnalytics): ExecutiveInsight[]
       id: 'volume-trend',
       type: isPositive ? 'positive' : 'warning',
       title: isPositive ? `Approval volume up ${pctChange}%` : `Approval volume down ${Math.abs(pctChange)}%`,
-      description: `${total} approvals captured this period versus ${prevPeriod.total} in the previous period. ${isPositive ? 'Growth in approval capture indicates increasing platform adoption.' : 'Decrease in capture may indicate integration connectivity issues or reduced workflow activity.'}`,
+      description: `${total} approvals captured this period versus ${prevPeriod.total} in the previous period.`,
       metric: 'Total Approvals',
       metricValue: `${total} (${isPositive ? '+' : ''}${pctChange}%)`,
       drilldownHref: '/analytics/drilldown/approvals-captured',
+      whatHappened: `Approval volume ${isPositive ? 'increased' : 'decreased'} by ${Math.abs(pctChange)}% — from ${prevPeriod.total} to ${total} approvals.`,
+      whyItMatters: isPositive
+        ? 'Growing capture volume indicates increasing platform adoption and broader compliance coverage across your organization.'
+        : 'Declining volume may indicate integration connectivity issues, reduced workflow activity, or approvals being handled outside ApprovLine.',
+      action: isPositive
+        ? 'Review which departments drove growth and ensure high-volume areas have complete evidence coverage.'
+        : 'Check integration health and identify whether approvals are being missed from key sources.',
     });
   } else if (total > 0) {
     insights.push({
       id: 'volume-absolute',
       type: 'info',
       title: `${total} approval decisions captured`,
-      description: `Your workspace has captured ${total} approval records. Each record is fully auditable with approver identity, decision context, and evidence links.`,
+      description: `Your workspace has captured ${total} fully auditable approval records with approver identity, decision context, and evidence links.`,
       metric: 'Total Approvals',
       metricValue: String(total),
       drilldownHref: '/analytics/drilldown/approvals-captured',
+      whatHappened: `ApprovLine captured ${total} approval records in the selected period.`,
+      whyItMatters: 'Each captured record forms part of your auditable approval trail, reducing manual retrieval effort during audits.',
+      action: 'Enable period comparison by selecting a previous date range to track volume trends over time.',
     });
   }
 
@@ -778,10 +826,15 @@ export function generateAIInsights(analytics: CoreAnalytics): ExecutiveInsight[]
       id: 'high-risk',
       type: insightType,
       title: `${highRisk} high-risk approvals require review`,
-      description: `${highRiskPct}% of all approval records are classified as high or critical risk. ${highRiskPct >= 20 ? 'Immediate review recommended — this rate exceeds the 20% threshold.' : 'These records should be prioritized in the next compliance review cycle.'}`,
+      description: `${highRiskPct}% of all approval records are classified as high or critical risk.`,
       metric: 'High-Risk Approvals',
       metricValue: `${highRisk} (${highRiskPct}% of total)`,
       drilldownHref: '/analytics/drilldown/high-risk-approvals',
+      whatHappened: `${highRisk} approvals (${highRiskPct}% of total) were classified as high or critical risk by ApprovLine's AI classifier.`,
+      whyItMatters: highRiskPct >= 20
+        ? 'A high-risk rate above 20% signals significant exposure — these approvals bypass normal controls or involve unusually high-value decisions.'
+        : 'High-risk approvals require additional evidence, escalation review, and documentation before audit.',
+      action: `Open the High Risk Approvals view to review each record, verify approver authorization, and attach missing evidence for the ${highRisk} flagged records.`,
     });
   }
 
@@ -791,20 +844,26 @@ export function generateAIInsights(analytics: CoreAnalytics): ExecutiveInsight[]
       id: 'evidence-coverage',
       type: evidenceCoverage < 50 ? 'critical' : 'warning',
       title: `Evidence coverage at ${evidenceCoverage}% — below target`,
-      description: `${100 - evidenceCoverage}% of approval records are missing evidence links or snippets. Auditors require complete evidence trails. Connect additional integrations or ask approvers to attach source links.`,
+      description: `${100 - evidenceCoverage}% of approval records are missing evidence links or source snippets.`,
       metric: 'Evidence Coverage',
       metricValue: `${evidenceCoverage}%`,
       drilldownHref: '/analytics/drilldown/traceability',
+      whatHappened: `${evidenceCoverage}% of approval records have attached evidence. ${100 - evidenceCoverage}% are missing source links or evidence snippets.`,
+      whyItMatters: 'Auditors require complete evidence trails for every approval decision. Records without evidence cannot be verified and create compliance gaps.',
+      action: 'Connect additional integrations (Slack, Gmail, Teams) to automatically capture source evidence, or manually attach evidence links to existing records.',
     });
   } else if (evidenceCoverage >= 90) {
     insights.push({
       id: 'evidence-coverage-good',
       type: 'positive',
       title: `Strong evidence coverage at ${evidenceCoverage}%`,
-      description: `${evidenceCoverage}% of approval records have evidence links and snippets — well above the 80% audit-readiness threshold. Your workspace is in strong shape for compliance review.`,
+      description: `${evidenceCoverage}% of approval records have evidence links and snippets — above the 80% audit-readiness threshold.`,
       metric: 'Evidence Coverage',
       metricValue: `${evidenceCoverage}%`,
       drilldownHref: '/analytics/drilldown/traceability',
+      whatHappened: `${evidenceCoverage}% of captured approvals have complete evidence trails including source links and decision context.`,
+      whyItMatters: 'High evidence coverage means your organization can rapidly respond to audit requests with verified, traceable records.',
+      action: 'Maintain this posture by ensuring new integrations automatically capture evidence. Review the remaining records without evidence.',
     });
   }
 
@@ -814,20 +873,26 @@ export function generateAIInsights(analytics: CoreAnalytics): ExecutiveInsight[]
       id: 'compliance-score',
       type: complianceScore < 50 ? 'critical' : 'warning',
       title: `Compliance score at ${complianceScore}% — action needed`,
-      description: `High-risk and pending approvals are reducing the overall compliance score. Resolve ${analytics.riskReduction.highRiskApprovalsDetected} high-risk records and ${analytics.riskReduction.missingApprovalsDetected} missing approvals to improve the score.`,
+      description: `High-risk and pending approvals are reducing the overall compliance score.`,
       metric: 'Compliance Score',
       metricValue: `${complianceScore}%`,
       drilldownHref: '/analytics/drilldown/compliance-readiness',
+      whatHappened: `Compliance score is ${complianceScore}%, driven down by ${analytics.riskReduction.highRiskApprovalsDetected} high-risk records and pending approvals without decisions.`,
+      whyItMatters: 'A compliance score below 70% increases audit risk. Regulators and internal audit teams expect documented decisions for every high-risk record.',
+      action: `Resolve ${analytics.riskReduction.highRiskApprovalsDetected} high-risk records and ${analytics.riskReduction.missingApprovalsDetected} pending approvals. Consider opening investigations for critical cases.`,
     });
   } else if (complianceScore >= 85) {
     insights.push({
       id: 'compliance-score-good',
       type: 'positive',
       title: `Compliance score at ${complianceScore}% — strong posture`,
-      description: `Your workspace maintains a strong compliance posture with ${complianceScore}% compliance score. Continue current practices to maintain audit readiness.`,
+      description: `Your workspace maintains a strong compliance posture. Continue current practices to maintain audit readiness.`,
       metric: 'Compliance Score',
       metricValue: `${complianceScore}%`,
       drilldownHref: '/analytics/drilldown/compliance-readiness',
+      whatHappened: `Compliance score is ${complianceScore}%, reflecting a low ratio of unresolved high-risk and pending approvals.`,
+      whyItMatters: 'Scores above 85% indicate your organization is audit-ready with minimal unresolved compliance exposure.',
+      action: 'Schedule a periodic policy review via Playbook AI to ensure your compliance controls remain current with evolving regulations.',
     });
   }
 
@@ -838,10 +903,17 @@ export function generateAIInsights(analytics: CoreAnalytics): ExecutiveInsight[]
       id: 'investigations-active',
       type: investigations.escalated > 0 ? 'critical' : 'warning',
       title: `${activeCount} active investigation${activeCount !== 1 ? 's' : ''} require attention`,
-      description: `${investigations.open} open, ${investigations.inProgress} in-progress${investigations.escalated > 0 ? `, and ${investigations.escalated} escalated` : ''}. Escalated investigations require immediate escalation response to prevent audit findings.`,
+      description: `${investigations.open} open, ${investigations.inProgress} in-progress${investigations.escalated > 0 ? `, ${investigations.escalated} escalated` : ''}.`,
       metric: 'Active Investigations',
       metricValue: String(activeCount),
       drilldownHref: '/investigations',
+      whatHappened: `${activeCount} investigations are currently active: ${investigations.open} open, ${investigations.inProgress} in progress${investigations.escalated > 0 ? `, and ${investigations.escalated} escalated` : ''}.`,
+      whyItMatters: investigations.escalated > 0
+        ? 'Escalated investigations carry the highest compliance risk — they represent unresolved issues that have exceeded normal review timelines.'
+        : 'Open investigations indicate approval records under active compliance review. Unresolved investigations delay audit sign-off.',
+      action: investigations.escalated > 0
+        ? `Immediately address ${investigations.escalated} escalated investigation${investigations.escalated > 1 ? 's' : ''} in the Investigation Center before proceeding to other reviews.`
+        : 'Review open investigations in the Investigation Center. Assign owners and set resolution timelines for each active case.',
     });
   }
 
@@ -851,10 +923,13 @@ export function generateAIInsights(analytics: CoreAnalytics): ExecutiveInsight[]
       id: 'approval-time',
       type: 'warning',
       title: `Average approval time is ${avgTime}h — above optimal`,
-      description: `Approvals are taking an average of ${avgTime} hours from request to decision. Identify bottleneck departments and consider escalation policies to reduce approval latency.`,
+      description: `Approvals are taking an average of ${avgTime} hours from request to decision.`,
       metric: 'Avg Approval Time',
       metricValue: `${avgTime}h`,
       drilldownHref: '/analytics/drilldown/time-saved',
+      whatHappened: `The average time from approval request to decision is ${avgTime} hours — above the 48-hour optimal threshold.`,
+      whyItMatters: 'Slow approval cycles create bottlenecks in business operations, delay procurement and hiring, and indicate manual-heavy processes that could be automated.',
+      action: 'Identify the departments or approver groups with the longest cycle times. Consider escalation policies, delegation rules, or SLA reminders to reduce latency.',
     });
   }
 

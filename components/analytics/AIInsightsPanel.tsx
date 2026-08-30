@@ -91,31 +91,58 @@ export function AIInsightsPanel({ insights, highRiskApprovals = [] }: Props) {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {insights.map((insight) => (
-            <div
-              key={insight.id}
-              className="rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] p-3 transition-colors hover:border-[#2A3F66]"
-            >
-              <div className="flex items-start gap-2.5">
-                <InsightIcon type={insight.type} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-white leading-snug">{insight.title}</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{insight.description}</p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-[10px] font-semibold text-slate-600">
-                      {insight.metric}: {insight.metricValue}
-                    </span>
-                    <Link
-                      href={insight.drilldownHref}
-                      className="text-[10px] font-bold text-violet-400 hover:text-violet-300 transition-colors"
-                    >
-                      View details &rarr;
-                    </Link>
+          {insights.map((insight) => {
+            const hasStructured = insight.whatHappened || insight.whyItMatters || insight.action;
+            return (
+              <div
+                key={insight.id}
+                className="rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] p-3 transition-colors hover:border-[#2A3F66]"
+              >
+                <div className="flex items-start gap-2.5">
+                  <InsightIcon type={insight.type} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-white leading-snug">{insight.title}</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-400">{insight.description}</p>
+
+                    {hasStructured && (
+                      <div className="mt-2.5 flex flex-col gap-1.5 border-t border-[#1E2D4A] pt-2.5">
+                        {insight.whatHappened && (
+                          <div>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">What Happened</span>
+                            <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{insight.whatHappened}</p>
+                          </div>
+                        )}
+                        {insight.whyItMatters && (
+                          <div>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-600">Why It Matters</span>
+                            <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{insight.whyItMatters}</p>
+                          </div>
+                        )}
+                        {insight.action && (
+                          <div>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-violet-500">Recommended Action</span>
+                            <p className="mt-0.5 text-[11px] leading-relaxed text-violet-300">{insight.action}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-[10px] font-semibold text-slate-600">
+                        {insight.metric}: {insight.metricValue}
+                      </span>
+                      <Link
+                        href={insight.drilldownHref}
+                        className="text-[10px] font-bold text-violet-400 hover:text-violet-300 transition-colors"
+                      >
+                        View details &rarr;
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
