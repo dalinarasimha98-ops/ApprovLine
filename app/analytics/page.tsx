@@ -74,6 +74,27 @@ function CardTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+function SectionHeader({
+  label, title, subtitle, href, hrefLabel,
+}: {
+  label: string; title: string; subtitle?: string; href?: string; hrefLabel?: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <SectionLabel>{label}</SectionLabel>
+        <CardTitle>{title}</CardTitle>
+        {subtitle && <p className="mt-0.5 text-[10px] text-slate-500">{subtitle}</p>}
+      </div>
+      {href && (
+        <Link href={href} className="mt-1 flex-shrink-0 text-[10px] font-bold text-violet-400 transition-colors hover:text-violet-300">
+          {hrefLabel ?? 'View all →'}
+        </Link>
+      )}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Connector activity horizontal bars
 // ---------------------------------------------------------------------------
@@ -219,7 +240,7 @@ async function ExecutiveDashboardSection({
           ? { createdAt: { gte: dateRange.from, lte: dateRange.to } }
           : {}),
       },
-      select: { id: true, subject: true, riskLevel: true, department: true, approverName: true },
+      select: { id: true, subject: true, riskLevel: true, department: true, approverName: true, businessImpact: true },
       orderBy: [{ riskLevel: 'desc' }, { createdAt: 'desc' }],
       take: 5,
     }),
@@ -412,9 +433,13 @@ async function ExecutiveDashboardSection({
           {/* Row 1: Line chart + Department donut */}
           <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
             <DarkCard>
-              <SectionLabel>Approval Volume</SectionLabel>
-              <CardTitle>Approval Volume Trend</CardTitle>
-              <p className="mt-0.5 text-[10px] text-slate-500">Last 30 days — Approved, Pending, Rejected</p>
+              <SectionHeader
+                label="Approval Volume"
+                title="Approval Volume Trend"
+                subtitle="Approved, Pending, Rejected"
+                href="/approvals"
+                hrefLabel="View all approvals →"
+              />
               <div className="mt-4">
                 <SVGLineChart
                   data={lineData}
@@ -426,16 +451,34 @@ async function ExecutiveDashboardSection({
             </DarkCard>
 
             <DarkCard>
-              <SectionLabel>Department</SectionLabel>
-              <CardTitle>Approvals by Department</CardTitle>
-              <div className="mt-4 flex justify-center">
-                <SVGDonutChart
-                  segments={deptSegments}
-                  size={140}
-                  strokeWidth={24}
-                  centerLabel={numberFormat(total)}
-                  centerSublabel="total"
-                />
+              <SectionHeader
+                label="Department"
+                title="Approvals by Department"
+                href="/approvals"
+              />
+              <div className="mt-4 flex items-center gap-4">
+                <div className="flex-shrink-0">
+                  <SVGDonutChart
+                    segments={deptSegments}
+                    size={120}
+                    strokeWidth={20}
+                    centerLabel={numberFormat(total)}
+                    centerSublabel="total"
+                  />
+                </div>
+                <div className="min-w-0 flex-1 grid gap-1.5">
+                  {deptSegments.map((seg) => {
+                    const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
+                    return (
+                      <div key={seg.label} className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 flex-shrink-0 rounded-sm" style={{ backgroundColor: seg.color }} />
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-slate-300">{seg.label}</span>
+                        <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
+                        <span className="w-10 text-right text-[10px] text-slate-500">({numberFormat(seg.value)})</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </DarkCard>
           </div>
@@ -443,53 +486,83 @@ async function ExecutiveDashboardSection({
           {/* Row 2: Risk Donut + Investigation Overview + Evidence Gauge */}
           <div className="grid gap-5 lg:grid-cols-3">
             <DarkCard>
-              <SectionLabel>Risk</SectionLabel>
-              <CardTitle>Risk Distribution</CardTitle>
-              <div className="mt-4 flex justify-center">
+              <SectionHeader
+                label="Risk"
+                title="Risk Distribution"
+                href="/analytics/drilldown/high-risk-approvals"
+                hrefLabel="View details →"
+              />
+              <div className="mt-3 flex justify-center">
                 <SVGDonutChart
                   segments={riskSegments.length > 0 ? riskSegments : [{ label: 'No data', value: 1, color: '#1E2D4A' }]}
-                  size={130}
-                  strokeWidth={22}
+                  size={120}
+                  strokeWidth={20}
                   centerLabel={numberFormat(total)}
                   centerSublabel="total"
                 />
               </div>
+              {riskSegments.length > 0 && (
+                <div className="mt-3 grid gap-1.5">
+                  {riskSegments.map((seg) => {
+                    const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
+                    return (
+                      <div key={seg.label} className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 flex-shrink-0 rounded-sm" style={{ backgroundColor: seg.color }} />
+                        <span className="flex-1 text-[11px] font-semibold text-slate-300">{seg.label} Risk</span>
+                        <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
+                        <span className="w-10 text-right text-[10px] text-slate-500">({numberFormat(seg.value)})</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </DarkCard>
 
             <DarkCard>
-              <SectionLabel>Investigations</SectionLabel>
-              <CardTitle>Investigation Overview</CardTitle>
-              <div className="mt-4 grid gap-2">
+              <SectionHeader
+                label="Investigations"
+                title="Investigation Overview"
+                href="/investigations"
+                hrefLabel="View all investigations →"
+              />
+              <div className="mt-4 grid grid-cols-5 gap-2">
                 {[
-                  { label: 'Total', value: report.investigationMetrics.total, color: 'text-white' },
-                  { label: 'Open', value: report.investigationMetrics.open, color: 'text-blue-400' },
-                  { label: 'In Progress', value: report.investigationMetrics.inProgress, color: 'text-violet-400' },
-                  { label: 'Escalated', value: report.investigationMetrics.escalated, color: 'text-red-400' },
-                  { label: 'Resolved', value: report.investigationMetrics.resolved, color: 'text-emerald-400' },
-                  { label: 'Closed', value: report.investigationMetrics.closed, color: 'text-slate-400' },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="flex items-center justify-between rounded-lg border border-[#1E2D4A] px-3 py-2">
-                    <span className="text-xs font-semibold text-slate-400">{label}</span>
-                    <Link
-                      href={`/investigations${label !== 'Total' ? `?status=${label.toUpperCase().replace(' ', '_')}` : ''}`}
-                      className={`text-sm font-black transition-opacity hover:opacity-70 ${color}`}
-                    >
-                      {numberFormat(value)}
-                    </Link>
-                  </div>
+                  { label: 'Total', value: report.investigationMetrics.total, color: '#7C3AED', status: '', iconPath: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                  { label: 'Open', value: report.investigationMetrics.open, color: '#3B82F6', status: 'OPEN', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+                  { label: 'In Progress', value: report.investigationMetrics.inProgress, color: '#8B5CF6', status: 'IN_PROGRESS', iconPath: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
+                  { label: 'Resolved', value: report.investigationMetrics.resolved, color: '#10B981', status: 'RESOLVED', iconPath: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+                  { label: 'Closed', value: report.investigationMetrics.closed, color: '#64748B', status: 'CLOSED', iconPath: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' },
+                ].map(({ label, value, color, status, iconPath }) => (
+                  <Link
+                    key={label}
+                    href={`/investigations${status ? `?status=${status}` : ''}`}
+                    className="flex flex-col items-center rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] p-3 text-center transition-colors hover:border-[#2A3F66]"
+                  >
+                    <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-full" style={{ backgroundColor: `${color}20` }}>
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d={iconPath} />
+                      </svg>
+                    </div>
+                    <span className="text-base font-black text-white">{numberFormat(value)}</span>
+                    <span className="mt-0.5 text-[10px] font-semibold leading-tight text-slate-500">{label}</span>
+                  </Link>
                 ))}
               </div>
             </DarkCard>
 
-            <DarkCard className="flex flex-col items-center justify-center">
-              <SectionLabel>Evidence</SectionLabel>
-              <CardTitle>Evidence Coverage</CardTitle>
-              <div className="mt-4 w-full">
+            <DarkCard className="flex flex-col">
+              <SectionHeader
+                label="Evidence"
+                title="Evidence Coverage"
+                href="/analytics/drilldown/traceability"
+                hrefLabel="View details →"
+              />
+              <div className="mt-3 flex flex-1 w-full justify-center">
                 <SVGArcGauge
                   value={report.evidenceCoverage}
-                  label="Evidence Coverage"
+                  label="Coverage"
                   sublabel={prev ? `${pctChange(report.evidenceCoverage, prev.evidenceCoverage) ?? '—'} vs previous period` : undefined}
-                  size={160}
+                  size={150}
                 />
               </div>
             </DarkCard>
@@ -498,18 +571,26 @@ async function ExecutiveDashboardSection({
           {/* Row 3: Monthly bar chart + Connector activity */}
           <div className="grid gap-5 lg:grid-cols-2">
             <DarkCard>
-              <SectionLabel>Volume</SectionLabel>
-              <CardTitle>Approval Volume by Month</CardTitle>
-              <p className="mt-0.5 text-[10px] text-slate-500">6-month view — approval count per month</p>
+              <SectionHeader
+                label="Volume"
+                title="Approval Value Over Time"
+                subtitle="6-month view — approval count per month"
+                href="/api/export/analytics?format=csv"
+                hrefLabel="View full report →"
+              />
               <div className="mt-4">
                 <SVGBarChart data={barData} height={180} color="#7C3AED" />
               </div>
             </DarkCard>
 
             <DarkCard>
-              <SectionLabel>Sources</SectionLabel>
-              <CardTitle>Connector Activity</CardTitle>
-              <p className="mt-0.5 text-[10px] text-slate-500">Approvals by source integration</p>
+              <SectionHeader
+                label="Sources"
+                title="Connector Activity"
+                subtitle="Approvals by source integration"
+                href="/integrations"
+                hrefLabel="View all →"
+              />
               <div className="mt-4">
                 <ConnectorBars items={report.connectorActivity} />
               </div>
@@ -518,9 +599,13 @@ async function ExecutiveDashboardSection({
 
           {/* Row 4: Top categories */}
           <DarkCard>
-            <SectionLabel>Categories</SectionLabel>
-            <CardTitle>Top Approval Categories</CardTitle>
-            <p className="mt-0.5 text-[10px] text-slate-500">Approvals grouped by category</p>
+            <SectionHeader
+              label="Categories"
+              title="Top Approval Categories"
+              subtitle="Approvals grouped by category"
+              href="/approvals"
+              hrefLabel="View all →"
+            />
             <div className="mt-4">
               <CategoryBars items={report.approvals.byDepartment} />
             </div>
