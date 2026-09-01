@@ -432,9 +432,6 @@ export default async function IntegrationsPage({
     oauthMessage('Zoom', query.zoom, query.reason),
   ].filter(Boolean);
 
-  const orgSlug = tenant.organization?.slug ?? '';
-  const appUrl = process.env.APP_URL ?? 'https://approvline.ai';
-
   return (
     <section className="mx-auto w-full max-w-[88rem] pb-10">
       {/* ── Page header ──────────────────────────────────────────────────── */}

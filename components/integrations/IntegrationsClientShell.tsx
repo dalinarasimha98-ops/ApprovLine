@@ -226,7 +226,7 @@ function CategoryTabs({
   );
 }
 
-function ConnectedCard({ p, onRequestModal }: { p: ShellProvider; onRequestModal: (name: string, slug?: string) => void }) {
+function ConnectedCard({ p }: { p: ShellProvider }) {
   const health = integrationHealthLabel(p.integrationStatus ?? 'CONNECTED');
   const isNeedsReauth = p.integrationStatus === 'NEEDS_REAUTH' || p.integrationStatus === 'ERROR';
 
@@ -482,7 +482,7 @@ export function IntegrationsClientShell({ providers, myRequests }: Props) {
           <SectionHeader title="Connected Integrations" count={connected.length} />
           <div className="grid gap-4 sm:grid-cols-2">
             {connected.map((p) => (
-              <ConnectedCard key={p.slug} p={p} onRequestModal={openModal} />
+              <ConnectedCard key={p.slug} p={p} />
             ))}
           </div>
         </section>
