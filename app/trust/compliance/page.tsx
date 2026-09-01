@@ -9,6 +9,7 @@ import {
   getComplianceOverview,
   getComplianceTrend,
   seedComplianceFrameworks,
+  type ComplianceTrendPoint,
 } from '@/services/compliance';
 
 export const dynamic = 'force-dynamic';
@@ -60,32 +61,26 @@ export default async function ComplianceHubPage() {
 
   const orgId = tenant.organization.id;
 
-  // Auto-seed default frameworks the first time a tenant opens the hub.
-  // seedComplianceFrameworks is idempotent (checks existing count), so this is
-  // safe on every render when the org has no frameworks yet.
-  let overview;
-  let trendPoints;
+  // Fetch overview — getComplianceOverview never throws; it returns { degraded: true }
+  // when the DB is unreachable or the tables don't exist yet.
+  const overview = await getComplianceOverview(orgId);
 
-  try {
-    overview = await getComplianceOverview(orgId);
-    if (overview.frameworks.length === 0) {
+  // Auto-seed only when the overview succeeded and returned no frameworks.
+  // Skip seeding when degraded so a missing migration doesn't crash the page.
+  if (!overview.degraded && overview.frameworks.length === 0) {
+    try {
       await seedComplianceFrameworks(orgId);
-      // Re-fetch after seeding so the shell has real framework rows.
-      overview = await getComplianceOverview(orgId);
+    } catch (err) {
+      console.error('[compliance-hub] seed failed', err);
     }
+  }
+
+  // Trend points — defensive: returns [] on any failure.
+  let trendPoints: ComplianceTrendPoint[] = [];
+  try {
     trendPoints = await getComplianceTrend(orgId, 30);
   } catch (err) {
-    console.error('[compliance-hub] data fetch failed', err);
-    return (
-      <DashboardShell>
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center shadow-sm">
-          <p className="text-sm font-black text-red-700">Compliance Hub is temporarily unavailable</p>
-          <p className="mt-2 text-sm leading-6 text-red-600">
-            A data dependency failed. Reload the page to retry.
-          </p>
-        </div>
-      </DashboardShell>
-    );
+    console.error('[compliance-hub] trend fetch failed', err);
   }
 
   return (
