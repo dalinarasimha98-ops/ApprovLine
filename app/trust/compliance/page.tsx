@@ -8,6 +8,7 @@ import { writeAuditLog } from '@/services/audit';
 import {
   getComplianceOverview,
   getComplianceTrend,
+  getComplianceWorkspace,
   seedComplianceFrameworks,
   type ComplianceTrendPoint,
 } from '@/services/compliance';
@@ -61,9 +62,13 @@ export default async function ComplianceHubPage() {
 
   const orgId = tenant.organization.id;
 
-  // Fetch overview — getComplianceOverview never throws; it returns { degraded: true }
-  // when the DB is unreachable or the tables don't exist yet.
-  const overview = await getComplianceOverview(orgId);
+  // Fetch overview and workspace in parallel.
+  // getComplianceOverview never throws; it returns { degraded: true } when the DB is unreachable.
+  // getComplianceWorkspace returns an empty workspace on any failure.
+  const [overview, workspaceData] = await Promise.all([
+    getComplianceOverview(orgId),
+    getComplianceWorkspace(orgId),
+  ]);
 
   // Auto-seed only when the overview succeeded and returned no frameworks.
   // Skip seeding when degraded so a missing migration doesn't crash the page.
@@ -102,7 +107,7 @@ export default async function ComplianceHubPage() {
       </div>
 
       {/* Main tabbed shell — all real DB data, all tenant-scoped */}
-      <ComplianceHubShell initialData={overview} trendPoints={trendPoints} orgId={orgId} />
+      <ComplianceHubShell initialData={overview} trendPoints={trendPoints} orgId={orgId} workspaceData={workspaceData} />
     </DashboardShell>
   );
 }

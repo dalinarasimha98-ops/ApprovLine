@@ -124,6 +124,65 @@ export type ComplianceTrendPoint = {
   score: number;
 };
 
+export type ActionItem = {
+  type: 'high_risk_approvals' | 'evidence_gaps' | 'policy_acknowledgements' | 'overdue_issues';
+  title: string;
+  subtitle: string;
+  count: number;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  href: string;
+  actionLabel: string;
+};
+
+export type WorkQueueItem = {
+  id: string;
+  type: 'approval' | 'control' | 'policy' | 'investigation' | 'attestation';
+  title: string;
+  subtitle?: string;
+  owner?: string;
+  priority: 'High' | 'Medium' | 'Low';
+  dueLabel?: string;
+  dueUrgent: boolean;
+  status?: string;
+  href: string;
+  actionLabel: string;
+};
+
+export type PolicyDocStatus = {
+  id: string;
+  name: string;
+  state: 'compliant' | 'review_required' | 'violations' | 'archived' | 'indexing';
+  detail: string;
+  href: string;
+};
+
+export type AIAdvisorInsight = {
+  headline: string;
+  whyItMatters: string;
+  recommendedAction: string;
+  evidenceHref: string;
+  copilotQuery: string;
+};
+
+export type WorkspaceControlRow = {
+  id: string;
+  name: string;
+  frameworkName?: string;
+  owner?: string;
+  status: string;
+  lastTestedAt?: string;
+  href: string;
+};
+
+export type ComplianceWorkspace = {
+  actionItems: ActionItem[];
+  workQueue: WorkQueueItem[];
+  topControls: WorkspaceControlRow[];
+  recentIssues: IssueSummary[];
+  policyDocs: PolicyDocStatus[];
+  aiAdvisor: AIAdvisorInsight | null;
+};
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function scoreLabel(score: number): ComplianceScoreLabel {
@@ -854,3 +913,298 @@ export async function updateControlStatus(
     metadata: { controlId, status, effectiveness },
   });
 }
+
+export const getComplianceWorkspace = cache(
+  unstable_cache(
+    async (organizationId: string): Promise<ComplianceWorkspace> => {
+      const scope = { organizationId };
+      try {
+        const now = new Date();
+        const [
+          highRiskApprovals,
+          evidenceGaps,
+          pendingAttestations,
+          overdueIssues,
+          openIssues,
+          problemControls,
+          playbooks,
+        ] = await withTimeout(
+          'compliance-workspace',
+          Promise.all([
+            prisma.approvalRecord.count({
+              where: tenantScopedWhere(scope, {
+                riskLevel: { in: ['high', 'critical'] },
+                status: 'PENDING_REVIEW',
+              }),
+            }),
+            prisma.approvalRecord.count({
+              where: tenantScopedWhere(scope, {
+                evidenceSnippet: null,
+                status: { not: 'REJECTED' },
+              }),
+            }),
+            prisma.complianceAttestation.findMany({
+              where: tenantScopedWhere(scope, { status: 'PENDING' }),
+              select: { id: true, title: true, policy: true, owner: true, dueDate: true },
+              orderBy: { dueDate: 'asc' },
+              take: 10,
+            }),
+            prisma.complianceIssue.findMany({
+              where: tenantScopedWhere(scope, {
+                status: { in: ['OPEN', 'IN_PROGRESS'] },
+                dueDate: { lt: now },
+              }),
+              select: { id: true, title: true, severity: true, owner: true, dueDate: true, status: true },
+              orderBy: { severity: 'desc' },
+              take: 10,
+            }),
+            prisma.complianceIssue.findMany({
+              where: tenantScopedWhere(scope, { status: { in: ['OPEN', 'IN_PROGRESS'] } }),
+              include: {
+                framework: { select: { name: true } },
+                control: { select: { name: true } },
+              },
+              orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
+              take: 8,
+            }),
+            prisma.complianceControl.findMany({
+              where: tenantScopedWhere(scope, {
+                status: { in: ['INEFFECTIVE', 'PARTIALLY_EFFECTIVE'] },
+              }),
+              include: { framework: { select: { name: true } } },
+              orderBy: { status: 'asc' },
+              take: 10,
+            }),
+            prisma.playbookDocument.findMany({
+              where: tenantScopedWhere(scope),
+              select: { id: true, name: true, status: true },
+              orderBy: { createdAt: 'desc' },
+              take: 8,
+            }),
+          ]),
+          8000,
+        );
+
+        // Build actionItems
+        const actionItems: ActionItem[] = [];
+        if (highRiskApprovals > 0) {
+          actionItems.push({
+            type: 'high_risk_approvals',
+            title: 'High-Risk Approvals Pending Review',
+            subtitle: `${highRiskApprovals} approval${highRiskApprovals !== 1 ? 's' : ''} with high or critical risk awaiting review`,
+            count: highRiskApprovals,
+            severity: highRiskApprovals >= 5 ? 'critical' : 'high',
+            href: '/approvals?riskLevel=high',
+            actionLabel: 'Review Now',
+          });
+        }
+        if (overdueIssues.length > 0) {
+          actionItems.push({
+            type: 'overdue_issues',
+            title: 'Overdue Compliance Issues',
+            subtitle: `${overdueIssues.length} issue${overdueIssues.length !== 1 ? 's' : ''} past their resolution deadline`,
+            count: overdueIssues.length,
+            severity: overdueIssues.some((i) => i.severity === 'CRITICAL') ? 'critical' : 'high',
+            href: '/trust/compliance?tab=issues',
+            actionLabel: 'Resolve Issues',
+          });
+        }
+        if (pendingAttestations.length > 0) {
+          actionItems.push({
+            type: 'policy_acknowledgements',
+            title: 'Attestations Awaiting Completion',
+            subtitle: `${pendingAttestations.length} policy or control attestation${pendingAttestations.length !== 1 ? 's' : ''} pending sign-off`,
+            count: pendingAttestations.length,
+            severity: 'medium',
+            href: '/trust/compliance?tab=attestations',
+            actionLabel: 'Complete Now',
+          });
+        }
+        if (evidenceGaps > 0) {
+          actionItems.push({
+            type: 'evidence_gaps',
+            title: 'Approvals Missing Evidence',
+            subtitle: `${evidenceGaps} approval record${evidenceGaps !== 1 ? 's' : ''} lack evidence documentation`,
+            count: evidenceGaps,
+            severity: 'medium',
+            href: '/evidence',
+            actionLabel: 'Fix Gaps',
+          });
+        }
+
+        // Build workQueue
+        const workQueue: WorkQueueItem[] = [];
+        for (const att of pendingAttestations.slice(0, 3)) {
+          const daysLeft = att.dueDate
+            ? Math.ceil((att.dueDate.getTime() - now.getTime()) / 86_400_000)
+            : null;
+          workQueue.push({
+            id: att.id,
+            type: 'attestation',
+            title: att.title,
+            subtitle: att.policy ?? undefined,
+            owner: att.owner ?? undefined,
+            priority: daysLeft !== null && daysLeft <= 7 ? 'High' : 'Medium',
+            dueLabel:
+              daysLeft !== null
+                ? daysLeft < 0
+                  ? `${Math.abs(daysLeft)}d overdue`
+                  : `Due in ${daysLeft}d`
+                : undefined,
+            dueUrgent: daysLeft !== null && daysLeft <= 7,
+            status: 'PENDING',
+            href: '/trust/compliance?tab=attestations',
+            actionLabel: 'Complete',
+          });
+        }
+        for (const issue of overdueIssues.slice(0, 3)) {
+          const daysOverdue = issue.dueDate
+            ? Math.ceil((now.getTime() - issue.dueDate.getTime()) / 86_400_000)
+            : 0;
+          workQueue.push({
+            id: issue.id,
+            type: 'investigation',
+            title: issue.title,
+            owner: issue.owner ?? undefined,
+            priority: issue.severity === 'CRITICAL' || issue.severity === 'HIGH' ? 'High' : 'Medium',
+            dueLabel: `${daysOverdue}d overdue`,
+            dueUrgent: true,
+            status: issue.status,
+            href: '/trust/compliance?tab=issues',
+            actionLabel: 'Resolve',
+          });
+        }
+        for (const control of problemControls.slice(0, 3)) {
+          workQueue.push({
+            id: control.id,
+            type: 'control',
+            title: control.name,
+            subtitle: control.framework?.name,
+            owner: control.owner ?? undefined,
+            priority: control.status === 'INEFFECTIVE' ? 'High' : 'Medium',
+            dueLabel: control.nextReviewAt
+              ? `Review by ${new Date(control.nextReviewAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+              : undefined,
+            dueUrgent: false,
+            status: control.status,
+            href: '/trust/compliance?tab=controls',
+            actionLabel: 'Update Status',
+          });
+        }
+
+        // topControls
+        const topControls: WorkspaceControlRow[] = problemControls.slice(0, 8).map((c) => ({
+          id: c.id,
+          name: c.name,
+          frameworkName: c.framework?.name,
+          owner: c.owner ?? undefined,
+          status: c.status,
+          lastTestedAt: c.lastTestedAt ? c.lastTestedAt.toISOString() : undefined,
+          href: '/trust/compliance?tab=controls',
+        }));
+
+        // recentIssues
+        const recentIssues: IssueSummary[] = openIssues.map((issue) => ({
+          id: issue.id,
+          title: issue.title,
+          description: issue.description,
+          severity: issue.severity,
+          status: issue.status,
+          owner: issue.owner,
+          dueDate: isoStr(issue.dueDate),
+          frameworkName: issue.framework?.name ?? null,
+          controlName: issue.control?.name ?? null,
+          createdAt: issue.createdAt.toISOString(),
+        }));
+
+        // policyDocs
+        const policyDocs: PolicyDocStatus[] = playbooks.map((doc) => {
+          let state: PolicyDocStatus['state'];
+          let detail: string;
+          switch (doc.status) {
+            case 'READY':
+              state = 'compliant';
+              detail = 'Active and indexed';
+              break;
+            case 'INDEXING':
+            case 'UPLOADED':
+              state = 'indexing';
+              detail = 'Processing…';
+              break;
+            case 'ERROR':
+              state = 'review_required';
+              detail = 'Indexing failed — re-upload needed';
+              break;
+            case 'ARCHIVED':
+            case 'SUPERSEDED':
+              state = 'archived';
+              detail = 'Archived';
+              break;
+            default:
+              state = 'review_required';
+              detail = 'Review required';
+          }
+          return { id: doc.id, name: doc.name, state, detail, href: '/playbooks' };
+        });
+
+        // Rule-based AI advisor
+        let aiAdvisor: AIAdvisorInsight | null = null;
+        if (highRiskApprovals >= 3) {
+          aiAdvisor = {
+            headline: `${highRiskApprovals} high-risk approvals need review`,
+            whyItMatters:
+              'Unreviewed high-risk approvals are a primary compliance gap that can affect audit readiness and increase regulatory exposure.',
+            recommendedAction:
+              'Review each approval, verify evidence documentation, and escalate any that require policy exceptions.',
+            evidenceHref: '/approvals?riskLevel=high',
+            copilotQuery: `What should I do about ${highRiskApprovals} pending high-risk approvals?`,
+          };
+        } else if (overdueIssues.length >= 2) {
+          aiAdvisor = {
+            headline: `${overdueIssues.length} compliance issues are past their deadline`,
+            whyItMatters:
+              'Overdue issues signal control failures that auditors specifically look for.',
+            recommendedAction:
+              'Assign owners, set resolution dates, and document remediation steps for each overdue issue.',
+            evidenceHref: '/trust/compliance?tab=issues',
+            copilotQuery: 'How do I remediate overdue compliance issues?',
+          };
+        } else if (problemControls.length >= 3) {
+          const ineffective = problemControls.filter((c) => c.status === 'INEFFECTIVE').length;
+          aiAdvisor = {
+            headline: `${problemControls.length} controls need attention (${ineffective} ineffective)`,
+            whyItMatters:
+              'Ineffective controls are direct audit findings indicating compliance obligations are not being met.',
+            recommendedAction:
+              'Update control status, document remediation steps, and schedule re-assessment.',
+            evidenceHref: '/trust/compliance?tab=controls',
+            copilotQuery: 'What is the remediation process for ineffective compliance controls?',
+          };
+        } else if (pendingAttestations.length >= 2) {
+          aiAdvisor = {
+            headline: `${pendingAttestations.length} attestations awaiting sign-off`,
+            whyItMatters: 'Incomplete attestations leave a gap in your evidence trail.',
+            recommendedAction:
+              'Complete pending attestations ensuring responsible owners review and sign off each one.',
+            evidenceHref: '/trust/compliance?tab=attestations',
+            copilotQuery: 'What attestations need to be completed for compliance?',
+          };
+        }
+
+        return { actionItems, workQueue, topControls, recentIssues, policyDocs, aiAdvisor };
+      } catch (err) {
+        console.error('[compliance-workspace] failed', err);
+        return {
+          actionItems: [],
+          workQueue: [],
+          topControls: [],
+          recentIssues: [],
+          policyDocs: [],
+          aiAdvisor: null,
+        };
+      }
+    },
+    ['compliance-workspace'],
+    { revalidate: 60 },
+  ),
+);
