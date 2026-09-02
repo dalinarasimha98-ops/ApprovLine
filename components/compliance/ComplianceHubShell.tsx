@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import type {
   ComplianceOverview,
@@ -13,6 +13,10 @@ import type {
   RiskArea,
   HealthMetric,
   ComplianceTrendPoint,
+  ComplianceWorkspace,
+  ActionItem,
+  WorkQueueItem,
+  PolicyDocStatus,
 } from '@/services/compliance';
 
 // ── Types re-exported for sub-components ─────────────────────────────────────
@@ -97,16 +101,6 @@ function categoryBadge(cat: string) {
   return map[cat] ?? 'bg-slate-100 text-slate-500';
 }
 
-function riskBadge(r: string) {
-  const map: Record<string, string> = {
-    Critical: 'bg-red-100 text-red-700 border-red-200',
-    High: 'bg-orange-100 text-orange-700 border-orange-200',
-    Medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    Low: 'bg-blue-100 text-blue-700 border-blue-200',
-  };
-  return map[r] ?? 'bg-slate-100 text-slate-500 border-slate-200';
-}
-
 function deadlineDaysBadge(days: number) {
   if (days < 0) return 'bg-red-600 text-white';
   if (days <= 14) return 'bg-red-100 text-red-700';
@@ -131,223 +125,7 @@ function deadlineColor(days: number) {
   return { bg: 'bg-indigo-600', text: 'text-white' };
 }
 
-// ── Micro-chart: simple SVG line for score trend ─────────────────────────────
-
-function MiniScoreTrend({ points, color = '#2155d9' }: { points: ComplianceTrendPoint[]; color?: string }) {
-  if (points.length < 2) {
-    return <div className="h-20 flex items-center justify-center text-xs text-slate-400">No trend data yet</div>;
-  }
-  const scores = points.map((p) => p.score);
-  const max = Math.max(...scores, 100);
-  const min = Math.min(...scores, 0);
-  const range = max - min || 1;
-  const w = 280;
-  const h = 80;
-  const pad = 8;
-  const xs = points.map((_, i) => pad + (i / (points.length - 1)) * (w - pad * 2));
-  const ys = scores.map((s) => pad + ((max - s) / range) * (h - pad * 2));
-  const line = xs.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${ys[i]}`).join(' ');
-  const area = `${line} L ${xs[xs.length - 1]} ${h} L ${xs[0]} ${h} Z`;
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20">
-      <defs>
-        <linearGradient id="scoreGrad" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.25} />
-          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-        </linearGradient>
-      </defs>
-      <path d={area} fill="url(#scoreGrad)" />
-      <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      {/* End dot */}
-      <circle cx={xs[xs.length - 1]} cy={ys[ys.length - 1]} r={3} fill={color} />
-    </svg>
-  );
-}
-
-// ── Arc gauge (light theme) ────────────────────────────────────────────────
-
-function ArcGauge({ score, label }: { score: number; label: string }) {
-  const size = 120;
-  const cx = size / 2;
-  const sw = 14;
-  const r = (size - sw) / 2 - 4;
-  const cy = r + sw / 2 + 4;
-  const viewH = cy + sw / 2 + 4;
-  const color = scoreColor(score);
-
-  const startAngle = 180;
-  const sweepAngle = (score / 100) * 180;
-
-  function polar(angleDeg: number) {
-    const rad = ((angleDeg - 90) * Math.PI) / 180;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  }
-
-  function arc(start: number, end: number) {
-    const s = polar(start);
-    const e = polar(Math.min(end, start + 359.99));
-    const large = end - start > 180 ? 1 : 0;
-    return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
-  }
-
-  const trackPath = arc(startAngle, startAngle + 180);
-  const fillPath = sweepAngle > 0.5 ? arc(startAngle, startAngle + sweepAngle) : null;
-
-  return (
-    <div className="flex flex-col items-center">
-      <svg viewBox={`0 0 ${size} ${viewH.toFixed(1)}`} style={{ width: size, height: viewH }}>
-        <path d={trackPath} fill="none" stroke="#E2E8F0" strokeWidth={sw} strokeLinecap="round" />
-        {fillPath && <path d={fillPath} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" />}
-        <text x={cx} y={cy - r * 0.45} textAnchor="middle" dominantBaseline="central" fontSize={22} fontWeight="900" fill="#0F172A">
-          {score}%
-        </text>
-        <text x={cx} y={cy - r * 0.1} textAnchor="middle" dominantBaseline="central" fontSize={10} fill={color} fontWeight="700">
-          {label}
-        </text>
-      </svg>
-    </div>
-  );
-}
-
-// ── Donut chart (light theme) ─────────────────────────────────────────────
-
-function DonutChart({
-  segments,
-  size = 140,
-  strokeWidth = 24,
-  center,
-  sub,
-}: {
-  segments: { label: string; value: number; color: string }[];
-  size?: number;
-  strokeWidth?: number;
-  center?: string;
-  sub?: string;
-}) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const r = (size - strokeWidth) / 2;
-  const total = segments.reduce((s, seg) => s + seg.value, 0);
-
-  function polar(cx: number, cy: number, r: number, angleDeg: number) {
-    const rad = ((angleDeg - 90) * Math.PI) / 180;
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-  }
-
-  function describeArc(startAngle: number, endAngle: number) {
-    const clamped = Math.min(endAngle, startAngle + 359.99);
-    const s = polar(cx, cy, r, startAngle);
-    const e = polar(cx, cy, r, clamped);
-    const large = clamped - startAngle > 180 ? 1 : 0;
-    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
-  }
-
-  if (total === 0) {
-    return (
-      <div style={{ width: size, height: size }} className="rounded-full border-2 border-slate-100 flex items-center justify-center">
-        <span className="text-xs text-slate-400">No data</span>
-      </div>
-    );
-  }
-
-  let currentAngle = 0;
-  const arcs = segments.map((seg) => {
-    const angle = (seg.value / total) * 360;
-    const startAngle = currentAngle;
-    currentAngle += angle;
-    return { ...seg, startAngle, angle };
-  });
-
-  return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#F1F5F9" strokeWidth={strokeWidth} />
-        {arcs.map((arc) => (
-          <path
-            key={arc.label}
-            d={describeArc(arc.startAngle, arc.startAngle + arc.angle)}
-            fill="none"
-            stroke={arc.color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-          />
-        ))}
-      </svg>
-      {center && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <p className="text-xl font-black text-slate-900 leading-none">{center}</p>
-          {sub && <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{sub}</p>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── KPI Card ──────────────────────────────────────────────────────────────────
-
-function KPICard({ title, value, sub, icon, trend, trendLabel, accent = '#2155d9', alert }: {
-  title: string;
-  value: string | number;
-  sub?: React.ReactNode;
-  icon: React.ReactNode;
-  trend?: number | null;
-  trendLabel?: string;
-  accent?: string;
-  alert?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-sm font-black text-slate-500 leading-tight">{title}</span>
-        <div className="shrink-0 grid h-9 w-9 place-items-center rounded-xl" style={{ background: `${accent}18` }}>
-          <span style={{ color: accent }}>{icon}</span>
-        </div>
-      </div>
-      <div>
-        <div className="text-3xl font-black text-slate-950 leading-none tabular-nums">{value}</div>
-        {alert && <div className="mt-1.5">{alert}</div>}
-        {sub && <div className="mt-1 text-xs font-semibold text-slate-500">{sub}</div>}
-      </div>
-      {trend !== undefined && trend !== null && (
-        <div className="flex items-center gap-1 text-xs font-black">
-          <span className={trend >= 0 ? 'text-emerald-600' : 'text-red-500'}>
-            {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
-          </span>
-          <span className="font-semibold text-slate-400">{trendLabel ?? 'vs last month'}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Score KPI (with arc gauge) ────────────────────────────────────────────────
-
-function ScoreKPICard({ score, label, trend }: { score: number; label: string; trend: number | null }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <span className="text-sm font-black text-slate-500">Overall Compliance Score</span>
-      <div className="flex items-center gap-4">
-        <ArcGauge score={score} label={label} />
-        <div className="flex flex-col gap-1">
-          {trend !== null && (
-            <div className="flex items-center gap-1 text-xs font-black">
-              <span className={trend >= 0 ? 'text-emerald-600' : 'text-red-500'}>
-                {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}pts
-              </span>
-              <span className="font-semibold text-slate-400">vs last month</span>
-            </div>
-          )}
-          <div className="text-xs font-semibold text-slate-400">
-            {score >= 75 ? '✓ Audit ready' : score >= 60 ? '⚠ Review needed' : '✗ Action required'}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Framework row ─────────────────────────────────────────────────────────────
+// ── Framework logos ───────────────────────────────────────────────────────────
 
 const FW_LOGOS: Record<string, string> = {
   iso27001: '🔒',
@@ -358,367 +136,560 @@ const FW_LOGOS: Record<string, string> = {
   nist_csf: '📊',
 };
 
-function FrameworkRow({ fw, onView }: { fw: FrameworkSummary; onView: () => void }) {
-  const score = fw.score;
-  return (
-    <tr className="border-t border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer" onClick={onView}>
-      <td className="py-3 pl-4 pr-2">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-base">
-            {FW_LOGOS[fw.slug] ?? '📋'}
-          </div>
-          <span className="text-sm font-black text-slate-800">{fw.name}</span>
-        </div>
-      </td>
-      <td className="py-3 px-2">
-        {score === null ? (
-          <span className="text-xs font-semibold text-slate-400">Not assessed</span>
-        ) : (
-          <div className="flex items-center gap-2">
-            <div className="w-20 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-              <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, backgroundColor: scoreColor(score) }} />
-            </div>
-            <span className="text-sm font-black text-slate-800 tabular-nums">{score}%</span>
-          </div>
-        )}
-      </td>
-      <td className="py-3 px-2 text-sm font-semibold text-slate-600 text-right tabular-nums">{fw.controls}</td>
-      <td className="py-3 px-2 text-right">
-        {fw.openIssues > 0 ? (
-          <span className="text-sm font-black text-red-600 tabular-nums">{fw.openIssues}</span>
-        ) : (
-          <span className="text-sm font-semibold text-slate-400">0</span>
-        )}
-      </td>
-      <td className="py-3 pl-2 pr-4 text-xs font-semibold text-slate-400">{shortDate(fw.lastAssessmentAt)}</td>
-    </tr>
-  );
-}
-
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
 const TABS = ['Overview', 'Frameworks', 'Controls', 'Policy Center', 'Risk & Issues', 'Attestations', 'Audit Trail'] as const;
 type TabId = (typeof TABS)[number];
 
-// ── Overview Tab ──────────────────────────────────────────────────────────────
+// ── Action Item severity helpers ──────────────────────────────────────────────
 
-function OverviewTab({ data, trend, onFrameworkView }: {
+function actionSeverityStyles(severity: ActionItem['severity']) {
+  switch (severity) {
+    case 'critical': return { border: 'border-red-300', bg: 'bg-red-50', badge: 'bg-red-600 text-white', icon: 'text-red-600', count: 'text-red-700' };
+    case 'high': return { border: 'border-orange-300', bg: 'bg-orange-50', badge: 'bg-orange-500 text-white', icon: 'text-orange-600', count: 'text-orange-700' };
+    case 'medium': return { border: 'border-yellow-300', bg: 'bg-yellow-50', badge: 'bg-yellow-500 text-white', icon: 'text-yellow-700', count: 'text-yellow-700' };
+    default: return { border: 'border-blue-200', bg: 'bg-blue-50', badge: 'bg-blue-500 text-white', icon: 'text-blue-600', count: 'text-blue-700' };
+  }
+}
+
+function actionItemIcon(type: ActionItem['type']) {
+  switch (type) {
+    case 'high_risk_approvals':
+      return <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>;
+    case 'evidence_gaps':
+      return <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>;
+    case 'policy_acknowledgements':
+      return <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>;
+    case 'overdue_issues':
+      return <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+  }
+}
+
+function priorityBadge(p: WorkQueueItem['priority']) {
+  switch (p) {
+    case 'High': return 'bg-red-100 text-red-700';
+    case 'Medium': return 'bg-yellow-100 text-yellow-700';
+    default: return 'bg-slate-100 text-slate-600';
+  }
+}
+
+function policyStateStyles(state: PolicyDocStatus['state']) {
+  switch (state) {
+    case 'compliant': return { dot: 'bg-emerald-500', text: 'text-emerald-700' };
+    case 'review_required': return { dot: 'bg-orange-500', text: 'text-orange-700' };
+    case 'violations': return { dot: 'bg-red-500', text: 'text-red-700' };
+    case 'indexing': return { dot: 'bg-blue-400 animate-pulse', text: 'text-blue-600' };
+    case 'archived': return { dot: 'bg-slate-300', text: 'text-slate-500' };
+  }
+}
+
+// ── Overview Tab (operational workspace) ──────────────────────────────────────
+
+function OverviewTab({ data, workspace, onTabChange }: {
   data: ComplianceOverview;
-  trend: ComplianceTrendPoint[];
-  onFrameworkView: () => void;
+  workspace: ComplianceWorkspace;
+  onTabChange: (tab: TabId) => void;
 }) {
-  const cs = data.controlStats;
-  const donutSegments = [
-    { label: 'Effective', value: cs.effective, color: '#10B981' },
-    { label: 'Partially Effective', value: cs.partiallyEffective, color: '#F59E0B' },
-    { label: 'Ineffective', value: cs.ineffective, color: '#EF4444' },
-    { label: 'Not Assessed', value: cs.notAssessed, color: '#CBD5E1' },
-  ];
+  const scoreCol = scoreColor(data.score);
 
   return (
     <div className="space-y-5">
-      {/* KPI Strip */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-        <ScoreKPICard score={data.score} label={data.scoreLabel} trend={data.scoreTrend} />
-        <KPICard
-          title="Frameworks"
-          value={data.frameworks.filter((f) => f.isEnabled).length}
-          sub={`${data.frameworks.length} configured`}
-          icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>}
-          accent="#6366F1"
-        />
-        <KPICard
-          title="Total Controls"
-          value={cs.total}
-          sub={`${cs.effective} effective`}
-          icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>}
-          accent="#0EA5E9"
-          trend={null}
-        />
-        <KPICard
-          title="Open Issues"
-          value={data.openIssues}
-          alert={data.highPriorityIssues > 0 ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-black text-red-700">
-              ⚠ {data.highPriorityIssues} High Priority
-            </span>
-          ) : null}
-          icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>}
-          accent="#EF4444"
-          trend={null}
-        />
-        <KPICard
-          title="Upcoming Audits"
-          value={data.upcomingAudits}
-          sub={data.upcomingDeadlines[0] ? `Next in ${Math.max(0, data.upcomingDeadlines[0].daysRemaining)}d` : 'No upcoming audits'}
-          icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>}
-          accent="#8B5CF6"
-        />
+
+      {/* ── Section 1: Compliance Posture ─────────────────────────────────── */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm px-5 py-4">
+        <div className="flex flex-wrap items-center gap-5">
+          {/* Score circle */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-full border-4" style={{ borderColor: scoreCol }}>
+              <span className="text-lg font-black tabular-nums" style={{ color: scoreCol }}>{data.score}</span>
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Compliance Score</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-sm font-black" style={{ color: scoreCol }}>{data.scoreLabel}</span>
+                {data.scoreTrend !== null && (
+                  <span className={`text-xs font-black ${data.scoreTrend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {data.scoreTrend >= 0 ? `↑${data.scoreTrend}pts` : `↓${Math.abs(data.scoreTrend)}pts`}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="h-10 w-px bg-slate-200 shrink-0 hidden sm:block" />
+
+          {/* 4 key stats */}
+          <div className="flex flex-wrap gap-x-6 gap-y-2 flex-1">
+            {[
+              { label: 'Active Frameworks', value: data.frameworks.filter(f => f.isEnabled).length },
+              { label: 'Total Controls', value: data.controlStats.total },
+              { label: 'Open Issues', value: data.openIssues, alert: data.highPriorityIssues > 0 },
+              { label: 'Evidence Coverage', value: `${data.evidenceCoverage}%` },
+            ].map(({ label, value, alert }) => (
+              <div key={label} className="flex flex-col">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</span>
+                <span className={`text-xl font-black tabular-nums leading-none mt-0.5 ${alert ? 'text-red-600' : 'text-slate-900'}`}>{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href="/api/export/approvals?format=csv"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50 transition"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+              Export
+            </a>
+            <a
+              href="/dashboard/audit"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50 transition"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
+              Audit Log
+            </a>
+          </div>
+        </div>
       </div>
 
-      {/* Main layout */}
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:gap-5">
-        {/* Left column (flex-1) */}
-        <div className="min-w-0 flex-1 space-y-5">
-          {/* Row 1: Framework table + Score trend */}
-          <div className="grid gap-5 lg:grid-cols-2">
-            {/* Framework posture */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                <h3 className="text-sm font-black text-slate-800">Compliance Posture by Framework</h3>
-                <button className="text-xs font-black text-[#2155d9] hover:underline">View all</button>
-              </div>
-              {data.frameworks.length === 0 ? (
-                <div className="px-4 py-8 text-center">
-                  <p className="text-sm font-semibold text-slate-500">No frameworks configured yet.</p>
-                  <p className="mt-1 text-xs text-slate-400">Configure your compliance frameworks to start tracking.</p>
-                </div>
-              ) : (
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                      <th className="pb-2 pl-4 pr-2">Framework</th>
-                      <th className="pb-2 px-2">Score</th>
-                      <th className="pb-2 px-2 text-right">Controls</th>
-                      <th className="pb-2 px-2 text-right">Issues</th>
-                      <th className="pb-2 pl-2 pr-4">Last Assessment</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.frameworks.slice(0, 6).map((fw) => (
-                      <FrameworkRow key={fw.id} fw={fw} onView={onFrameworkView} />
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+      {/* ── Section 2: Action Required ────────────────────────────────────── */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+          <div>
+            <h2 className="text-sm font-black text-slate-900">Action Required</h2>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Items that require your attention today</p>
+          </div>
+          {workspace.actionItems.length > 0 && (
+            <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-600 text-[11px] font-black text-white">
+              {workspace.actionItems.length}
+            </span>
+          )}
+        </div>
 
-            {/* Score trend */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-black text-slate-800">Compliance Score Trend</h3>
-                <span className="text-xs font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">Last 30 days</span>
-              </div>
-              {trend.length === 0 ? (
-                <div className="h-40 flex flex-col items-center justify-center text-center">
-                  <p className="text-sm font-semibold text-slate-500">No trend data yet.</p>
-                  <p className="mt-1 text-xs text-slate-400">Compliance evaluations generate trend data over time.</p>
-                </div>
-              ) : (
-                <div>
-                  {/* Y labels */}
-                  <div className="flex flex-col text-[10px] font-semibold text-slate-400 gap-0 mb-1">
-                    {[100, 75, 50, 25, 0].map((v) => (
-                      <div key={v} className="flex items-center gap-1">
-                        <span className="w-6 text-right tabular-nums">{v}%</span>
-                      </div>
-                    ))}
+        {workspace.actionItems.length === 0 ? (
+          <div className="px-5 py-8 flex flex-col items-center text-center gap-2">
+            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+              <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <p className="text-sm font-black text-slate-700">All clear</p>
+            <p className="text-xs font-semibold text-slate-400">No compliance actions require attention right now.</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+            {workspace.actionItems.map((item) => {
+              const s = actionSeverityStyles(item.severity);
+              return (
+                <div key={item.type} className={`rounded-xl border ${s.border} ${s.bg} p-4 flex flex-col gap-3`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className={`shrink-0 ${s.icon}`}>{actionItemIcon(item.type)}</div>
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${s.badge}`}>
+                      {item.severity}
+                    </span>
                   </div>
-                  <MiniScoreTrend points={trend} color="#2155d9" />
-                  {/* X labels */}
-                  <div className="flex justify-between text-[10px] font-semibold text-slate-400 mt-1">
-                    {trend.length > 0 && (
-                      <>
-                        <span>{trend[0]?.label}</span>
-                        <span>{trend[Math.floor(trend.length / 2)]?.label}</span>
-                        <span>{trend[trend.length - 1]?.label}</span>
-                      </>
-                    )}
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-slate-900 leading-snug">{item.title}</p>
+                    <p className="mt-1 text-[11px] font-semibold text-slate-600 leading-snug">{item.subtitle}</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-2xl font-black tabular-nums ${s.count}`}>{item.count}</span>
+                    <a href={item.href} className="inline-flex items-center gap-1 rounded-lg bg-white border border-white/80 px-2.5 py-1 text-[11px] font-black text-slate-800 hover:bg-slate-50 transition shadow-sm">
+                      {item.actionLabel} →
+                    </a>
                   </div>
                 </div>
-              )}
-            </div>
+              );
+            })}
           </div>
+        )}
+      </div>
 
-          {/* Row 2: Risk Areas + Control Status + Recent Activities */}
-          <div className="grid gap-5 lg:grid-cols-3">
-            {/* Top Risk Areas */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                <h3 className="text-sm font-black text-slate-800">Top Risk Areas</h3>
-                <button className="text-xs font-black text-[#2155d9] hover:underline">View all</button>
-              </div>
-              {data.topRiskAreas.length === 0 ? (
-                <div className="px-4 py-6 text-center text-sm font-semibold text-slate-400">No risk areas identified.</div>
-              ) : (
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                      <th className="pb-2 pl-4 pr-2">Risk Area</th>
-                      <th className="pb-2 px-1">Level</th>
-                      <th className="pb-2 px-1 text-right">Issues</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.topRiskAreas.map((r) => (
-                      <tr key={r.name} className="border-t border-slate-100">
-                        <td className="py-2.5 pl-4 pr-2 text-xs font-black text-slate-700">{r.name}</td>
-                        <td className="py-2.5 px-1">
-                          <span className={`inline-block rounded-full border px-1.5 py-0.5 text-[10px] font-black ${riskBadge(r.riskLevel)}`}>
-                            {r.riskLevel}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-1 text-right text-xs font-black text-slate-700 tabular-nums">{r.openIssues}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* Control Status donut */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-black text-slate-800 mb-3">Control Status</h3>
-              <div className="flex items-start gap-4">
-                <DonutChart
-                  segments={donutSegments}
-                  size={120}
-                  strokeWidth={20}
-                  center={String(cs.total)}
-                  sub="Total Controls"
-                />
-                <div className="flex-1 space-y-2 pt-1">
-                  {donutSegments.map((seg) => (
-                    <div key={seg.label} className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
-                        <span className="text-[11px] font-semibold text-slate-600">{seg.label}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs font-black text-slate-800 tabular-nums">{seg.value}</span>
-                        <span className="text-[10px] text-slate-400">
-                          ({cs.total > 0 ? Math.round((seg.value / cs.total) * 100) : 0}%)
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {cs.total > 0 && (
-                <a href="/trust/compliance#controls" className="mt-3 flex items-center justify-center text-xs font-black text-[#2155d9] hover:underline">
-                  View all controls →
-                </a>
-              )}
-            </div>
-
-            {/* Recent Compliance Activities */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                <h3 className="text-sm font-black text-slate-800">Recent Activities</h3>
-                <button className="text-xs font-black text-[#2155d9] hover:underline">View all</button>
-              </div>
-              {data.recentActivities.length === 0 ? (
-                <div className="px-4 py-6 text-center text-sm font-semibold text-slate-400">No recent activities.</div>
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {data.recentActivities.slice(0, 6).map((a) => (
-                    <li key={a.id} className="flex items-start gap-3 px-4 py-3">
-                      <div className="mt-0.5 shrink-0">
-                        <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <svg className="h-3.5 w-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-black text-slate-700 leading-snug">{a.label}</p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <span className="text-[10px] font-semibold text-slate-400">{relDate(a.createdAt)}</span>
-                          <span className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-black ${categoryBadge(a.category)}`}>{a.category}</span>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+      {/* ── Section 3: My Compliance Work ────────────────────────────────── */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+          <div>
+            <h2 className="text-sm font-black text-slate-900">My Compliance Work</h2>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Your active compliance tasks across frameworks, controls, and attestations</p>
           </div>
+          <button
+            onClick={() => onTabChange('Attestations')}
+            className="text-xs font-black text-[#2155d9] hover:underline"
+          >
+            View All →
+          </button>
+        </div>
 
-          {/* Compliance Health Overview strip */}
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="px-5 pt-4 pb-2">
-              <h3 className="text-sm font-black text-slate-800">Compliance Health Overview</h3>
-            </div>
-            {data.healthMetrics.length === 0 ? (
-              <div className="px-5 py-4 text-sm text-slate-400">No health data available.</div>
-            ) : (
-              <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 sm:grid-cols-3 lg:grid-cols-6">
-                {data.healthMetrics.map((m) => (
-                  <div key={m.label} className="flex flex-col gap-1 p-4">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{m.label}</span>
-                    <span className="text-2xl font-black text-slate-900 tabular-nums leading-none">{m.value}</span>
-                    {m.delta !== null && (
-                      <span className={`text-[10px] font-black ${m.delta >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                        {m.delta >= 0 ? `↑ ${m.delta}` : `↓ ${Math.abs(m.delta)}`} this month
+        {workspace.workQueue.length === 0 ? (
+          <div className="px-5 py-6 text-center">
+            <p className="text-sm font-semibold text-slate-500">No active compliance work assigned.</p>
+            <p className="mt-1 text-xs text-slate-400">Tasks appear when attestations, controls, or issues require your attention.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  <th className="py-3 pl-5 pr-3">Item</th>
+                  <th className="py-3 px-3">Owner</th>
+                  <th className="py-3 px-3">Priority</th>
+                  <th className="py-3 px-3">Due</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 pl-3 pr-5">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workspace.workQueue.map((item) => (
+                  <tr key={item.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td className="py-3 pl-5 pr-3 max-w-xs">
+                      <p className="text-xs font-black text-slate-800 leading-snug">{item.title}</p>
+                      {item.subtitle && <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{item.subtitle}</p>}
+                    </td>
+                    <td className="py-3 px-3 text-xs font-semibold text-slate-600">{item.owner ?? '—'}</td>
+                    <td className="py-3 px-3">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${priorityBadge(item.priority)}`}>
+                        {item.priority}
                       </span>
-                    )}
-                  </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      {item.dueLabel ? (
+                        <span className={`text-xs font-black ${item.dueUrgent ? 'text-red-600' : 'text-slate-500'}`}>
+                          {item.dueLabel}
+                        </span>
+                      ) : <span className="text-xs text-slate-400">—</span>}
+                    </td>
+                    <td className="py-3 px-3">
+                      {item.status && (
+                        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${statusBadge(item.status)}`}>
+                          {statusLabel(item.status)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 pl-3 pr-5">
+                      <a href={item.href} className="text-[11px] font-black text-[#2155d9] hover:underline whitespace-nowrap">
+                        {item.actionLabel} →
+                      </a>
+                    </td>
+                  </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Section 4: Controls Requiring Attention ───────────────────────── */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+          <div>
+            <h2 className="text-sm font-black text-slate-900">Controls Requiring Attention</h2>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Ineffective and partially effective controls that need remediation</p>
+          </div>
+          <button
+            onClick={() => onTabChange('Controls')}
+            className="text-xs font-black text-[#2155d9] hover:underline"
+          >
+            View All Controls →
+          </button>
+        </div>
+
+        {workspace.topControls.length === 0 ? (
+          <div className="px-5 py-6 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+              <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <div>
+              <p className="text-sm font-black text-slate-700">All controls are effective</p>
+              <p className="text-xs font-semibold text-slate-400">No control remediation is required at this time.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  <th className="py-3 pl-5 pr-3">Control</th>
+                  <th className="py-3 px-3">Framework</th>
+                  <th className="py-3 px-3">Owner</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3">Last Tested</th>
+                  <th className="py-3 pl-3 pr-5">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workspace.topControls.map((c) => (
+                  <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td className="py-3 pl-5 pr-3">
+                      <p className="text-xs font-black text-slate-800">{c.name}</p>
+                    </td>
+                    <td className="py-3 px-3 text-xs font-semibold text-slate-600">{c.frameworkName ?? '—'}</td>
+                    <td className="py-3 px-3 text-xs font-semibold text-slate-600">{c.owner ?? '—'}</td>
+                    <td className="py-3 px-3">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${statusBadge(c.status)}`}>
+                        {statusLabel(c.status)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-xs font-semibold text-slate-400">
+                      {c.lastTestedAt ? relDate(c.lastTestedAt) : '—'}
+                    </td>
+                    <td className="py-3 pl-3 pr-5">
+                      <a href={c.href} className="text-[11px] font-black text-[#2155d9] hover:underline">
+                        Update Status →
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Section 5: 4-column grid ──────────────────────────────────────── */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+        {/* Risk & Issues */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100">
+            <h3 className="text-xs font-black text-slate-800">Risk &amp; Issues</h3>
+            <button onClick={() => onTabChange('Risk & Issues')} className="text-[11px] font-black text-[#2155d9] hover:underline">
+              View all
+            </button>
+          </div>
+          {workspace.recentIssues.length === 0 ? (
+            <div className="px-4 py-5 text-center text-xs font-semibold text-slate-400">No open compliance issues.</div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {workspace.recentIssues.slice(0, 5).map((issue) => (
+                <li key={issue.id} className="px-4 py-3 flex items-start gap-2.5">
+                  <div className="shrink-0 mt-0.5">
+                    <div className={`h-1.5 w-1.5 rounded-full mt-1 ${issue.severity === 'CRITICAL' ? 'bg-red-500' : issue.severity === 'HIGH' ? 'bg-orange-500' : 'bg-yellow-500'}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-black text-slate-800 leading-snug line-clamp-2">{issue.title}</p>
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span className={`inline-block rounded-full border px-1 py-0.5 text-[9px] font-black ${severityBadge(issue.severity)}`}>
+                        {issue.severity}
+                      </span>
+                      {issue.frameworkName && (
+                        <span className="text-[9px] font-semibold text-slate-400">{issue.frameworkName}</span>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Policy Status */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100">
+            <h3 className="text-xs font-black text-slate-800">Policy Status</h3>
+            <a href="/playbooks" className="text-[11px] font-black text-[#2155d9] hover:underline">Open Playbooks</a>
+          </div>
+          {workspace.policyDocs.length === 0 ? (
+            <div className="px-4 py-5 text-center">
+              <p className="text-xs font-semibold text-slate-400">No policy documents uploaded.</p>
+              <a href="/playbooks" className="mt-2 inline-block text-[11px] font-black text-[#2155d9] hover:underline">Upload policy →</a>
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {workspace.policyDocs.slice(0, 5).map((doc) => {
+                const s = policyStateStyles(doc.state);
+                return (
+                  <li key={doc.id} className="px-4 py-3 flex items-center gap-2.5">
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${s.dot}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-black text-slate-800 truncate">{doc.name}</p>
+                      <p className={`text-[10px] font-semibold ${s.text}`}>{doc.detail}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        {/* Evidence Health */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+          <h3 className="text-xs font-black text-slate-800 mb-3">Evidence Health</h3>
+          <div className="space-y-3.5">
+            {[
+              { label: 'Evidence Coverage', value: data.evidenceCoverage, color: '#10B981' },
+              { label: 'Approval Compliance', value: data.approvalCompliance, color: '#2155d9' },
+              { label: 'Effective Controls', value: data.controlStats.total > 0 ? Math.round((data.controlStats.effective / data.controlStats.total) * 100) : 0, color: '#8B5CF6' },
+            ].map(({ label, value, color }) => (
+              <div key={label}>
+                <div className="flex justify-between mb-1">
+                  <span className="text-[11px] font-black text-slate-600">{label}</span>
+                  <span className="text-[11px] font-black tabular-nums" style={{ color }}>{value}%</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${value}%`, backgroundColor: color }} />
+                </div>
               </div>
-            )}
+            ))}
           </div>
         </div>
 
-        {/* Sidebar: Upcoming Deadlines */}
-        <aside className="w-full shrink-0 xl:w-72 xl:sticky xl:top-6">
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <h3 className="text-sm font-black text-slate-800">Upcoming Deadlines</h3>
-              <button className="text-xs font-black text-[#2155d9] hover:underline">View all</button>
-            </div>
-            {data.upcomingDeadlines.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <p className="text-sm font-semibold text-slate-500">No upcoming deadlines.</p>
-                <p className="mt-1 text-xs text-slate-400">Configure frameworks to track audit deadlines.</p>
+        {/* Upcoming Deadlines */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100">
+            <h3 className="text-xs font-black text-slate-800">Upcoming Deadlines</h3>
+          </div>
+          {data.upcomingDeadlines.length === 0 ? (
+            <div className="px-4 py-5 text-center text-xs font-semibold text-slate-400">No upcoming deadlines.</div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {data.upcomingDeadlines.slice(0, 5).map((d) => {
+                const { month, day } = deadlineMonthDay(d.dueDate);
+                const { bg, text } = deadlineColor(d.daysRemaining);
+                return (
+                  <li key={d.id} className="flex items-center gap-3 px-4 py-3">
+                    <div className={`shrink-0 flex flex-col items-center justify-center rounded-lg ${bg} ${text} w-9 h-9`}>
+                      <span className="text-[8px] font-black uppercase">{month}</span>
+                      <span className="text-sm font-black leading-none">{day}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-black text-slate-800 leading-snug line-clamp-1">{d.title}</p>
+                      <span className={`inline-block rounded-full px-1.5 py-0.5 text-[9px] font-black mt-0.5 ${deadlineDaysBadge(d.daysRemaining)}`}>
+                        {d.daysRemaining < 0 ? 'Overdue' : `${d.daysRemaining}d left`}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* ── Section 6: 3-column grid ──────────────────────────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-3">
+
+        {/* Recent Activity */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100">
+            <h3 className="text-xs font-black text-slate-800">Recent Activity</h3>
+            <button onClick={() => onTabChange('Audit Trail')} className="text-[11px] font-black text-[#2155d9] hover:underline">
+              Full audit log
+            </button>
+          </div>
+          {data.recentActivities.length === 0 ? (
+            <div className="px-4 py-6 text-center text-xs font-semibold text-slate-400">No recent compliance activity.</div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {data.recentActivities.slice(0, 7).map((a) => (
+                <li key={a.id} className="flex items-start gap-3 px-4 py-3">
+                  <div className="mt-0.5 shrink-0">
+                    <div className="h-6 w-6 rounded-lg bg-slate-100 flex items-center justify-center">
+                      <svg className="h-3 w-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-black text-slate-700 leading-snug">{a.label}</p>
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-slate-400">{relDate(a.createdAt)}</span>
+                      <span className={`inline-block rounded-full px-1.5 py-0.5 text-[9px] font-black ${categoryBadge(a.category)}`}>{a.category}</span>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* AI Compliance Advisor */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-4 pt-4 pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+                <svg className="h-3.5 w-3.5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>
               </div>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {data.upcomingDeadlines.map((d) => {
-                  const { month, day } = deadlineMonthDay(d.dueDate);
-                  const { bg, text } = deadlineColor(d.daysRemaining);
-                  return (
-                    <li key={d.id} className="flex items-start gap-3 px-4 py-3">
-                      <div className={`shrink-0 flex flex-col items-center justify-center rounded-lg ${bg} ${text} w-11 h-11`}>
-                        <span className="text-[9px] font-black uppercase">{month}</span>
-                        <span className="text-lg font-black leading-none">{day}</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-black text-slate-800 leading-snug">{d.title}</p>
-                        {d.frameworkName && <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{d.frameworkName}</p>}
-                        <div className="mt-1">
-                          <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${deadlineDaysBadge(d.daysRemaining)}`}>
-                            {d.daysRemaining < 0 ? 'Overdue' : `${d.daysRemaining} days left`}
-                          </span>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+              <h3 className="text-xs font-black text-slate-800">AI Compliance Advisor</h3>
+            </div>
           </div>
 
-          {/* Evidence + Approval Coverage */}
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-black text-slate-800 mb-3">Coverage Metrics</h3>
-            <div className="space-y-3">
-              {[
-                { label: 'Evidence Coverage', value: data.evidenceCoverage, color: '#10B981' },
-                { label: 'Approval Compliance', value: data.approvalCompliance, color: '#2155d9' },
-              ].map(({ label, value, color }) => (
-                <div key={label}>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-xs font-black text-slate-600">{label}</span>
-                    <span className="text-xs font-black tabular-nums" style={{ color }}>{value}%</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${value}%`, backgroundColor: color }} />
-                  </div>
-                </div>
-              ))}
+          {workspace.aiAdvisor === null ? (
+            <div className="px-4 py-6 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <p className="text-sm font-black text-slate-700">Looking good</p>
+              </div>
+              <p className="text-xs font-semibold text-slate-400 leading-relaxed">No critical compliance patterns detected. Continue monitoring your controls and maintaining evidence documentation.</p>
+              <a href="/copilot?q=What+is+our+compliance+posture%3F" className="mt-3 inline-flex items-center gap-1 rounded-xl bg-violet-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-violet-700 transition">
+                Ask AI Copilot
+              </a>
             </div>
+          ) : (
+            <div className="px-4 py-4 space-y-3">
+              <div className="rounded-xl bg-violet-50 border border-violet-200 p-3">
+                <p className="text-xs font-black text-violet-900 leading-snug">{workspace.aiAdvisor.headline}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Why it matters</p>
+                <p className="text-[11px] font-semibold text-slate-600 leading-relaxed">{workspace.aiAdvisor.whyItMatters}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Recommended action</p>
+                <p className="text-[11px] font-semibold text-slate-600 leading-relaxed">{workspace.aiAdvisor.recommendedAction}</p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <a href={workspace.aiAdvisor.evidenceHref} className="inline-flex items-center gap-1 rounded-xl bg-[#2155d9] px-3 py-1.5 text-[11px] font-black text-white hover:bg-[#1a44be] transition">
+                  View Evidence →
+                </a>
+                <a href={`/copilot?q=${encodeURIComponent(workspace.aiAdvisor.copilotQuery)}`} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-[11px] font-black text-slate-700 hover:bg-slate-50 transition">
+                  Ask AI Copilot
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-4 pt-4 pb-2 border-b border-slate-100">
+            <h3 className="text-xs font-black text-slate-800">Quick Actions</h3>
           </div>
-        </aside>
+          <div className="p-3 space-y-1.5">
+            {[
+              { label: 'Review Approvals', sub: 'Check pending high-risk approvals', href: '/approvals', icon: '✍️' },
+              { label: 'Manage Controls', sub: 'Update control effectiveness', href: '/trust/compliance?tab=controls', icon: '🛡️', tab: 'Controls' as TabId },
+              { label: 'Complete Attestations', sub: 'Sign off pending attestations', href: '/trust/compliance?tab=attestations', icon: '✅', tab: 'Attestations' as TabId },
+              { label: 'Upload Policy', sub: 'Add or update policy documents', href: '/playbooks', icon: '📄' },
+              { label: 'Investigate Issues', sub: 'Open Investigation Center', href: '/investigations', icon: '🔍' },
+              { label: 'View Evidence', sub: 'Browse evidence records', href: '/evidence', icon: '📋' },
+            ].map((action) => (
+              action.tab ? (
+                <button
+                  key={action.label}
+                  onClick={() => onTabChange(action.tab!)}
+                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 transition text-left"
+                >
+                  <span className="text-base shrink-0">{action.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-black text-slate-800">{action.label}</p>
+                    <p className="text-[10px] font-semibold text-slate-400">{action.sub}</p>
+                  </div>
+                  <svg className="h-3.5 w-3.5 text-slate-300 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </button>
+              ) : (
+                <a
+                  key={action.label}
+                  href={action.href}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 transition"
+                >
+                  <span className="text-base shrink-0">{action.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-black text-slate-800">{action.label}</p>
+                    <p className="text-[10px] font-semibold text-slate-400">{action.sub}</p>
+                  </div>
+                  <svg className="h-3.5 w-3.5 text-slate-300 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </a>
+              )
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1356,15 +1327,12 @@ function AuditTrailTab() {
 type Props = {
   initialData: ComplianceOverview;
   trendPoints: ComplianceTrendPoint[];
+  workspaceData: ComplianceWorkspace;
   orgId: string;
 };
 
-export function ComplianceHubShell({ initialData, trendPoints }: Props) {
+export function ComplianceHubShell({ initialData, workspaceData }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('Overview');
-
-  const handleFrameworkView = useCallback(() => {
-    setActiveTab('Frameworks');
-  }, []);
 
   return (
     <div>
@@ -1389,8 +1357,8 @@ export function ComplianceHubShell({ initialData, trendPoints }: Props) {
       {activeTab === 'Overview' && (
         <OverviewTab
           data={initialData}
-          trend={trendPoints}
-          onFrameworkView={handleFrameworkView}
+          workspace={workspaceData}
+          onTabChange={setActiveTab}
         />
       )}
       {activeTab === 'Frameworks' && <FrameworksTab initial={initialData.frameworks} />}
