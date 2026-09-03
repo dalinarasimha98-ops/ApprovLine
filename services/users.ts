@@ -2,7 +2,6 @@ import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { tenantScopedWhere } from '@/lib/tenant-isolation';
-import { toDate } from '@/lib/types/dates';
 import type { Role } from '@/lib/rbac';
 
 export type UserRow = {
@@ -11,7 +10,7 @@ export type UserRow = {
   name: string | null;
   role: Role;
   teams: { id: string; name: string }[];
-  createdAt: Date;
+  createdAt: string;
 };
 
 export type TeamRow = {
@@ -20,7 +19,7 @@ export type TeamRow = {
   department: string | null;
   memberCount: number;
   members: { id: string; name: string | null; email: string; role: Role }[];
-  createdAt: Date;
+  createdAt: string;
 };
 
 export type PendingInvite = {
@@ -36,7 +35,7 @@ export type ActivityEvent = {
   action: string;
   actorName: string | null;
   metadata: Record<string, unknown>;
-  createdAt: Date;
+  createdAt: string;
 };
 
 export type UsersTeamsSummary = {
@@ -122,7 +121,7 @@ async function fetchUsersTeamsData(organizationId: string): Promise<UsersTeamsDa
     name: u.name,
     role: u.role as Role,
     teams: u.teams.map((tm) => ({ id: tm.team.id, name: tm.team.name })),
-    createdAt: toDate(u.createdAt),
+    createdAt: u.createdAt.toISOString(),
   }));
 
   const teamRows: TeamRow[] = teams.map((t) => ({
@@ -136,7 +135,7 @@ async function fetchUsersTeamsData(organizationId: string): Promise<UsersTeamsDa
       email: m.user.email,
       role: m.user.role as Role,
     })),
-    createdAt: toDate(t.createdAt),
+    createdAt: t.createdAt.toISOString(),
   }));
 
   const pendingInvites = jsonArray<PendingInvite>(org?.invitedTeamMembers);
@@ -151,7 +150,7 @@ async function fetchUsersTeamsData(organizationId: string): Promise<UsersTeamsDa
       action: log.action,
       actorName,
       metadata: (log.metadata as Record<string, unknown>) ?? {},
-      createdAt: toDate(log.createdAt),
+      createdAt: log.createdAt.toISOString(),
     };
   });
 

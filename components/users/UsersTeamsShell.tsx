@@ -70,8 +70,9 @@ function Avatar({ name, email, size = 'sm' }: { name: string | null; email: stri
   );
 }
 
-function relDate(date: Date): string {
-  const diff = Date.now() - date.getTime();
+function relDate(date: Date | string): string {
+  const d = new Date(date);
+  const diff = Date.now() - d.getTime();
   const secs = Math.floor(diff / 1000);
   if (secs < 60) return 'just now';
   const mins = Math.floor(secs / 60);
@@ -80,7 +81,7 @@ function relDate(date: Date): string {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function formatAction(action: string, metadata: Record<string, unknown>): string {
