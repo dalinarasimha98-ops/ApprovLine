@@ -4,7 +4,6 @@ import { enforcePageRole } from '@/lib/rbac';
 import { getSettingsOverview } from '@/services/settings';
 import { SettingsShell } from '@/components/settings/SettingsShell';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
-import { Settings } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,30 +14,40 @@ export default async function SettingsPage() {
   if (!tenant.user || !tenant.organization) redirect('/dashboard');
   enforcePageRole('/dashboard/settings', tenant.user.role);
 
-  const data = await getSettingsOverview(tenant.organization.id).catch(() => null);
-  if (!data) redirect('/dashboard');
+  let data;
+  try {
+    data = await getSettingsOverview(tenant.organization.id);
+  } catch {
+    return (
+      <DashboardShell>
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="bg-[#07111f] px-6 py-7 text-white">
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Workspace Configuration</p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight">Settings</h1>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <p className="font-black text-amber-900">Could not load settings right now.</p>
+          <p className="mt-1 text-sm font-semibold text-amber-700">The database did not respond in time. Please retry in a moment.</p>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell>
-      <div className="flex min-h-screen flex-col bg-[#07111f]">
-        {/* Page header */}
-        <div className="border-b border-white/[0.06] px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/20">
-              <Settings className="h-4 w-4 text-blue-300" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold text-white">Settings</h1>
-              <p className="text-xs text-slate-500">{data.organization.name} · Workspace configuration</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Shell */}
-        <div className="flex-1 px-6 py-6">
-          <SettingsShell data={data} />
+      {/* Page header — matches the Users & Teams / Playbooks header pattern */}
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="bg-[#07111f] px-6 py-7 text-white">
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Workspace Configuration</p>
+          <h1 className="mt-2 text-3xl font-black tracking-tight">{data.organization.name}</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+            Manage your organization, security, workflows, integrations and ApprovLine configuration.
+          </p>
         </div>
       </div>
+
+      <SettingsShell data={data} />
     </DashboardShell>
   );
 }
