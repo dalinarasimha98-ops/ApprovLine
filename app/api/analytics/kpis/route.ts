@@ -3,6 +3,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { getCoreAnalytics, generateAIInsights, type DateRange } from '@/services/analytics';
 import { hasAnyRole } from '@/lib/rbac';
 import { withTimeout } from '@/lib/performance';
+import { EntitlementDeniedError, requireEntitlement } from '@/lib/entitlements';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,12 @@ export async function GET(request: NextRequest) {
   }
   if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) {
     return NextResponse.json({ error: 'Your workspace role cannot access analytics.' }, { status: 403 });
+  }
+  try {
+    await requireEntitlement(tenant.organization.id, 'executive_roi');
+  } catch (err) {
+    if (err instanceof EntitlementDeniedError) return NextResponse.json({ error: err.message }, { status: 403 });
+    throw err;
   }
 
   const params = request.nextUrl.searchParams;

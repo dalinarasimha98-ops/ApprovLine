@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
 import { DASHBOARD_TENANT_CACHE_TAG } from '@/lib/auth';
 import { isFounderIdentity } from '@/lib/founder-identity';
+import { assertSeatAvailable } from '@/lib/seat-enforcement';
 
 export type FounderRole = 'SUPER_ADMIN' | 'FOUNDER_ADMIN' | 'SUPPORT_ADMIN';
 
@@ -1208,7 +1209,7 @@ export async function inviteFounderCustomerUser(access: Extract<FounderAccess, {
   if (!customer) throw new Error('Customer not found.');
   const capacityUsers = await prisma.founderManagedUser.count({ where: { customerAccountId, status: { in: ['ACTIVE', 'INVITED'] } } });
   const purchasedSeats = customer.seatAllocation?.purchasedSeats ?? 5;
-  if (capacityUsers >= purchasedSeats) throw new Error('Seat limit reached. Increase purchased seats before inviting another user.');
+  assertSeatAvailable(capacityUsers, purchasedSeats, 'Seat limit reached. Increase purchased seats before inviting another user.');
 
   const user = await prisma.founderManagedUser.upsert({
     where: { customerAccountId_email: { customerAccountId, email } },
@@ -1230,12 +1231,41 @@ export async function updateFounderCustomerUser(access: Extract<FounderAccess, {
   const role = normalizeManagedUserRole(formData.get('role')) as 'ORG_ADMIN' | 'COMPLIANCE' | 'LEGAL' | 'FINANCE' | 'PROCUREMENT' | 'ENGINEERING' | 'VIEWER';
   if (!customerAccountId || !userId) throw new Error('Customer and user are required.');
 
+  // 'activate' runs its seat check and write inside a serializable transaction so two
+  // concurrent reactivations cannot both consume the same final available seat.
+  if (action === 'activate') {
+    const activated = await prisma.$transaction(async (tx) => {
+      const seatAlloc = await tx.customerSeatAllocation.findUnique({ where: { customerAccountId } });
+      const purchasedSeats = seatAlloc?.purchasedSeats ?? 5;
+      const activeCount = await tx.founderManagedUser.count({
+        where: { customerAccountId, status: 'ACTIVE', id: { not: userId } },
+      });
+      assertSeatAvailable(activeCount, purchasedSeats, 'Seat limit reached. Suspend or remove an active user before reactivating another.');
+      return tx.founderManagedUser.update({ where: { id: userId }, data: { status: 'ACTIVE', acceptedAt: new Date() } });
+    }, { isolationLevel: 'Serializable' });
+    await recalculateCustomerSeats(customerAccountId);
+    await refreshCustomerHealth(customerAccountId);
+    await logFounderAction({ access, customerAccountId, action: 'user.reactivated', targetType: 'FounderManagedUser', targetId: userId, metadata: { email: activated.email, role: activated.role } });
+    return;
+  }
+
   const data: Prisma.FounderManagedUserUpdateInput = {};
   let auditAction = 'user.updated';
-  if (action === 'activate') {
-    data.status = 'ACTIVE';
-    data.acceptedAt = new Date();
-    auditAction = 'user.reactivated';
+
+  if (action === 'resend') {
+    // Restoring INVITED status on a REVOKED/EXPIRED user re-reserves a seat slot;
+    // verify ACTIVE+INVITED capacity (excluding this user) before the write.
+    const seatAlloc = await prisma.customerSeatAllocation.findUnique({ where: { customerAccountId } });
+    const purchasedSeats = seatAlloc?.purchasedSeats ?? 5;
+    const reservedCount = await prisma.founderManagedUser.count({
+      where: { customerAccountId, status: { in: ['ACTIVE', 'INVITED'] }, id: { not: userId } },
+    });
+    assertSeatAvailable(reservedCount, purchasedSeats, 'Seat limit reached. Increase purchased seats before resending this invitation.');
+    data.status = 'INVITED';
+    data.inviteToken = randomUUID();
+    data.invitedAt = new Date();
+    data.expiresAt = daysFromNow(14);
+    auditAction = 'user.invite.resent';
   } else if (action === 'suspend') {
     data.status = 'SUSPENDED';
     data.suspendedAt = new Date();
@@ -1249,12 +1279,6 @@ export async function updateFounderCustomerUser(access: Extract<FounderAccess, {
     data.revokedAt = new Date();
     data.inviteToken = null;
     auditAction = 'user.invite.revoked';
-  } else if (action === 'resend') {
-    data.status = 'INVITED';
-    data.inviteToken = randomUUID();
-    data.invitedAt = new Date();
-    data.expiresAt = daysFromNow(14);
-    auditAction = 'user.invite.resent';
   } else if (action === 'role') {
     data.role = role;
     auditAction = 'user.role.changed';
@@ -1502,8 +1526,50 @@ export function buildFounderObservabilityReadinessChecks() {
   ];
 }
 
-export function buildFounderTenantIsolationReport() {
+export async function buildFounderTenantIsolationReport() {
   const testedAt = new Date();
+
+  // Real DB isolation checks: verify that tenant-scoped tables have organizationId on all rows.
+  // A mismatch would indicate an orphaned row not scoped to any tenant.
+  const dbChecks: { name: string; status: 'Pass' | 'Warning' | 'Fail'; detail: string }[] = [];
+
+  try {
+    const [orgs, approvalTotal, approvalScoped, auditTotal, auditScoped, memoryTotal, memoryScoped] = await Promise.all([
+      prisma.organization.count(),
+      prisma.approvalRecord.count(),
+      prisma.approvalRecord.count({ where: { organizationId: { not: '' } } }),
+      prisma.auditLog.count(),
+      prisma.auditLog.count({ where: { organizationId: { not: '' } } }),
+      prisma.memoryEntity.count(),
+      prisma.memoryEntity.count({ where: { organizationId: { not: '' } } }),
+    ]);
+    dbChecks.push(
+      {
+        name: 'ApprovalRecord isolation',
+        status: approvalTotal === 0 || approvalTotal === approvalScoped ? 'Pass' : 'Warning',
+        detail: `${approvalScoped}/${approvalTotal} approval records carry organizationId. ${orgs} tenant organizations registered.`,
+      },
+      {
+        name: 'AuditLog isolation',
+        status: auditTotal === 0 || auditTotal === auditScoped ? 'Pass' : 'Warning',
+        detail: `${auditScoped}/${auditTotal} audit log entries carry organizationId.`,
+      },
+      {
+        name: 'MemoryEntity isolation',
+        status: memoryTotal === 0 || memoryTotal === memoryScoped ? 'Pass' : 'Warning',
+        detail: `${memoryScoped}/${memoryTotal} memory graph entities carry organizationId.`,
+      },
+    );
+  } catch {
+    dbChecks.push({
+      name: 'DB isolation check',
+      status: 'Warning',
+      detail: 'Could not query isolation data — run npm run db:deploy to ensure tables exist.',
+    });
+  }
+
+  const dbStatus = dbChecks.every((c) => c.status === 'Pass') ? 'Pass' : 'Warning';
+
   const modules = [
     {
       name: 'Tenant Context',
@@ -1526,8 +1592,8 @@ export function buildFounderTenantIsolationReport() {
     {
       name: 'Customer APIs',
       status: 'Pass',
-      detail: 'Dashboard, approvals, audit logs, integrations, playbooks, investigations, analytics, and gateway services keep organization filters in data access paths.',
-      coverage: ['Approvals', 'Audit logs', 'Playbooks', 'Investigations', 'Gateway', 'Exports'],
+      detail: 'Approvals, audit logs, playbooks, investigations (entitlement-gated), analytics (entitlement-gated), and gateway services keep organizationId filters in all data access paths.',
+      coverage: ['Approvals', 'Audit logs', 'Playbooks', 'Investigations', 'Analytics', 'Gateway', 'Exports'],
     },
     {
       name: 'Founder Operations',
@@ -1541,23 +1607,32 @@ export function buildFounderTenantIsolationReport() {
       detail: 'Rejected cross-tenant Memory Graph access attempts are recorded as security audit events when an organization context is present.',
       coverage: ['Cross-tenant attempts', 'Safe error messages', 'Audit metadata'],
     },
+    {
+      name: 'DB Row Isolation',
+      status: dbStatus,
+      detail: `Live database check: ${dbChecks.map((c) => c.name + ' ' + c.status).join(', ')}.`,
+      coverage: dbChecks.map((c) => c.name),
+    },
   ];
 
   return {
     testedAt,
-    status: modules.every((module) => module.status === 'Pass') ? 'Pass' : 'Warning',
+    status: modules.every((m) => m.status === 'Pass') ? 'Pass' : 'Warning',
     modulesTested: modules.length,
+    dbChecks,
     apiSurfaces: [
       '/api/classify',
       '/api/ingest/test',
       '/api/playbooks/*',
+      '/api/investigations/*',
+      '/api/analytics/*',
       '/api/v1/approvals',
       '/api/v1/webhooks/approvals',
       '/api/debug/dashboard',
       'dashboard server components',
       'founder operations pages',
     ],
-    highRiskFindings: [],
+    highRiskFindings: dbChecks.filter((c) => c.status !== 'Pass').map((c) => c.detail),
     remediation: [
       'Keep all new Prisma reads scoped by organizationId.',
       'Use resolveTenantContext before customer-facing mutations.',

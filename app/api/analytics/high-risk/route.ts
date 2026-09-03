@@ -3,6 +3,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { tenantScopedWhere } from '@/lib/tenant-isolation';
 import type { Prisma, ApprovalStatus } from '@prisma/client';
+import { EntitlementDeniedError, requireEntitlement } from '@/lib/entitlements';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,12 @@ export async function GET(request: Request) {
   const allowedRoles = ROUTE_PERMISSIONS['/analytics'];
   if (allowedRoles && !hasAnyRole(tenant.user.role, allowedRoles)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  try {
+    await requireEntitlement(tenant.organization.id, 'executive_roi');
+  } catch (err) {
+    if (err instanceof EntitlementDeniedError) return NextResponse.json({ error: err.message }, { status: 403 });
+    throw err;
   }
 
   const organizationId = tenant.organization.id;

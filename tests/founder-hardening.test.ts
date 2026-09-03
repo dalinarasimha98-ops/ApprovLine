@@ -74,4 +74,25 @@ const pkg = JSON.parse(read('package.json'));
 assert.equal(pkg.scripts['test:founder'], 'node --import tsx tests/founder-hardening.test.ts');
 assert.equal(pkg.scripts['test:tenant-isolation'], 'node --import tsx tests/tenant-isolation.test.ts');
 
-console.log('Validated Founder Control Center v2 hardening routes, schema, services, audit export, and test script.');
+// ── Seat enforcement hardening assertions ─────────────────────────────────────
+// Every path that transitions a user to ACTIVE or INVITED must go through the
+// centralized assertSeatAvailable helper from lib/seat-enforcement.ts.
+
+const seatHelper = read('lib/seat-enforcement.ts');
+assert.match(seatHelper, /export function assertSeatAvailable/);
+assert.match(seatHelper, /current >= limit/);
+
+// services/founder.ts must import and use the centralized helper.
+assert.match(founderService, /import.*assertSeatAvailable.*seat-enforcement/);
+
+// activate path: must use a serializable transaction for concurrency safety.
+assert.match(founderService, /isolationLevel.*Serializable/s);
+assert.match(founderService, /Seat limit reached\. Suspend or remove an active user/);
+
+// resend path: must check capacity before restoring INVITED status.
+assert.match(founderService, /Seat limit reached\. Increase purchased seats before resending/);
+
+// invite path: still protected (unchanged, but assert it too).
+assert.match(founderService, /Seat limit reached\. Increase purchased seats before inviting/);
+
+console.log('Validated Founder Control Center v2 hardening routes, schema, services, audit export, seat enforcement, and test script.');
