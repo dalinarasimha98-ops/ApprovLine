@@ -43,7 +43,7 @@ const primaryNav: NavGroup[] = [
     label: 'Infrastructure',
     items: [
       { href: '/founder/operations', label: 'System Health' },
-      { href: '/founder/security/isolation', label: 'Security' },
+      { href: '/founder/security/isolation', label: 'Tenant Isolation' },
       { href: '/founder/settings', label: 'Founder Settings' },
     ],
   },

@@ -9,8 +9,8 @@ function badgeTone(status: string) {
   return 'red' as const;
 }
 
-export default function FounderTenantIsolationPage() {
-  const report = buildFounderTenantIsolationReport();
+export default async function FounderTenantIsolationPage() {
+  const report = await buildFounderTenantIsolationReport();
 
   return (
     <div className="space-y-8">
@@ -55,6 +55,25 @@ export default function FounderTenantIsolationPage() {
             </div>
           </article>
         ))}
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Live DB Isolation Check</p>
+        <h3 className="mt-2 text-2xl font-black text-slate-950">Row-level tenant scoping</h3>
+        <p className="mt-2 text-sm font-semibold text-slate-500">
+          Real-time query against live database tables. All rows in tenant-scoped tables must carry an <code className="rounded bg-slate-100 px-1">organizationId</code>.
+        </p>
+        <div className="mt-5 grid gap-3">
+          {report.dbChecks.map((check) => (
+            <div key={check.name} className="flex items-start justify-between gap-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <div>
+                <p className="font-black text-slate-950">{check.name}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">{check.detail}</p>
+              </div>
+              <FounderBadge tone={badgeTone(check.status)}>{check.status}</FounderBadge>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">

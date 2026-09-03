@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { hasAnyRole } from '@/lib/rbac';
 import { withTimeout } from '@/lib/performance';
 import { createInvestigationCase } from '@/services/investigations';
+import { EntitlementDeniedError, requireEntitlement } from '@/lib/entitlements';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,12 @@ export async function GET(request: Request) {
   if (tenant.status === 'unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!tenant.organization || !tenant.user) return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   if (!hasAnyRole(tenant.user.role, [...ALLOWED_ROLES])) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  try {
+    await requireEntitlement(tenant.organization.id, 'investigations');
+  } catch (err) {
+    if (err instanceof EntitlementDeniedError) return NextResponse.json({ error: err.message }, { status: 403 });
+    throw err;
+  }
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q') ?? '';
@@ -98,6 +105,12 @@ export async function POST(request: Request) {
   if (tenant.status === 'unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!tenant.organization || !tenant.user) return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
   if (!hasAnyRole(tenant.user.role, [...ALLOWED_ROLES])) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  try {
+    await requireEntitlement(tenant.organization.id, 'investigations');
+  } catch (err) {
+    if (err instanceof EntitlementDeniedError) return NextResponse.json({ error: err.message }, { status: 403 });
+    throw err;
+  }
 
   const body = await request.json().catch(() => ({})) as {
     title?: string;

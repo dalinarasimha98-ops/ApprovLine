@@ -1502,8 +1502,50 @@ export function buildFounderObservabilityReadinessChecks() {
   ];
 }
 
-export function buildFounderTenantIsolationReport() {
+export async function buildFounderTenantIsolationReport() {
   const testedAt = new Date();
+
+  // Real DB isolation checks: verify that tenant-scoped tables have organizationId on all rows.
+  // A mismatch would indicate an orphaned row not scoped to any tenant.
+  const dbChecks: { name: string; status: 'Pass' | 'Warning' | 'Fail'; detail: string }[] = [];
+
+  try {
+    const [orgs, approvalTotal, approvalScoped, auditTotal, auditScoped, memoryTotal, memoryScoped] = await Promise.all([
+      prisma.organization.count(),
+      prisma.approvalRecord.count(),
+      prisma.approvalRecord.count({ where: { organizationId: { not: '' } } }),
+      prisma.auditLog.count(),
+      prisma.auditLog.count({ where: { organizationId: { not: '' } } }),
+      prisma.memoryEntity.count(),
+      prisma.memoryEntity.count({ where: { organizationId: { not: '' } } }),
+    ]);
+    dbChecks.push(
+      {
+        name: 'ApprovalRecord isolation',
+        status: approvalTotal === 0 || approvalTotal === approvalScoped ? 'Pass' : 'Warning',
+        detail: `${approvalScoped}/${approvalTotal} approval records carry organizationId. ${orgs} tenant organizations registered.`,
+      },
+      {
+        name: 'AuditLog isolation',
+        status: auditTotal === 0 || auditTotal === auditScoped ? 'Pass' : 'Warning',
+        detail: `${auditScoped}/${auditTotal} audit log entries carry organizationId.`,
+      },
+      {
+        name: 'MemoryEntity isolation',
+        status: memoryTotal === 0 || memoryTotal === memoryScoped ? 'Pass' : 'Warning',
+        detail: `${memoryScoped}/${memoryTotal} memory graph entities carry organizationId.`,
+      },
+    );
+  } catch {
+    dbChecks.push({
+      name: 'DB isolation check',
+      status: 'Warning',
+      detail: 'Could not query isolation data — run npm run db:deploy to ensure tables exist.',
+    });
+  }
+
+  const dbStatus = dbChecks.every((c) => c.status === 'Pass') ? 'Pass' : 'Warning';
+
   const modules = [
     {
       name: 'Tenant Context',
@@ -1526,8 +1568,8 @@ export function buildFounderTenantIsolationReport() {
     {
       name: 'Customer APIs',
       status: 'Pass',
-      detail: 'Dashboard, approvals, audit logs, integrations, playbooks, investigations, analytics, and gateway services keep organization filters in data access paths.',
-      coverage: ['Approvals', 'Audit logs', 'Playbooks', 'Investigations', 'Gateway', 'Exports'],
+      detail: 'Approvals, audit logs, playbooks, investigations (entitlement-gated), analytics (entitlement-gated), and gateway services keep organizationId filters in all data access paths.',
+      coverage: ['Approvals', 'Audit logs', 'Playbooks', 'Investigations', 'Analytics', 'Gateway', 'Exports'],
     },
     {
       name: 'Founder Operations',
@@ -1541,23 +1583,32 @@ export function buildFounderTenantIsolationReport() {
       detail: 'Rejected cross-tenant Memory Graph access attempts are recorded as security audit events when an organization context is present.',
       coverage: ['Cross-tenant attempts', 'Safe error messages', 'Audit metadata'],
     },
+    {
+      name: 'DB Row Isolation',
+      status: dbStatus,
+      detail: `Live database check: ${dbChecks.map((c) => c.name + ' ' + c.status).join(', ')}.`,
+      coverage: dbChecks.map((c) => c.name),
+    },
   ];
 
   return {
     testedAt,
-    status: modules.every((module) => module.status === 'Pass') ? 'Pass' : 'Warning',
+    status: modules.every((m) => m.status === 'Pass') ? 'Pass' : 'Warning',
     modulesTested: modules.length,
+    dbChecks,
     apiSurfaces: [
       '/api/classify',
       '/api/ingest/test',
       '/api/playbooks/*',
+      '/api/investigations/*',
+      '/api/analytics/*',
       '/api/v1/approvals',
       '/api/v1/webhooks/approvals',
       '/api/debug/dashboard',
       'dashboard server components',
       'founder operations pages',
     ],
-    highRiskFindings: [],
+    highRiskFindings: dbChecks.filter((c) => c.status !== 'Pass').map((c) => c.detail),
     remediation: [
       'Keep all new Prisma reads scoped by organizationId.',
       'Use resolveTenantContext before customer-facing mutations.',
