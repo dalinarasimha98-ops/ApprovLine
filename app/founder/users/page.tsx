@@ -199,7 +199,26 @@ export default async function FounderUsersPage({
                     </td>
                     <td className="px-5 py-4">
                       {!readOnly ? (
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-2 flex-wrap">
+                          {(user.status === 'ACTIVE' || user.status === 'INVITED') ? (
+                            <form action={updateUser} className="flex gap-1 items-center">
+                              <input type="hidden" name="userId" value={user.id} />
+                              <input type="hidden" name="customerAccountId" value={user.customerAccountId} />
+                              <input type="hidden" name="action" value="role" />
+                              <select
+                                name="role"
+                                defaultValue={user.role}
+                                className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-bold outline-none focus:border-[#2557dc]"
+                              >
+                                {['ORG_ADMIN', 'COMPLIANCE', 'LEGAL', 'FINANCE', 'PROCUREMENT', 'ENGINEERING', 'VIEWER'].map((r) => (
+                                  <option key={r} value={r}>{r.replace('_', ' ')}</option>
+                                ))}
+                              </select>
+                              <button className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-600 hover:bg-slate-50">
+                                Set role
+                              </button>
+                            </form>
+                          ) : null}
                           {user.status === 'INVITED' ? (
                             <form action={updateUser}>
                               <input type="hidden" name="userId" value={user.id} />

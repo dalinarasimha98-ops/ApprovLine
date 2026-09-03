@@ -291,13 +291,16 @@ export default async function FounderObservabilityPage() {
         </article>
 
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">Auditability</p>
-          <h3 className="mt-2 text-xl font-black text-slate-950">Operational actions are recorded</h3>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">Audit Policy</p>
+          <h3 className="mt-2 text-xl font-black text-slate-950">Planned operational actions</h3>
+          <p className="mt-2 text-sm font-semibold text-slate-500">
+            The following operational write actions are scoped and will be audited when implemented. All mutations today go through server actions with full audit trails via <code className="rounded bg-slate-100 px-1">FounderAuditLog</code>.
+          </p>
           <div className="mt-5 grid gap-3">
             {['Retry Job', 'Dismiss Alert', 'Resolve Incident', 'Acknowledge Incident'].map((action) => (
               <div key={action} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="font-black text-slate-950">{action}</p>
-                <FounderBadge tone="green">Audited</FounderBadge>
+                <FounderBadge tone="slate">Planned</FounderBadge>
               </div>
             ))}
           </div>

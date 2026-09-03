@@ -435,26 +435,13 @@ export default async function FounderRevenuePage() {
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">Task Management</p>
         <h3 className="mt-2 text-xl font-black text-slate-950">Revenue and customer success tasks</h3>
-        <div className="mt-5 grid gap-3 lg:grid-cols-2">
-          {[
-            ['Demo', 'Prepare executive ROI story for next demo', 'Founder', 'High'],
-            ['Follow-up', 'Send security questionnaire answers', 'Customer Success', 'High'],
-            ['Security Review', 'Confirm read-only integration permissions', 'Security', 'Medium'],
-            ['Commercial Review', 'Validate seat count and plan recommendation', 'Founder', 'High'],
-            ['Contract Follow-up', 'Send final MSA and DPA package', 'Legal', 'Medium'],
-            ['Renewal Discussion', 'Review health score and expansion potential', 'Customer Success', 'Medium'],
-          ].map(([type, title, owner, priority]) => (
-            <div key={title} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <FounderBadge tone={priority === 'High' ? 'red' : 'amber'}>{type}</FounderBadge>
-                  <p className="mt-3 font-black text-slate-950">{title}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-600">Owner: {owner} · Due this week</p>
-                </div>
-                <FounderBadge tone={priority === 'High' ? 'red' : 'amber'}>{priority}</FounderBadge>
-              </div>
-            </div>
-          ))}
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+          <p className="font-black text-slate-950">Task tracking is managed externally</p>
+          <p className="mt-2 text-sm font-semibold text-slate-500">
+            Use your team&apos;s project management tool (Linear, Notion, etc.) to track revenue and CS tasks. Customer health signals are available on the{' '}
+            <Link href="/founder/health" className="text-[#2557dc] hover:underline">Customer Health</Link> and{' '}
+            <Link href="/founder/pilots" className="text-[#2557dc] hover:underline">Pilots</Link> pages.
+          </p>
         </div>
       </section>
     </div>
