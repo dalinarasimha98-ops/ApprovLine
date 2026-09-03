@@ -3,7 +3,6 @@ import { getDashboardTenant } from '@/lib/auth';
 import { enforcePageRole } from '@/lib/rbac';
 import { getSettingsOverview } from '@/services/settings';
 import { SettingsShell } from '@/components/settings/SettingsShell';
-import { DashboardShell } from '@/components/dashboard/DashboardShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,8 +18,8 @@ export default async function SettingsPage() {
     data = await getSettingsOverview(tenant.organization.id);
   } catch {
     return (
-      <DashboardShell>
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="grid gap-4">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="bg-[#07111f] px-6 py-7 text-white">
             <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Workspace Configuration</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight">Settings</h1>
@@ -30,14 +29,14 @@ export default async function SettingsPage() {
           <p className="font-black text-amber-900">Could not load settings right now.</p>
           <p className="mt-1 text-sm font-semibold text-amber-700">The database did not respond in time. Please retry in a moment.</p>
         </div>
-      </DashboardShell>
+      </div>
     );
   }
 
   return (
-    <DashboardShell>
-      {/* Page header — matches the Users & Teams / Playbooks header pattern */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <div className="grid gap-4">
+      {/* Page header — dark card matching the Users & Teams / Playbooks pattern */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="bg-[#07111f] px-6 py-7 text-white">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Workspace Configuration</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight">{data.organization.name}</h1>
@@ -48,6 +47,6 @@ export default async function SettingsPage() {
       </div>
 
       <SettingsShell data={data} />
-    </DashboardShell>
+    </div>
   );
 }
