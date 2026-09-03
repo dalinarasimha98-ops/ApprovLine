@@ -56,7 +56,7 @@ const items: NavigationItem[] = [
   { href: '/dashboard/audit', label: 'Reports & Exports', icon: ScrollText },
   { href: '/dashboard/alerts', label: 'Alerts & Risks', icon: ShieldAlert },
   { href: '/trust/compliance', label: 'Compliance Hub', icon: ShieldCheck },
-  { href: '/settings/identity', label: 'Users & Teams', icon: Users },
+  { href: '/settings/users', label: 'Users & Teams', icon: Users },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 

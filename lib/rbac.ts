@@ -57,6 +57,7 @@ export const ROUTE_PERMISSIONS: Record<string, Role[]> = {
   // onboarding status) and /dashboard/settings/* (settings hub, integrations) -
   // both gated the same way.
   '/settings': ['ADMIN', 'OWNER'],
+  '/settings/users': ['VIEWER', 'AUDITOR', 'MEMBER', 'MANAGER', 'ADMIN', 'OWNER'],
   '/dashboard/settings': ['ADMIN', 'OWNER'],
   // Matches the read tier already enforced on app/api/playbooks/* (see
   // permissionsForRole()'s playbooks:read in lib/auth.ts) - keeps the page
