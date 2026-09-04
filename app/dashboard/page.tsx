@@ -392,7 +392,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-3 xl:grid-cols-12">
         <article className={`${panelClass} p-4 xl:col-span-8`}>
-          <SectionHeader title="Recent Activity" subtitle="System and user activities" href="/dashboard/audit" />
+          <SectionHeader title="Recent Activity" subtitle="System and user activities" href="/dashboard/audit-log" />
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {recentAudit.map((event, index) => (
               <div key={event.id} className="min-w-0 border-l border-white/[0.08] pl-3 first:border-l-0">

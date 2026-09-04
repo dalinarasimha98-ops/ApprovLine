@@ -71,6 +71,7 @@ const sections: NavSection[] = [
       { href: '/trust/compliance', label: 'Compliance Hub', icon: ShieldCheck },
       { href: '/dashboard/alerts', label: 'Alerts & Risks', icon: ShieldAlert },
       { href: '/dashboard/audit', label: 'Reports & Exports', icon: ScrollText },
+      { href: '/dashboard/audit-log', label: 'Audit Logs', icon: Activity },
       { href: '/investigations', label: 'Investigation Center', icon: FileSearch },
     ],
   },

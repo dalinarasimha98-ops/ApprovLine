@@ -765,7 +765,7 @@ function AuditTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="Retention" value="Full history retained" />
         </div>
         <div className="border-t border-slate-100 px-6 py-4">
-          <Link href="/dashboard/audit" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
+          <Link href="/dashboard/audit-log" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
             <ScrollText className="h-4 w-4" />
             Open Audit Logs
             <ExternalLink className="h-3.5 w-3.5" />

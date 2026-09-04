@@ -370,7 +370,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
             Investigation Center
           </PendingLink>
           <PendingLink
-            href="/dashboard/audit?category=alerts"
+            href="/dashboard/audit"
             pendingText="Opening…"
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-slate-200 hover:bg-white/[0.1]"
           >
