@@ -29,6 +29,7 @@
     "test:manual-approvals": "node --import tsx tests/manual-approvals.test.ts",
     "test:evidence": "node --import tsx tests/evidence-platform.test.ts",
     "test:approval-records": "node --import tsx tests/approval-records-dashboard.test.ts",
+    "test:alerts": "node --import tsx tests/alerts.test.ts",
     "test:copilot": "node --import tsx tests/ai-copilot.test.ts",
     "test:executive-analytics": "node --import tsx tests/executive-analytics.test.ts",
     "test:e2e:approvals": "playwright test tests/e2e/approval-timeline.spec.ts",
