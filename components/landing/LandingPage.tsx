@@ -89,32 +89,41 @@ const trustItems = [
 
 const pricing = [
   {
-    name: 'Starter',
-    price: '$199',
+    name: 'Business',
+    price: '$999',
     cadence: '/month',
-    note: 'For focused teams building a reliable approval record.',
-    features: ['Up to 10 users', '2 connected systems', 'AI approval classification', 'Searchable approval timeline', 'CSV exports', 'Standard support'],
-    cta: 'Start Free Trial',
+    note: 'Full approval intelligence for teams ready to operationalize governance.',
+    features: [
+      'Up to 25 users',
+      '3 connected systems',
+      'AI approval classification',
+      'Playbook AI compliance checks',
+      'Investigation Center',
+      'Executive analytics',
+      'Searchable approval timeline',
+      'Standard support',
+    ],
+    cta: 'Start a Pilot',
     href: '/get-started',
-  },
-  {
-    name: 'Growth',
-    price: '$499',
-    cadence: '/month',
-    note: 'For organizations operationalizing approval intelligence.',
-    features: ['Up to 50 users', '8 connected systems', 'Playbook AI compliance', 'Investigation Center', 'Executive analytics', 'Priority support'],
-    cta: 'Book Demo',
-    href: '/book-demo',
-    featured: true,
   },
   {
     name: 'Enterprise',
     price: 'Custom',
     cadence: 'Pricing',
-    note: 'For regulated enterprises with complex governance.',
-    features: ['Unlimited users and systems', 'Enterprise Memory Graph', 'Advanced AI Copilot', 'SSO and identity controls', 'Custom retention and integrations', 'Dedicated success and SLA'],
-    cta: 'Contact Sales',
-    href: 'mailto:sales@approvline.com',
+    note: 'Enterprise-scale governance, audit infrastructure, and dedicated success.',
+    features: [
+      'Enterprise-scale users and systems',
+      'Enterprise Memory Graph',
+      'Advanced AI Copilot',
+      'SSO and identity controls',
+      'Custom retention and integrations',
+      'Dedicated success and SLA',
+      'Flexible deployment options',
+      'Annual enterprise agreements',
+    ],
+    cta: 'Talk to Sales',
+    href: '/book-demo',
+    featured: true,
   },
 ];
 
@@ -123,8 +132,8 @@ const pricingTrust = [
   'Tenant isolation',
   'Complete audit logging',
   'SOC 2-ready architecture',
-  'No hidden fees',
-  'Cancel anytime for Starter & Growth',
+  'Flexible deployment options',
+  'Annual enterprise agreements available',
 ];
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
@@ -706,19 +715,23 @@ export function LandingPage() {
           <div className={styles.sectionShell}>
             <div className={styles.centerHeading}>
               <SectionEyebrow>Enterprise Pricing</SectionEyebrow>
-              <h2>Scale approval intelligence with confidence.</h2>
-              <p>Flexible plans built around your systems, approval volume, and operational needs.</p>
+              <h2>Simple pricing. Enterprise-grade control.</h2>
+              <p>Two plans built for organizations that take approval governance seriously.</p>
             </div>
             <div className={styles.pricingGrid}>
               {pricing.map((plan) => (
-                <article className={plan.featured ? styles.featuredPlan : ''} key={plan.name}>
-                  {plan.featured && <span className={styles.planLabel}>Most Popular</span>}
+                <article className={plan.featured ? `${styles.featuredPlan} ${styles.enterprisePlan}` : ''} key={plan.name}>
+                  {plan.featured && <span className={styles.planLabel}>Enterprise</span>}
                   <h3>{plan.name}</h3><p>{plan.note}</p>
                   <div className={styles.planPrice}><strong>{plan.price}</strong><small>{plan.cadence}</small></div>
                   <ul>{plan.features.map((feature) => <li key={feature}><CheckIcon />{feature}</li>)}</ul>
                   <Link className={plan.featured ? styles.primaryButtonLarge : styles.outlineButtonLarge} href={plan.href}>{plan.cta} <ArrowIcon /></Link>
                 </article>
               ))}
+            </div>
+            <div className={styles.pilotCallout}>
+              <p>Want to prove the value before a full rollout?</p>
+              <Link className={styles.outlineButtonLarge} href="/get-started">Request a Pilot <ArrowIcon /></Link>
             </div>
             <div className={styles.pricingTrust} aria-label="Pricing trust and security">
               {pricingTrust.map((item) => <span key={item}><CheckIcon />{item}</span>)}
