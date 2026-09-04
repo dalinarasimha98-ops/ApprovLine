@@ -53,6 +53,7 @@ export const ROUTE_PERMISSIONS: Record<string, Role[]> = {
   '/investigations': ['MANAGER', 'ADMIN', 'OWNER'],
   '/memory': ['ADMIN', 'OWNER'],
   '/dashboard/alerts': ['MANAGER', 'ADMIN', 'OWNER'],
+  '/dashboard/audit': ['AUDITOR', 'MANAGER', 'ADMIN', 'OWNER'],
   // Settings lives under two URL namespaces in this app - /settings/* (identity,
   // onboarding status) and /dashboard/settings/* (settings hub, integrations) -
   // both gated the same way.
