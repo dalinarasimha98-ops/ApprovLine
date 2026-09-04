@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { getDashboardTenant } from '@/lib/auth';
+import { enforcePageRole } from '@/lib/rbac';
 import { CopilotClient } from '@/components/copilot/CopilotClient';
 import { copilotSuggestions } from '@/services/copilot/copilot';
 import { PendingLink } from '@/components/system/PendingLink';
@@ -22,6 +23,9 @@ export default async function CopilotPage({
   const tenant = await getDashboardTenant(COPILOT_TENANT_TIMEOUT_MS);
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') {
     redirect('/onboarding');
+  }
+  if (tenant.status === 'ready' && tenant.user) {
+    enforcePageRole('/copilot', tenant.user.role);
   }
 
   const params = await searchParams;

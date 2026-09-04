@@ -50,16 +50,26 @@ export function hasAnyRole(userRole: Role, allowedRoles: Role[]): boolean {
 export const ROUTE_PERMISSIONS: Record<string, Role[]> = {
   '/analytics': ['ADMIN', 'OWNER'],
   '/trust/compliance': ['ADMIN', 'AUDITOR', 'OWNER'],
-  '/investigations': ['MANAGER', 'ADMIN', 'OWNER'],
-  '/memory': ['ADMIN', 'OWNER'],
+  // AUDITOR gets VIEW access to investigations; mutations (notes, status) are
+  // separately gated in server actions via hasAnyRole(['MANAGER','ADMIN','OWNER']).
+  '/investigations': ['AUDITOR', 'MANAGER', 'ADMIN', 'OWNER'],
+  // VIEWER is the only role denied Memory Graph (all others get VIEW at minimum).
+  '/memory': ['MEMBER', 'AUDITOR', 'MANAGER', 'ADMIN', 'OWNER'],
+  // VIEWER is denied Copilot; AUDITOR/MEMBER/MANAGER/ADMIN/OWNER all get access
+  // (entitlement check still applies on top of this role gate).
+  '/copilot': ['MEMBER', 'AUDITOR', 'MANAGER', 'ADMIN', 'OWNER'],
   '/dashboard/alerts': ['MANAGER', 'ADMIN', 'OWNER'],
   '/dashboard/audit': ['AUDITOR', 'MANAGER', 'ADMIN', 'OWNER'],
+  '/dashboard/audit-log': ['AUDITOR', 'MANAGER', 'ADMIN', 'OWNER'],
   // Settings lives under two URL namespaces in this app - /settings/* (identity,
   // onboarding status) and /dashboard/settings/* (settings hub, integrations) -
   // both gated the same way.
   '/settings': ['ADMIN', 'OWNER'],
-  '/settings/users': ['VIEWER', 'AUDITOR', 'MEMBER', 'MANAGER', 'ADMIN', 'OWNER'],
+  // Users & Teams: AUDITOR gets VIEW; MANAGER gets limited operational visibility;
+  // ADMIN/OWNER manage. MEMBER and VIEWER have no user-administration access.
+  '/settings/users': ['AUDITOR', 'MANAGER', 'ADMIN', 'OWNER'],
   '/dashboard/settings': ['ADMIN', 'OWNER'],
+  '/dashboard/settings/integrations': ['ADMIN', 'OWNER'],
   // Matches the read tier already enforced on app/api/playbooks/* (see
   // permissionsForRole()'s playbooks:read in lib/auth.ts) - keeps the page
   // and its underlying API routes consistent instead of showing a page that
