@@ -138,8 +138,33 @@ test('/investigations ROUTE_PERMISSIONS includes AUDITOR', () => {
   assert.ok(!roles!.includes('VIEWER'), 'VIEWER must NOT be in /investigations allowed roles');
 });
 
-// Investigation server action gate: AUDITOR cannot mutate
-test('AUDITOR fails investigation mutation gate (hasAnyRole check)', () => {
+// Investigation READ gate: AUDITOR can read
+const INVESTIGATION_READ: Role[] = ['AUDITOR', 'MANAGER', 'ADMIN', 'OWNER'];
+const INVESTIGATION_WRITE: Role[] = ['MANAGER', 'ADMIN', 'OWNER'];
+
+test('AUDITOR passes investigation READ gate (API GET)', () => {
+  assert.strictEqual(hasAnyRole('AUDITOR', INVESTIGATION_READ), true, 'AUDITOR must be able to read investigations');
+});
+test('MEMBER fails investigation READ gate', () => {
+  assert.strictEqual(hasAnyRole('MEMBER', INVESTIGATION_READ), false);
+});
+test('VIEWER fails investigation READ gate', () => {
+  assert.strictEqual(hasAnyRole('VIEWER', INVESTIGATION_READ), false);
+});
+
+// Investigation WRITE gate: AUDITOR cannot mutate
+test('AUDITOR fails investigation WRITE gate (API POST/PATCH)', () => {
+  assert.strictEqual(hasAnyRole('AUDITOR', INVESTIGATION_WRITE), false, 'AUDITOR must not pass write role check');
+});
+test('MANAGER passes investigation WRITE gate', () => {
+  assert.strictEqual(hasAnyRole('MANAGER', INVESTIGATION_WRITE), true);
+});
+test('ADMIN passes investigation WRITE gate', () => {
+  assert.strictEqual(hasAnyRole('ADMIN', INVESTIGATION_WRITE), true);
+});
+
+// Investigation server action gate: AUDITOR cannot mutate via server actions
+test('AUDITOR fails investigation mutation gate (server action hasAnyRole check)', () => {
   const result = hasAnyRole('AUDITOR', ['MANAGER', 'ADMIN', 'OWNER']);
   assert.strictEqual(result, false, 'AUDITOR must not pass mutation role check');
 });
@@ -399,6 +424,58 @@ test('ROUTE_PERMISSIONS contains /dashboard/settings/integrations', async () => 
   const { readFileSync } = await import('node:fs');
   const src = readFileSync(new URL('../lib/rbac.ts', import.meta.url), 'utf8');
   assert.ok(src.includes("'/dashboard/settings/integrations'"), 'integrations route must be in ROUTE_PERMISSIONS');
+});
+
+test('settings/users page calls enforcePageRole (not bypassed by hasAnyRole including MEMBER)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../app/settings/users/page.tsx', import.meta.url), 'utf8');
+  assert.ok(src.includes("enforcePageRole('/settings/users'"), 'Must call enforcePageRole for /settings/users');
+  assert.ok(
+    !src.includes("hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN', 'MANAGER', 'AUDITOR', 'MEMBER'])"),
+    'Must not use the old bypass hasAnyRole that included MEMBER',
+  );
+});
+
+test('Integrations page calls enforcePageRole with /dashboard/settings/integrations path', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(
+    new URL('../app/dashboard/settings/integrations/page.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.ok(
+    src.includes("enforcePageRole('/dashboard/settings/integrations'"),
+    'Integrations page must use the /dashboard/settings/integrations path, not /dashboard/settings',
+  );
+});
+
+test('Investigation list API (route.ts) has READ_ROLES that includes AUDITOR', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../app/api/investigations/route.ts', import.meta.url), 'utf8');
+  assert.ok(src.includes('READ_ROLES'), 'Must define READ_ROLES for GET handler');
+  assert.ok(src.includes("'AUDITOR'"), 'READ_ROLES must include AUDITOR');
+  assert.ok(src.includes('WRITE_ROLES'), 'Must define WRITE_ROLES for POST handler');
+});
+
+test('Investigation detail API ([id]/route.ts) has READ_ROLES that includes AUDITOR', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(
+    new URL('../app/api/investigations/[id]/route.ts', import.meta.url),
+    'utf8',
+  );
+  assert.ok(src.includes('READ_ROLES'), 'Must define READ_ROLES for GET handler');
+  assert.ok(src.includes("'AUDITOR'"), 'READ_ROLES must include AUDITOR');
+  assert.ok(src.includes('WRITE_ROLES'), 'Must define WRITE_ROLES for PATCH handler');
+});
+
+test('Copilot page enforcePageRole covers all authenticated states, not only ready', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../app/copilot/page.tsx', import.meta.url), 'utf8');
+  // Must NOT gate enforcePageRole solely on tenant.status === 'ready'
+  assert.ok(
+    !src.includes("tenant.status === 'ready' && tenant.user"),
+    "enforcePageRole must not be gated on tenant.status === 'ready'",
+  );
+  assert.ok(src.includes("enforcePageRole('/copilot'"), 'Must call enforcePageRole');
 });
 
 // ── Final summary ──────────────────────────────────────────────────────────────

@@ -24,7 +24,8 @@ export default async function CopilotPage({
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') {
     redirect('/onboarding');
   }
-  if (tenant.status === 'ready' && tenant.user) {
+  // Enforce role for any state where user is resolved — covers both ready and degraded-mode.
+  if (tenant.user) {
     enforcePageRole('/copilot', tenant.user.role);
   }
 
