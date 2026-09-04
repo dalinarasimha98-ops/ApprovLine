@@ -5,6 +5,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
+import { enforcePageRole, hasAnyRole } from '@/lib/rbac';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
 import { buildInvestigationSummary, buildPolicyChecks, calculateRiskScore, timelineForApproval } from '@/services/investigations';
@@ -51,6 +52,7 @@ async function addNoteAction(formData: FormData) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  if (!hasAnyRole(tenant.user.role, ['MANAGER', 'ADMIN', 'OWNER'])) redirect('/investigations');
 
   const investigationId = String(formData.get('investigationId') ?? '');
   const body = String(formData.get('body') ?? '').trim();
@@ -79,7 +81,8 @@ async function updateStatusAction(formData: FormData) {
   'use server';
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
-  if (!tenant.organization) redirect('/onboarding');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  if (!hasAnyRole(tenant.user.role, ['MANAGER', 'ADMIN', 'OWNER'])) redirect('/investigations');
   const investigationId = String(formData.get('investigationId') ?? '');
   const status = String(formData.get('status') ?? 'OPEN') === 'CLOSED' ? 'CLOSED' : 'OPEN';
   await prisma.investigationCase.update({
@@ -103,6 +106,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization) redirect('/dashboard');
+  enforcePageRole('/investigations', tenant.user?.role ?? 'VIEWER');
 
   const investigation = await withTimeout(
     'investigation detail',

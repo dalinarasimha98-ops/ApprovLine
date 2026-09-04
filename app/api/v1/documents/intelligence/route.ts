@@ -34,9 +34,9 @@ export async function POST(request: NextRequest) {
     const form = await request.formData();
     const file = form.get("file");
     const sourceSystem = String(form.get("source_system") ?? "document-upload");
-    const tenantSlug = form.get("tenant_slug")
-      ? String(form.get("tenant_slug"))
-      : undefined;
+    // Use the server-authoritative slug bound to this API key; never trust
+    // tenant_slug from the client form as the authorization source.
+    const tenantSlug = authorization.orgSlug;
 
     if (!(file instanceof File)) {
       return NextResponse.json(

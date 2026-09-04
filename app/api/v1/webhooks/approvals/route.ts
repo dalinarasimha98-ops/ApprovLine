@@ -9,6 +9,10 @@ import {
 } from '@/services/gateway/universalGateway';
 import { verifyWebhookSignature } from '@/services/queue/reliability';
 
+// Server-authoritative org slug bound to this webhook secret — never trusts
+// tenant_slug supplied by the caller.
+const BOUND_ORG_SLUG = env.UNIVERSAL_GATEWAY_ORG_SLUG;
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -43,6 +47,9 @@ export async function POST(request: NextRequest) {
     const approval = normalizeWebhookApproval(parsed.data);
     const result = await ingestUniversalApproval(approval, {
       receivedVia: 'webhook',
+      // Use the server-authoritative slug; never trust tenant_slug from
+      // the webhook payload as the authorization source.
+      tenantSlug: BOUND_ORG_SLUG,
       ipAddress: ip,
       userAgent: request.headers.get('user-agent') ?? undefined,
     });

@@ -7,12 +7,15 @@ function secureEqual(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+// orgSlug is the server-authoritative organization slug bound to this API key.
+// Routes MUST pass it to ingestUniversalApproval / ingestGatewayArtifact and
+// MUST NOT use any tenant_slug supplied by the client when orgSlug is present.
 export function authorizeGatewayRequest(request: Request) {
   const configuredKey = env.UNIVERSAL_GATEWAY_API_KEY;
   if (!configuredKey) {
     return process.env.NODE_ENV === 'production'
       ? { ok: false as const, status: 503, error: 'Universal Gateway is not configured.' }
-      : { ok: true as const };
+      : { ok: true as const, orgSlug: env.UNIVERSAL_GATEWAY_ORG_SLUG };
   }
 
   const authHeader = request.headers.get('authorization') ?? '';
@@ -22,5 +25,5 @@ export function authorizeGatewayRequest(request: Request) {
     return { ok: false as const, status: 401, error: 'Unauthorized' };
   }
 
-  return { ok: true as const };
+  return { ok: true as const, orgSlug: env.UNIVERSAL_GATEWAY_ORG_SLUG };
 }
