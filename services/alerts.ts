@@ -8,11 +8,13 @@ import { toDate } from '@/lib/types/dates';
 import { writeAuditLog } from '@/services/audit';
 import { calculateRiskScore, riskLabel } from '@/services/investigations';
 
-// Alerts have no dedicated schema — dismiss/escalate state is tracked as
-// real, persisted AuditLog events (the same append-only trail every other
-// approval action already writes to) rather than an unpersisted UI toggle.
+// Alerts have no dedicated schema — dismiss/escalate/acknowledge state is
+// tracked as real, persisted AuditLog events (the same append-only trail
+// every other approval action already writes to) rather than an
+// unpersisted UI toggle.
 export const ALERT_DISMISSED_ACTION = 'approval_alert.dismissed';
 export const ALERT_ESCALATED_ACTION = 'approval_alert.escalated';
+export const ALERT_ACKNOWLEDGED_ACTION = 'approval_alert.acknowledged';
 
 export type AlertSeverity = 'Critical' | 'High' | 'Medium' | 'Low';
 
@@ -35,6 +37,8 @@ export type ApprovalAlert = {
   complianceExplanation: string | null;
   complianceSeverity: string | null;
   escalated: boolean;
+  acknowledged: boolean;
+  investigating: boolean;
 };
 
 export type AlertsResult = {
@@ -42,6 +46,10 @@ export type AlertsResult = {
   severityCounts: Record<AlertSeverity, number>;
   total: number;
   dismissedCount: number;
+  openCount: number;
+  escalatedCount: number;
+  investigatingCount: number;
+  acknowledgedCount: number;
 };
 
 const alertApprovalSelect = {
@@ -78,6 +86,14 @@ export type AlertFilters = {
   approvalType?: string;
   from?: string;
   to?: string;
+  /** Free-text search against subject, approverName, department, category. */
+  q?: string;
+  /** Exact department match (post-fetch). */
+  department?: string;
+  /** Exact sourcePlatform match, case-insensitive (post-fetch). */
+  sourcePlatform?: string;
+  /** Alert operational status: 'open' | 'escalated' | 'investigating' | 'acknowledged' (post-fetch). */
+  status?: string;
 };
 
 type AlertsCacheParams = {
@@ -116,10 +132,6 @@ export function invalidateAlertsCache(organizationId: string) {
 }
 
 // --- Circuit breaker -----------------------------------------------------
-// Mirrors lib/auth.ts / lib/approvalRecords.ts: after repeated consecutive
-// failures, stop hitting the database and fail fast. Also gates whether the
-// degraded banner is shown at all — a single slow query must never alarm
-// the user.
 const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3;
 const CIRCUIT_BREAKER_COOLDOWN_MS = 60_000;
 let consecutiveAlertsFailures = 0;
@@ -164,14 +176,20 @@ async function fetchAlertsFresh(cacheParams: AlertsCacheParams): Promise<AlertsR
 
   const attempt = () =>
     Promise.all([
+      // AuditLog events for dismiss / escalate / acknowledge state
       withTimeout(
         'alerts:auditEvents',
         prisma.auditLog.findMany({
-          where: { organizationId, action: { in: [ALERT_DISMISSED_ACTION, ALERT_ESCALATED_ACTION] }, approvalRecordId: { not: null } },
+          where: {
+            organizationId,
+            action: { in: [ALERT_DISMISSED_ACTION, ALERT_ESCALATED_ACTION, ALERT_ACKNOWLEDGED_ACTION] },
+            approvalRecordId: { not: null },
+          },
           select: { approvalRecordId: true, action: true },
         }),
         ALERTS_QUERY_TIMEOUT_MS,
       ).catch(() => [] as Array<{ approvalRecordId: string | null; action: string }>),
+      // High-risk approval records
       withTimeout(
         'alerts:approvals',
         prisma.approvalRecord.findMany({
@@ -195,20 +213,42 @@ async function fetchAlertsFresh(cacheParams: AlertsCacheParams): Promise<AlertsR
         }),
         ALERTS_QUERY_TIMEOUT_MS,
       ),
+      // Active investigation memberships — determines "investigating" status
+      withTimeout(
+        'alerts:investigating',
+        prisma.investigationApproval.findMany({
+          where: {
+            investigation: {
+              organizationId,
+              status: { in: ['OPEN', 'IN_PROGRESS', 'ESCALATED'] },
+            },
+          },
+          select: { approvalRecordId: true },
+        }),
+        ALERTS_QUERY_TIMEOUT_MS,
+      ).catch(() => [] as Array<{ approvalRecordId: string }>),
     ]);
 
   try {
     // One quick retry on a connection-pool-shaped error — self-heals a
     // single transient blip within the same request.
-    const [auditEvents, approvals] = await attempt().catch(async (error) => {
+    const [auditEvents, approvals, investigatingJoins] = await attempt().catch(async (error) => {
       const message = error instanceof Error ? error.message : String(error);
       if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
       await new Promise((resolve) => setTimeout(resolve, 300));
       return attempt();
     });
 
-    const dismissedIds = new Set(auditEvents.filter((e) => e.action === ALERT_DISMISSED_ACTION).map((e) => e.approvalRecordId!));
-    const escalatedIds = new Set(auditEvents.filter((e) => e.action === ALERT_ESCALATED_ACTION).map((e) => e.approvalRecordId!));
+    const dismissedIds = new Set(
+      auditEvents.filter((e) => e.action === ALERT_DISMISSED_ACTION).map((e) => e.approvalRecordId!),
+    );
+    const escalatedIds = new Set(
+      auditEvents.filter((e) => e.action === ALERT_ESCALATED_ACTION).map((e) => e.approvalRecordId!),
+    );
+    const acknowledgedIds = new Set(
+      auditEvents.filter((e) => e.action === ALERT_ACKNOWLEDGED_ACTION).map((e) => e.approvalRecordId!),
+    );
+    const investigatingIds = new Set(investigatingJoins.map((j) => j.approvalRecordId));
 
     const alerts: ApprovalAlert[] = approvals
       .filter((approval) => !dismissedIds.has(approval.id))
@@ -233,6 +273,8 @@ async function fetchAlertsFresh(cacheParams: AlertsCacheParams): Promise<AlertsR
           complianceExplanation: approval.complianceEvaluations[0]?.explanation ?? null,
           complianceSeverity: approval.complianceEvaluations[0]?.severity ?? null,
           escalated: escalatedIds.has(approval.id),
+          acknowledged: acknowledgedIds.has(approval.id),
+          investigating: investigatingIds.has(approval.id),
         };
       })
       .sort((a, b) => b.riskScore - a.riskScore);
@@ -244,8 +286,22 @@ async function fetchAlertsFresh(cacheParams: AlertsCacheParams): Promise<AlertsR
       Low: alerts.filter((a) => a.severity === 'Low').length,
     };
 
+    const openCount = alerts.filter((a) => !a.escalated && !a.investigating).length;
+    const escalatedCount = alerts.filter((a) => a.escalated).length;
+    const investigatingCount = alerts.filter((a) => a.investigating).length;
+    const acknowledgedCount = alerts.filter((a) => a.acknowledged).length;
+
     recordAlertsSuccess();
-    return { alerts, severityCounts, total: alerts.length, dismissedCount: dismissedIds.size };
+    return {
+      alerts,
+      severityCounts,
+      total: alerts.length,
+      dismissedCount: dismissedIds.size,
+      openCount,
+      escalatedCount,
+      investigatingCount,
+      acknowledgedCount,
+    };
   } catch (error) {
     recordAlertsFailure();
     throw error;
@@ -255,10 +311,11 @@ async function fetchAlertsFresh(cacheParams: AlertsCacheParams): Promise<AlertsR
 /**
  * Cross-request cache (Next.js Data Cache) — the primary fix: previously
  * every page load hit Postgres directly with zero shared caching, and any
- * single slow query immediately showed the degraded banner (see
- * fetchAlertsFresh's breaker for why that's now gated to 3+ consecutive
- * failures instead). Severity/date filters are folded into the cache key
- * via cacheParams; the "All" case (no filters) is what most page loads hit.
+ * single slow query immediately showed the degraded banner. Severity/date
+ * filters are folded into the cache key via cacheParams; the "All" case
+ * (no filters) is what most page loads hit. Post-fetch filters (severity,
+ * status, q, department, sourcePlatform) are applied after the cache
+ * lookup so they don't multiply cache variants.
  */
 function getCachedAlertsFetcher(organizationId: string) {
   return unstable_cache(
@@ -282,8 +339,7 @@ function deserializeAlertsResult(result: AlertsResult): AlertsResult {
   return { ...result, alerts: result.alerts.map(deserializeAlert) };
 }
 
-// Per-request dedup on top of the cross-request cache, keyed by a stable
-// string (not object identity).
+// Per-request dedup on top of the cross-request cache.
 const getAlertsForRequest = cache(async (organizationId: string, cacheParamsKey: string) => {
   const cacheParams = JSON.parse(cacheParamsKey) as AlertsCacheParams;
   const result = await getCachedAlertsFetcher(organizationId)(cacheParams);
@@ -291,10 +347,6 @@ const getAlertsForRequest = cache(async (organizationId: string, cacheParamsKey:
 });
 
 // --- Tier-2 "last known good" store --------------------------------------
-// unstable_cache has no built-in stale-if-error primitive — this is the
-// same small, explicitly-imperative fallback store used in
-// lib/approvalRecords.ts, purely for serving the last successful result
-// when a fresh fetch fails and nothing else is available.
 type LastGoodEntry = { result: AlertsResult; cachedAt: number };
 const STALE_CACHE_TTL_MS = 10 * 60 * 1000;
 
@@ -307,33 +359,57 @@ function lastGoodStore() {
   return globalForAlerts.approvlineAlertsLastGood;
 }
 
-export async function getApprovalAlerts(organizationId: string, filters: AlertFilters = {}): Promise<
-  AlertsResult & { degraded: boolean; alert: boolean; staleAsOfMs?: number; message?: string }
-> {
+/** Apply post-fetch filters (severity, status, q, department, sourcePlatform) to an alerts list. */
+function applyPostFetchFilters(alerts: ApprovalAlert[], filters: AlertFilters): ApprovalAlert[] {
+  let list = alerts;
+  if (filters.severity) list = list.filter((a) => a.severity.toLowerCase() === filters.severity!.toLowerCase());
+  if (filters.status === 'open') list = list.filter((a) => !a.escalated && !a.investigating);
+  if (filters.status === 'escalated') list = list.filter((a) => a.escalated);
+  if (filters.status === 'investigating') list = list.filter((a) => a.investigating);
+  if (filters.status === 'acknowledged') list = list.filter((a) => a.acknowledged);
+  if (filters.department) {
+    const dept = filters.department.toLowerCase();
+    list = list.filter((a) => (a.department ?? '').toLowerCase() === dept);
+  }
+  if (filters.sourcePlatform) {
+    const plat = filters.sourcePlatform.toLowerCase();
+    list = list.filter((a) => (a.sourcePlatform ?? '').toLowerCase() === plat);
+  }
+  if (filters.q) {
+    const q = filters.q.toLowerCase();
+    list = list.filter(
+      (a) =>
+        a.subject.toLowerCase().includes(q) ||
+        (a.approverName?.toLowerCase().includes(q) ?? false) ||
+        (a.department?.toLowerCase().includes(q) ?? false) ||
+        (a.category?.toLowerCase().includes(q) ?? false),
+    );
+  }
+  return list;
+}
+
+export async function getApprovalAlerts(
+  organizationId: string,
+  filters: AlertFilters = {},
+): Promise<AlertsResult & { degraded: boolean; alert: boolean; staleAsOfMs?: number; message?: string }> {
   const cacheParams = normalizeFiltersForCache(organizationId, filters);
   const cacheKey = JSON.stringify(cacheParams);
   const lastGoodKey = `${organizationId}::${cacheKey}`;
 
   try {
     const result = await withTimeout('alerts (total)', getAlertsForRequest(organizationId, cacheKey), ALERTS_TOTAL_FETCH_TIMEOUT_MS);
-    const filtered = filters.severity ? result.alerts.filter((a) => a.severity.toLowerCase() === filters.severity!.toLowerCase()) : result.alerts;
-    const withFilter = { ...result, alerts: filtered };
+    const filtered = applyPostFetchFilters(result.alerts, filters);
+    const withFilter: AlertsResult = { ...result, alerts: filtered };
     lastGoodStore().set(lastGoodKey, { result, cachedAt: Date.now() });
     return { ...withFilter, degraded: false, alert: false };
   } catch (error) {
     console.error('[alerts] fetch failed', error);
 
-    // The degraded banner is reserved for a database that has actually been
-    // unreachable for 3+ consecutive attempts (the breaker is open) — a
-    // single slow query must never alarm the user, even if it means
-    // falling back to a slightly stale (but real) result.
     const alert = isAlertsBreakerOpen();
 
     const lastGood = lastGoodStore().get(lastGoodKey);
     if (lastGood && Date.now() - lastGood.cachedAt < STALE_CACHE_TTL_MS) {
-      const filtered = filters.severity
-        ? lastGood.result.alerts.filter((a) => a.severity.toLowerCase() === filters.severity!.toLowerCase())
-        : lastGood.result.alerts;
+      const filtered = applyPostFetchFilters(lastGood.result.alerts, filters);
       return {
         ...lastGood.result,
         alerts: filtered,
@@ -349,6 +425,10 @@ export async function getApprovalAlerts(organizationId: string, filters: AlertFi
       severityCounts: { Critical: 0, High: 0, Medium: 0, Low: 0 },
       total: 0,
       dismissedCount: 0,
+      openCount: 0,
+      escalatedCount: 0,
+      investigatingCount: 0,
+      acknowledgedCount: 0,
       degraded: true,
       alert,
       message: alert
@@ -374,6 +454,16 @@ export async function escalateApprovalAlert(input: { organizationId: string; act
     actorUserId: input.actorUserId,
     approvalRecordId: input.approvalId,
     action: ALERT_ESCALATED_ACTION,
+  });
+  invalidateAlertsCache(input.organizationId);
+}
+
+export async function acknowledgeApprovalAlert(input: { organizationId: string; actorUserId?: string; approvalId: string }) {
+  await writeAuditLog({
+    organizationId: input.organizationId,
+    actorUserId: input.actorUserId,
+    approvalRecordId: input.approvalId,
+    action: ALERT_ACKNOWLEDGED_ACTION,
   });
   invalidateAlertsCache(input.organizationId);
 }

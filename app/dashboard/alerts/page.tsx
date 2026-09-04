@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { Suspense } from 'react';
+import Link from 'next/link';
+import { ShieldAlert, AlertTriangle, TrendingUp, Search } from 'lucide-react';
 import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
@@ -8,8 +10,16 @@ import { RefreshButton } from '@/components/system/RefreshButton';
 import { CardSkeleton } from '@/components/system/Skeletons';
 import { getDashboardTenant } from '@/lib/auth';
 import { createInvestigationCase } from '@/services/investigations';
-import { dismissApprovalAlert, escalateApprovalAlert, getApprovalAlerts, type ApprovalAlert } from '@/services/alerts';
+import {
+  dismissApprovalAlert,
+  escalateApprovalAlert,
+  acknowledgeApprovalAlert,
+  getApprovalAlerts,
+  type ApprovalAlert,
+} from '@/services/alerts';
 import { enforcePageRole } from '@/lib/rbac';
+import { SeverityBadge, OperationalStatusBadge } from '@/components/dashboard/alerts/AlertStatusBadge';
+import { AlertsTableClient } from '@/components/dashboard/alerts/AlertsTableClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,42 +31,14 @@ type AlertsPageProps = {
     approvalType?: string;
     from?: string;
     to?: string;
+    q?: string;
+    department?: string;
+    sourcePlatform?: string;
+    status?: string;
   }>;
 };
 
-function dateText(value: Date) {
-  return value.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function minutesAgo(ms: number) {
-  const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000));
-  if (minutes === 0) return 'less than a minute ago';
-  if (minutes === 1) return '1 minute ago';
-  return `${minutes} minutes ago`;
-}
-
-function severityClass(severity: string) {
-  if (severity === 'Critical') return 'border-rose-200 bg-rose-50 text-rose-700';
-  if (severity === 'High') return 'border-amber-200 bg-amber-50 text-amber-800';
-  if (severity === 'Medium') return 'border-blue-200 bg-blue-50 text-[#2155d9]';
-  return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-}
-
-function MetricCard({ label, value, tone }: { label: string; value: number; tone: 'rose' | 'amber' | 'blue' | 'emerald' }) {
-  const toneClass = {
-    rose: 'bg-rose-50 text-rose-700',
-    amber: 'bg-amber-50 text-amber-800',
-    blue: 'bg-blue-50 text-[#2155d9]',
-    emerald: 'bg-emerald-50 text-emerald-700',
-  }[tone];
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${toneClass}`}>{label}</div>
-      <p className="mt-4 text-3xl font-black tracking-tight text-slate-950">{value}</p>
-    </div>
-  );
-}
-
+// ── Auth helper ───────────────────────────────────────────────────────────────
 async function requireOrganizationId() {
   const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
@@ -66,12 +48,13 @@ async function requireOrganizationId() {
   return { organizationId: tenant.organization.id, actorUserId: tenant.user.id };
 }
 
+// ── Server actions ────────────────────────────────────────────────────────────
+
 async function investigateAlertAction(formData: FormData) {
   'use server';
   const { organizationId } = await requireOrganizationId();
   const approvalId = String(formData.get('approvalId') ?? '');
   if (!approvalId) redirect('/dashboard/alerts');
-
   const investigation = await createInvestigationCase({ organizationId, approvalIds: [approvalId] }).catch(() => null);
   if (!investigation) redirect('/dashboard/alerts');
   redirect(`/investigations/${investigation.id}`);
@@ -93,130 +76,268 @@ async function dismissAlertAction(formData: FormData) {
   revalidatePath('/dashboard/alerts');
 }
 
-function DegradedNotice({ message, alert }: { message: string; alert: boolean }) {
+async function acknowledgeAlertAction(formData: FormData) {
+  'use server';
+  const { organizationId, actorUserId } = await requireOrganizationId();
+  const approvalId = String(formData.get('approvalId') ?? '');
+  if (approvalId) await acknowledgeApprovalAlert({ organizationId, actorUserId, approvalId });
+  revalidatePath('/dashboard/alerts');
+}
+
+// ── Degraded banner ───────────────────────────────────────────────────────────
+function DegradedBanner({ message, alert }: { message: string; alert: boolean }) {
   return (
-    <div className={alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm' : 'rounded-2xl border border-slate-200 bg-white p-4 text-slate-600 shadow-sm'}>
+    <div className={`rounded-xl border p-4 ${alert ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-slate-200 bg-white text-slate-600'}`}>
       {alert ? <AutoRetryOnDegraded intervalMs={AUTO_RETRY_INTERVAL_MS} /> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className={alert ? 'text-sm font-black text-amber-950' : 'text-sm font-black text-slate-950'}>
-            {alert ? 'Alerts are recovering' : 'Refreshing...'}
+          <p className={`text-sm font-black ${alert ? 'text-amber-950' : 'text-slate-950'}`}>
+            {alert ? 'Alerts are recovering' : 'Refreshing alerts…'}
           </p>
-          <p className="mt-1 text-sm leading-6">{message}</p>
+          <p className="mt-1 text-sm leading-5">{message}</p>
         </div>
-        <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 disabled:opacity-70" />
+        <RefreshButton className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 disabled:opacity-70" />
       </div>
     </div>
   );
 }
 
-/**
- * Both alert sections below independently call getApprovalAlerts() rather
- * than threading one shared result through props — safe and cheap because
- * the underlying fetch is deduped per-request (see services/alerts.ts's
- * React cache() wrapper), and it keeps each visual section self-contained
- * in its own Suspense boundary with its own skeleton and inline recovery
- * state, matching the pattern already used on Compliance Hub.
- */
-async function AlertSeverityCards({ filters }: { filters: AlertsPageProps['searchParams'] extends Promise<infer T> ? T : never }) {
+// ── KPI metrics row ───────────────────────────────────────────────────────────
+type KpiMetric = {
+  label: string;
+  value: number;
+  href: string;
+  colorClass: string;
+  dotClass: string;
+  desc: string;
+};
+
+function KpiCard({ metric, active }: { metric: KpiMetric; active: boolean }) {
+  return (
+    <Link
+      href={metric.href}
+      className={`group rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md ${active ? 'ring-2 ring-[#2155d9]/30 border-[#2155d9]/30' : 'border-slate-200'}`}
+    >
+      <div className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${metric.colorClass}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${metric.dotClass}`} />
+        {metric.label}
+      </div>
+      <p className="mt-3 text-3xl font-black tabular-nums tracking-tight text-slate-950">{metric.value}</p>
+      <p className="mt-1 text-[11px] text-slate-400">{metric.desc}</p>
+    </Link>
+  );
+}
+
+async function AlertMetricsRow({ filters }: { filters: Awaited<AlertsPageProps['searchParams']> }) {
   const { organizationId } = await requireOrganizationId();
   const result = await getApprovalAlerts(organizationId, filters);
 
+  const baseUrl = '/dashboard/alerts';
+  const qs = (params: Record<string, string>) => {
+    const p = new URLSearchParams(params);
+    return `${baseUrl}?${p.toString()}`;
+  };
+
+  const metrics: KpiMetric[] = [
+    {
+      label: 'Critical',
+      value: result.severityCounts.Critical,
+      href: qs({ severity: 'critical' }),
+      colorClass: 'border-rose-200 bg-rose-50 text-rose-700',
+      dotClass: 'bg-rose-500',
+      desc: 'Needs immediate attention',
+    },
+    {
+      label: 'High',
+      value: result.severityCounts.High,
+      href: qs({ severity: 'high' }),
+      colorClass: 'border-amber-200 bg-amber-50 text-amber-800',
+      dotClass: 'bg-amber-500',
+      desc: 'Requires prompt review',
+    },
+    {
+      label: 'Open',
+      value: result.openCount,
+      href: qs({ status: 'open' }),
+      colorClass: 'border-orange-200 bg-orange-50 text-orange-700',
+      dotClass: 'bg-orange-500 animate-pulse',
+      desc: 'Unassigned, not escalated',
+    },
+    {
+      label: 'Escalated',
+      value: result.escalatedCount,
+      href: qs({ status: 'escalated' }),
+      colorClass: 'border-violet-200 bg-violet-50 text-violet-700',
+      dotClass: 'bg-violet-500',
+      desc: 'Sent to senior review',
+    },
+    {
+      label: 'Investigating',
+      value: result.investigatingCount,
+      href: qs({ status: 'investigating' }),
+      colorClass: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+      dotClass: 'bg-indigo-500',
+      desc: 'Active investigation case',
+    },
+  ];
+
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Critical" value={result.severityCounts.Critical} tone="rose" />
-        <MetricCard label="High" value={result.severityCounts.High} tone="amber" />
-        <MetricCard label="Medium" value={result.severityCounts.Medium} tone="blue" />
-        <MetricCard label="Low" value={result.severityCounts.Low} tone="emerald" />
+    <div className="grid gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        {metrics.map((m) => (
+          <KpiCard
+            key={m.label}
+            metric={m}
+            active={
+              (m.label === 'Critical' && filters.severity === 'critical') ||
+              (m.label === 'High' && filters.severity === 'high') ||
+              (m.label === 'Open' && filters.status === 'open') ||
+              (m.label === 'Escalated' && filters.status === 'escalated') ||
+              (m.label === 'Investigating' && filters.status === 'investigating')
+            }
+          />
+        ))}
       </div>
-      {result.message ? <DegradedNotice message={result.message} alert={result.alert} /> : null}
-      {!result.message && result.staleAsOfMs ? (
-        <p className="-mt-2 text-xs font-bold text-slate-400">Last updated {minutesAgo(result.staleAsOfMs)}.</p>
+      {result.staleAsOfMs ? (
+        <p className="text-[11px] text-slate-400">
+          Last refreshed {Math.max(0, Math.round((Date.now() - result.staleAsOfMs) / 60_000))}m ago.
+        </p>
       ) : null}
     </div>
   );
 }
 
-function AlertCard({ alert }: { alert: ApprovalAlert }) {
+// ── Attention queue (top critical / high alerts) ──────────────────────────────
+function AttentionItem({
+  alert,
+  investigateAction,
+}: {
+  alert: ApprovalAlert;
+  investigateAction: (fd: FormData) => Promise<void>;
+}) {
+  const borderColor = alert.severity === 'Critical' ? 'border-rose-200' : 'border-amber-200';
+  const stripColor = alert.severity === 'Critical' ? 'bg-rose-500' : 'bg-amber-500';
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className={`relative overflow-hidden rounded-xl border ${borderColor} bg-white shadow-sm`}>
+      <div className={`absolute inset-y-0 left-0 w-1 ${stripColor}`} />
+      <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4 pl-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-full border px-2.5 py-1 text-xs font-black uppercase ${severityClass(alert.severity)}`}>{alert.severity} · {alert.riskScore}</span>
-            {alert.escalated ? <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-black uppercase text-violet-700">Escalated</span> : null}
+            <SeverityBadge severity={alert.severity} score={alert.riskScore} />
+            {alert.escalated ? <OperationalStatusBadge escalated={true} investigating={false} acknowledged={false} /> : null}
           </div>
-          <h3 className="mt-3 text-lg font-black text-slate-950">{alert.subject}</h3>
-          <p className="mt-1 text-sm font-semibold text-slate-500">
-            {alert.department ?? 'Unassigned'} · {alert.approverName ?? 'Unknown approver'} · {alert.sourcePlatform ?? 'unknown'} · {dateText(alert.occurredAt)}
+          <h4 className="mt-2 text-sm font-black text-slate-950">{alert.subject}</h4>
+          <p className="mt-1 text-[12px] text-slate-500">
+            {alert.department ?? 'Unknown'} · {alert.approverName ?? 'Unknown approver'}
+            {alert.reasons[0] ? ` · ${alert.reasons[0]}` : ''}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {alert.reasons.map((reason) => (
-              <span key={reason} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{reason}</span>
-            ))}
-          </div>
           {alert.complianceExplanation ? (
-            <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">
-              <b>Playbook finding ({alert.complianceSeverity ?? 'unscored'}):</b> {alert.complianceExplanation}
-            </p>
+            <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-slate-600">{alert.complianceExplanation}</p>
           ) : null}
         </div>
-        <div className="flex shrink-0 flex-col items-stretch gap-2">
-          <PendingLink href={`/approvals/${alert.id}`} pendingText="Opening..." className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-black text-slate-700 hover:bg-slate-50">
+        <div className="flex shrink-0 gap-2">
+          <PendingLink
+            href={`/approvals/${alert.id}`}
+            pendingText="Opening…"
+            className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-xs font-black text-slate-700 hover:bg-slate-50"
+          >
             View approval
           </PendingLink>
-          <form action={investigateAlertAction}>
+          <form action={investigateAction}>
             <input type="hidden" name="approvalId" value={alert.id} />
-            <FormSubmitButton pendingText="Opening case..." className="min-h-0 h-9 w-full rounded-lg bg-[#2155d9] px-3 text-xs font-black text-white shadow-sm shadow-blue-200">
+            <FormSubmitButton pendingText="Opening case…" className="min-h-0 h-9 rounded-lg bg-[#2155d9] px-3 text-xs font-black text-white shadow-sm shadow-blue-200">
               Investigate
             </FormSubmitButton>
           </form>
-          <div className="flex gap-2">
-            <form action={escalateAlertAction} className="flex-1">
-              <input type="hidden" name="approvalId" value={alert.id} />
-              <FormSubmitButton pendingText="Escalating..." className="min-h-0 h-9 w-full rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-black text-violet-700">
-                Escalate
-              </FormSubmitButton>
-            </form>
-            <form action={dismissAlertAction} className="flex-1">
-              <input type="hidden" name="approvalId" value={alert.id} />
-              <FormSubmitButton pendingText="Dismissing..." className="min-h-0 h-9 w-full rounded-lg border border-slate-200 px-3 text-xs font-black text-slate-600">
-                Dismiss
-              </FormSubmitButton>
-            </form>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-async function AlertsList({ filters }: { filters: AlertsPageProps['searchParams'] extends Promise<infer T> ? T : never }) {
+// ── Main alerts list (table) ──────────────────────────────────────────────────
+async function AlertsList({
+  filters,
+  investigateAction,
+  escalateAction,
+  dismissAction,
+  acknowledgeAction,
+}: {
+  filters: Awaited<AlertsPageProps['searchParams']>;
+  investigateAction: (fd: FormData) => Promise<void>;
+  escalateAction: (fd: FormData) => Promise<void>;
+  dismissAction: (fd: FormData) => Promise<void>;
+  acknowledgeAction: (fd: FormData) => Promise<void>;
+}) {
   const { organizationId } = await requireOrganizationId();
   const result = await getApprovalAlerts(organizationId, filters);
 
+  if (result.message) {
+    return <DegradedBanner message={result.message} alert={result.alert} />;
+  }
+
   if (result.alerts.length === 0) {
-    if (result.message) return null; // DegradedNotice already rendered by AlertSeverityCards
     return (
-      <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-10 text-center shadow-sm">
-        <h3 className="text-lg font-black text-slate-950">No active alerts</h3>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+      <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/60 p-10 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+          <ShieldAlert className="h-5 w-5 text-emerald-600" />
+        </div>
+        <h3 className="mt-4 text-base font-black text-slate-950">No active alerts</h3>
+        <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
           {result.dismissedCount > 0
-            ? `${result.dismissedCount} alert${result.dismissedCount === 1 ? '' : 's'} dismissed. Nothing else is currently flagged for review.`
-            : 'No high-risk, conditional, pending, or evidence-incomplete approvals right now.'}
+            ? `${result.dismissedCount} alert${result.dismissedCount === 1 ? '' : 's'} dismissed. Nothing else currently requires review.`
+            : 'No high-risk or policy-violating approvals are currently flagged.'}
         </p>
+        {Object.values(filters).some(Boolean) ? (
+          <PendingLink href="/dashboard/alerts" pendingText="Clearing…" className="mt-4 inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700">
+            Clear filters
+          </PendingLink>
+        ) : null}
       </div>
     );
   }
 
+  const attentionItems = result.alerts
+    .filter((a) => (a.severity === 'Critical' || a.severity === 'High') && !a.investigating)
+    .slice(0, 3);
+
   return (
     <div className="grid gap-4">
-      {result.alerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)}
+      {/* Attention Required queue */}
+      {attentionItems.length > 0 ? (
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <h3 className="text-sm font-black text-slate-900">Attention Required</h3>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">{attentionItems.length}</span>
+          </div>
+          <div className="grid gap-3">
+            {attentionItems.map((alert) => (
+              <AttentionItem key={alert.id} alert={alert} investigateAction={investigateAction} />
+            ))}
+          </div>
+          <div className="mt-4 mb-1 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-slate-400" />
+            <h3 className="text-sm font-black text-slate-900">All Alerts</h3>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{result.alerts.length}</span>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Operational table */}
+      <AlertsTableClient
+        alerts={result.alerts}
+        investigateAction={investigateAction}
+        escalateAction={escalateAction}
+        dismissAction={dismissAction}
+        acknowledgeAction={acknowledgeAction}
+      />
     </div>
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default async function AlertsPage({ searchParams }: AlertsPageProps) {
   const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
@@ -224,69 +345,136 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
   if (!tenant.organization) redirect('/dashboard');
 
   const filters = await searchParams;
-  const severityKey = JSON.stringify(filters);
+  const cacheKey = JSON.stringify(filters);
+  const hasActiveFilter = Object.values(filters).some(Boolean);
 
   return (
-    <section className="grid gap-6">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-[#07111f] p-6 text-white shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Alerts & Risks</p>
-        <h2 className="mt-2 text-3xl font-black tracking-tight">Active risk signals requiring attention</h2>
-        <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-300">
-          High-risk, conditional, pending, and evidence-incomplete approvals surfaced from your live approval records — triage them here, or convert one into a full Investigation Center case.
-        </p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <PendingLink href="/investigations" pendingText="Opening..." className="inline-flex h-10 items-center rounded-xl border border-white/10 bg-white/[0.08] px-4 text-sm font-black text-white">
-            Open Investigation Center
+    <section className="grid gap-5">
+      {/* Page header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-slate-500" />
+            <h2 className="text-xl font-black tracking-tight text-white">Alerts &amp; Risks</h2>
+          </div>
+          <p className="mt-1 text-sm text-slate-400">
+            Monitor, investigate, and resolve approval risks across your organization.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <PendingLink
+            href="/investigations"
+            pendingText="Opening…"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-slate-200 hover:bg-white/[0.1]"
+          >
+            Investigation Center
           </PendingLink>
+          <PendingLink
+            href="/dashboard/audit?category=alerts"
+            pendingText="Opening…"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-slate-200 hover:bg-white/[0.1]"
+          >
+            Export
+          </PendingLink>
+          <RefreshButton className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-slate-200 disabled:opacity-50 hover:bg-white/[0.1]" />
         </div>
       </div>
 
-      <Suspense key={`cards-${severityKey}`} fallback={<CardSkeleton rows={2} />}>
-        <AlertSeverityCards filters={filters} />
+      {/* KPI metrics */}
+      <Suspense key={`metrics-${cacheKey}`} fallback={<CardSkeleton rows={1} />}>
+        <AlertMetricsRow filters={filters} />
       </Suspense>
 
-      <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-5">
-        <label className="grid gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Severity</span>
-          <select name="severity" defaultValue={filters.severity ?? ''} className="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100">
-            <option value="">All</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-        </label>
-        <label className="grid gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Approval type</span>
-          <select name="approvalType" defaultValue={filters.approvalType ?? ''} className="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100">
-            <option value="">All</option>
-            <option value="EXPLICIT">Explicit</option>
-            <option value="IMPLICIT">Implicit</option>
-            <option value="CONDITIONAL">Conditional</option>
-            <option value="REJECTION">Rejection</option>
-            <option value="ESCALATION">Escalation</option>
-          </select>
-        </label>
-        <label className="grid gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-wide text-slate-500">From</span>
-          <input name="from" type="date" defaultValue={filters.from ?? ''} className="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
-        </label>
-        <label className="grid gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-wide text-slate-500">To</span>
-          <input name="to" type="date" defaultValue={filters.to ?? ''} className="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
-        </label>
-        <div className="flex items-end gap-2">
-          <FormSubmitButton pendingText="Filtering..." className="min-h-0 h-11 rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
-            Apply
-          </FormSubmitButton>
-          <PendingLink href="/dashboard/alerts" pendingText="Clearing..." className="inline-flex h-11 items-center rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700">
-            Clear
-          </PendingLink>
+      {/* Filter bar */}
+      <form className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4 backdrop-blur-sm">
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+          <label className="xl:col-span-2 grid gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Search</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                name="q"
+                type="search"
+                defaultValue={filters.q ?? ''}
+                placeholder="Alert title, approver, department…"
+                className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.07] pl-9 pr-3 text-sm font-semibold text-slate-100 placeholder-slate-500 outline-none focus:border-[#2155d9]/60 focus:ring-2 focus:ring-[#2155d9]/25"
+              />
+            </div>
+          </label>
+          <label className="grid gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Severity</span>
+            <select name="severity" defaultValue={filters.severity ?? ''} className="h-10 rounded-lg border border-white/10 bg-white/[0.07] px-3 text-sm font-semibold text-slate-100 outline-none focus:border-[#2155d9]/60">
+              <option value="">All severities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </label>
+          <label className="grid gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</span>
+            <select name="status" defaultValue={filters.status ?? ''} className="h-10 rounded-lg border border-white/10 bg-white/[0.07] px-3 text-sm font-semibold text-slate-100 outline-none focus:border-[#2155d9]/60">
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="escalated">Escalated</option>
+              <option value="investigating">Investigating</option>
+              <option value="acknowledged">Acknowledged</option>
+            </select>
+          </label>
+          <label className="grid gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Type</span>
+            <select name="approvalType" defaultValue={filters.approvalType ?? ''} className="h-10 rounded-lg border border-white/10 bg-white/[0.07] px-3 text-sm font-semibold text-slate-100 outline-none focus:border-[#2155d9]/60">
+              <option value="">All types</option>
+              <option value="EXPLICIT">Explicit</option>
+              <option value="IMPLICIT">Implicit</option>
+              <option value="CONDITIONAL">Conditional</option>
+              <option value="REJECTION">Rejection</option>
+              <option value="ESCALATION">Escalation</option>
+            </select>
+          </label>
+          <label className="grid gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Source</span>
+            <select name="sourcePlatform" defaultValue={filters.sourcePlatform ?? ''} className="h-10 rounded-lg border border-white/10 bg-white/[0.07] px-3 text-sm font-semibold text-slate-100 outline-none focus:border-[#2155d9]/60">
+              <option value="">All sources</option>
+              <option value="slack">Slack</option>
+              <option value="gmail">Gmail</option>
+              <option value="teams">Teams</option>
+              <option value="jira">Jira</option>
+              <option value="zoom">Zoom</option>
+            </select>
+          </label>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-3">
+          <label className="flex items-center gap-2 text-[11px] text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-widest">From</span>
+            <input name="from" type="date" defaultValue={filters.from ?? ''} className="h-8 rounded-lg border border-white/10 bg-white/[0.07] px-2 text-sm text-slate-100 outline-none focus:border-[#2155d9]/60" />
+          </label>
+          <label className="flex items-center gap-2 text-[11px] text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-widest">To</span>
+            <input name="to" type="date" defaultValue={filters.to ?? ''} className="h-8 rounded-lg border border-white/10 bg-white/[0.07] px-2 text-sm text-slate-100 outline-none focus:border-[#2155d9]/60" />
+          </label>
+          <div className="ml-auto flex gap-2">
+            {hasActiveFilter ? (
+              <PendingLink href="/dashboard/alerts" pendingText="Clearing…" className="inline-flex h-9 items-center rounded-lg border border-white/10 px-4 text-sm font-bold text-slate-300 hover:bg-white/[0.06]">
+                Clear
+              </PendingLink>
+            ) : null}
+            <FormSubmitButton pendingText="Filtering…" className="min-h-0 h-9 rounded-lg bg-[#2155d9] px-5 text-sm font-bold text-white shadow-sm shadow-blue-900">
+              Apply
+            </FormSubmitButton>
+          </div>
         </div>
       </form>
 
-      <Suspense key={`list-${severityKey}`} fallback={<CardSkeleton rows={4} />}>
-        <AlertsList filters={filters} />
+      {/* Alerts list */}
+      <Suspense key={`alerts-${cacheKey}`} fallback={<CardSkeleton rows={5} />}>
+        <AlertsList
+          filters={filters}
+          investigateAction={investigateAlertAction}
+          escalateAction={escalateAlertAction}
+          dismissAction={dismissAlertAction}
+          acknowledgeAction={acknowledgeAlertAction}
+        />
       </Suspense>
     </section>
   );
