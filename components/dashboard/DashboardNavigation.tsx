@@ -42,22 +42,52 @@ type NavigationItem = {
   badge?: string;
 };
 
-const items: NavigationItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/evidence', label: 'Unified Evidence', icon: Boxes, badge: 'New' },
-  { href: '/dashboard/approvals', label: 'Approvals', icon: FileCheck2 },
-  { href: '/copilot', label: 'AI Copilot', icon: Bot },
-  { href: '/investigations', label: 'Investigation Center', icon: FileSearch },
-  { href: '/playbooks', label: 'Playbook AI', icon: BrainCircuit },
-  { href: '/memory', label: 'Memory Graph', icon: Network },
-  { href: '/analytics', label: 'Executive Analytics', icon: BarChart3 },
-  { href: '/dashboard/gateway', label: 'Universal Gateway', icon: GitBranch },
-  { href: '/dashboard/settings/integrations', label: 'Integrations', icon: Cable },
-  { href: '/dashboard/audit', label: 'Reports & Exports', icon: ScrollText },
-  { href: '/dashboard/alerts', label: 'Alerts & Risks', icon: ShieldAlert },
-  { href: '/trust/compliance', label: 'Compliance Hub', icon: ShieldCheck },
-  { href: '/settings/users', label: 'Users & Teams', icon: Users },
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+type NavSection = {
+  title: string;
+  items: NavigationItem[];
+};
+
+const sections: NavSection[] = [
+  {
+    title: 'Core Operations',
+    items: [
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/dashboard/approvals', label: 'Approvals', icon: FileCheck2 },
+      { href: '/evidence', label: 'Unified Evidence', icon: Boxes, badge: 'New' },
+    ],
+  },
+  {
+    title: 'Intelligence',
+    items: [
+      { href: '/copilot', label: 'AI Copilot', icon: Bot },
+      { href: '/playbooks', label: 'Playbook AI', icon: BrainCircuit },
+      { href: '/memory', label: 'Memory Graph', icon: Network },
+      { href: '/investigations', label: 'Investigation Center', icon: FileSearch },
+      { href: '/analytics', label: 'Executive Analytics', icon: BarChart3 },
+    ],
+  },
+  {
+    title: 'Governance & Risk',
+    items: [
+      { href: '/trust/compliance', label: 'Compliance Hub', icon: ShieldCheck },
+      { href: '/dashboard/alerts', label: 'Alerts & Risks', icon: ShieldAlert },
+      { href: '/dashboard/audit', label: 'Reports & Exports', icon: ScrollText },
+    ],
+  },
+  {
+    title: 'Integrations & Platform',
+    items: [
+      { href: '/dashboard/gateway', label: 'Universal Gateway', icon: GitBranch },
+      { href: '/dashboard/settings/integrations', label: 'Integrations', icon: Cable },
+    ],
+  },
+  {
+    title: 'Administration',
+    items: [
+      { href: '/settings/users', label: 'Users & Teams', icon: Users },
+      { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+    ],
+  },
 ];
 
 export function DashboardNavigation({ mobile = false, role = null }: { mobile?: boolean; role?: Role | null }) {
@@ -72,13 +102,22 @@ export function DashboardNavigation({ mobile = false, role = null }: { mobile?: 
   // matching role check on its API routes - not this filter. A null role
   // (tenant lookup unavailable) shows every item rather than blocking
   // rendering, matching this component's existing fail-open rendering style.
-  const visibleItems = useMemo(() => {
-    if (!role) return items;
-    return items.filter(({ href }) => {
-      const allowedRoles = findRoutePermission(href);
-      return !allowedRoles || hasAnyRole(role, allowedRoles);
-    });
+  const visibleSections = useMemo(() => {
+    return sections
+      .map((section) => ({
+        ...section,
+        items: !role
+          ? section.items
+          : section.items.filter(({ href }) => {
+              const allowedRoles = findRoutePermission(href);
+              return !allowedRoles || hasAnyRole(role, allowedRoles);
+            }),
+      }))
+      .filter((section) => section.items.length > 0);
   }, [role]);
+
+  // Flat list of all visible items — used for active-state detection, prefetching, and mobile nav.
+  const visibleItems = useMemo(() => visibleSections.flatMap((s) => s.items), [visibleSections]);
 
   useEffect(() => {
     setPendingHref(null);
@@ -169,35 +208,44 @@ export function DashboardNavigation({ mobile = false, role = null }: { mobile?: 
           <span className="block h-full w-1/3 animate-[route-progress_1s_ease-in-out_infinite] rounded-r-full bg-blue-400 shadow-[0_0_18px_rgba(96,165,250,.75)]" />
         </div>
       ) : null}
-      <div className="grid gap-0.5">
-        {visibleItems.map(({ href, label, icon: Icon, badge }) => {
-          const active = activeHref === href;
-          const pending = pendingHref === href;
-          return (
-            <Link
-              key={href}
-              href={href}
-              prefetch
-              onMouseEnter={() => router.prefetch(href)}
-              onPointerDown={() => beginNavigation(href)}
-              onClick={() => beginNavigation(href)}
-              className={`group flex min-h-9 items-center gap-3 rounded-md px-3 text-[13px] font-medium transition ${
-                active
-                  ? 'bg-blue-600 text-white shadow-[0_8px_24px_rgba(37,99,235,.22)]'
-                  : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-100'
-              }`}
-            >
-              <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-blue-100' : 'text-slate-500 group-hover:text-slate-300'}`} />
-              <span className="min-w-0 flex-1 truncate">{label}</span>
-              {badge ? (
-                <span className="rounded bg-violet-500/25 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-200">
-                  {badge}
-                </span>
-              ) : null}
-              {pending ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-100" aria-label="Opening" /> : null}
-            </Link>
-          );
-        })}
+      <div className="grid gap-0">
+        {visibleSections.map((section, sectionIndex) => (
+          <div key={section.title} className={sectionIndex > 0 ? 'mt-4' : ''}>
+            <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+              {section.title}
+            </p>
+            <div className="grid gap-0.5">
+              {section.items.map(({ href, label, icon: Icon, badge }) => {
+                const active = activeHref === href;
+                const pending = pendingHref === href;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    prefetch
+                    onMouseEnter={() => router.prefetch(href)}
+                    onPointerDown={() => beginNavigation(href)}
+                    onClick={() => beginNavigation(href)}
+                    className={`group flex min-h-9 items-center gap-3 rounded-md px-3 text-[13px] font-medium transition ${
+                      active
+                        ? 'bg-blue-600 text-white shadow-[0_8px_24px_rgba(37,99,235,.22)]'
+                        : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-100'
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-blue-100' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                    <span className="min-w-0 flex-1 truncate">{label}</span>
+                    {badge ? (
+                      <span className="rounded bg-violet-500/25 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-200">
+                        {badge}
+                      </span>
+                    ) : null}
+                    {pending ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-100" aria-label="Opening" /> : null}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </nav>
   );
