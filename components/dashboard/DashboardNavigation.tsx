@@ -62,7 +62,6 @@ const sections: NavSection[] = [
       { href: '/copilot', label: 'AI Copilot', icon: Bot },
       { href: '/playbooks', label: 'Playbook AI', icon: BrainCircuit },
       { href: '/memory', label: 'Memory Graph', icon: Network },
-      { href: '/investigations', label: 'Investigation Center', icon: FileSearch },
       { href: '/analytics', label: 'Executive Analytics', icon: BarChart3 },
     ],
   },
@@ -72,6 +71,7 @@ const sections: NavSection[] = [
       { href: '/trust/compliance', label: 'Compliance Hub', icon: ShieldCheck },
       { href: '/dashboard/alerts', label: 'Alerts & Risks', icon: ShieldAlert },
       { href: '/dashboard/audit', label: 'Reports & Exports', icon: ScrollText },
+      { href: '/investigations', label: 'Investigation Center', icon: FileSearch },
     ],
   },
   {

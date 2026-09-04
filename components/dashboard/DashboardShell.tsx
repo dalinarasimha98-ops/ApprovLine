@@ -12,6 +12,34 @@ import {
   WorkspaceSwitcherLink,
 } from '@/components/dashboard/DashboardHeaderControls';
 import { getDashboardTenant } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+const PLAN_LABELS: Record<string, string> = {
+  FREE_TRIAL: 'Free Trial',
+  STARTER: 'Starter',
+  GROWTH: 'Growth',
+  ENTERPRISE: 'Enterprise',
+};
+
+async function getWorkspacePlan(organizationId: string) {
+  try {
+    const account = await prisma.customerAccount.findUnique({
+      where: { organizationId },
+      select: {
+        planTier: true,
+        seatAllocation: { select: { purchasedSeats: true, usedSeats: true } },
+      },
+    });
+    if (!account) return null;
+    return {
+      planLabel: PLAN_LABELS[account.planTier] ?? account.planTier,
+      usedSeats: account.seatAllocation?.usedSeats ?? null,
+      purchasedSeats: account.seatAllocation?.purchasedSeats ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function DashboardShell({
   children,
@@ -30,6 +58,9 @@ export async function DashboardShell({
   // "show everything" rather than blocking rendering.
   const tenant = await getDashboardTenant(1500).catch(() => null);
   const role = tenant?.user?.role ?? null;
+  const plan = tenant?.organization?.id
+    ? await getWorkspacePlan(tenant.organization.id).catch(() => null)
+    : null;
   return (
     <div className="min-h-screen bg-[#030b18] text-slate-100">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-white/[0.08] bg-[#020916] p-3 text-white lg:flex">
@@ -43,7 +74,18 @@ export async function DashboardShell({
         <DashboardNavigation role={role} />
         <div className="mt-3 shrink-0 rounded-lg border border-white/[0.08] bg-white/[0.035] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Workspace plan</p>
-          <p className="mt-1 text-xs font-semibold text-slate-200">Manage billing and usage</p>
+          {plan ? (
+            <>
+              <p className="mt-1 text-xs font-semibold text-slate-200">{plan.planLabel}</p>
+              {plan.usedSeats !== null && plan.purchasedSeats !== null ? (
+                <p className="mt-0.5 text-[10px] text-slate-500">
+                  {plan.usedSeats} / {plan.purchasedSeats} seats used
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="mt-1 text-xs font-semibold text-slate-200">Billing &amp; usage</p>
+          )}
           <PendingLink
             href="/dashboard/customer-success"
             pendingText="Opening plan..."
