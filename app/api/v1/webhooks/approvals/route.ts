@@ -39,6 +39,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Org binding must be present — fail closed rather than falling back to
+    // client-supplied tenant_slug in the webhook payload.
+    if (!BOUND_ORG_SLUG) {
+      return NextResponse.json(
+        { error: 'Universal Gateway organization binding is not configured.' },
+        { status: 503 },
+      );
+    }
+
     const parsed = universalWebhookSchema.safeParse(JSON.parse(rawBody || 'null'));
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid webhook payload', details: parsed.error.flatten() }, { status: 400 });
