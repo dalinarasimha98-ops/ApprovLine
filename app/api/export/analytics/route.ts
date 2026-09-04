@@ -3,6 +3,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { analyticsCsv, analyticsPdf, buildExecutiveAnalytics } from '@/services/analytics';
 import { withTimeout } from '@/lib/performance';
 import { hasAnyRole } from '@/lib/rbac';
+import { writeAuditLog } from '@/services/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,14 @@ export async function GET(request: NextRequest) {
       },
     );
   }
+
+  // Non-blocking audit log.
+  writeAuditLog({
+    organizationId: tenant.organization.id,
+    actorUserId: tenant.session?.userId,
+    action: 'report.exported',
+    metadata: { reportId: 'executive-analytics', reportName: 'Executive Analytics Report', format },
+  }).catch(() => {});
 
   if (format === 'pdf') {
     return new NextResponse(analyticsPdf(report), {

@@ -7,6 +7,7 @@ import { reportApprovalFailure } from '@/lib/approval-observability';
 import { withTimeout } from '@/lib/performance';
 import { hasAnyRole } from '@/lib/rbac';
 import { createSimplePdf } from '@/lib/simple-pdf';
+import { writeAuditLog } from '@/services/audit';
 
 function contains(value: string | null) {
   return value ? { contains: value, mode: 'insensitive' as const } : undefined;
@@ -94,6 +95,14 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ error: 'Approval export is unavailable or has been deleted.' }, { status: 404 });
   }
+
+  // Non-blocking audit log — export is complete regardless of whether this write succeeds.
+  writeAuditLog({
+    organizationId: organization.id,
+    actorUserId: tenant.session?.userId,
+    action: 'report.exported',
+    metadata: { reportId: 'approval-audit', reportName: 'Approval Audit Report', format, recordCount: approvals.length },
+  }).catch(() => {});
 
   if (format === 'json') {
     return new NextResponse(JSON.stringify({ approvals }, jsonReplacer, 2), {
