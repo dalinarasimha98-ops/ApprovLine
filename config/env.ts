@@ -35,6 +35,7 @@ const envSchema = z.object({
   ZOOM_CLIENT_SECRET: optionalEnvString,
   UNIVERSAL_GATEWAY_API_KEY: optionalEnvString,
   UNIVERSAL_GATEWAY_WEBHOOK_SECRET: optionalEnvString,
+  UNIVERSAL_GATEWAY_ORG_SLUG: optionalEnvString,
   LEAD_NOTIFICATION_WEBHOOK_URL: optionalEnvString,
   CRM_WEBHOOK_URL: optionalEnvString,
   LEAD_WEBHOOK_BEARER_TOKEN: optionalEnvString,

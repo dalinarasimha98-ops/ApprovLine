@@ -273,7 +273,7 @@ export default async function IntegrationsPage({
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  if (tenant.user) enforcePageRole('/dashboard/settings', tenant.user.role);
+  if (tenant.user) enforcePageRole('/dashboard/settings/integrations', tenant.user.role);
 
   const query = await searchParams;
 

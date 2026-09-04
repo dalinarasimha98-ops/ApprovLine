@@ -33,6 +33,8 @@
     "test:copilot": "node --import tsx tests/ai-copilot.test.ts",
     "test:executive-analytics": "node --import tsx tests/executive-analytics.test.ts",
     "test:reports": "node --import tsx tests/reports.test.ts",
+    "test:p1-security": "node --import tsx tests/p1-security-hardening.test.ts",
+    "test:access-control": "node --import tsx tests/access-control.test.ts",
     "test:e2e:approvals": "playwright test tests/e2e/approval-timeline.spec.ts",
     "readiness": "tsx scripts/readiness.ts",
     "gmail:sync": "tsx scripts/gmail-sync.ts",

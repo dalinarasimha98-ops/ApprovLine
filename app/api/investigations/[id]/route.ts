@@ -11,7 +11,9 @@ export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-const ALLOWED_ROLES = ['MANAGER', 'ADMIN', 'OWNER'] as const;
+// AUDITOR has VIEW access to investigations (read-only); writes remain MANAGER+.
+const READ_ROLES = ['AUDITOR', 'MANAGER', 'ADMIN', 'OWNER'] as const;
+const WRITE_ROLES = ['MANAGER', 'ADMIN', 'OWNER'] as const;
 
 const VALID_STATUSES = ['OPEN', 'IN_PROGRESS', 'ESCALATED', 'RESOLVED', 'CLOSED'] as const;
 type ValidStatus = (typeof VALID_STATUSES)[number];
@@ -21,7 +23,7 @@ export async function GET(_: Request, { params }: RouteContext) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!tenant.organization || !tenant.user) return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-  if (!hasAnyRole(tenant.user.role, [...ALLOWED_ROLES])) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!hasAnyRole(tenant.user.role, [...READ_ROLES])) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
     await requireEntitlement(tenant.organization.id, 'investigations');
   } catch (err) {
@@ -87,7 +89,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const tenant = await getDashboardTenant(4000);
   if (tenant.status === 'unauthenticated') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!tenant.organization || !tenant.user) return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-  if (!hasAnyRole(tenant.user.role, [...ALLOWED_ROLES])) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!hasAnyRole(tenant.user.role, [...WRITE_ROLES])) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   try {
     await requireEntitlement(tenant.organization.id, 'investigations');
   } catch (err) {

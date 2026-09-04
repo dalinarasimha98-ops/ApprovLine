@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDashboardTenant } from "@/lib/auth";
+import { hasAnyRole } from "@/lib/rbac";
 import { answerCopilotQuestion } from "@/services/copilot/copilot";
 import { recordPerformance } from "@/lib/performance";
 import { EntitlementDeniedError, requireEntitlement } from "@/lib/entitlements";
@@ -46,6 +47,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: tenant.error ?? "Workspace is not ready yet." },
         { status: 503 },
+      );
+    }
+
+    // VIEWER role is denied Copilot — enforced here at the API layer (matching the
+    // page-level enforcePageRole('/copilot', ...) in app/copilot/page.tsx).
+    if (tenant.user && !hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN', 'MANAGER', 'AUDITOR', 'MEMBER'])) {
+      recordPerformance("/api/copilot/query", Date.now() - startedAt, 403);
+      return NextResponse.json(
+        { error: "Your role does not have access to Copilot." },
+        { status: 403 },
       );
     }
 

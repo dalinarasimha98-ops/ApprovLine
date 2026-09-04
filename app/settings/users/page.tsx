@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { UsersTeamsShell } from '@/components/users/UsersTeamsShell';
 import { getDashboardTenant } from '@/lib/auth';
-import { hasAnyRole } from '@/lib/rbac';
+import { enforcePageRole } from '@/lib/rbac';
 import { getUsersTeamsData } from '@/services/users';
 
 export const dynamic = 'force-dynamic';
@@ -14,9 +14,7 @@ export default async function UsersTeamsPage() {
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization || !tenant.user) redirect('/dashboard');
 
-  if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN', 'MANAGER', 'AUDITOR', 'MEMBER'])) {
-    redirect('/dashboard');
-  }
+  enforcePageRole('/settings/users', tenant.user.role);
 
   const orgId = tenant.organization.id;
 

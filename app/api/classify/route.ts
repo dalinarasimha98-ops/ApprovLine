@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getCurrentTenant } from '@/lib/auth';
+import { getDashboardTenant } from '@/lib/auth';
 import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import { classifyWithOpenAI } from '@/services/classifier/openai';
@@ -36,17 +36,20 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    let organizationId: string | undefined;
-    if (parsed.data.organizationId) {
-      const tenant = await getCurrentTenant();
-      if (tenant.organization.id !== parsed.data.organizationId) {
-        return NextResponse.json({ error: 'Forbidden tenant scope' }, { status: 403 });
-      }
-      if (!hasMinimumRole(tenant.user.role, 'MEMBER')) {
-        return NextResponse.json({ error: 'Your workspace role cannot create approval records.' }, { status: 403 });
-      }
-      organizationId = tenant.organization.id;
+    // Every classification request must have an authenticated session and a
+    // server-derived organizationId. organizationId from the request body is
+    // intentionally ignored — the session is the only authorization source.
+    const tenant = await getDashboardTenant(4000);
+    if (tenant.status === 'unauthenticated') {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+    if (!tenant.organization || !tenant.user) {
+      return NextResponse.json({ error: 'Workspace not configured' }, { status: 403 });
+    }
+    if (!hasMinimumRole(tenant.user.role, 'MEMBER')) {
+      return NextResponse.json({ error: 'Your workspace role cannot create approval records.' }, { status: 403 });
+    }
+    const organizationId = tenant.organization.id;
 
     const result = await classifyWithOpenAI(parsed.data);
 

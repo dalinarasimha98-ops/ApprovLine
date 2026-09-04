@@ -9,6 +9,10 @@ import {
 } from '@/services/gateway/universalGateway';
 import { verifyWebhookSignature } from '@/services/queue/reliability';
 
+// Server-authoritative org slug bound to this webhook secret — never trusts
+// tenant_slug supplied by the caller.
+const BOUND_ORG_SLUG = env.UNIVERSAL_GATEWAY_ORG_SLUG;
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
@@ -35,6 +39,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Org binding must be present — fail closed rather than falling back to
+    // client-supplied tenant_slug in the webhook payload.
+    if (!BOUND_ORG_SLUG) {
+      return NextResponse.json(
+        { error: 'Universal Gateway organization binding is not configured.' },
+        { status: 503 },
+      );
+    }
+
     const parsed = universalWebhookSchema.safeParse(JSON.parse(rawBody || 'null'));
     if (!parsed.success) {
       return NextResponse.json({ error: 'Invalid webhook payload', details: parsed.error.flatten() }, { status: 400 });
@@ -43,6 +56,9 @@ export async function POST(request: NextRequest) {
     const approval = normalizeWebhookApproval(parsed.data);
     const result = await ingestUniversalApproval(approval, {
       receivedVia: 'webhook',
+      // Use the server-authoritative slug; never trust tenant_slug from
+      // the webhook payload as the authorization source.
+      tenantSlug: BOUND_ORG_SLUG,
       ipAddress: ip,
       userAgent: request.headers.get('user-agent') ?? undefined,
     });

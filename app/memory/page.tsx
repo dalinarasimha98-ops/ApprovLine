@@ -3,22 +3,22 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
-import { hasAnyRole } from '@/lib/rbac';
-import { enforcePageRole } from '@/lib/rbac';
+import { hasAnyRole, enforcePageRole } from '@/lib/rbac';
 import { ensureMemoryStorage } from '@/services/memory-storage';
 import { rebuildMemoryGraphForOrganization } from '@/services/memory';
 import { MemoryGraphWorkspace } from '@/components/memory/MemoryGraphWorkspace';
 
 export const dynamic = 'force-dynamic';
 
-const ALLOWED_ROLES = ['MANAGER', 'ADMIN', 'OWNER'] as const;
+// Rebuild is a destructive write operation — restrict to MANAGER and above.
+const GRAPH_REBUILD_ROLES = ['MANAGER', 'ADMIN', 'OWNER'] as const;
 
 async function refreshMemoryGraphAction() {
   'use server';
   const tenant = await getDashboardTenant(5000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (!tenant.organization || !tenant.user) redirect('/onboarding');
-  enforcePageRole('/memory', tenant.user.role);
+  if (!hasAnyRole(tenant.user.role, [...GRAPH_REBUILD_ROLES])) redirect('/memory');
   try {
     await rebuildMemoryGraphForOrganization(tenant.organization.id);
   } catch (error) {
@@ -38,7 +38,6 @@ export default async function MemoryPage({ searchParams }: MemoryPageProps) {
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization || !tenant.user) redirect('/dashboard');
   enforcePageRole('/memory', tenant.user.role);
-  if (!hasAnyRole(tenant.user.role, [...ALLOWED_ROLES])) redirect('/dashboard');
 
   const params = await searchParams;
   const orgId = tenant.organization.id;

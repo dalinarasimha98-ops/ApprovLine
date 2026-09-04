@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
 
     const result = await ingestUniversalApproval(parsed.data, {
       receivedVia: 'api',
+      // Use the server-side org slug bound to this API key credential; never
+      // trust tenant_slug from the client body as the authorization source.
+      tenantSlug: authorization.orgSlug,
       ipAddress: ip,
       userAgent: request.headers.get('user-agent') ?? undefined,
     });
