@@ -73,9 +73,8 @@ const founderService = read('services/founder.ts');
 assert.match(founderService, /buildFounderTenantIsolationReport/);
 assert.match(founderService, /tenant_isolation/);
 
-const founderShell = read('components/founder/FounderShell.tsx');
-assert.match(founderShell, /Tenant Isolation/);
-assert.match(founderShell, /\/founder\/security\/isolation/);
+const founderNav = read('components/founder/FounderNavClient.tsx');
+assert.match(founderNav, /\/founder\/security\/isolation/);
 
 assert.equal(existsSync(`${root}/app/founder/security/isolation/page.tsx`), true);
 const isolationPage = read('app/founder/security/isolation/page.tsx');
