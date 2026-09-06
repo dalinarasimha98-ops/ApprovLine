@@ -141,9 +141,9 @@ export default async function FounderCustomersPage({
         {/* KPI strip */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <KpiCard label="Total Customers" value={summary.total} />
-          <KpiCard label="Active" value={summary.active} sub={`${summary.trial} in trial`} />
-          <KpiCard label="At Risk" value={summary.atRisk} sub="AT_RISK or CRITICAL health" />
-          <KpiCard label="Trial" value={summary.trial} sub="Free trial accounts" />
+          <KpiCard label="Active" value={summary.active} sub="Status: ACTIVE" />
+          <KpiCard label="Elevated Risk" value={summary.atRisk} sub="Customers with at-risk or critical health" />
+          <KpiCard label="Trial" value={summary.trial} sub="Status: TRIAL" />
         </div>
       </section>
 

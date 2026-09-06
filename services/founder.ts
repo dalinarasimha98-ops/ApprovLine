@@ -754,6 +754,7 @@ export type CustomerRow = {
   healthStatus: string;
   expectedArr: number;
   createdAt: string;
+  updatedAt: string;
   lifecycleStatus: string;
 };
 
@@ -842,6 +843,7 @@ export async function listFounderCustomers(opts?: {
             healthStatus: customer.health?.status ?? 'NEEDS_ATTENTION',
             expectedArr: arrFromPlanTier(customer.planTier, allocatedSeats || activeSeats),
             createdAt: customer.createdAt.toISOString(),
+            updatedAt: customer.updatedAt.toISOString(),
             lifecycleStatus: deriveLifecycle(customer.status, customer.planTier, healthScore),
           };
         }),
@@ -880,6 +882,7 @@ export async function listFounderCustomers(opts?: {
             healthStatus: organization.onboardedAt ? 'HEALTHY' : 'NEEDS_ATTENTION',
             expectedArr: 0,
             createdAt: organization.createdAt.toISOString(),
+            updatedAt: organization.updatedAt.toISOString(),
             lifecycleStatus: deriveLifecycle(organization.onboardedAt ? 'ACTIVE' : 'TRIAL', 'FREE_TRIAL', healthScore),
           };
         }),

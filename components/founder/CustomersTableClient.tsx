@@ -95,7 +95,7 @@ function PreviewDrawer({
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
           <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Customer Profile</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Customer Preview</p>
             <h3 className="mt-1 truncate text-xl font-black text-slate-950">{customer.companyName}</h3>
             <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{customer.domain}</p>
           </div>
@@ -136,6 +136,11 @@ function PreviewDrawer({
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
             <p className="text-xs font-black uppercase tracking-wide text-slate-400">Admin</p>
             <p className="mt-1 truncate text-sm font-bold text-slate-700">{customer.primaryAdminEmail}</p>
+          </div>
+
+          <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Last Updated</p>
+            <p className="mt-1 text-sm font-bold text-slate-700">{fmtDate(customer.updatedAt)}</p>
           </div>
         </div>
 
@@ -188,71 +193,74 @@ export function FilterBar({
     startTransition(() => router.push(`/founder/customers?${params.toString()}`));
   }
 
+  const hasFilters = !!(q || status || plan || health);
+
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-2 w-full">
+      {/* Search row */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
           const fd = new FormData(e.currentTarget);
           navigate({ q: String(fd.get('q') ?? ''), page: '1' });
         }}
-        className="flex gap-2"
+        className="w-full"
       >
         <input
           name="q"
           defaultValue={q}
-          placeholder="Search company, domain, email…"
-          className="h-9 w-52 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100 sm:w-64"
+          placeholder="Search customers by company, domain, email…"
+          className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
         />
-        <button type="submit" className="h-9 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-700 hover:bg-slate-50">
-          Search
-        </button>
       </form>
 
-      <select
-        value={status ?? ''}
-        onChange={(e) => navigate({ status: e.target.value, page: '1' })}
-        className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
-      >
-        <option value="">All Statuses</option>
-        <option value="ACTIVE">Active</option>
-        <option value="TRIAL">Trial</option>
-        <option value="SUSPENDED">Suspended</option>
-        <option value="CHURNED">Churned</option>
-      </select>
-
-      <select
-        value={plan ?? ''}
-        onChange={(e) => navigate({ plan: e.target.value, page: '1' })}
-        className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
-      >
-        <option value="">All Plans</option>
-        <option value="FREE_TRIAL">Free Trial</option>
-        <option value="STARTER">Starter</option>
-        <option value="GROWTH">Growth</option>
-        <option value="ENTERPRISE">Enterprise</option>
-      </select>
-
-      <select
-        value={health ?? ''}
-        onChange={(e) => navigate({ health: e.target.value, page: '1' })}
-        className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
-      >
-        <option value="">All Health</option>
-        <option value="HEALTHY">Healthy</option>
-        <option value="NEEDS_ATTENTION">Needs Attention</option>
-        <option value="AT_RISK">At Risk</option>
-        <option value="CRITICAL">Critical</option>
-      </select>
-
-      {(q || status || plan || health) ? (
-        <button
-          onClick={() => navigate({ q: '', status: '', plan: '', health: '', page: '1' })}
-          className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-500 hover:bg-slate-50"
+      {/* Filter row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={status ?? ''}
+          onChange={(e) => navigate({ status: e.target.value, page: '1' })}
+          className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
         >
-          Clear filters
-        </button>
-      ) : null}
+          <option value="">Status</option>
+          <option value="ACTIVE">Active</option>
+          <option value="TRIAL">Trial</option>
+          <option value="SUSPENDED">Suspended</option>
+          <option value="CHURNED">Churned</option>
+        </select>
+
+        <select
+          value={plan ?? ''}
+          onChange={(e) => navigate({ plan: e.target.value, page: '1' })}
+          className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
+        >
+          <option value="">Plan</option>
+          <option value="FREE_TRIAL">Free Trial</option>
+          <option value="STARTER">Starter</option>
+          <option value="GROWTH">Growth</option>
+          <option value="ENTERPRISE">Enterprise</option>
+        </select>
+
+        <select
+          value={health ?? ''}
+          onChange={(e) => navigate({ health: e.target.value, page: '1' })}
+          className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
+        >
+          <option value="">Health</option>
+          <option value="HEALTHY">Healthy</option>
+          <option value="NEEDS_ATTENTION">Needs Attention</option>
+          <option value="AT_RISK">At Risk</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
+
+        {hasFilters && (
+          <button
+            onClick={() => navigate({ q: '', status: '', plan: '', health: '', page: '1' })}
+            className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-500 hover:bg-slate-50"
+          >
+            Reset
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -275,12 +283,22 @@ export function CustomersTableClient({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm" style={{ minWidth: 900 }}>
+        <table className="w-full text-left text-sm" style={{ minWidth: 860 }}>
           <thead className="bg-slate-50">
             <tr>
-              {['Customer', 'Plan', 'Lifecycle', 'Health', 'Seats', 'Integrations', 'Est. ARR', 'Since', ''].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-xs font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">
-                  {h}
+              {[
+                { label: 'Customer', className: 'w-[220px]' },
+                { label: 'Plan', className: 'w-[90px]' },
+                { label: 'Lifecycle', className: 'w-[110px]' },
+                { label: 'Health', className: 'w-[110px]' },
+                { label: 'Seats', className: 'w-[70px]' },
+                { label: 'Integrations', className: 'w-[80px]' },
+                { label: 'Est. ARR', className: 'w-[80px]' },
+                { label: 'Last Updated', className: 'w-[90px]' },
+                { label: '', className: 'w-[150px]' },
+              ].map((h) => (
+                <th key={h.label} className={`px-4 py-3.5 text-xs font-black uppercase tracking-wide text-slate-500 whitespace-nowrap ${h.className}`}>
+                  {h.label}
                 </th>
               ))}
             </tr>
@@ -294,34 +312,34 @@ export function CustomersTableClient({
                   onClick={() => setPreviewId(customer.id === previewId ? null : customer.id)}
                   className={`cursor-pointer transition-colors hover:bg-slate-50 ${previewId === customer.id ? 'bg-blue-50/60' : ''}`}
                 >
-                  <td className="px-5 py-4">
-                    <p className="font-black text-slate-950 leading-snug">{customer.companyName}</p>
-                    <p className="mt-0.5 text-xs font-semibold text-slate-400">{customer.domain}</p>
-                    <p className="mt-0.5 text-xs font-semibold text-slate-400 truncate max-w-[220px]">{customer.primaryAdminEmail}</p>
+                  <td className="px-4 py-4">
+                    <p className="font-black text-slate-950 leading-snug truncate max-w-[200px]">{customer.companyName}</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-400 truncate max-w-[200px]">{customer.domain}</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-400 truncate max-w-[200px]">{customer.primaryAdminEmail}</p>
                   </td>
-                  <td className="px-5 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <Badge className="bg-slate-50 border-slate-200 text-slate-600">
                       {customer.planTier.replace(/_/g, ' ')}
                     </Badge>
                   </td>
-                  <td className="px-5 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <Badge className={lifecycleTone(customer.lifecycleStatus)}>{customer.lifecycleStatus}</Badge>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="px-4 py-4">
                     <Badge className={`${ht.bg} ${ht.text}`}>{healthLabel(customer.healthStatus)}</Badge>
                     <p className="mt-1 text-xs font-bold text-slate-400">{customer.healthScore}/100</p>
                   </td>
-                  <td className="px-5 py-4 whitespace-nowrap font-bold text-slate-700 tabular-nums">
+                  <td className="px-4 py-4 whitespace-nowrap font-bold text-slate-700 tabular-nums">
                     {customer.activeSeats}/{customer.allocatedSeats}
                   </td>
-                  <td className="px-5 py-4 font-bold text-slate-700 tabular-nums">{customer.integrationsConnected}</td>
-                  <td className="px-5 py-4 font-bold text-slate-700 tabular-nums whitespace-nowrap">{fmtArr(customer.expectedArr)}</td>
-                  <td className="px-5 py-4 text-sm font-semibold text-slate-500 whitespace-nowrap">{fmtDate(customer.createdAt)}</td>
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-4 font-bold text-slate-700 tabular-nums">{customer.integrationsConnected}</td>
+                  <td className="px-4 py-4 font-bold text-slate-700 tabular-nums whitespace-nowrap">{fmtArr(customer.expectedArr)}</td>
+                  <td className="px-4 py-4 text-xs font-semibold text-slate-500 whitespace-nowrap">{fmtDate(customer.updatedAt)}</td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center justify-end gap-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <Link
                         href={`/founder/customers/${customer.id}`}
-                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50"
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50"
                       >
                         Open
                       </Link>
@@ -331,7 +349,7 @@ export function CustomersTableClient({
                           <input type="hidden" name="status" value={customer.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED'} />
                           <button
                             type="submit"
-                            className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50"
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50"
                           >
                             {customer.status === 'SUSPENDED' ? 'Reactivate' : 'Suspend'}
                           </button>
