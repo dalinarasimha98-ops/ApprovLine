@@ -740,72 +740,152 @@ async function fallbackOverview() {
   };
 }
 
-export async function listFounderCustomers(query?: string): Promise<SafeResult<Array<{
+export type CustomerRow = {
   id: string;
   companyName: string;
   domain: string;
   status: string;
   planTier: string;
   primaryAdminEmail: string;
-  seats: string;
+  activeSeats: number;
+  allocatedSeats: number;
   integrationsConnected: number;
   healthScore: number;
   healthStatus: string;
-}>>> {
+  expectedArr: number;
+  createdAt: string;
+  lifecycleStatus: string;
+};
+
+export type CustomerListResult = {
+  customers: CustomerRow[];
+  total: number;
+  summary: { total: number; active: number; atRisk: number; trial: number };
+};
+
+function arrFromPlanTier(planTier: string, seats: number): number {
+  if (planTier === 'ENTERPRISE') return Math.max(25_000, seats * 1_200);
+  if (planTier === 'GROWTH') return Math.max(6_000, seats * 600);
+  if (planTier === 'STARTER') return Math.max(1_200, seats * 240);
+  return 0;
+}
+
+function deriveLifecycle(status: string, planTier: string, healthScore: number): string {
+  if (status === 'CHURNED') return 'Lost';
+  if (status === 'ACTIVE' && planTier !== 'FREE_TRIAL') return 'Converted';
+  if (status === 'SUSPENDED' || healthScore < 35) return 'Pilot At Risk';
+  if (healthScore >= 55) return 'Pilot Active';
+  if (status === 'TRIAL') return 'Demo Scheduled';
+  return 'Prospect';
+}
+
+export async function listFounderCustomers(opts?: {
+  query?: string;
+  status?: string;
+  planTier?: string;
+  healthStatus?: string;
+  page?: number;
+  take?: number;
+}): Promise<SafeResult<CustomerListResult>> {
+  const take = opts?.take ?? 25;
+  const page = Math.max(1, opts?.page ?? 1);
+  const skip = (page - 1) * take;
+  const query = opts?.query?.trim() || undefined;
+
+  const where: Prisma.CustomerAccountWhereInput = {};
+  if (query) {
+    where.OR = [
+      { companyName: { contains: query, mode: 'insensitive' } },
+      { domain: { contains: query, mode: 'insensitive' } },
+      { primaryAdminEmail: { contains: query, mode: 'insensitive' } },
+    ];
+  }
+  if (opts?.status) where.status = opts.status as import('@prisma/client').CustomerAccountStatus;
+  if (opts?.planTier) where.planTier = opts.planTier as import('@prisma/client').CustomerPlanTier;
+  if (opts?.healthStatus) where.health = { status: opts.healthStatus as import('@prisma/client').CustomerHealthStatus };
+
   try {
     await ensureFounderStorage();
-    const customers = await prisma.customerAccount.findMany({
-      where: query
-        ? {
-            OR: [
-              { companyName: { contains: query, mode: 'insensitive' } },
-              { domain: { contains: query, mode: 'insensitive' } },
-              { primaryAdminEmail: { contains: query, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
-      orderBy: { createdAt: 'desc' },
-      include: { seatAllocation: true, integrationStatuses: true, health: true, managedUsers: true },
-      take: 100,
-    });
+    const [customers, total, summaryActive, summaryAtRisk, summaryTrial, summaryTotal] = await Promise.all([
+      prisma.customerAccount.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: { seatAllocation: true, integrationStatuses: true, health: true, managedUsers: true },
+        skip,
+        take,
+      }),
+      prisma.customerAccount.count({ where }),
+      prisma.customerAccount.count({ where: { status: 'ACTIVE' } }),
+      prisma.customerHealth.count({ where: { status: { in: ['AT_RISK', 'CRITICAL'] } } }),
+      prisma.customerAccount.count({ where: { status: 'TRIAL' } }),
+      prisma.customerAccount.count(),
+    ]);
 
     return {
       migrationRequired: false,
-      data: customers.map((customer) => ({
-        id: customer.id,
-        companyName: customer.companyName,
-        domain: customer.domain,
-        status: customer.status,
-        planTier: customer.planTier,
-        primaryAdminEmail: customer.primaryAdminEmail,
-        seats: `${customer.managedUsers.filter((user) => user.status === 'ACTIVE').length}/${customer.seatAllocation?.allocatedSeats ?? 0}`,
-        integrationsConnected: customer.integrationStatuses.filter((status) => status.connectionState === 'CONNECTED').length,
-        healthScore: customer.health?.score ?? 50,
-        healthStatus: customer.health?.status ?? 'NEEDS_ATTENTION',
-      })),
+      data: {
+        customers: customers.map((customer) => {
+          const activeSeats = customer.managedUsers.filter((u) => u.status === 'ACTIVE').length;
+          const allocatedSeats = customer.seatAllocation?.allocatedSeats ?? 0;
+          const healthScore = customer.health?.score ?? 50;
+          return {
+            id: customer.id,
+            companyName: customer.companyName,
+            domain: customer.domain,
+            status: customer.status,
+            planTier: customer.planTier,
+            primaryAdminEmail: customer.primaryAdminEmail,
+            activeSeats,
+            allocatedSeats,
+            integrationsConnected: customer.integrationStatuses.filter((s) => s.connectionState === 'CONNECTED').length,
+            healthScore,
+            healthStatus: customer.health?.status ?? 'NEEDS_ATTENTION',
+            expectedArr: arrFromPlanTier(customer.planTier, allocatedSeats || activeSeats),
+            createdAt: customer.createdAt.toISOString(),
+            lifecycleStatus: deriveLifecycle(customer.status, customer.planTier, healthScore),
+          };
+        }),
+        total,
+        summary: { total: summaryTotal, active: summaryActive, atRisk: summaryAtRisk, trial: summaryTrial },
+      },
     };
   } catch (error) {
     const organizations = await prisma.organization.findMany({
       where: query ? { name: { contains: query, mode: 'insensitive' } } : undefined,
       orderBy: { createdAt: 'desc' },
       include: { users: true, integrations: true },
-      take: 50,
+      skip,
+      take,
     }).catch(() => []);
+    const orgTotal = await prisma.organization.count().catch(() => 0);
     return {
       migrationRequired: isFounderTableMissing(error),
       safeError: safeError(error),
-      data: organizations.map((organization) => ({
-        id: organization.id,
-        companyName: organization.name,
-        domain: `${organization.slug}.workspace`,
-        status: organization.onboardedAt ? 'ACTIVE' : 'TRIAL',
-        planTier: 'FREE_TRIAL',
-        primaryAdminEmail: organization.users[0]?.email ?? 'admin pending',
-        seats: `${organization.users.length}/${Math.max(organization.users.length, 5)}`,
-        integrationsConnected: organization.integrations.filter((integration) => integration.status === 'CONNECTED').length,
-        healthScore: organization.onboardedAt ? 70 : 45,
-        healthStatus: organization.onboardedAt ? 'HEALTHY' : 'NEEDS_ATTENTION',
-      })),
+      data: {
+        customers: organizations.map((organization) => {
+          const activeSeats = organization.users.length;
+          const allocatedSeats = Math.max(organization.users.length, 5);
+          const healthScore = organization.onboardedAt ? 70 : 45;
+          return {
+            id: organization.id,
+            companyName: organization.name,
+            domain: `${organization.slug}.workspace`,
+            status: organization.onboardedAt ? 'ACTIVE' : 'TRIAL',
+            planTier: 'FREE_TRIAL',
+            primaryAdminEmail: organization.users[0]?.email ?? 'admin pending',
+            activeSeats,
+            allocatedSeats,
+            integrationsConnected: organization.integrations.filter((i) => i.status === 'CONNECTED').length,
+            healthScore,
+            healthStatus: organization.onboardedAt ? 'HEALTHY' : 'NEEDS_ATTENTION',
+            expectedArr: 0,
+            createdAt: organization.createdAt.toISOString(),
+            lifecycleStatus: deriveLifecycle(organization.onboardedAt ? 'ACTIVE' : 'TRIAL', 'FREE_TRIAL', healthScore),
+          };
+        }),
+        total: orgTotal,
+        summary: { total: orgTotal, active: orgTotal, atRisk: 0, trial: 0 },
+      },
     };
   }
 }

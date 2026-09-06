@@ -1,9 +1,15 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
-import { FounderBadge, MigrationNotice } from '@/components/founder/FounderShell';
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { isFounderIdentity } from '@/lib/founder-identity';
+import { MigrationNotice } from '@/components/founder/FounderShell';
+import { CustomersTableClient, FilterBar } from '@/components/founder/CustomersTableClient';
 import { getFounderAccess, listFounderCustomers, updateCustomerStatus } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
+
+const TAKE = 25;
 
 async function updateStatus(formData: FormData) {
   'use server';
@@ -13,96 +19,164 @@ async function updateStatus(formData: FormData) {
   revalidatePath('/founder/customers');
 }
 
+function KpiCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className="mt-2 text-3xl font-black tabular-nums tracking-tight text-slate-950">{value}</p>
+      {sub ? <p className="mt-1 text-xs font-semibold text-slate-400">{sub}</p> : null}
+    </article>
+  );
+}
+
+function Pagination({
+  page,
+  total,
+  take,
+  q,
+  status,
+  plan,
+  health,
+}: {
+  page: number;
+  total: number;
+  take: number;
+  q?: string;
+  status?: string;
+  plan?: string;
+  health?: string;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / take));
+  const from = Math.min((page - 1) * take + 1, total);
+  const to = Math.min(page * take, total);
+
+  function href(p: number) {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (status) params.set('status', status);
+    if (plan) params.set('plan', plan);
+    if (health) params.set('health', health);
+    params.set('page', String(p));
+    return `/founder/customers?${params.toString()}`;
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-4 px-5 py-4 text-sm">
+      <p className="font-semibold text-slate-500">
+        {total === 0 ? 'No results' : `Showing ${from}–${to} of ${total} customer${total === 1 ? '' : 's'}`}
+      </p>
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
+          {page > 1 ? (
+            <Link href={href(page - 1)} className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50">
+              Previous
+            </Link>
+          ) : (
+            <span className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-300 cursor-not-allowed">Previous</span>
+          )}
+          <span className="px-3 py-1.5 text-xs font-black text-slate-500">
+            {page} / {totalPages}
+          </span>
+          {page < totalPages ? (
+            <Link href={href(page + 1)} className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50">
+              Next
+            </Link>
+          ) : (
+            <span className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-300 cursor-not-allowed">Next</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default async function FounderCustomersPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ q?: string }>;
+  searchParams?: Promise<{ q?: string; status?: string; plan?: string; health?: string; page?: string }>;
 }) {
+  const session = await auth();
+  if (!session.userId) redirect('/sign-in');
+  const user = await currentUser();
+  const email = user?.emailAddresses?.[0]?.emailAddress ?? null;
+  if (!isFounderIdentity(session.userId, email)) redirect('/');
+
   const params = await searchParams;
-  const query = params?.q?.trim();
-  const access = await getFounderAccess();
-  const result = await listFounderCustomers(query);
+  const q = params?.q?.trim() || undefined;
+  const status = params?.status || undefined;
+  const plan = params?.plan || undefined;
+  const health = params?.health || undefined;
+  const page = Math.max(1, parseInt(params?.page ?? '1') || 1);
+
+  const [access, result] = await Promise.all([
+    getFounderAccess(),
+    listFounderCustomers({ query: q, status, planTier: plan, healthStatus: health, page, take: TAKE }),
+  ]);
+
+  const summary = result.data.summary;
+  const isFiltered = !!(q || status || plan || health);
 
   return (
     <div className="space-y-6">
       {result.migrationRequired ? <MigrationNotice message={result.safeError} /> : null}
 
+      {/* Header */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2557dc]">Customers</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Customer accounts</h2>
-            <p className="mt-2 max-w-2xl text-base font-semibold leading-7 text-slate-600">
-              Search, review, suspend, reactivate, and open customer operations profiles.
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2557dc]">Customer Portfolio</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">All Customers</h2>
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
+              Search, filter, review health, manage lifecycle status, and open Customer 360 profiles.
             </p>
           </div>
-          <Link href="/founder/provision" className="rounded-xl bg-[#2557dc] px-5 py-3 text-sm font-black text-white">Provision customer</Link>
+          <Link
+            href="/founder/provision"
+            className="shrink-0 self-start rounded-xl bg-[#2557dc] px-5 py-3 text-sm font-black text-white"
+          >
+            Provision customer
+          </Link>
         </div>
-        <form className="mt-6 flex max-w-xl gap-3">
-          <input
-            name="q"
-            defaultValue={query}
-            placeholder="Search company, domain, or admin email"
-            className="min-h-12 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold outline-none transition focus:border-[#2557dc] focus:ring-4 focus:ring-blue-100"
-          />
-          <button className="rounded-xl border border-slate-200 px-5 text-sm font-black text-slate-700">Search</button>
-        </form>
+
+        {/* KPI strip */}
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <KpiCard label="Total Customers" value={summary.total} />
+          <KpiCard label="Active" value={summary.active} sub={`${summary.trial} in trial`} />
+          <KpiCard label="At Risk" value={summary.atRisk} sub="AT_RISK or CRITICAL health" />
+          <KpiCard label="Trial" value={summary.trial} sub="Free trial accounts" />
+        </div>
       </section>
 
+      {/* Table */}
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-5 py-4">Customer</th>
-                <th className="px-5 py-4">Plan</th>
-                <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4">Seats</th>
-                <th className="px-5 py-4">Integrations</th>
-                <th className="px-5 py-4">Health</th>
-                <th className="px-5 py-4"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {result.data.map((customer) => (
-                <tr key={customer.id}>
-                  <td className="px-5 py-5">
-                    <p className="font-black text-slate-950">{customer.companyName}</p>
-                    <p className="mt-1 text-xs font-semibold text-slate-500">{customer.domain} · {customer.primaryAdminEmail}</p>
-                  </td>
-                  <td className="px-5 py-5 font-bold text-slate-600">{customer.planTier.replace('_', ' ')}</td>
-                  <td className="px-5 py-5"><FounderBadge tone={customer.status === 'ACTIVE' ? 'green' : customer.status === 'SUSPENDED' ? 'red' : 'amber'}>{customer.status}</FounderBadge></td>
-                  <td className="px-5 py-5 font-bold text-slate-700">{customer.seats}</td>
-                  <td className="px-5 py-5 font-bold text-slate-700">{customer.integrationsConnected}</td>
-                  <td className="px-5 py-5">
-                    <p className="font-black text-slate-950">{customer.healthScore}/100</p>
-                    <p className="text-xs font-bold text-slate-500">{customer.healthStatus.replace('_', ' ')}</p>
-                  </td>
-                  <td className="px-5 py-5">
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/founder/customers/${customer.id}`} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700">Open</Link>
-                      {access.ok && !access.readOnly ? (
-                        <form action={updateStatus}>
-                          <input type="hidden" name="customerId" value={customer.id} />
-                          <input type="hidden" name="status" value={customer.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED'} />
-                          <button className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700">
-                            {customer.status === 'SUSPENDED' ? 'Reactivate' : 'Suspend'}
-                          </button>
-                        </form>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!result.data.length ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center font-semibold text-slate-500">
-                    No customer accounts found.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+        {/* Filter bar */}
+        <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <FilterBar q={q} status={status} plan={plan} health={health} />
+          {isFiltered && (
+            <p className="text-xs font-semibold text-slate-400 shrink-0">
+              {result.data.total} result{result.data.total === 1 ? '' : 's'}
+            </p>
+          )}
+        </div>
+
+        {/* Table */}
+        <CustomersTableClient
+          customers={result.data.customers}
+          readOnly={!access.ok || access.readOnly}
+          updateStatusAction={updateStatus}
+        />
+
+        {/* Pagination */}
+        <div className="border-t border-slate-100">
+          <Pagination
+            page={page}
+            total={result.data.total}
+            take={TAKE}
+            q={q}
+            status={status}
+            plan={plan}
+            health={health}
+          />
         </div>
       </section>
     </div>
