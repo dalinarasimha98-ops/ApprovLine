@@ -27,16 +27,24 @@ function statusTone(status: string): 'green' | 'blue' | 'amber' | 'red' | 'slate
   return 'slate';
 }
 
-function healthTone(score: number): 'green' | 'amber' | 'red' {
-  if (score >= 75) return 'green';
-  if (score >= 45) return 'amber';
+function healthTone(status: string | null): 'green' | 'amber' | 'red' {
+  if (status === 'HEALTHY') return 'green';
+  if (status === 'NEEDS_ATTENTION') return 'amber';
   return 'red';
 }
 
-function healthLabelFromScore(score: number) {
-  if (score >= 75) return 'Healthy';
-  if (score >= 45) return 'Needs Attention';
-  return 'At Risk';
+function healthLabelFromStatus(status: string | null) {
+  if (status === 'HEALTHY') return 'Healthy';
+  if (status === 'NEEDS_ATTENTION') return 'Needs Attention';
+  if (status === 'AT_RISK') return 'At Risk';
+  if (status === 'CRITICAL') return 'Critical';
+  return 'Needs Attention';
+}
+
+function healthBarColor(status: string | null) {
+  if (status === 'HEALTHY') return 'bg-emerald-500';
+  if (status === 'NEEDS_ATTENTION') return 'bg-amber-400';
+  return 'bg-red-500';
 }
 
 function formatAction(action: string) {
@@ -237,7 +245,7 @@ export default async function FounderHomePage() {
         <KpiCard
           label="At Risk"
           value={atRiskCount}
-          sub={`${data?.atRisk ?? 0} critical · ${data?.needsAttention ?? 0} attention`}
+          sub={`${data?.atRisk ?? 0} at risk · ${data?.needsAttention ?? 0} attention`}
           warn={atRiskCount > 0}
         />
         <KpiCard
@@ -368,18 +376,12 @@ export default async function FounderHomePage() {
                             <div className="flex items-center gap-2">
                               <div className="h-1.5 w-14 overflow-hidden rounded-full bg-slate-100">
                                 <div
-                                  className={`h-full rounded-full transition-all ${
-                                    customer.score >= 75
-                                      ? 'bg-emerald-500'
-                                      : customer.score >= 45
-                                        ? 'bg-amber-400'
-                                        : 'bg-red-500'
-                                  }`}
+                                  className={`h-full rounded-full transition-all ${healthBarColor(customer.healthStatus)}`}
                                   style={{ width: `${Math.max(4, customer.score)}%` }}
                                 />
                               </div>
-                              <FounderBadge tone={healthTone(customer.score)}>
-                                {healthLabelFromScore(customer.score)}
+                              <FounderBadge tone={healthTone(customer.healthStatus)}>
+                                {healthLabelFromStatus(customer.healthStatus)}
                               </FounderBadge>
                             </div>
                           </td>
@@ -491,7 +493,7 @@ export default async function FounderHomePage() {
           {/* Revenue estimate */}
           <section className="rounded-2xl border border-[#2557dc]/20 bg-[#2557dc]/5 p-5 shadow-sm">
             <div className="mb-1 flex items-center justify-between gap-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2557dc]/70">Revenue</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2557dc]/70">Est. ARR</p>
               <span className="rounded-full border border-[#2557dc]/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#2557dc]/60">Plan-based estimate</span>
             </div>
             <p className="text-3xl font-black tabular-nums text-[#2557dc]">{formatArr(totalEstArr)}</p>

@@ -664,7 +664,7 @@ export async function buildFounderOverview(): Promise<SafeResult<{
   integrationsConnected: number;
   playbooks: number;
   investigations: number;
-  recentCustomers: Array<{ id: string; companyName: string; domain: string; status: string; planTier: string; score: number }>;
+  recentCustomers: Array<{ id: string; companyName: string; domain: string; status: string; planTier: string; score: number; healthStatus: string | null }>;
 }>> {
   try {
     await ensureFounderStorage();
@@ -706,6 +706,7 @@ export async function buildFounderOverview(): Promise<SafeResult<{
           status: customer.status,
           planTier: customer.planTier,
           score: customer.health?.score ?? 50,
+          healthStatus: customer.health?.status ?? null,
         })),
       },
     };
