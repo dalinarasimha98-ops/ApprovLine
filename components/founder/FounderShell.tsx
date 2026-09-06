@@ -29,6 +29,9 @@ export function FounderSystemError({ detail }: { detail?: string }) {
           <Link href="/founder/readiness" className="rounded-xl bg-[#2557dc] px-5 py-3 text-sm font-black text-white">
             Open founder readiness
           </Link>
+          <Link href="/founder/certification" className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">
+            Open certification
+          </Link>
           <Link href="/health" className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700">
             Open health check
           </Link>
