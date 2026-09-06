@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { isFounderIdentity } from '@/lib/founder-identity';
 import { MigrationNotice } from '@/components/founder/FounderShell';
 import { CustomersTableClient, FilterBar } from '@/components/founder/CustomersTableClient';
-import { getFounderAccess, listFounderCustomers, updateCustomerStatus } from '@/services/founder';
+import { getFounderAccess, listFounderCustomers, updateCustomerStatus, type FounderAccess, type CustomerListResult } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,8 +109,13 @@ export default async function FounderCustomersPage({
   const page = Math.max(1, parseInt(params?.page ?? '1') || 1);
 
   const [access, result] = await Promise.all([
-    getFounderAccess(),
-    listFounderCustomers({ query: q, status, planTier: plan, healthStatus: health, page, take: TAKE }),
+    getFounderAccess().catch((): FounderAccess => ({ ok: false, reason: 'forbidden' })),
+    listFounderCustomers({ query: q, status, planTier: plan, healthStatus: health, page, take: TAKE }).catch(
+      (): { data: CustomerListResult; migrationRequired: boolean; safeError?: string } => ({
+        migrationRequired: false,
+        data: { customers: [], total: 0, summary: { total: 0, active: 0, atRisk: 0, trial: 0 } },
+      })
+    ),
   ]);
 
   const summary = result.data.summary;
