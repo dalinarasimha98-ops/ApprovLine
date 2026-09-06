@@ -11,7 +11,8 @@ type NavItem = { label: string; href?: string; exact?: boolean; soon?: boolean }
 type NavGroup = { id: string; label: string; items: NavItem[] };
 
 // Route mapping: every href is a real existing /founder/* route.
-// Items without href are marked soon and rendered as non-interactive.
+// Duplicate destinations are intentional (different conceptual entry points to
+// the same page) — active state uses first-match-wins so only one item highlights.
 const NAV: NavGroup[] = [
   {
     id: 'command',
@@ -26,7 +27,6 @@ const NAV: NavGroup[] = [
     label: 'Customers',
     items: [
       { label: 'All Customers', href: '/founder/customers' },
-      { label: 'Customer 360', href: '/founder/customers' },
       { label: 'Customer Health', href: '/founder/health' },
       { label: 'Provision Customer', href: '/founder/provision' },
     ],
@@ -36,8 +36,6 @@ const NAV: NavGroup[] = [
     label: 'Onboarding',
     items: [
       { label: 'Onboarding Pipeline', href: '/founder/pilots' },
-      { label: 'Active Onboardings', soon: true },
-      { label: 'Onboarding Templates', soon: true },
       { label: 'Go-Live Readiness', href: '/founder/readiness' },
     ],
   },
@@ -45,8 +43,7 @@ const NAV: NavGroup[] = [
     id: 'product',
     label: 'Product Control',
     items: [
-      { label: 'Feature Access', href: '/founder/features' },
-      { label: 'Feature Flags', href: '/founder/features' },
+      { label: 'Feature Management', href: '/founder/features' },
       { label: 'Integration Catalog', href: '/founder/integrations' },
       { label: 'Customer Integrations', href: '/founder/integrations' },
     ],
@@ -85,15 +82,13 @@ const NAV: NavGroup[] = [
       { label: 'Security', href: '/founder/security/isolation' },
     ],
   },
-  {
-    id: 'settings',
-    label: 'Settings',
-    items: [{ label: 'Founder Settings', href: '/founder/settings' }],
-  },
 ];
 
-// Existing engineering-internal pages retained but kept separate from primary nav.
-const ENGINEERING: NavItem[] = [
+// Settings rendered below Internal Tools so it sits at the very bottom.
+const SETTINGS: NavItem[] = [{ label: 'Founder Settings', href: '/founder/settings' }];
+
+// Internal operational/engineering tools — visually separated from business nav.
+const INTERNAL_TOOLS: NavItem[] = [
   { label: 'Demo Generator', href: '/founder/demo-generator' },
   { label: 'Observability', href: '/founder/observability' },
   { label: 'Certification', href: '/founder/certification' },
@@ -105,13 +100,30 @@ function isItemActive(item: NavItem, pathname: string): boolean {
   return pathname === item.href || pathname.startsWith(item.href + '/');
 }
 
+// First-match-wins: returns the unique key of the first nav item that matches
+// the current pathname, so duplicate-route items don't both appear active.
+function findFirstActiveKey(pathname: string): string {
+  for (const group of NAV) {
+    for (let i = 0; i < group.items.length; i++) {
+      if (isItemActive(group.items[i], pathname)) return `${group.id}-${i}`;
+    }
+  }
+  for (let i = 0; i < INTERNAL_TOOLS.length; i++) {
+    if (isItemActive(INTERNAL_TOOLS[i], pathname)) return `internal-${i}`;
+  }
+  for (let i = 0; i < SETTINGS.length; i++) {
+    if (isItemActive(SETTINGS[i], pathname)) return `settings-${i}`;
+  }
+  return '';
+}
+
 function getPageTitle(pathname: string): string {
   for (const group of NAV) {
     for (const item of group.items) {
       if (item.href && isItemActive(item, pathname)) return item.label;
     }
   }
-  for (const item of ENGINEERING) {
+  for (const item of [...INTERNAL_TOOLS, ...SETTINGS]) {
     if (item.href && isItemActive(item, pathname)) return item.label;
   }
   return 'Founder Console';
@@ -131,6 +143,7 @@ function SidebarContent({
   onClose: () => void;
 }) {
   const readOnly = role === 'SUPPORT_ADMIN';
+  const activeKey = findFirstActiveKey(pathname);
 
   return (
     <div className="flex h-full flex-col">
@@ -166,11 +179,12 @@ function SidebarContent({
               {group.label}
             </p>
             {group.items.map((item, idx) => {
-              const active = isItemActive(item, pathname);
+              const itemKey = `${group.id}-${idx}`;
+              const active = activeKey === itemKey;
               if (item.soon) {
                 return (
                   <span
-                    key={`${group.id}-${idx}`}
+                    key={itemKey}
                     className="flex cursor-default select-none items-center justify-between rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium text-slate-700"
                     title="Coming soon"
                   >
@@ -183,7 +197,7 @@ function SidebarContent({
               }
               return (
                 <Link
-                  key={`${group.id}-${idx}`}
+                  key={itemKey}
                   href={item.href!}
                   onClick={onClose}
                   className={`flex items-center rounded-lg px-2.5 py-1.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] ${
@@ -200,13 +214,13 @@ function SidebarContent({
           </div>
         ))}
 
-        {/* Engineering — internal tooling retained at the bottom */}
+        {/* Internal Tools — operational/engineering tools, visually separated */}
         <div className="mt-5 border-t border-white/8 pt-3">
           <p className="mb-0.5 px-2 text-[9.5px] font-black uppercase tracking-[0.22em] text-slate-600">
-            Engineering
+            Internal Tools
           </p>
-          {ENGINEERING.map((item) => {
-            const active = isItemActive(item, pathname);
+          {INTERNAL_TOOLS.map((item, idx) => {
+            const active = activeKey === `internal-${idx}`;
             return (
               <Link
                 key={item.href}
@@ -216,6 +230,31 @@ function SidebarContent({
                   active
                     ? 'bg-[#2557dc]/18 font-semibold text-slate-200'
                     : 'font-medium text-slate-600 hover:bg-white/5 hover:text-slate-400'
+                }`}
+                aria-current={active ? 'page' : undefined}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Settings — bottom of sidebar */}
+        <div className="mt-4 border-t border-white/8 pt-3">
+          <p className="mb-0.5 px-2 text-[9.5px] font-black uppercase tracking-[0.22em] text-slate-600">
+            Settings
+          </p>
+          {SETTINGS.map((item, idx) => {
+            const active = activeKey === `settings-${idx}`;
+            return (
+              <Link
+                key={item.href}
+                href={item.href!}
+                onClick={onClose}
+                className={`flex items-center rounded-lg px-2.5 py-1.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] ${
+                  active
+                    ? 'bg-[#2557dc]/18 font-semibold text-white'
+                    : 'font-medium text-slate-400 hover:bg-white/5 hover:text-slate-200'
                 }`}
                 aria-current={active ? 'page' : undefined}
               >
