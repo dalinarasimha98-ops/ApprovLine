@@ -15,6 +15,7 @@ import {
   updateCustomerAccountDetails,
   updateCustomerNote,
   updateCustomerStatus,
+  type FounderAccess,
 } from '@/services/founder';
 
 export const dynamic = 'force-dynamic';
@@ -228,7 +229,7 @@ export default async function FounderCustomerProfilePage({
   const rawTab = sp?.tab ?? 'overview';
   const activeTab: TabId = (TABS.map((t) => t.id) as string[]).includes(rawTab) ? rawTab as TabId : 'overview';
 
-  const access = await getFounderAccess();
+  const access = await getFounderAccess().catch((): FounderAccess => ({ ok: false, reason: 'forbidden' }));
   const result = await getFounderCustomerProfile(id);
   if (!result.data && !result.migrationRequired) notFound();
 
