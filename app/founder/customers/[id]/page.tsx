@@ -129,8 +129,11 @@ function fmtMoney(n: number): string {
   return `$${n}`;
 }
 
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+function fmtDate(d: Date | null | undefined): string {
+  if (!d) return '—';
+  const date = d instanceof Date ? d : new Date(String(d));
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function initials(name: string): string {
@@ -241,6 +244,7 @@ export default async function FounderCustomerProfilePage({
     );
   }
 
+  try {
   const { customer, usage } = result.data;
   const inviteLink = founderInviteLink(customer.primaryAdminEmail);
 
@@ -963,6 +967,20 @@ export default async function FounderCustomerProfilePage({
       </div>
     </div>
   );
+  } catch (renderError: unknown) {
+    if (renderError !== null && typeof renderError === 'object' && typeof (renderError as Record<string, unknown>).digest === 'string') {
+      throw renderError;
+    }
+    const safeMsg = renderError instanceof Error
+      ? renderError.message.replace(/postgresql:\/\/[^ ]+/g, '[db-url-redacted]').slice(0, 200)
+      : 'Unexpected render error';
+    console.error('[founder] customer 360 render error', renderError);
+    return (
+      <div className="space-y-6">
+        <MigrationNotice message={safeMsg} />
+      </div>
+    );
+  }
 }
 
 // ─── Small render helpers ────────────────────────────────────────────────────
