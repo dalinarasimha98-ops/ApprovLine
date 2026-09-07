@@ -74,7 +74,9 @@
     "typescript": "^5.8.3"
   },
   "overrides": {
-    "postcss": "$postcss"
+    "postcss": "$postcss",
+    "browserslist": ">=4.28.9",
+    "fast-uri": ">=3.1.6"
   },
   "engines": {
     "node": ">=24.0.0"
