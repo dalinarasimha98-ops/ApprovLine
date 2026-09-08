@@ -1,5 +1,3 @@
-'use client';
-
 export type TabId = 'overview' | 'onboarding' | 'users' | 'integrations' | 'billing' | 'health' | 'activity' | 'notes';
 
 export const TABS: { id: TabId; label: string }[] = [
