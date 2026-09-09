@@ -1,9 +1,7 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { FounderBadge, MigrationNotice } from '@/components/founder/FounderShell';
-import { isFounderIdentity } from '@/lib/founder-identity';
-import { buildFounderOverview, buildFounderOperationsCenter, listFounderAuditLogs } from '@/services/founder';
+import { buildFounderOverview, buildFounderOperationsCenter, getFounderAccess, listFounderAuditLogs } from '@/services/founder';
 import { buildFounderPilotCommandCenter } from '@/services/founder-pilots';
 import type { PilotStatus } from '@/services/founder-pilots';
 
@@ -128,15 +126,11 @@ const STAGE_STYLES: Record<PilotStatus, { bg: string; text: string }> = {
 };
 
 export default async function FounderHomePage() {
-  // Triple auth guard: middleware + layout + page
-  const session = await auth();
-  if (!session.userId) redirect('/dashboard');
-  const clerkUser = await currentUser();
-  const email =
-    clerkUser?.primaryEmailAddress?.emailAddress ??
-    clerkUser?.emailAddresses[0]?.emailAddress ??
-    null;
-  if (!isFounderIdentity(session.userId, email)) redirect('/dashboard');
+  // Triple auth guard: middleware + layout + page. getFounderAccess() is
+  // wrapped in React's cache(), so this reuses the layout's result for this
+  // request instead of making a second Clerk currentUser() round-trip.
+  const access = await getFounderAccess();
+  if (!access.ok) redirect('/dashboard');
 
   const [overview, opsCenter, auditResult, pilotsResult] = await Promise.all([
     buildFounderOverview(),

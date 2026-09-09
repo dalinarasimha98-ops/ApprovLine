@@ -1,8 +1,5 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
-import { isFounderIdentity } from '@/lib/founder-identity';
 import { MigrationNotice } from '@/components/founder/FounderShell';
 import { CustomersTableClient, FilterBar } from '@/components/founder/CustomersTableClient';
 import { getFounderAccess, listFounderCustomers, updateCustomerStatus, type FounderAccess, type CustomerListResult } from '@/services/founder';
@@ -95,12 +92,6 @@ export default async function FounderCustomersPage({
 }: {
   searchParams?: Promise<{ q?: string; status?: string; plan?: string; health?: string; page?: string }>;
 }) {
-  const session = await auth();
-  if (!session.userId) redirect('/sign-in');
-  const user = await currentUser();
-  const email = user?.emailAddresses?.[0]?.emailAddress ?? null;
-  if (!isFounderIdentity(session.userId, email)) redirect('/');
-
   const params = await searchParams;
   const q = params?.q?.trim() || undefined;
   const status = params?.status || undefined;

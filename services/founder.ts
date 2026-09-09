@@ -1,7 +1,9 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import { cache } from 'react';
 import { revalidateTag } from 'next/cache';
+import { after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
 import { DASHBOARD_TENANT_CACHE_TAG } from '@/lib/auth';
@@ -477,7 +479,11 @@ async function ensureFounderStorage() {
   return founderStorageBootstrapPromise;
 }
 
-export async function getFounderAccess(): Promise<FounderAccess> {
+// Wrapped in React's cache() so the Clerk currentUser() network round-trip
+// and the PlatformAdmin lookup run at most once per request, no matter how
+// many times the layout and page components each call this (previously a
+// duplicate call on nearly every founder navigation).
+export const getFounderAccess = cache(async (): Promise<FounderAccess> => {
   const session = await auth();
   if (!session.userId) return { ok: false, reason: 'unauthenticated' };
 
@@ -516,7 +522,7 @@ export async function getFounderAccess(): Promise<FounderAccess> {
   if (!role) role = 'SUPER_ADMIN';
 
   return { ok: true, userId: session.userId, email: email ?? '', role, readOnly: role === 'SUPPORT_ADMIN' };
-}
+});
 
 export function canWriteFounder(access: FounderAccess) {
   return access.ok && !access.readOnly;
@@ -918,7 +924,14 @@ export async function getFounderCustomerProfile(id: string) {
       optionalMetric(prisma.playbookDocument.count({ where: { organizationId: customer.organizationId } }), 0),
       optionalMetric(prisma.investigationCase.count({ where: { organizationId: customer.organizationId } }), 0),
     ]);
-    await refreshCustomerHealth(customer.id).catch(() => null);
+    // Deferred via after(): refreshCustomerHealth() re-fetches the customer
+    // and runs ~6 more count queries plus a health upsert, but its result
+    // was never read here anyway (customer.health above is the pre-refresh
+    // value from the include). Awaiting it only added latency to every
+    // Customer 360 view without changing what gets rendered. after() runs
+    // it once the response has been sent, without risking it being cut off
+    // like a bare unawaited promise would be.
+    after(() => refreshCustomerHealth(customer.id).catch(() => null));
     return { migrationRequired: false, data: { customer, usage: { approvals, auditLogs, playbooks, investigations } } };
   } catch (error) {
     return { migrationRequired: isFounderTableMissing(error), safeError: safeError(error), data: null };
