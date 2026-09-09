@@ -43,6 +43,8 @@ jobs:
         run: npm run test:production-hardening
       - name: Test — founder console
         run: npm run test:founder
+      - name: Test — founder provisioning
+        run: npm run test:founder-provisioning
       - name: Test — reliability hardening
         run: npm run test:reliability
       - name: Test — tenant isolation

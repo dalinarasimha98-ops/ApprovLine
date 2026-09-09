@@ -770,7 +770,7 @@ export type CustomerListResult = {
   summary: { total: number; active: number; atRisk: number; trial: number };
 };
 
-function arrFromPlanTier(planTier: string, seats: number): number {
+export function arrFromPlanTier(planTier: string, seats: number): number {
   if (planTier === 'ENTERPRISE') return Math.max(25_000, seats * 1_200);
   if (planTier === 'GROWTH') return Math.max(6_000, seats * 600);
   if (planTier === 'STARTER') return Math.max(1_200, seats * 240);
@@ -1001,126 +1001,315 @@ export async function exportFounderAuditLogs(filters: FounderAuditFilters = {}, 
   return [header.join(','), ...rows].join('\n');
 }
 
+export class FounderProvisioningError extends Error {
+  code: 'DUPLICATE_DOMAIN' | 'VALIDATION';
+  constructor(message: string, code: 'DUPLICATE_DOMAIN' | 'VALIDATION') {
+    super(message);
+    this.name = 'FounderProvisioningError';
+    this.code = code;
+  }
+}
+
+const DOMAIN_PATTERN = /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_PROVISIONING_SEATS = 50_000;
+
+// Real-time "is this domain already a customer" check for the provisioning
+// wizard's Company step — advisory only; provisionFounderCustomer() below
+// re-checks server-side before writing, since client state is never trusted.
+export async function checkFounderDomainAvailability(domain: string): Promise<{ available: boolean; existingCompanyName?: string; existingCustomerId?: string }> {
+  const normalized = domain.trim().toLowerCase();
+  if (!normalized || !DOMAIN_PATTERN.test(normalized)) return { available: true };
+  try {
+    await ensureFounderStorage();
+    const existing = await prisma.customerAccount.findUnique({ where: { domain: normalized }, select: { id: true, companyName: true } });
+    return existing ? { available: false, existingCompanyName: existing.companyName, existingCustomerId: existing.id } : { available: true };
+  } catch (error) {
+    if (isFounderTableMissing(error)) return { available: true };
+    throw error;
+  }
+}
+
+// Onboarding stage derived purely from real, already-tracked facts (account
+// status, the invited administrator's status, and integration connection
+// state) — no separate stage field/model invented for this.
+export function deriveProvisioningOnboardingStage(input: {
+  customerStatus: string;
+  adminStatus?: string | null;
+  anyIntegrationConnected: boolean;
+}): 'Provisioned' | 'Admin Invited' | 'Admin Accepted' | 'Integrations Connected' | 'Go-Live' {
+  if (input.customerStatus === 'ACTIVE') return 'Go-Live';
+  if (input.anyIntegrationConnected) return 'Integrations Connected';
+  if (input.adminStatus === 'ACTIVE') return 'Admin Accepted';
+  if (input.adminStatus === 'INVITED') return 'Admin Invited';
+  return 'Provisioned';
+}
+
 export async function provisionFounderCustomer(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
-  if (access.readOnly) throw new Error('Support admins cannot provision customers.');
+  if (access.readOnly) throw new FounderProvisioningError('Support admins cannot provision customers.', 'VALIDATION');
   await ensureFounderStorage();
+
+  const requestId = String(formData.get('requestId') ?? '').trim();
+
+  // Idempotent replay guard: if this exact wizard submission already
+  // succeeded (e.g. the client retried after a dropped response), hand back
+  // the already-provisioned customer instead of creating a duplicate.
+  if (requestId) {
+    const priorSuccess = await prisma.founderAuditLog.findFirst({
+      where: { action: 'customer.provisioned', metadata: { path: ['requestId'], equals: requestId } },
+    }).catch(() => null);
+    if (priorSuccess?.customerAccountId) {
+      const existing = await prisma.customerAccount.findUnique({ where: { id: priorSuccess.customerAccountId } });
+      if (existing) return existing;
+    }
+  }
 
   const companyName = String(formData.get('companyName') ?? '').trim();
   const domain = String(formData.get('domain') ?? '').trim().toLowerCase();
-  const primaryAdminEmail = String(formData.get('primaryAdminEmail') ?? '').trim().toLowerCase();
-  const primaryAdminName = String(formData.get('primaryAdminName') ?? '').trim();
   const industry = String(formData.get('industry') ?? '').trim();
-  const planTier = String(formData.get('planTier') ?? 'FREE_TRIAL') as 'FREE_TRIAL' | 'STARTER' | 'GROWTH' | 'ENTERPRISE';
-  const seats = Math.max(1, Number(formData.get('seats') ?? 5));
-  const dataRetentionDays = Math.max(30, Number(formData.get('dataRetentionDays') ?? 365));
+  const internalNotes = String(formData.get('notes') ?? '').trim();
+  const headquarters = String(formData.get('headquarters') ?? '').trim();
+  const companySize = String(formData.get('companySize') ?? '').trim();
 
-  if (!companyName || !domain || !primaryAdminEmail) {
-    throw new Error('Company name, domain, and primary admin email are required.');
+  const planTier = String(formData.get('planTier') ?? 'FREE_TRIAL') as 'FREE_TRIAL' | 'STARTER' | 'GROWTH' | 'ENTERPRISE';
+  const billingType = String(formData.get('billingType') ?? 'ANNUAL').trim();
+  const contractStartDate = String(formData.get('contractStartDate') ?? '').trim();
+  const contractEndDate = String(formData.get('contractEndDate') ?? '').trim();
+
+  const seats = Math.round(Number(formData.get('seats') ?? 5));
+  const dataRetentionDays = Math.max(30, Math.round(Number(formData.get('dataRetentionDays') ?? 365)));
+
+  const primaryAdminName = String(formData.get('primaryAdminName') ?? '').trim();
+  const primaryAdminEmail = String(formData.get('primaryAdminEmail') ?? '').trim().toLowerCase();
+  const adminRole = normalizeManagedUserRole(formData.get('adminRole') ?? 'ORG_ADMIN') as
+    'ORG_ADMIN' | 'COMPLIANCE' | 'LEGAL' | 'FINANCE' | 'PROCUREMENT' | 'ENGINEERING' | 'VIEWER';
+
+  const validPlans = new Set(['FREE_TRIAL', 'STARTER', 'GROWTH', 'ENTERPRISE']);
+
+  if (!companyName) throw new FounderProvisioningError('Company name is required.', 'VALIDATION');
+  if (!DOMAIN_PATTERN.test(domain)) throw new FounderProvisioningError('Enter a valid company domain (e.g. acme.com).', 'VALIDATION');
+  if (!validPlans.has(planTier)) throw new FounderProvisioningError('Choose a valid plan.', 'VALIDATION');
+  if (!Number.isFinite(seats) || seats < 1) throw new FounderProvisioningError('Seats must be a positive whole number.', 'VALIDATION');
+  if (seats > MAX_PROVISIONING_SEATS) throw new FounderProvisioningError(`Seats cannot exceed ${MAX_PROVISIONING_SEATS.toLocaleString()}.`, 'VALIDATION');
+  if (!primaryAdminName) throw new FounderProvisioningError('Administrator name is required.', 'VALIDATION');
+  if (!EMAIL_PATTERN.test(primaryAdminEmail)) throw new FounderProvisioningError('Enter a valid administrator email.', 'VALIDATION');
+
+  // Explicit duplicate-domain rejection *before* the transaction — never
+  // silently upsert into an unrelated existing tenant that happens to share
+  // this domain; the founder must open that customer's profile instead.
+  const existingForDomain = await prisma.customerAccount.findUnique({ where: { domain }, select: { id: true, companyName: true } });
+  if (existingForDomain) {
+    throw new FounderProvisioningError(
+      `${domain} is already provisioned for "${existingForDomain.companyName}". Open that customer's profile instead of provisioning a duplicate.`,
+      'DUPLICATE_DOMAIN',
+    );
   }
 
   const slug = slugify(domain.replace(/\..*$/, '') || companyName);
   const enabledFeatureKeys = new Set(formData.getAll('features').map(String));
   const enabledIntegrationKeys = new Set(formData.getAll('integrations').map(String));
 
-  const result = await prisma.$transaction(async (tx) => {
-    const organization = await tx.organization.upsert({
-      where: { slug },
-      update: { name: companyName, onboardedAt: new Date() },
-      create: {
-        name: companyName,
-        slug,
-        departments: ['Finance', 'Legal', 'Procurement', 'Compliance'],
-        approvalCategories: ['Finance', 'Procurement', 'Legal', 'Security', 'Compliance'],
-        onboardedAt: new Date(),
-      },
-    });
+  await prisma.founderAuditLog.create({
+    data: {
+      actorUserId: access.userId,
+      actorEmail: access.email,
+      actorRole: access.role,
+      action: 'customer.provision.started',
+      targetType: 'CustomerAccount',
+      metadata: { requestId: requestId || null, companyName, domain, planTier, seats },
+    },
+  }).catch((error) => console.error('[founder] provision-started audit log failed', error));
 
-    const customer = await tx.customerAccount.upsert({
-      where: { domain },
-      update: {
-        companyName,
-        primaryAdminName: primaryAdminName || null,
-        primaryAdminEmail,
-        industry: industry || null,
-        planTier,
-        dataRetentionDays,
-      },
-      create: {
-        organizationId: organization.id,
-        companyName,
-        domain,
-        primaryAdminName: primaryAdminName || null,
-        primaryAdminEmail,
-        industry: industry || null,
-        planTier,
-        dataRetentionDays,
-      },
-    });
-
-    await tx.customerWorkspace.upsert({
-      where: { customerAccountId: customer.id },
-      update: { workspaceName: companyName, workspaceSlug: slug },
-      create: { customerAccountId: customer.id, organizationId: organization.id, workspaceName: companyName, workspaceSlug: slug },
-    });
-
-    await tx.customerSeatAllocation.upsert({
-      where: { customerAccountId: customer.id },
-      update: { purchasedSeats: seats, allocatedSeats: seats },
-      create: { customerAccountId: customer.id, purchasedSeats: seats, allocatedSeats: seats },
-    });
-
-    for (const feature of founderFeatures) {
-      await tx.customerFeatureFlag.upsert({
-        where: { customerAccountId_key: { customerAccountId: customer.id, key: feature.key } },
-        update: { enabled: enabledFeatureKeys.has(feature.key), category: feature.category, updatedBy: access.email },
-        create: { customerAccountId: customer.id, key: feature.key, enabled: enabledFeatureKeys.has(feature.key), category: feature.category, updatedBy: access.email },
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const organization = await tx.organization.upsert({
+        where: { slug },
+        update: { name: companyName, onboardedAt: new Date() },
+        create: {
+          name: companyName,
+          slug,
+          departments: ['Finance', 'Legal', 'Procurement', 'Compliance'],
+          approvalCategories: ['Finance', 'Procurement', 'Legal', 'Security', 'Compliance'],
+          onboardedAt: new Date(),
+        },
       });
-    }
 
-    for (const integration of founderIntegrationCatalog) {
-      await tx.customerIntegrationStatus.upsert({
-        where: { customerAccountId_provider: { customerAccountId: customer.id, provider: integration.key } },
+      const customer = await tx.customerAccount.upsert({
+        where: { domain },
         update: {
-          accessEnabled: enabledIntegrationKeys.has(integration.key),
-          connectionState: enabledIntegrationKeys.has(integration.key) ? 'ACCESS_ENABLED' : 'NOT_ENABLED',
+          companyName,
+          primaryAdminName: primaryAdminName || null,
+          primaryAdminEmail,
+          industry: industry || null,
+          planTier,
+          dataRetentionDays,
+          internalNotes: internalNotes || null,
+        },
+        create: {
+          organizationId: organization.id,
+          companyName,
+          domain,
+          primaryAdminName: primaryAdminName || null,
+          primaryAdminEmail,
+          industry: industry || null,
+          planTier,
+          dataRetentionDays,
+          internalNotes: internalNotes || null,
+        },
+      });
+
+      // Headquarters, company size, and commercial contract details have no
+      // dedicated CustomerAccount columns yet; CustomerWorkspace.metadata is
+      // an existing JSON column, so they're stored there rather than
+      // inventing new schema/migrations for this wizard.
+      const workspaceMetadata = {
+        headquarters: headquarters || null,
+        companySize: companySize || null,
+        billingType: billingType || null,
+        contractStartDate: contractStartDate || null,
+        contractEndDate: contractEndDate || null,
+      };
+      await tx.customerWorkspace.upsert({
+        where: { customerAccountId: customer.id },
+        update: { workspaceName: companyName, workspaceSlug: slug, metadata: workspaceMetadata },
+        create: { customerAccountId: customer.id, organizationId: organization.id, workspaceName: companyName, workspaceSlug: slug, metadata: workspaceMetadata },
+      });
+
+      await tx.customerSeatAllocation.upsert({
+        where: { customerAccountId: customer.id },
+        update: { purchasedSeats: seats, allocatedSeats: seats },
+        create: { customerAccountId: customer.id, purchasedSeats: seats, allocatedSeats: seats },
+      });
+
+      for (const feature of founderFeatures) {
+        await tx.customerFeatureFlag.upsert({
+          where: { customerAccountId_key: { customerAccountId: customer.id, key: feature.key } },
+          update: { enabled: enabledFeatureKeys.has(feature.key), category: feature.category, updatedBy: access.email },
+          create: { customerAccountId: customer.id, key: feature.key, enabled: enabledFeatureKeys.has(feature.key), category: feature.category, updatedBy: access.email },
+        });
+      }
+      await tx.founderAuditLog.create({
+        data: {
+          customerAccountId: customer.id,
+          actorUserId: access.userId,
+          actorEmail: access.email,
+          actorRole: access.role,
+          action: 'customer.feature.configured',
+          targetType: 'CustomerAccount',
+          targetId: customer.id,
+          metadata: { enabledFeatures: Array.from(enabledFeatureKeys) },
+        },
+      });
+
+      for (const integration of founderIntegrationCatalog) {
+        await tx.customerIntegrationStatus.upsert({
+          where: { customerAccountId_provider: { customerAccountId: customer.id, provider: integration.key } },
+          update: {
+            accessEnabled: enabledIntegrationKeys.has(integration.key),
+            connectionState: enabledIntegrationKeys.has(integration.key) ? 'ACCESS_ENABLED' : 'NOT_ENABLED',
+          },
+          create: {
+            customerAccountId: customer.id,
+            provider: integration.key,
+            accessEnabled: enabledIntegrationKeys.has(integration.key),
+            connectionState: enabledIntegrationKeys.has(integration.key) ? 'ACCESS_ENABLED' : 'NOT_ENABLED',
+          },
+        });
+      }
+      await tx.founderAuditLog.create({
+        data: {
+          customerAccountId: customer.id,
+          actorUserId: access.userId,
+          actorEmail: access.email,
+          actorRole: access.role,
+          action: 'customer.integration.access_granted',
+          targetType: 'CustomerAccount',
+          targetId: customer.id,
+          metadata: { grantedIntegrations: Array.from(enabledIntegrationKeys) },
+        },
+      });
+
+      // Initial customer administrator — reuses the same FounderManagedUser
+      // invitation shape as inviteFounderCustomerUser() (INVITED status,
+      // inviteToken, 14-day expiry). No separate invitation model.
+      const adminNameParts = primaryAdminName.split(/\s+/);
+      const adminUser = await tx.founderManagedUser.upsert({
+        where: { customerAccountId_email: { customerAccountId: customer.id, email: primaryAdminEmail } },
+        update: {
+          firstName: adminNameParts[0] || primaryAdminName,
+          lastName: adminNameParts.slice(1).join(' ') || '—',
+          role: adminRole,
+          status: 'INVITED',
+          inviteToken: randomUUID(),
+          invitedAt: new Date(),
+          expiresAt: daysFromNow(14),
         },
         create: {
           customerAccountId: customer.id,
-          provider: integration.key,
-          accessEnabled: enabledIntegrationKeys.has(integration.key),
-          connectionState: enabledIntegrationKeys.has(integration.key) ? 'ACCESS_ENABLED' : 'NOT_ENABLED',
+          organizationId: organization.id,
+          firstName: adminNameParts[0] || primaryAdminName,
+          lastName: adminNameParts.slice(1).join(' ') || '—',
+          email: primaryAdminEmail,
+          role: adminRole,
+          status: 'INVITED',
+          inviteToken: randomUUID(),
+          expiresAt: daysFromNow(14),
         },
       });
-    }
+      await tx.founderAuditLog.create({
+        data: {
+          customerAccountId: customer.id,
+          actorUserId: access.userId,
+          actorEmail: access.email,
+          actorRole: access.role,
+          action: 'user.invited',
+          targetType: 'FounderManagedUser',
+          targetId: adminUser.id,
+          metadata: { email: primaryAdminEmail, role: adminRole },
+        },
+      });
 
-    await tx.customerHealth.upsert({
-      where: { customerAccountId: customer.id },
-      update: { score: 55, status: 'NEEDS_ATTENTION', activeUsers: 0, integrationsConnected: 0 },
-      create: { customerAccountId: customer.id, score: 55, status: 'NEEDS_ATTENTION' },
-    });
+      await tx.customerHealth.upsert({
+        where: { customerAccountId: customer.id },
+        update: { score: 55, status: 'NEEDS_ATTENTION', activeUsers: 0, integrationsConnected: 0 },
+        create: { customerAccountId: customer.id, score: 55, status: 'NEEDS_ATTENTION' },
+      });
 
-    await tx.founderAuditLog.create({
+      await tx.founderAuditLog.create({
+        data: {
+          customerAccountId: customer.id,
+          actorUserId: access.userId,
+          actorEmail: access.email,
+          actorRole: access.role,
+          action: 'customer.provisioned',
+          targetType: 'CustomerAccount',
+          targetId: customer.id,
+          metadata: { planTier, seats, enabledIntegrations: Array.from(enabledIntegrationKeys), requestId: requestId || null },
+        },
+      });
+
+      return { customer, adminUser };
+    }, { maxWait: 10000, timeout: 20000 });
+
+    // Founder-provisioned orgs are marked onboarded immediately — bust the
+    // tenant cache so an existing session for this org never keeps reading a
+    // stale pre-provisioning result.
+    revalidateTag(DASHBOARD_TENANT_CACHE_TAG);
+
+    return result.customer;
+  } catch (error) {
+    await prisma.founderAuditLog.create({
       data: {
-        customerAccountId: customer.id,
         actorUserId: access.userId,
         actorEmail: access.email,
         actorRole: access.role,
-        action: 'customer.provisioned',
+        action: 'customer.provision.failed',
         targetType: 'CustomerAccount',
-        targetId: customer.id,
-        metadata: { planTier, seats, enabledIntegrations: Array.from(enabledIntegrationKeys) },
+        metadata: { requestId: requestId || null, companyName, domain, error: safeError(error) },
       },
-    });
-
-    return customer;
-  }, { maxWait: 10000, timeout: 20000 });
-
-  // Founder-provisioned orgs are marked onboarded immediately — bust the
-  // tenant cache so an existing session for this org never keeps reading a
-  // stale pre-provisioning result.
-  revalidateTag(DASHBOARD_TENANT_CACHE_TAG);
-
-  return result;
+    }).catch((auditError) => console.error('[founder] provision-failed audit log failed', auditError));
+    throw error;
+  }
 }
 
 export async function updateCustomerStatus(access: Extract<FounderAccess, { ok: true }>, customerId: string, status: string) {

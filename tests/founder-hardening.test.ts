@@ -38,7 +38,7 @@ assert.match(founderLayout, /FounderSystemError/);
 assert.match(founderLayout, /access check failed/);
 
 const provisionPage = read('app/founder/provision/page.tsx');
-assert.match(provisionPage, /provision_failed/);
+assert.match(provisionPage, /errorCode/);
 assert.match(provisionPage, /Customer provisioning could not complete/);
 
 const accountDetailsCard = read('components/founder/CustomerAccountDetailsCard.tsx');
