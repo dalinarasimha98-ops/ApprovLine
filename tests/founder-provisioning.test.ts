@@ -14,6 +14,7 @@ const read = (path: string) => readFileSync(`${root}/${path}`, 'utf8');
 const founderService = read('services/founder.ts');
 const provisionPage = read('app/founder/provision/page.tsx');
 const wizard = read('components/founder/ProvisionWizard.tsx');
+const featureManagementPage = read('app/founder/features/page.tsx');
 
 // 1. Unauthorized / forbidden Founder access is checked server-side, on both
 //    the page render and the provisioning action — never trusting the client.
@@ -107,4 +108,38 @@ assert.match(wizard, /\/founder\/pilots\/\$\{state\.customerId\}/);
 //     the existing CustomerAccountDetailsCard, not a bespoke fetch/XHR flow.
 assert.match(wizard, /useActionState\(provisionAction, \{\}\)/);
 
-console.log('Validated Founder Console provisioning: authorization gates, duplicate-domain rejection, seat/admin validation, feature/integration configuration, audit events, transactional writes, idempotent replay, and honest invitation status.');
+// 14. There is exactly one feature catalog. Feature Management
+//     (/founder/features) and Provision Customer (/founder/provision) both
+//     import founderFeatures from the same services/founder module — no
+//     second catalog was created for either page. If this regresses (a
+//     page starts importing a differently-named or locally-defined feature
+//     list), these two assertions fail before the pages can drift apart.
+assert.match(featureManagementPage, /import \{[^}]*founderFeatures[^}]*\} from '@\/services\/founder'/);
+assert.match(provisionPage, /import \{[^}]*founderFeatures[^}]*\} from '@\/services\/founder'/);
+assert.doesNotMatch(featureManagementPage, /const founderFeatures\s*=/);
+assert.doesNotMatch(wizard, /founderFeatures/); // the wizard only ever sees the `features` prop, never imports the catalog itself
+
+// 15. Neither page truncates or filters the catalog before counting or
+//     rendering it (no .slice/.filter applied to founderFeatures itself) —
+//     Feature Management's "Feature gates" metric and Provision Customer's
+//     grid must both reflect founderFeatures.length exactly.
+assert.doesNotMatch(featureManagementPage, /founderFeatures\.(slice|filter)\(/);
+assert.doesNotMatch(provisionPage, /founderFeatures\.(slice|filter)\(/);
+assert.match(featureManagementPage, /founderFeatures\.length/);
+
+// 16. Every catalog entry declares its own defaultEnabled flag, and the
+//     wizard's default selection is computed by filtering on that flag
+//     (services/founder.ts's catalog data), not a hardcoded list of keys
+//     duplicated into the wizard — a newly added feature is automatically
+//     included or excluded correctly with zero wizard changes.
+assert.match(founderService, /defaultEnabled: true/);
+assert.match(wizard, /features\.filter\(\(f\) => f\.defaultEnabled\)\.map\(\(f\) => f\.key\)/);
+assert.doesNotMatch(wizard, /enabledFeatures: \[['"]/); // never a hardcoded array of feature-key literals
+
+// 17. The "X of Y features enabled" summary is computed from the live
+//     catalog/selection lengths, never a hardcoded literal like "7 of 7".
+assert.match(wizard, /\{draft\.enabledFeatures\.length\} of \{features\.length\} features/);
+assert.doesNotMatch(wizard, /\d+ of \d+ features/); // no literal digit pair anywhere in the source
+assert.doesNotMatch(wizard, /\d+ of \d+ integrations/);
+
+console.log('Validated Founder Console provisioning: authorization gates, duplicate-domain rejection, seat/admin validation, feature/integration configuration, audit events, transactional writes, idempotent replay, honest invitation status, and single-source-of-truth feature catalog parity with Feature Management.');

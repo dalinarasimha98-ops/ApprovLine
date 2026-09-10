@@ -13,7 +13,7 @@ export type ProvisionActionState = {
   adminInviteLink?: string;
 };
 
-type CatalogItem = { key: string; label: string; category: string; description?: string };
+type CatalogItem = { key: string; label: string; category: string; description?: string; defaultEnabled?: boolean };
 type RoleItem = { key: string; label: string };
 
 type DomainCheckResult = { available: boolean; existingCompanyName?: string };
@@ -97,7 +97,11 @@ function defaultDraft(features: CatalogItem[], integrations: CatalogItem[]): Dra
     contractStartDate: new Date().toISOString().slice(0, 10),
     contractEndDate: '',
     seats: 5,
-    enabledFeatures: features.map((f) => f.key),
+    // Default selection is driven by each catalog entry's own defaultEnabled
+    // flag (services/founder.ts), not a hardcoded list of keys here — a
+    // feature added to the catalog is automatically included in this
+    // computation with no wizard change required.
+    enabledFeatures: features.filter((f) => f.defaultEnabled).map((f) => f.key),
     enabledIntegrations: integrations.map((i) => i.key),
     adminName: '',
     adminEmail: '',
@@ -480,9 +484,12 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">4. Feature Access</p>
               <p className="text-sm font-semibold text-slate-500">Enable the product features available to this customer. Reflects your existing feature catalog — enabling here does not bypass individual user permissions.</p>
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
-                All {features.length} features are enabled by default for new customers. Deselect any that shouldn&apos;t be available to this one.
+                {features.every((f) => f.defaultEnabled)
+                  ? `All ${features.length} features are enabled by default for new customers.`
+                  : `${features.filter((f) => f.defaultEnabled).length} of ${features.length} features are enabled by default for new customers.`}
+                {' '}Deselect any that shouldn&apos;t be available to this one.
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {features.map((feature) => {
                   const enabled = draft.enabledFeatures.includes(feature.key);
                   return (
@@ -509,7 +516,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
                 All {integrations.length} integrations are granted access by default for new customers. Deselect any that shouldn&apos;t be available to this one.
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {integrations.map((integration) => {
                   const enabled = draft.enabledIntegrations.includes(integration.key);
                   return (

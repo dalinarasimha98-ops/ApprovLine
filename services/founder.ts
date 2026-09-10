@@ -16,14 +16,19 @@ export type FounderAccess =
   | { ok: true; userId: string; email: string; role: FounderRole; readOnly: boolean }
   | { ok: false; reason: 'unauthenticated' | 'forbidden'; email?: string | null };
 
+// The single authoritative catalog of founder-gateable customer feature
+// flags (backed by CustomerFeatureFlag). /founder/features (Feature
+// Management) and /founder/provision (Provision Customer) both import this
+// exact array — there is no second copy anywhere. Anything added here
+// automatically appears, correctly counted, in both places.
 export const founderFeatures = [
-  { key: 'demo_mode', label: 'Demo mode', category: 'Workspace', description: 'Allow clearly marked demo records and demo reset actions.' },
-  { key: 'playbook_ai', label: 'Playbook AI', category: 'AI', description: 'Policy upload, rule extraction, and approval compliance scoring.' },
-  { key: 'copilot', label: 'AI Copilot', category: 'AI', description: 'Enterprise decision intelligence assistant over approvals, policies, and evidence.' },
-  { key: 'investigations', label: 'Investigation Center', category: 'Compliance', description: 'Case management, evidence timelines, and risk analysis.' },
-  { key: 'executive_roi', label: 'Executive ROI', category: 'Analytics', description: 'Boardroom-ready ROI, risk, and compliance analytics.' },
-  { key: 'universal_gateway', label: 'Universal Gateway', category: 'Ingestion', description: 'API, webhook, import, document, and transcript approval ingestion.' },
-  { key: 'pilot_readiness', label: 'Pilot Readiness', category: 'Customer Success', description: 'Pilot setup checklist, feedback, feature flags, and customer success telemetry.' },
+  { key: 'demo_mode', label: 'Demo mode', category: 'Workspace', description: 'Allow clearly marked demo records and demo reset actions.', defaultEnabled: true },
+  { key: 'playbook_ai', label: 'Playbook AI', category: 'AI', description: 'Policy upload, rule extraction, and approval compliance scoring.', defaultEnabled: true },
+  { key: 'copilot', label: 'AI Copilot', category: 'AI', description: 'Enterprise decision intelligence assistant over approvals, policies, and evidence.', defaultEnabled: true },
+  { key: 'investigations', label: 'Investigation Center', category: 'Compliance', description: 'Case management, evidence timelines, and risk analysis.', defaultEnabled: true },
+  { key: 'executive_roi', label: 'Executive ROI', category: 'Analytics', description: 'Boardroom-ready ROI, risk, and compliance analytics.', defaultEnabled: true },
+  { key: 'universal_gateway', label: 'Universal Gateway', category: 'Ingestion', description: 'API, webhook, import, document, and transcript approval ingestion.', defaultEnabled: true },
+  { key: 'pilot_readiness', label: 'Pilot Readiness', category: 'Customer Success', description: 'Pilot setup checklist, feedback, feature flags, and customer success telemetry.', defaultEnabled: true },
 ] as const;
 
 export const founderIntegrationCatalog = [

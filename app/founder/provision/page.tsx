@@ -68,7 +68,7 @@ export default async function FounderProvisionPage() {
     <ProvisionWizard
       readOnly={readOnly}
       accessSafeError={accessSafeError}
-      features={founderFeatures.map((f) => ({ key: f.key, label: f.label, category: f.category, description: f.description }))}
+      features={founderFeatures.map((f) => ({ key: f.key, label: f.label, category: f.category, description: f.description, defaultEnabled: f.defaultEnabled }))}
       integrations={founderIntegrationCatalog.map((i) => ({ key: i.key, label: i.label, category: i.category }))}
       adminRoles={founderManagedUserRoles.map((r) => ({ key: r.key, label: r.label }))}
       checkDomainAction={checkDomainAction}
