@@ -352,7 +352,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
           </div>
         ) : null}
 
-        <nav aria-label="Provisioning steps" className="mt-6 flex gap-2 overflow-x-auto pb-1">
+        <nav aria-label="Provisioning steps" className="mt-6 flex flex-wrap gap-x-1 gap-y-3">
           {STEPS.map((s, i) => (
             <button
               key={s.id}
@@ -360,11 +360,10 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               onClick={() => goToStep(i)}
               disabled={i > furthestStep}
               aria-current={step === i ? 'step' : undefined}
-              className="flex shrink-0 items-center gap-2 rounded-full px-2 py-1 disabled:cursor-not-allowed"
+              className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-2 py-1 disabled:cursor-not-allowed"
             >
               <StepIcon index={i} active={step === i} complete={i < step && !stepHasError(i)} />
               <span className={`text-xs font-black ${step === i ? 'text-[#2557dc]' : i > furthestStep ? 'text-slate-300' : 'text-slate-500'}`}>{s.label}</span>
-              {i < STEPS.length - 1 ? <span className="mx-1 h-px w-4 bg-slate-200" aria-hidden="true" /> : null}
             </button>
           ))}
         </nav>
@@ -472,6 +471,9 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
             <div className="grid gap-5">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">4. Feature Access</p>
               <p className="text-sm font-semibold text-slate-500">Enable the product features available to this customer. Reflects your existing feature catalog — enabling here does not bypass individual user permissions.</p>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
+                All {features.length} features are enabled by default for new customers. Deselect any that shouldn&apos;t be available to this one.
+              </div>
               <div className="grid gap-3 md:grid-cols-2">
                 {features.map((feature) => {
                   const enabled = draft.enabledFeatures.includes(feature.key);
@@ -496,6 +498,9 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               <p className="text-sm font-semibold text-slate-500">
                 Granting access here does not connect anything. The customer&apos;s own IT team still authenticates and connects each integration from inside their workspace — ApprovLine founders never see or handle customer OAuth credentials.
               </p>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
+                All {integrations.length} integrations are granted access by default for new customers. Deselect any that shouldn&apos;t be available to this one.
+              </div>
               <div className="grid gap-3 md:grid-cols-2">
                 {integrations.map((integration) => {
                   const enabled = draft.enabledIntegrations.includes(integration.key);
@@ -540,7 +545,10 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
 
           {step === 6 && (
             <div className="grid gap-5">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">7. Review</p>
+              <div className="rounded-2xl border border-[#2557dc]/20 bg-[#2557dc]/5 p-4">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">7. Review — Final Check</p>
+                <p className="mt-1 text-sm font-semibold text-slate-600">Every section below will be written when you provision. Use Edit to correct anything before confirming on the right.</p>
+              </div>
               {[
                 { title: 'Company', stepIndex: 0, rows: [['Company', draft.companyName], ['Domain', draft.domain], ['Industry', draft.industry || '—'], ['Headquarters', draft.headquarters || '—']] },
                 { title: 'Plan & Commercial', stepIndex: 1, rows: [['Plan', PLAN_OPTIONS.find(([v]) => v === draft.planTier)?.[1] ?? draft.planTier], ['Billing type', draft.billingType === 'ANNUAL' ? 'Annual' : 'Monthly'], ['Contract start', draft.contractStartDate || '—'], ['Estimated ARR', formatArr(estArr)]] },
@@ -595,11 +603,15 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               <button type="button" onClick={() => goToStep(3)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
             <div className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
-              <p className="font-black text-slate-950">{draft.enabledIntegrations.length} selected</p>
+              <p className="font-black text-slate-950">{draft.enabledIntegrations.length} of {integrations.length} integrations selected</p>
               <button type="button" onClick={() => goToStep(4)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
             <div className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
-              <p className="font-black text-slate-950 break-all">{draft.adminEmail || 'not set'}</p>
+              {draft.adminEmail ? (
+                <p className="break-all font-black text-slate-950">{draft.adminEmail}</p>
+              ) : (
+                <p className="font-bold italic text-amber-600">Customer administrator not configured</p>
+              )}
               <button type="button" onClick={() => goToStep(5)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
           </div>
@@ -614,7 +626,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
             </ol>
           </div>
 
-          <div className="mt-5 border-t border-slate-100 pt-5">
+          <div className={step < STEPS.length - 2 ? 'mt-5 border-t border-slate-100 pt-5' : 'mt-5 rounded-2xl border-2 border-[#2557dc]/15 bg-slate-50 p-4'}>
             {step < STEPS.length - 2 ? (
               <div className="flex gap-2">
                 {step > 0 ? (
@@ -624,11 +636,12 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               </div>
             ) : (
               <div className="grid gap-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">8. Provision</p>
                 <p className={`text-xs font-black uppercase tracking-wide ${readyToProvision ? 'text-emerald-600' : 'text-amber-600'}`}>
                   {readyToProvision ? 'Ready to provision' : readOnly ? 'Read-only role — provisioning disabled' : `${outstandingCount} item${outstandingCount === 1 ? '' : 's'} need attention`}
                 </p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={back} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">Back</button>
+                  <button type="button" onClick={back} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-100">Back</button>
                   <button
                     type="submit"
                     disabled={!readyToProvision || isPending}
