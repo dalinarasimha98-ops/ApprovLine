@@ -228,6 +228,14 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
   const goToStep = (index: number) => {
     if (index <= furthestStep) setStep(index);
   };
+  // Edit links (Review section + sidebar summary) always jump, even to a
+  // step past furthestStep — they're a direct "go fix this" shortcut, not
+  // the top stepper's progressive-disclosure nav. Bumping furthestStep too
+  // keeps the top stepper's reachable-step state consistent with the jump.
+  const jumpToStep = (index: number) => {
+    setStep(index);
+    setFurthestStep((f) => Math.max(f, index));
+  };
   const advance = () => {
     const next = Math.min(step + 1, STEPS.length - 1);
     setStep(next);
@@ -560,7 +568,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
                 <div key={section.title} className="rounded-2xl border border-slate-200 p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{section.title}</p>
-                    <button type="button" onClick={() => goToStep(section.stepIndex)} className="text-xs font-black text-[#2557dc] hover:text-blue-700">Edit</button>
+                    <button type="button" onClick={() => jumpToStep(section.stepIndex)} className="text-xs font-black text-[#2557dc] hover:text-blue-700">Edit</button>
                   </div>
                   <dl className="mt-2 grid gap-1 sm:grid-cols-2">
                     {section.rows.map(([label, value]) => (
@@ -585,26 +593,26 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
                 <p className="font-black text-slate-950">{draft.companyName || 'Untitled company'}</p>
                 <p className="text-xs font-semibold text-slate-400">{draft.domain || 'no domain set'}</p>
               </div>
-              <button type="button" onClick={() => goToStep(0)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
+              <button type="button" onClick={() => jumpToStep(0)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
             <div className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
               <div>
                 <p className="font-black text-slate-950">{PLAN_OPTIONS.find(([v]) => v === draft.planTier)?.[1]}</p>
                 <p className="text-xs font-semibold text-slate-400">{draft.billingType === 'ANNUAL' ? 'Annual billing' : 'Monthly billing'} · Est. {formatArr(estArr)}</p>
               </div>
-              <button type="button" onClick={() => goToStep(1)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
+              <button type="button" onClick={() => jumpToStep(1)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
             <div className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
               <p className="font-black text-slate-950">{draft.seats} seats</p>
-              <button type="button" onClick={() => goToStep(2)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
+              <button type="button" onClick={() => jumpToStep(2)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
             <div className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
               <p className="font-black text-slate-950">{draft.enabledFeatures.length} of {features.length} features</p>
-              <button type="button" onClick={() => goToStep(3)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
+              <button type="button" onClick={() => jumpToStep(3)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
             <div className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
               <p className="font-black text-slate-950">{draft.enabledIntegrations.length} of {integrations.length} integrations selected</p>
-              <button type="button" onClick={() => goToStep(4)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
+              <button type="button" onClick={() => jumpToStep(4)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
             <div className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
               {draft.adminEmail ? (
@@ -612,7 +620,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               ) : (
                 <p className="font-bold italic text-amber-600">Customer administrator not configured</p>
               )}
-              <button type="button" onClick={() => goToStep(5)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
+              <button type="button" onClick={() => jumpToStep(5)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
           </div>
 
