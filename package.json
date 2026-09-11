@@ -26,6 +26,7 @@
     "test:onboarding-pipeline": "node --import tsx tests/founder-onboarding.test.ts",
     "test:go-live-readiness": "node --import tsx tests/founder-go-live-readiness.test.ts",
     "test:features": "node --import tsx tests/founder-features.test.ts",
+    "test:gateway-entitlement": "node --import tsx tests/universal-gateway-entitlement.test.ts",
     "test:reliability": "node --import tsx tests/reliability-hardening.test.ts",
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
     "test:rbac": "node --import tsx scripts/test-rbac.ts",

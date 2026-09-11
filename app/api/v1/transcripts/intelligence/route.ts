@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import { authorizeGatewayRequest } from '@/lib/gateway-auth';
-import { ingestGatewayArtifact } from '@/services/gateway/universalGateway';
+import { getGatewayOrganization, ingestGatewayArtifact } from '@/services/gateway/universalGateway';
+import { EntitlementDeniedError, requireEntitlement } from '@/lib/entitlements';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,17 +19,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
+    // Resolve the organization once, from the server-authoritative org slug
+    // bound to this API key credential — never from a client-supplied
+    // tenant_slug (form field or JSON body), which would let any caller
+    // holding the shared gateway API key redirect ingestion into an
+    // arbitrary organization.
+    const organization = await getGatewayOrganization(authorization.orgSlug);
+    try {
+      await requireEntitlement(organization.id, 'universal_gateway');
+    } catch (error) {
+      if (error instanceof EntitlementDeniedError) {
+        return NextResponse.json({ error: error.message, code: 'ENTITLEMENT_REQUIRED' }, { status: 403 });
+      }
+      throw error;
+    }
+
     const contentType = request.headers.get('content-type') ?? '';
     let content = '';
     let sourceSystem = 'meeting-transcript';
     let name = 'Uploaded transcript';
-    let tenantSlug: string | undefined;
 
     if (contentType.includes('multipart/form-data')) {
       const form = await request.formData();
       const file = form.get('file');
       sourceSystem = String(form.get('source_system') ?? sourceSystem);
-      tenantSlug = form.get('tenant_slug') ? String(form.get('tenant_slug')) : undefined;
       if (file instanceof File) {
         if (file.size > 10 * 1024 * 1024) {
           return NextResponse.json({ error: 'Transcript must be 10 MB or smaller.' }, { status: 413 });
@@ -43,7 +57,6 @@ export async function POST(request: NextRequest) {
       content = typeof body.transcript === 'string' ? body.transcript : '';
       sourceSystem = typeof body.source_system === 'string' ? body.source_system : sourceSystem;
       name = typeof body.name === 'string' ? body.name : name;
-      tenantSlug = typeof body.tenant_slug === 'string' ? body.tenant_slug : undefined;
     }
 
     if (!content.trim()) {
@@ -51,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     const results = await ingestGatewayArtifact({
-      organizationSlug: tenantSlug,
+      organizationId: organization.id,
       sourceSystem,
       artifactType: 'transcript',
       name,

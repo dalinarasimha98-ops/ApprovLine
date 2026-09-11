@@ -3,11 +3,13 @@ import { env } from '@/config/env';
 import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import {
+  getGatewayOrganization,
   ingestUniversalApproval,
   normalizeWebhookApproval,
   universalWebhookSchema,
 } from '@/services/gateway/universalGateway';
 import { verifyWebhookSignature } from '@/services/queue/reliability';
+import { EntitlementDeniedError, requireEntitlement } from '@/lib/entitlements';
 
 // Server-authoritative org slug bound to this webhook secret — never trusts
 // tenant_slug supplied by the caller.
@@ -53,12 +55,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid webhook payload', details: parsed.error.flatten() }, { status: 400 });
     }
 
+    // Resolve the organization once, from the server-authoritative bound
+    // slug — never from the webhook payload — so the entitlement check
+    // below and the ingestion call afterward agree on the same organization.
+    const organization = await getGatewayOrganization(BOUND_ORG_SLUG);
+    try {
+      await requireEntitlement(organization.id, 'universal_gateway');
+    } catch (error) {
+      if (error instanceof EntitlementDeniedError) {
+        return NextResponse.json({ error: error.message, code: 'ENTITLEMENT_REQUIRED' }, { status: 403 });
+      }
+      throw error;
+    }
+
     const approval = normalizeWebhookApproval(parsed.data);
     const result = await ingestUniversalApproval(approval, {
       receivedVia: 'webhook',
-      // Use the server-authoritative slug; never trust tenant_slug from
-      // the webhook payload as the authorization source.
-      tenantSlug: BOUND_ORG_SLUG,
+      organizationId: organization.id,
       ipAddress: ip,
       userAgent: request.headers.get('user-agent') ?? undefined,
     });

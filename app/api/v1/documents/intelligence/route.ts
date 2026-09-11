@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { distributedRateLimit } from "@/lib/rate-limit";
 import { measure } from "@/lib/performance";
 import { authorizeGatewayRequest } from "@/lib/gateway-auth";
-import { ingestGatewayArtifact } from "@/services/gateway/universalGateway";
+import { getGatewayOrganization, ingestGatewayArtifact } from "@/services/gateway/universalGateway";
 import { extractPlaybookText } from "@/services/playbooks";
+import { EntitlementDeniedError, requireEntitlement } from "@/lib/entitlements";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve the organization once, from the server-authoritative slug
+    // bound to this API key — never from the client form — so the
+    // entitlement check below and the ingestion call afterward agree on the
+    // same organization.
+    const organization = await getGatewayOrganization(authorization.orgSlug);
+    try {
+      await requireEntitlement(organization.id, "universal_gateway");
+    } catch (error) {
+      if (error instanceof EntitlementDeniedError) {
+        return NextResponse.json(
+          { error: error.message, code: "ENTITLEMENT_REQUIRED" },
+          { status: 403 },
+        );
+      }
+      throw error;
+    }
+
     const form = await request.formData();
     const file = form.get("file");
     const sourceSystem = String(form.get("source_system") ?? "document-upload");
-    // Use the server-authoritative slug bound to this API key; never trust
-    // tenant_slug from the client form as the authorization source.
-    const tenantSlug = authorization.orgSlug;
 
     if (!(file instanceof File)) {
       return NextResponse.json(
@@ -69,7 +84,7 @@ export async function POST(request: NextRequest) {
       );
     }
     const results = await ingestGatewayArtifact({
-      organizationSlug: tenantSlug,
+      organizationId: organization.id,
       sourceSystem,
       artifactType: "document",
       name: file.name,

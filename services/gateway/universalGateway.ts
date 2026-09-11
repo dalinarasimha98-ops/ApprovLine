@@ -273,6 +273,10 @@ export function normalizeWebhookApproval(input: UniversalWebhookInput): Universa
 
 export async function ingestGatewayArtifact(input: {
   organizationSlug?: string;
+  // Preferred over organizationSlug when the caller has already resolved the
+  // organization itself (e.g. to run an entitlement check before ingesting)
+  // — avoids a second getGatewayOrganization lookup for the same request.
+  organizationId?: string;
   sourceSystem: string;
   artifactType: 'email' | 'csv' | 'document' | 'transcript';
   name: string;
@@ -302,6 +306,7 @@ export async function ingestGatewayArtifact(input: {
         lineNumber: index + 1,
       },
     }, {
+      organizationId: input.organizationId,
       tenantSlug: input.organizationSlug,
       receivedVia: input.artifactType,
       auditAction: `gateway.${input.artifactType}.processed`,

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { distributedRateLimit } from '@/lib/rate-limit';
 import { measure } from '@/lib/performance';
 import { authorizeGatewayRequest } from '@/lib/gateway-auth';
-import { ingestGatewayArtifact } from '@/services/gateway/universalGateway';
+import { getGatewayOrganization, ingestGatewayArtifact } from '@/services/gateway/universalGateway';
+import { EntitlementDeniedError, requireEntitlement } from '@/lib/entitlements';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,10 +19,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
+    // Resolve the organization once, from the server-authoritative org slug
+    // bound to this API key credential — never from a client-supplied
+    // tenant_slug form field, which would let any caller holding the shared
+    // gateway API key redirect ingestion into an arbitrary organization.
+    const organization = await getGatewayOrganization(authorization.orgSlug);
+    try {
+      await requireEntitlement(organization.id, 'universal_gateway');
+    } catch (error) {
+      if (error instanceof EntitlementDeniedError) {
+        return NextResponse.json({ error: error.message, code: 'ENTITLEMENT_REQUIRED' }, { status: 403 });
+      }
+      throw error;
+    }
+
     const form = await request.formData();
     const file = form.get('file');
     const sourceSystem = String(form.get('source_system') ?? 'csv-import');
-    const tenantSlug = form.get('tenant_slug') ? String(form.get('tenant_slug')) : undefined;
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: 'CSV file is required as form field `file`.' }, { status: 400 });
@@ -32,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     const content = await file.text();
     const results = await ingestGatewayArtifact({
-      organizationSlug: tenantSlug,
+      organizationId: organization.id,
       sourceSystem,
       artifactType: 'csv',
       name: file.name,

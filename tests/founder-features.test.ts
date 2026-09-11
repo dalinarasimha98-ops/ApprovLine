@@ -105,12 +105,13 @@ for (const key of ['copilot', 'playbook_ai', 'investigations', 'executive_roi', 
 assert.match(featuresService, /function isEntitlementKey\(key: string\): key is EntitlementKey/);
 
 // 6. Runtime enforcement claims are self-verifying: every key this module
-//    claims is enforced really does have a requireEntitlement call for it
-//    in a real route, and universal_gateway (claimed NOT enforced) really
-//    has no such call anywhere in the codebase's route files inspected —
-//    so "Founder UI state" vs "runtime enforcement state" can never quietly
-//    go stale without breaking this test.
-assert.match(featuresService, /const RUNTIME_ENFORCED_KEYS = new Set<string>\(\['playbook_ai', 'copilot', 'investigations', 'executive_roi'\]\);/);
+//    claims is enforced really does have a requireEntitlement call for it in
+//    a real route — universal_gateway now included, following the
+//    entitlement-enforcement follow-up (see tests/universal-gateway-entitlement.test.ts
+//    for the full route-by-route, filesystem-discovered proof) — so
+//    "Founder UI state" vs "runtime enforcement state" can never quietly go
+//    stale without breaking this test.
+assert.match(featuresService, /const RUNTIME_ENFORCED_KEYS = new Set<string>\(\['playbook_ai', 'copilot', 'investigations', 'executive_roi', 'universal_gateway'\]\);/);
 assert.match(playbookUpload, /requireEntitlement\(tenant\.organization\.id, "playbook_ai"\)/);
 assert.match(playbookReplace, /requireEntitlement\(tenant\.organization\.id, 'playbook_ai'\)/);
 assert.match(copilotQuery, /requireEntitlement\(tenant\.organization\.id, "copilot"\)/);
@@ -123,8 +124,8 @@ for (const file of [playbookUpload, playbookReplace, copilotQuery, investigation
   assert.doesNotMatch(file, /requireEntitlement\([^)]*'universal_gateway'/);
   assert.doesNotMatch(file, /requireEntitlement\([^)]*"universal_gateway"/);
 }
-// The UI honestly flags a non-enforced feature rather than implying every
-// toggle is live-enforced.
+// The UI still honestly flags any genuinely non-enforced feature (demo_mode,
+// pilot_readiness) rather than implying every toggle is live-enforced.
 assert.match(client, /!selected\.runtimeEnforced/);
 assert.match(client, /Founder UI state only/);
 
@@ -315,4 +316,4 @@ assert.doesNotMatch(navClient, /founder\/features.*Manage/);
 assert.match(customer360Page, /customer\.featureFlags\.map\(\(flag\) =>/);
 assert.match(customer360Page, /No feature flags configured yet\./);
 
-console.log('Validated Feature Management: one authoritative founderFeatures catalog and one authoritative CustomerFeatureFlag override table (never a second catalog or a conflation with the tenant-scoped FeatureFlag model), effective access computed by the exact same priority order as lib/entitlements.ts\'s resolveEntitlement (workspace inactivity, then override, then isPlanEntitled, then a Founder-only default), a self-verifying Runtime Enforcement claim (playbook_ai/copilot/investigations/executive_roi genuinely enforced via real requireEntitlement call sites; universal_gateway/demo_mode/pilot_readiness honestly flagged as Founder-UI-only), every mutation re-validating access/read-only/customer-existence/feature-key server-side with previous-state-aware audit logging, a real override-reset capability with no schema change, real (non-fabricated) KPIs and per-feature aggregates, an accessible fixed-position drawer that cannot cause page overflow, working search/filters, honest empty states, no N+1 queries, no secrets exposed, and Provision Customer/Customer 360/the Founder sidebar left untouched.');
+console.log('Validated Feature Management: one authoritative founderFeatures catalog and one authoritative CustomerFeatureFlag override table (never a second catalog or a conflation with the tenant-scoped FeatureFlag model), effective access computed by the exact same priority order as lib/entitlements.ts\'s resolveEntitlement (workspace inactivity, then override, then isPlanEntitled, then a Founder-only default), a self-verifying Runtime Enforcement claim (playbook_ai/copilot/investigations/executive_roi/universal_gateway all genuinely enforced via real requireEntitlement call sites; demo_mode/pilot_readiness honestly flagged as Founder-UI-only since no runtime consumer exists for either), every mutation re-validating access/read-only/customer-existence/feature-key server-side with previous-state-aware audit logging, a real override-reset capability with no schema change, real (non-fabricated) KPIs and per-feature aggregates, an accessible fixed-position drawer that cannot cause page overflow, working search/filters, honest empty states, no N+1 queries, no secrets exposed, and Provision Customer/Customer 360/the Founder sidebar left untouched.');

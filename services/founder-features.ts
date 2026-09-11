@@ -48,22 +48,28 @@ function isEntitlementKey(key: string): key is EntitlementKey {
 
 // Verified by inspecting every requireEntitlement()/resolveEntitlement()
 // call site in the repository as of this module's authoring:
-//   playbook_ai      -> app/api/playbooks/upload/route.ts, app/api/playbooks/[id]/replace/route.ts
-//   copilot          -> app/api/copilot/query/route.ts
-//   investigations   -> app/api/investigations/route.ts, app/api/investigations/[id]/route.ts
-//   executive_roi    -> app/api/analytics/kpis/route.ts, app/api/analytics/high-risk/route.ts, app/api/analytics/compliance/route.ts
-// universal_gateway has a real plan policy (isPlanEntitled supports it) but
-// NO route calls requireEntitlement/resolveEntitlement for it — the
-// Universal Gateway ingestion routes (app/api/v1/*) do not check it. A
-// Founder toggle for universal_gateway therefore has NO runtime effect yet.
+//   playbook_ai       -> app/api/playbooks/upload/route.ts, app/api/playbooks/[id]/replace/route.ts
+//   copilot           -> app/api/copilot/query/route.ts
+//   investigations    -> app/api/investigations/route.ts, app/api/investigations/[id]/route.ts
+//   executive_roi     -> app/api/analytics/kpis/route.ts, app/api/analytics/high-risk/route.ts, app/api/analytics/compliance/route.ts
+//   universal_gateway -> every app/api/v1/* Universal Gateway ingestion route
+//                         (approvals, webhooks/approvals, imports/csv,
+//                         documents/intelligence, transcripts/intelligence),
+//                         each resolving the organization from its own
+//                         server-side gateway authorization (never a
+//                         client-supplied tenant_slug) before calling
+//                         requireEntitlement.
 // demo_mode and pilot_readiness aren't even in EntitlementKey, so they have
 // no enforcement path at all — the "Founder-controlled default" catalog
-// state is purely informational until something calls resolveEntitlement
-// for them or checks CustomerFeatureFlag directly.
+// state is purely informational. No runtime code anywhere reads
+// CustomerFeatureFlag for these two keys (verified by inspecting every real
+// consumer of the pilot self-service /dashboard/pilot page and its own,
+// separate, organizationId-scoped FeatureFlag model) — they were never
+// wired to gate anything, so this module does not invent that wiring.
 // This is reported honestly in the Feature Management UI and the
 // implementation report rather than claimed as enforced. See tests/founder-features.test.ts
 // for a self-verifying regression check of this exact claim.
-const RUNTIME_ENFORCED_KEYS = new Set<string>(['playbook_ai', 'copilot', 'investigations', 'executive_roi']);
+const RUNTIME_ENFORCED_KEYS = new Set<string>(['playbook_ai', 'copilot', 'investigations', 'executive_roi', 'universal_gateway']);
 
 export function isRuntimeEnforced(key: string): boolean {
   return RUNTIME_ENFORCED_KEYS.has(key);
