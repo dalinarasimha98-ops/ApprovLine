@@ -202,14 +202,17 @@ assert.doesNotMatch(provisionPage, /Safe diagnostic: \$\{safeProvisionError\(err
 
 console.log('Validated Founder Console provisioning: authorization gates, duplicate-domain rejection, seat/admin validation, feature/integration configuration, audit events, transactional writes, idempotent replay, honest invitation status, single-source-of-truth feature catalog parity with Feature Management, Organization.onboardingCompletedSteps null-constraint regression coverage across every Organization creation call site, and a safe (non-leaking) Founder-facing failure message.');
 
-// 22. Provision Customer must never fabricate or display an ARR figure —
-//     no plan-tier-derived revenue estimate anywhere in the wizard, no
-//     duplicated copy of arrFromPlanTier, no "Estimated ARR" label, no
-//     currency-formatted output, and no leftover hardcoded 25000/25,000
-//     sample value from the removed card.
+// 22. Provision Customer must never *automatically calculate* or fabricate
+//     an ARR figure from the plan tier — no plan-tier-derived revenue
+//     estimate function anywhere in the wizard, no duplicated copy of
+//     arrFromPlanTier, no "Plan-based estimate" label, no rupee-formatted
+//     output, and no leftover hardcoded 25000/25,000 sample value from the
+//     removed card. This does NOT forbid "Estimated ARR" itself — a later
+//     task (see assertion set 36+) reintroduces it as a required,
+//     Founder-*entered* field, which is an explicit, distinct concept from
+//     the auto-calculated figure this assertion set guards against.
 assert.doesNotMatch(wizard, /estimateArr/);
 assert.doesNotMatch(wizard, /formatArr/);
-assert.doesNotMatch(wizard, /Estimated ARR/i);
 assert.doesNotMatch(wizard, /Plan-based estimate/i);
 assert.doesNotMatch(wizard, /₹/);
 assert.doesNotMatch(wizard, /25,?000/);
@@ -264,21 +267,23 @@ assert.doesNotMatch(plansModule.match(/function formatPlanPrice[\s\S]*?\n\}/)?.[
 
 // 28. Provision Customer consumes this exact catalog — no second,
 //     duplicated plan/pricing definition inside the wizard or its page.
-assert.match(provisionPage, /import \{ commercialPlans, formatPlanPrice \} from '@\/lib\/plans'/);
+assert.match(provisionPage, /import \{ commercialPlans, formatPlanPrice, suggestedAnnualEstimate \} from '@\/lib\/plans'/);
 assert.match(provisionPage, /Object\.values\(commercialPlans\)\.map/);
 assert.doesNotMatch(wizard, /amountUsd: 999/);
 assert.doesNotMatch(wizard, /'Business'/); // display name comes from the plans prop, never a wizard-local literal
 
-// 29. Provision Customer still shows no ARR after adding real plan
-//     pricing — the earlier no-ARR regression coverage (assertion set 22)
-//     must still hold with the plan catalog wired in.
+// 29. Provision Customer still shows no *automatically calculated* ARR
+//     after adding real plan pricing — the earlier no-fabricated-ARR
+//     regression coverage (assertion set 22) must still hold with the plan
+//     catalog wired in. (Founder-entered Estimated ARR, added later, is a
+//     distinct, explicitly-confirmed concept — see assertion set 36+.)
 assert.doesNotMatch(wizard, /estimateArr|formatArr\(/);
 
 // 30. Business's seat limit is enforced both client-side (the wizard) and
 //     server-side (provisionFounderCustomer never trusts the client) —
 //     sourced from the shared catalog, not a hardcoded 25 in two places.
 assert.match(wizard, /selectedPlan\?\.seatLimit != null && draft\.seats > selectedPlan\.seatLimit/);
-assert.match(founderService, /import \{ commercialPlans \} from '@\/lib\/plans'/);
+assert.match(founderService, /import \{ commercialPlans, MAX_ESTIMATED_ARR_USD \} from '@\/lib\/plans'/);
 assert.match(founderService, /plan\.seatLimit != null && seats > plan\.seatLimit/);
 assert.doesNotMatch(founderService.match(/const plan = commercialPlans\[planTier\][\s\S]{0,300}/)?.[0] ?? '', /seatLimit: 25|> 25\b/);
 
@@ -323,3 +328,169 @@ assert.match(accountDetailsCard, /Object\.values\(commercialPlans\)\.map\(\(plan
 assert.doesNotMatch(accountDetailsCard, /\['STARTER', 'Starter'\]/);
 
 console.log('Validated Customer 360 (page and CustomerAccountDetailsCard) displays plan names from lib/plans.ts, so "Business" is shown consistently everywhere a Founder sees a customer\'s plan.');
+
+// ─── Founder-entered Estimated ARR (required, never auto-calculated as
+// commercial fact) ───────────────────────────────────────────────────────
+const billingPage = read('app/founder/billing/page.tsx');
+
+// 36. (Scenario: field exists) The wizard exposes a real, named form field —
+//     not just display text — and it is wired into the hidden-field payload
+//     the final submit sends to provisionFounderCustomer.
+assert.match(wizard, /estimatedArrUsd: string;/);
+assert.match(wizard, /<input type="hidden" name="estimatedArrUsd" value=\{draft\.estimatedArrUsd\} \/>/);
+assert.match(wizard, />\s*Estimated ARR\s*<span className="text-rose-600"> \*<\/span>/);
+
+// 37. (Scenario: required) Both the wizard's client-side validation and
+//     provisionFounderCustomer's server-side validation reject an empty
+//     value with the exact required copy — the server never trusts the
+//     client's own check.
+assert.match(wizard, /if \(!arrRaw\) \{\s*errors\.estimatedArrUsd = 'Estimated ARR is required\.';/);
+assert.match(founderService, /if \(!estimatedArrUsdRaw\) throw new FounderProvisioningError\('Estimated ARR is required\.', 'VALIDATION'\);/);
+
+// 38. (Scenario: empty blocks) readyToProvision is gated on the full
+//     `validation` map being empty, and estimatedArrUsd is one of the keys
+//     that map can carry (assertion 37) — so an empty field blocks
+//     progression to Provision exactly like every other required field.
+assert.match(wizard, /const readyToProvision = Object\.keys\(validation\)\.length === 0 && !readOnly;/);
+assert.match(wizard, /1: \['estimatedArrUsd'\],/);
+
+// 39. (Scenario: zero blocks) Zero is explicitly rejected, client- and
+//     server-side, with the exact required copy — not silently coerced to
+//     a falsy-empty state or accepted as "no revenue yet".
+assert.match(wizard, /else if \(arrNum <= 0\) errors\.estimatedArrUsd = 'Estimated ARR must be greater than zero\.';/);
+assert.match(founderService, /if \(estimatedArrUsd <= 0\) throw new FounderProvisioningError\('Estimated ARR must be greater than zero\.', 'VALIDATION'\);/);
+
+// 40. (Scenario: negative blocks) The same `<= 0` comparison rejects
+//     negative values too — there is no separate, missing negative-number
+//     branch that would let a negative slip through as "not zero".
+assert.doesNotMatch(wizard, /arrNum < 0/); // would imply a gap letting exactly 0 or a separate negative path diverge
+assert.doesNotMatch(founderService, /estimatedArrUsd < 0(?! *\|\|)/);
+
+// 41. (Scenario: invalid blocks) A non-numeric entry (e.g. "abc") produces
+//     Number(...) => NaN, which is explicitly checked and rejected with the
+//     exact "enter a valid" copy before the zero/negative check ever runs.
+assert.match(wizard, /if \(!Number\.isFinite\(arrNum\)\) errors\.estimatedArrUsd = 'Enter a valid estimated ARR\.';/);
+assert.match(founderService, /if \(!Number\.isFinite\(estimatedArrUsd\)\) throw new FounderProvisioningError\('Enter a valid estimated ARR\.', 'VALIDATION'\);/);
+
+// 42. (Scenario: valid accepted) There is a sane, generous ceiling (not a
+//     narrow one that would reject legitimate large enterprise contracts),
+//     shared by both layers from the same lib/plans.ts constant — never two
+//     independently hardcoded ceiling numbers that could drift apart.
+assert.match(plansModule, /export const MAX_ESTIMATED_ARR_USD = 100_000_000;/);
+assert.match(wizard, /import \{ MAX_ESTIMATED_ARR_USD \} from '@\/lib\/plans';/);
+assert.match(founderService, /import \{ commercialPlans, MAX_ESTIMATED_ARR_USD \} from '@\/lib\/plans';/);
+assert.match(wizard, /arrNum > MAX_ESTIMATED_ARR_USD/);
+assert.match(founderService, /estimatedArrUsd > MAX_ESTIMATED_ARR_USD/);
+
+// 43. (Scenario: Enterprise gets no auto-ARR) suggestedAnnualEstimate only
+//     ever returns a number for fixed/monthly pricing; Enterprise's pricing
+//     is `{ type: 'custom' }`, so it always resolves to null — the wizard's
+//     default draft (Enterprise-selected) starts with an empty string, not
+//     a pre-filled figure.
+assert.match(plansModule, /export function suggestedAnnualEstimate\(pricing: PlanPricing\): number \| null \{/);
+{
+  const suggestFn = plansModule.match(/export function suggestedAnnualEstimate[\s\S]*?\n\}/)?.[0] ?? '';
+  assert.match(suggestFn, /return pricing\.amountUsd \* 12;/);
+  assert.match(suggestFn, /return null;/);
+}
+assert.match(wizard, /estimatedArrUsd: '',/); // defaultDraft's initial value — Enterprise is the default planTier
+assert.doesNotMatch(founderService, /estimatedArrUsd = .*ENTERPRISE/); // never derived from the Enterprise plan name
+
+// 44. (Scenario: Business can suggest $11,988) 999 * 12 = 11,988 is never
+//     hardcoded anywhere — it is only ever computed at runtime from
+//     commercialPlans.STARTER's own published $999/month price via
+//     suggestedAnnualEstimate, so a future price change can't leave a stale
+//     11988 literal behind.
+assert.doesNotMatch(plansModule, /11[,_]?988/);
+assert.doesNotMatch(wizard, /11[,_]?988/);
+assert.doesNotMatch(provisionPage, /11[,_]?988/);
+assert.match(provisionPage, /suggestedArrUsd: suggestedAnnualEstimate\(plan\.pricing\)/);
+assert.match(wizard, /suggestedArrUsd: number \| null/);
+
+// 45. (Scenario: suggestion is clearly a suggestion) The suggestion is only
+//     ever surfaced as help copy, gated on the current value still matching
+//     the plan's suggestion exactly — never injected as a value the Founder
+//     didn't see labeled, and never silently required.
+assert.match(wizard, /isSuggestedArrValue/);
+assert.match(wizard, /Suggested from the current Business monthly price\. Confirm or adjust for the customer agreement\./);
+assert.match(wizard, /Estimated annual recurring revenue for internal planning\. This is not actual billed revenue\./);
+assert.doesNotMatch(wizard, /Actual ARR/i);
+
+// 46. (Scenario: Founder can confirm/adjust) The Estimated ARR input is a
+//     normal editable numeric field — not disabled, not read-only — so a
+//     pre-filled Business suggestion can be changed like any other field.
+assert.match(wizard, /value=\{draft\.estimatedArrUsd\}\s*\n\s*onChange=\{\(e\) => set\('estimatedArrUsd', e\.target\.value\)\}/);
+assert.doesNotMatch(wizard, /name="estimatedArrUsd"[\s\S]{0,40}disabled/);
+
+// 47. (Scenario: summary updates dynamically) The sidebar Provisioning
+//     Summary reads the live draft value (not a snapshot taken once), and
+//     falls back to an honest "Required" label — never a fabricated
+//     placeholder number — when the field is empty or invalid.
+assert.match(wizard, /Estimated ARR — Required/);
+assert.match(wizard, /Est\. ARR \$\$\{Number\(draft\.estimatedArrUsd\)\.toLocaleString\(\)\}/);
+assert.doesNotMatch(wizard, /Est\. ARR \$0\b/);
+
+// 48. (Scenario: Review shows entered value) The Review step's Plan &
+//     Commercial section carries a distinctly-labeled "Estimated ARR" row
+//     (never "Actual ARR") alongside Plan, Billing type, and the contract
+//     dates already covered by assertion 23.
+assert.match(wizard, /\['Estimated ARR', draft\.estimatedArrUsd\.trim\(\) && !validation\.estimatedArrUsd \? `\$\$\{Number\(draft\.estimatedArrUsd\)\.toLocaleString\(\)\}` : 'Estimated ARR — Required'\]/);
+
+// 49. (Scenario: provisioning persists correctly) The validated value is
+//     actually written to CustomerAccount.estimatedArrUsd in both the
+//     create and update branches of the upsert — parsed-and-validated is
+//     not enough on its own; it must reach the database write.
+{
+  const upsertBlock = founderService.match(/const customer = await tx\.customerAccount\.upsert\(\{[\s\S]*?\n {6}\}\);/)?.[0] ?? '';
+  assert.notEqual(upsertBlock, '', 'customerAccount.upsert() block not found in provisionFounderCustomer');
+  const updateBlock = upsertBlock.match(/update: \{[\s\S]*?\n {8}\},/)?.[0] ?? '';
+  const createBlock2 = upsertBlock.match(/create: \{[\s\S]*?\n {8}\},/)?.[0] ?? '';
+  assert.match(updateBlock, /estimatedArrUsd,/);
+  assert.match(createBlock2, /estimatedArrUsd,/);
+}
+assert.match(prismaSchema, /estimatedArrUsd\s+Int\?/);
+
+// 50. (Scenario: actual revenue never created from estimate) There is no
+//     "actual"/"recognized"/"invoice" revenue field anywhere in the schema
+//     or provisioning code that estimatedArrUsd is ever copied into — the
+//     Founder-entered figure stays confined to its own column, with no
+//     code path promoting it to a billed-revenue concept.
+assert.doesNotMatch(prismaSchema, /actualArrUsd|recognizedRevenue|invoiceAmount|paidRevenue/i);
+assert.doesNotMatch(founderService, /actualArr|recognizedRevenue|invoiceAmount|paidRevenue/i);
+assert.match(prismaSchema, /Founder-entered internal planning estimate[\s\S]{0,400}never automatically\s*\n\s*\/\/ becomes actual\/recognized revenue/);
+
+// 51. (Scenario: Revenue page not broken / terminology stays accurate)
+//     Founder Revenue's own pipeline "Expected ARR" metric (a separate,
+//     pre-existing, legitimately-labeled concept — assertion 32) is
+//     untouched: it is not reading from or renamed to estimatedArrUsd.
+assert.doesNotMatch(revenuePage, /estimatedArrUsd/);
+assert.match(founderPilots, /function arrForPlan\(planTier: string, seats: number\)/);
+
+// 52. (Scenario: Billing page not broken) /founder/billing's seat/plan
+//     management is untouched — it has no ARR figure of any kind, so
+//     adding estimatedArrUsd elsewhere introduces no naming collision or
+//     unintended coupling there.
+assert.doesNotMatch(billingPage, /estimatedArrUsd|Estimated ARR/);
+
+// 53. (Scenario: tenant isolation intact) CustomerAccount.estimatedArrUsd
+//     lives on the same tenant-scoped commercial record as every other
+//     Founder-only commercial field (planTier, dataRetentionDays) — it
+//     carries no cross-tenant reference and does not appear in
+//     lib/tenant-isolation.ts, since Founder Console commercial data is
+//     deliberately separate from tenant-scoped Organization data (see
+//     CLAUDE.md's "Founder/internal ops" architecture note).
+const tenantIsolationLib = read('lib/tenant-isolation.ts');
+assert.doesNotMatch(tenantIsolationLib, /estimatedArrUsd/);
+
+// 54. Audit trail: the Founder's confirmed commercial inputs are logged via
+//     the existing FounderAuditLog mechanism (no second audit system),
+//     capturing plan/billing type/estimated ARR without duplicating admin
+//     PII or contract dates into this event.
+assert.match(founderService, /action: 'customer\.provision\.commercial_configured'/);
+{
+  const commercialEventBlock = founderService.match(/action: 'customer\.provision\.commercial_configured'[\s\S]*?\n {8}\},/)?.[0] ?? '';
+  assert.match(commercialEventBlock, /metadata: \{ planTier, billingType, estimatedArrUsd \}/);
+  assert.doesNotMatch(commercialEventBlock, /primaryAdminEmail|contractStartDate|contractEndDate/);
+}
+
+console.log('Validated Founder-entered Estimated ARR: required client- and server-side with exact copy for empty/zero/negative/invalid input, a shared sane ceiling, Enterprise never auto-calculated, Business\'s suggestion derived at runtime from the authoritative $999/month price (never a hardcoded 11,988), the suggestion clearly labeled and freely editable, live Provisioning Summary and Review display, correct persistence into CustomerAccount.estimatedArrUsd, no path that ever promotes the estimate into actual/recognized revenue, Revenue/Billing pages and tenant isolation left untouched, and a dedicated commercial_configured audit event with no PII over-logging.');

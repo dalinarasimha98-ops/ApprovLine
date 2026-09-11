@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { MAX_ESTIMATED_ARR_USD } from '@/lib/plans';
 
 export type ProvisionActionState = {
   ok?: boolean;
@@ -18,7 +19,7 @@ type RoleItem = { key: string; label: string };
 // Mirrors lib/plans.ts's CommercialPlan, trimmed to what the wizard needs to
 // display — the server (page.tsx) is the only place that reads the catalog
 // module itself; the wizard only ever sees this plain-data prop.
-type PlanCatalogItem = { tier: string; displayName: string; priceLabel: string; seatLimit: number | null; connectedSystemLimit: number | null };
+type PlanCatalogItem = { tier: string; displayName: string; priceLabel: string; seatLimit: number | null; connectedSystemLimit: number | null; suggestedArrUsd: number | null };
 
 type DomainCheckResult = { available: boolean; existingCompanyName?: string };
 
@@ -59,6 +60,10 @@ type DraftState = {
   billingType: 'ANNUAL' | 'MONTHLY';
   contractStartDate: string;
   contractEndDate: string;
+  // Kept as a raw string (not a number) so the field can start genuinely
+  // empty for Enterprise — there is no such thing as a "0 ARR" default to
+  // fall back to without misrepresenting an unentered value as a real figure.
+  estimatedArrUsd: string;
   seats: number;
   enabledFeatures: string[];
   enabledIntegrations: string[];
@@ -79,6 +84,10 @@ function defaultDraft(features: CatalogItem[], integrations: CatalogItem[]): Dra
     billingType: 'ANNUAL',
     contractStartDate: new Date().toISOString().slice(0, 10),
     contractEndDate: '',
+    // Default plan is Enterprise (custom pricing) — never auto-calculated, so
+    // this starts empty regardless of plan; the Business-suggestion effect
+    // below only fills it in if/when the Founder selects Business.
+    estimatedArrUsd: '',
     seats: 5,
     // Default selection is driven by each catalog entry's own defaultEnabled
     // flag (services/founder.ts), not a hardcoded list of keys here — a
@@ -191,6 +200,22 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
   const domainTaken = domainCheck.result?.available === false;
   const selectedPlan = plans.find((p) => p.tier === draft.planTier);
 
+  // Business-plan Estimated ARR suggestion: only pre-fills an empty field, and
+  // only for plans that publish a suggestion (lib/plans.ts's
+  // suggestedAnnualEstimate returns null for custom/unset pricing, so
+  // Enterprise never gets one). Never overwrites a value the Founder already
+  // typed or confirmed.
+  useEffect(() => {
+    setDraft((d) => {
+      if (d.estimatedArrUsd.trim() !== '') return d;
+      const plan = plans.find((p) => p.tier === d.planTier);
+      if (plan?.suggestedArrUsd == null) return d;
+      return { ...d, estimatedArrUsd: String(plan.suggestedArrUsd) };
+    });
+  }, [draft.planTier, plans]);
+
+  const isSuggestedArrValue = selectedPlan?.suggestedArrUsd != null && draft.estimatedArrUsd.trim() === String(selectedPlan.suggestedArrUsd);
+
   const validation = useMemo(() => {
     const errors: Record<string, string> = {};
     if (!draft.companyName.trim()) errors.companyName = 'Company name is required.';
@@ -201,6 +226,19 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
     else if (selectedPlan?.seatLimit != null && draft.seats > selectedPlan.seatLimit) {
       errors.seats = `${selectedPlan.displayName} includes up to ${selectedPlan.seatLimit} users. Reduce seats or switch to a plan with contract-defined seats.`;
     }
+    // Estimated ARR: a required, Founder-entered internal planning figure —
+    // mirrors the exact wording/order of services/founder.ts's server-side
+    // validation so the wizard never blocks (or allows) something the server
+    // would decide differently.
+    const arrRaw = draft.estimatedArrUsd.trim();
+    if (!arrRaw) {
+      errors.estimatedArrUsd = 'Estimated ARR is required.';
+    } else {
+      const arrNum = Number(arrRaw);
+      if (!Number.isFinite(arrNum)) errors.estimatedArrUsd = 'Enter a valid estimated ARR.';
+      else if (arrNum <= 0) errors.estimatedArrUsd = 'Estimated ARR must be greater than zero.';
+      else if (arrNum > MAX_ESTIMATED_ARR_USD) errors.estimatedArrUsd = `Estimated ARR cannot exceed $${MAX_ESTIMATED_ARR_USD.toLocaleString()}.`;
+    }
     if (!draft.adminName.trim()) errors.adminName = 'Administrator name is required.';
     if (!EMAIL_PATTERN.test(draft.adminEmail.trim())) errors.adminEmail = 'Enter a valid administrator email.';
     return errors;
@@ -208,6 +246,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
 
   const stepErrorKeys: Record<number, string[]> = {
     0: ['companyName', 'domain'],
+    1: ['estimatedArrUsd'],
     2: ['seats'],
     5: ['adminName', 'adminEmail'],
   };
@@ -379,6 +418,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
         <input type="hidden" name="billingType" value={draft.billingType} />
         <input type="hidden" name="contractStartDate" value={draft.contractStartDate} />
         <input type="hidden" name="contractEndDate" value={draft.contractEndDate} />
+        <input type="hidden" name="estimatedArrUsd" value={draft.estimatedArrUsd} />
         <input type="hidden" name="seats" value={draft.seats} />
         <input type="hidden" name="dataRetentionDays" value={365} />
         <input type="hidden" name="primaryAdminName" value={draft.adminName} />
@@ -446,6 +486,33 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
                   <input type="date" className={inputClass} value={draft.contractEndDate} onChange={(e) => set('contractEndDate', e.target.value)} />
                 </Field>
               </div>
+              <label className="grid gap-2 text-sm font-black text-slate-700">
+                <span>
+                  Estimated ARR
+                  <span className="text-rose-600"> *</span>
+                </span>
+                <div className="relative max-w-xs">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">$</span>
+                  <input
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    className={`${inputClass} w-full pl-8`}
+                    value={draft.estimatedArrUsd}
+                    onChange={(e) => set('estimatedArrUsd', e.target.value)}
+                    placeholder="e.g. 24000"
+                  />
+                </div>
+                <span className="text-xs font-semibold text-slate-400">
+                  Estimated annual recurring revenue for internal planning. This is not actual billed revenue.
+                </span>
+                {isSuggestedArrValue ? (
+                  <span className="text-xs font-bold text-[#2557dc]">
+                    Suggested from the current Business monthly price. Confirm or adjust for the customer agreement.
+                  </span>
+                ) : null}
+                {validation.estimatedArrUsd ? <span role="alert" className="text-xs font-bold text-rose-600">{validation.estimatedArrUsd}</span> : null}
+              </label>
             </div>
           )}
 
@@ -556,7 +623,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               </div>
               {[
                 { title: 'Company', stepIndex: 0, rows: [['Company', draft.companyName], ['Domain', draft.domain], ['Industry', draft.industry || '—'], ['Headquarters', draft.headquarters || '—']] },
-                { title: 'Plan & Commercial', stepIndex: 1, rows: [['Plan', selectedPlan?.displayName ?? draft.planTier], ['Price', selectedPlan?.priceLabel ?? '—'], ['Billing type', draft.billingType === 'ANNUAL' ? 'Annual' : 'Monthly'], ['Contract start', draft.contractStartDate || '—'], ['Contract end', draft.contractEndDate || '—']] },
+                { title: 'Plan & Commercial', stepIndex: 1, rows: [['Plan', selectedPlan?.displayName ?? draft.planTier], ['Price', selectedPlan?.priceLabel ?? '—'], ['Estimated ARR', draft.estimatedArrUsd.trim() && !validation.estimatedArrUsd ? `$${Number(draft.estimatedArrUsd).toLocaleString()}` : 'Estimated ARR — Required'], ['Billing type', draft.billingType === 'ANNUAL' ? 'Annual' : 'Monthly'], ['Contract start', draft.contractStartDate || '—'], ['Contract end', draft.contractEndDate || '—']] },
                 { title: 'Seats', stepIndex: 2, rows: [['Seats', String(draft.seats)]] },
                 { title: 'Feature Access', stepIndex: 3, rows: [['Enabled', `${draft.enabledFeatures.length} of ${features.length} features`]] },
                 { title: 'Integration Access', stepIndex: 4, rows: [['Granted', `${draft.enabledIntegrations.length} of ${integrations.length} integrations`]] },
@@ -596,6 +663,11 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               <div>
                 <p className="font-black text-slate-950">{selectedPlan?.displayName ?? draft.planTier}</p>
                 <p className="text-xs font-semibold text-slate-400">{selectedPlan?.priceLabel}</p>
+                <p className={`mt-1 text-xs font-black ${validation.estimatedArrUsd ? 'text-amber-600' : 'text-slate-500'}`}>
+                  {draft.estimatedArrUsd.trim() && !validation.estimatedArrUsd
+                    ? `Est. ARR $${Number(draft.estimatedArrUsd).toLocaleString()}`
+                    : 'Estimated ARR — Required'}
+                </p>
               </div>
               <button type="button" onClick={() => jumpToStep(1)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>

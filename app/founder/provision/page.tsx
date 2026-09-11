@@ -8,7 +8,7 @@ import {
   getFounderAccess,
   provisionFounderCustomer,
 } from '@/services/founder';
-import { commercialPlans, formatPlanPrice } from '@/lib/plans';
+import { commercialPlans, formatPlanPrice, suggestedAnnualEstimate } from '@/lib/plans';
 import { ProvisionWizard, type ProvisionActionState } from '@/components/founder/ProvisionWizard';
 
 export const dynamic = 'force-dynamic';
@@ -84,6 +84,7 @@ export default async function FounderProvisionPage() {
         priceLabel: formatPlanPrice(plan.pricing),
         seatLimit: plan.seatLimit,
         connectedSystemLimit: plan.connectedSystemLimit,
+        suggestedArrUsd: suggestedAnnualEstimate(plan.pricing),
       }))}
       checkDomainAction={checkDomainAction}
       provisionAction={provisionAction}

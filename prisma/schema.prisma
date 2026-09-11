@@ -1319,6 +1319,13 @@ model CustomerAccount {
   primaryAdminEmail   String
   dataRetentionDays   Int                         @default(365)
   internalNotes       String?
+  // Founder-entered internal planning estimate captured at provisioning
+  // (or later edited), in whole USD. Distinct from any calculated
+  // pipeline/expected ARR (services/founder-pilots.ts's arrForPlan,
+  // services/founder.ts's arrFromPlanTier) and never automatically
+  // becomes actual/recognized revenue — that must come from an
+  // authoritative billing/subscription/invoice system when one exists.
+  estimatedArrUsd     Int?
   createdAt           DateTime                    @default(now())
   updatedAt           DateTime                    @updatedAt
   organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)

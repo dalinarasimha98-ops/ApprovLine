@@ -9,7 +9,7 @@ import { csvCell } from '@/lib/csv';
 import { DASHBOARD_TENANT_CACHE_TAG } from '@/lib/auth';
 import { isFounderIdentity } from '@/lib/founder-identity';
 import { assertSeatAvailable } from '@/lib/seat-enforcement';
-import { commercialPlans } from '@/lib/plans';
+import { commercialPlans, MAX_ESTIMATED_ARR_USD } from '@/lib/plans';
 
 export type FounderRole = 'SUPER_ADMIN' | 'FOUNDER_ADMIN' | 'SUPPORT_ADMIN';
 
@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS "CustomerAccount" (
   "primaryAdminEmail" TEXT NOT NULL,
   "dataRetentionDays" INTEGER NOT NULL DEFAULT 365,
   "internalNotes" TEXT,
+  "estimatedArrUsd" INTEGER,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "CustomerAccount_pkey" PRIMARY KEY ("id")
@@ -1081,6 +1082,11 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
   const billingType = String(formData.get('billingType') ?? 'ANNUAL').trim();
   const contractStartDate = String(formData.get('contractStartDate') ?? '').trim();
   const contractEndDate = String(formData.get('contractEndDate') ?? '').trim();
+  // Founder-entered internal planning estimate — never calculated from the
+  // plan name for Enterprise, and never trusted from the client without
+  // re-validating server-side.
+  const estimatedArrUsdRaw = String(formData.get('estimatedArrUsd') ?? '').trim();
+  const estimatedArrUsd = Math.round(Number(estimatedArrUsdRaw));
 
   const seats = Math.round(Number(formData.get('seats') ?? 5));
   const dataRetentionDays = Math.max(30, Math.round(Number(formData.get('dataRetentionDays') ?? 365)));
@@ -1111,6 +1117,15 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
   }
   if (!primaryAdminName) throw new FounderProvisioningError('Administrator name is required.', 'VALIDATION');
   if (!EMAIL_PATTERN.test(primaryAdminEmail)) throw new FounderProvisioningError('Enter a valid administrator email.', 'VALIDATION');
+
+  // Estimated ARR: required, Founder-entered internal planning figure —
+  // never calculated here for Enterprise, never inferred from the plan.
+  if (!estimatedArrUsdRaw) throw new FounderProvisioningError('Estimated ARR is required.', 'VALIDATION');
+  if (!Number.isFinite(estimatedArrUsd)) throw new FounderProvisioningError('Enter a valid estimated ARR.', 'VALIDATION');
+  if (estimatedArrUsd <= 0) throw new FounderProvisioningError('Estimated ARR must be greater than zero.', 'VALIDATION');
+  if (estimatedArrUsd > MAX_ESTIMATED_ARR_USD) {
+    throw new FounderProvisioningError(`Estimated ARR cannot exceed $${MAX_ESTIMATED_ARR_USD.toLocaleString()}.`, 'VALIDATION');
+  }
 
   // Explicit duplicate-domain rejection *before* the transaction — never
   // silently upsert into an unrelated existing tenant that happens to share
@@ -1169,6 +1184,7 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
           planTier,
           dataRetentionDays,
           internalNotes: internalNotes || null,
+          estimatedArrUsd,
         },
         create: {
           organizationId: organization.id,
@@ -1180,6 +1196,7 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
           planTier,
           dataRetentionDays,
           internalNotes: internalNotes || null,
+          estimatedArrUsd,
         },
       });
 
@@ -1198,6 +1215,22 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
         where: { customerAccountId: customer.id },
         update: { workspaceName: companyName, workspaceSlug: slug, metadata: workspaceMetadata },
         create: { customerAccountId: customer.id, organizationId: organization.id, workspaceName: companyName, workspaceSlug: slug, metadata: workspaceMetadata },
+      });
+
+      // Records the Founder's confirmed commercial inputs (plan, billing type,
+      // and the entered Estimated ARR) without over-logging sensitive detail —
+      // no contract dates or admin PII duplicated here.
+      await tx.founderAuditLog.create({
+        data: {
+          customerAccountId: customer.id,
+          actorUserId: access.userId,
+          actorEmail: access.email,
+          actorRole: access.role,
+          action: 'customer.provision.commercial_configured',
+          targetType: 'CustomerAccount',
+          targetId: customer.id,
+          metadata: { planTier, billingType, estimatedArrUsd },
+        },
       });
 
       await tx.customerSeatAllocation.upsert({

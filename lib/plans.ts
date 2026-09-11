@@ -128,3 +128,22 @@ export function formatPlanPriceParts(pricing: PlanPricing): { price: string; cad
   if (pricing.type === 'custom') return { price: 'Custom', cadence: 'Pricing' };
   return { price: 'Not yet on a paid plan', cadence: '' };
 }
+
+/**
+ * Founder-entered Estimated ARR sanity ceiling (whole USD) — guards against
+ * garbage/overflow input, not a real commercial limit. $100M covers any
+ * plausible ApprovLine enterprise contract with wide headroom.
+ */
+export const MAX_ESTIMATED_ARR_USD = 100_000_000;
+
+/**
+ * A starting-point suggestion for the wizard's Estimated ARR field, derived
+ * from the plan's own published price — never fabricated separately. Only
+ * fixed-price plans (Business) get a suggestion; custom-priced plans
+ * (Enterprise) return null so the Founder must type a real value with no
+ * pre-filled number to rubber-stamp.
+ */
+export function suggestedAnnualEstimate(pricing: PlanPricing): number | null {
+  if (pricing.type === 'fixed' && pricing.cadence === 'month') return pricing.amountUsd * 12;
+  return null;
+}
