@@ -60,12 +60,14 @@ for (const value of ['PENDING', 'UNDER_REVIEW', 'PLANNED', 'IN_DEVELOPMENT', 'AV
 }
 
 // 4. Legacy CustomerIntegrationStatus system (used by Go-Live Readiness /
-//    Provision Customer) is preserved functionally intact, not deleted or
-//    silently replaced — but is no longer rendered as a second, competing
-//    provider catalog (see the "no competing catalog UI" block below).
-assert.match(page, /founderIntegrationCatalog/);
-assert.match(page, /updateCustomerIntegrationAccess/);
-assert.match(page, /Go-Live Readiness Legacy Access \(compatibility\)/);
+//    Provision Customer) is preserved functionally intact at the backend
+//    (schema, mutator function, seed catalog constant), but is no longer
+//    exposed as a second, competing Founder-facing customer-access UI on
+//    /founder/integrations — removed entirely per the final control-plane
+//    cleanup, not merely collapsed (see the dedicated block below).
+assert.doesNotMatch(page, /founderIntegrationCatalog/);
+assert.doesNotMatch(page, /updateCustomerIntegrationAccess/);
+assert.doesNotMatch(page, /updateLegacyAccess/);
 
 // ─── Regression: MarketplaceProvider is the ONE authoritative provider
 // registry — self-heals an empty production table, never falls back to a
@@ -111,29 +113,56 @@ for (const file of [page, client]) {
   assert.doesNotMatch(file, /Seed Providers|Initialize Catalog|Create Providers/i);
 }
 
-// 4e. The legacy compatibility section can no longer visually read as a
-//     second provider catalog: it is collapsed by default (<details>, not
-//     an always-open grid of provider cards) and rendered as a single
-//     compact table, not per-provider cards with logos.
-assert.match(page, /<details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">/);
-assert.doesNotMatch(page, /grid gap-4 md:grid-cols-2 xl:grid-cols-3/); // the old card-grid layout is gone
-assert.match(page, /<table className="w-full min-w-\[640px\] text-left text-sm">/);
+// 4e. No visible legacy customer-access management table remains anywhere
+//     on the page: no <details> disclosure, no per-connector card grid, no
+//     narrow "Connector/Category/Customer/Access" compatibility table, and
+//     no customer-select-and-checkbox form for a fixed 8-key connector
+//     list. Provider Catalog's own detail drawer (IntegrationCatalogClient)
+//     is the only Founder-facing customer-access surface left.
+assert.doesNotMatch(page, /<details/);
+assert.doesNotMatch(page, /Go-Live Readiness Legacy Access/);
+assert.doesNotMatch(page, /Legacy: Connector Access Gates/);
+assert.doesNotMatch(page, /grid gap-4 md:grid-cols-2 xl:grid-cols-3/); // the old card-grid layout
+assert.doesNotMatch(page, /min-w-\[640px\]/); // the old compact-table layout
+assert.doesNotMatch(page, /accessEnabled" type="checkbox"/);
+assert.doesNotMatch(page, /Select customer<\/option>/);
+assert.doesNotMatch(page, /FounderBadge tone="slate">Customer-owned/);
 
-// 4f. The legacy section's own copy explicitly distinguishes it from the
-//     Provider Catalog / TenantProviderAccess above it — the exact
-//     documentation the correction pass requires before keeping any
-//     "genuinely different, still required" control.
-assert.match(page, /Not the provider catalog above\./);
-assert.match(page, /TenantProviderAccess/);
-
-// 4g. updateCustomerIntegrationAccess (the legacy mutator) still only
-//     writes CustomerIntegrationStatus — it was not silently repointed at
-//     TenantProviderAccess (which would create a third, inconsistent
-//     access mechanism) and still audits via the one canonical helper.
+// 4f. The backend compatibility path is genuinely intact, not merely
+//     unreferenced-and-forgotten: the schema field, the catalog constant,
+//     and the mutator function all still exist and still behave exactly as
+//     before (still only ever writes CustomerIntegrationStatus — never
+//     TenantProviderAccess, which would create a third, inconsistent
+//     access mechanism — and still audits via the one canonical helper).
+//     Nothing in services/founder.ts was touched by this UI-only cleanup.
+assert.match(prismaSchema, /model CustomerIntegrationStatus \{[\s\S]*?accessEnabled\s+Boolean/);
+assert.match(founderServiceFull, /export const founderIntegrationCatalog = \[/);
+assert.match(founderServiceFull, /export async function updateCustomerIntegrationAccess\(/);
 const legacyUpdateFn = founderServiceFull.match(/export async function updateCustomerIntegrationAccess\([\s\S]*?\n\}\n/)?.[0] ?? '';
 assert.match(legacyUpdateFn, /prisma\.customerIntegrationStatus\.upsert\(/);
 assert.doesNotMatch(legacyUpdateFn, /prisma\.tenantProviderAccess\./);
 assert.match(legacyUpdateFn, /await logFounderAction\(\{/);
+
+// 4g. Go-Live Readiness's Integrations gate still reads accessEnabled off
+//     CustomerIntegrationStatus directly (services/founder-go-live-readiness.ts)
+//     — its logic was not rewritten or repointed at TenantProviderAccess —
+//     and Provision Customer's initial setup step still writes it via its
+//     own transactional upsert loop over founderIntegrationCatalog
+//     (services/founder.ts), entirely independent of the removed page UI.
+const goLiveReadinessService = read('services/founder-go-live-readiness.ts');
+assert.match(goLiveReadinessService, /integrationStatuses\.filter\(\(i\) => i\.accessEnabled\)/);
+assert.match(founderServiceFull, /for \(const integration of founderIntegrationCatalog\) \{/);
+assert.match(founderServiceFull, /tx\.customerIntegrationStatus\.upsert\(/);
+
+// 4h. No new/duplicate customer-access mechanism was introduced to fill the
+//     gap left by the removed UI — TenantProviderAccess (via
+//     enableProviderForTenant/disableProviderForTenant, already covered
+//     below) remains the one canonical, forward-looking Founder-facing
+//     control, and no second mutator function was added anywhere in this
+//     task's files.
+for (const file of [service, actions, page, client]) {
+  assert.doesNotMatch(file, /function \w*[Ll]egacy\w*Access\w*\(/);
+}
 
 // ─── Security: no client-supplied actor identity (the explicit CRITICAL fix) ─
 
@@ -416,4 +445,4 @@ assert.doesNotMatch(navClient, /Coming Soon/);
 //     scope per the spec.
 assert.match(customerProvidersRoute, /informational/i);
 
-console.log('Validated Founder Integration Catalog: reuses the exact existing MarketplaceProvider/TenantProviderAccess/IntegrationRequest/Integration/CustomerIntegrationStatus/FounderAuditLog architecture with no duplicate models or audit systems, removes client-trusted actor identity from enableProviderForTenant/disableProviderForTenant in favor of server-derived getFounderAccess().email, validates organization/provider/request existence and provider lifecycle before every mutation, audits every mutation with before/after state via the one canonical logFounderAction helper, keeps Customer Availability and Connection State honestly distinct (including an UNKNOWN state for the ~21 marketplace providers with no trackable Integration row), computes every KPI from real batched (N+1-free) queries, exposes no credentials, and ships an accessible, non-dead-button, honestly-empty-stated catalog and request UI with working search/filters/pagination and a mandated confirmation dialog for dangerous lifecycle transitions. Correction pass: proved from source that the MarketplaceProvider seed was never wired into any automatic deploy/build/migrate path (the real root cause of an empty catalog next to real legacy connector cards), added a self-healing, memoized, count-gated bootstrap mirroring ensureFounderStorage\'s exact idiom (reusing the one idempotent seed against the shared Prisma singleton, no UI seed button, no second seeding mechanism), and turned the still-required legacy CustomerIntegrationStatus compatibility control from an always-open competing provider-card grid into a collapsed, clearly-labeled, table-based compatibility section that documents exactly how it differs from TenantProviderAccess and cannot be mistaken for a second catalog.');
+console.log('Validated Founder Integration Catalog: reuses the exact existing MarketplaceProvider/TenantProviderAccess/IntegrationRequest/Integration/CustomerIntegrationStatus/FounderAuditLog architecture with no duplicate models or audit systems, removes client-trusted actor identity from enableProviderForTenant/disableProviderForTenant in favor of server-derived getFounderAccess().email, validates organization/provider/request existence and provider lifecycle before every mutation, audits every mutation with before/after state via the one canonical logFounderAction helper, keeps Customer Availability and Connection State honestly distinct (including an UNKNOWN state for the ~21 marketplace providers with no trackable Integration row), computes every KPI from real batched (N+1-free) queries, exposes no credentials, and ships an accessible, non-dead-button, honestly-empty-stated catalog and request UI with working search/filters/pagination and a mandated confirmation dialog for dangerous lifecycle transitions. Correction pass 1: proved from source that the MarketplaceProvider seed was never wired into any automatic deploy/build/migrate path, added a self-healing, memoized, count-gated bootstrap mirroring ensureFounderStorage\'s exact idiom. Correction pass 2 (final control-plane cleanup): removed the visible legacy customer-access management table entirely from the page (no <details>, no card grid, no compact table, no per-connector customer-select form) rather than merely collapsing it, while proving the backend compatibility path stays fully intact and untouched — CustomerIntegrationStatus.accessEnabled still exists in the schema, founderIntegrationCatalog and updateCustomerIntegrationAccess remain exported from services/founder.ts unchanged, Go-Live Readiness\'s Integrations gate still reads accessEnabled directly, and Provision Customer\'s own transactional upsert loop still writes it at account creation — so Provider Catalog\'s TenantProviderAccess-based drawer is now the single, unambiguous Founder-facing customer-access control with no duplicate UI anywhere on the page.');

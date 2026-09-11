@@ -1,11 +1,5 @@
-import { revalidatePath } from 'next/cache';
 import { FounderBadge, MigrationNotice } from '@/components/founder/FounderShell';
-import {
-  founderIntegrationCatalog,
-  getFounderAccess,
-  listCustomerAccountOptions,
-  updateCustomerIntegrationAccess,
-} from '@/services/founder';
+import { getFounderAccess } from '@/services/founder';
 import { buildIntegrationCatalogPortfolio } from '@/services/founder-integrations';
 import { IntegrationCatalogClient, type MutationResult } from '@/components/founder/IntegrationCatalogClient';
 import type { ProviderLifecycle } from '@/lib/founder-integrations';
@@ -42,23 +36,12 @@ async function disableProviderAccessAction(input: { providerSlug: string; organi
   return result.ok ? { ok: true } : { ok: false, error: result.error ?? 'Failed to revoke access.' };
 }
 
-async function updateLegacyAccess(formData: FormData) {
-  'use server';
-  const access = await getFounderAccess();
-  if (!access.ok || access.readOnly) return;
-  await updateCustomerIntegrationAccess(access, formData);
-  revalidatePath('/founder/integrations');
-}
-
 export default async function FounderIntegrationsPage() {
   const access = await getFounderAccess();
   const readOnly = !access.ok || access.readOnly;
   const canManage = access.ok && !access.readOnly;
 
-  const [portfolioResult, customers] = await Promise.all([
-    buildIntegrationCatalogPortfolio(),
-    listCustomerAccountOptions(),
-  ]);
+  const portfolioResult = await buildIntegrationCatalogPortfolio();
   const data = portfolioResult.data;
 
   // grid grid-cols-1 (Tailwind's default minmax(0,1fr) track) + min-w-0
@@ -116,82 +99,6 @@ export default async function FounderIntegrationsPage() {
           onUpdateRequestStatus={updateRequestStatusAction}
         />
       )}
-
-      {/* Go-Live Readiness Legacy Access (compatibility) — NOT a second
-          provider catalog. CustomerIntegrationStatus.accessEnabled predates
-          MarketplaceProvider/TenantProviderAccess and is still the field
-          Go-Live Readiness's Integrations gate (services/founder-go-live-readiness.ts)
-          and Provision Customer's initial setup step read — this is the only
-          Founder UI that writes it. TenantProviderAccess (managed in the
-          Provider Catalog's drawer above) is the canonical, forward-looking
-          model for "is this provider available to this customer" across the
-          full MarketplaceProvider registry; this section is a narrower,
-          8-key compatibility shim kept only because those two other locked
-          modules still depend on it. Collapsed by default and rendered as a
-          compact table (never provider cards) so it can never again be
-          mistaken for a second, competing provider catalog. */}
-      <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <summary className="cursor-pointer list-none p-5">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-black text-slate-950">Go-Live Readiness Legacy Access (compatibility)</h3>
-              <p className="mt-1 text-xs font-semibold text-slate-500">
-                Not the provider catalog above. Controls a legacy per-customer access flag still read by the Go-Live Readiness Integrations gate and Provision Customer — kept only for that compatibility, and separate from Provider Catalog availability (TenantProviderAccess) managed via each provider&apos;s detail drawer.
-              </p>
-            </div>
-            <FounderBadge tone="slate">Legacy · click to expand</FounderBadge>
-          </div>
-        </summary>
-        <div className="border-t border-slate-100 p-5">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-xs font-black uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="pb-3 pr-4">Connector</th>
-                  <th className="pb-3 pr-4">Category</th>
-                  <th className="pb-3 pr-4">Customer</th>
-                  <th className="pb-3 pr-4">Access</th>
-                  <th className="pb-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {founderIntegrationCatalog.map((integration) => (
-                  <tr key={integration.key}>
-                    <td className="py-3 pr-4 font-black text-slate-950">{integration.label}</td>
-                    <td className="py-3 pr-4 text-slate-500">{integration.category}</td>
-                    <td className="py-3 pr-4">
-                      <form id={`legacy-${integration.key}`} action={updateLegacyAccess} className="contents">
-                        <input type="hidden" name="provider" value={integration.key} />
-                        <select
-                          name="customerAccountId"
-                          form={`legacy-${integration.key}`}
-                          required
-                          disabled={readOnly || !customers.length}
-                          className="h-9 w-48 rounded-lg border border-slate-200 px-2 text-xs font-bold outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
-                        >
-                          <option value="">Select customer</option>
-                          {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.companyName}</option>)}
-                        </select>
-                      </form>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                        <input form={`legacy-${integration.key}`} name="accessEnabled" type="checkbox" defaultChecked disabled={readOnly} className="h-4 w-4" />
-                        Enabled
-                      </label>
-                    </td>
-                    <td className="py-3">
-                      <button form={`legacy-${integration.key}`} disabled={readOnly || !customers.length} className="rounded-lg bg-[#2557dc] px-3 py-1.5 text-xs font-black text-white disabled:bg-slate-300">
-                        Update
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </details>
     </div>
   );
 }
