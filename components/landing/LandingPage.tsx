@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { commercialPlans, formatPlanPriceParts } from '@/lib/plans';
 import styles from './LandingPage.module.css';
 
 const businessSources = [
@@ -87,40 +88,24 @@ const trustItems = [
   ['99.9% Reliability', 'Operational readiness for enterprise workloads.'],
 ];
 
+// Price, cadence, and feature bullets come from lib/plans.ts, the single
+// authoritative catalog also consumed by Provision Customer — only the
+// marketing-only fields (note/cta/href/featured) live here.
 const pricing = [
   {
-    name: 'Business',
-    price: '$999',
-    cadence: '/month',
+    name: commercialPlans.STARTER.displayName,
+    ...formatPlanPriceParts(commercialPlans.STARTER.pricing),
     note: 'Full approval intelligence for teams ready to operationalize governance.',
-    features: [
-      'Up to 25 users',
-      '3 connected systems',
-      'AI approval classification',
-      'Playbook AI compliance checks',
-      'Investigation Center',
-      'Executive analytics',
-      'Searchable approval timeline',
-      'Standard support',
-    ],
+    features: commercialPlans.STARTER.marketingFeatures,
     cta: 'Start a Pilot',
     href: '/get-started',
+    featured: false,
   },
   {
-    name: 'Enterprise',
-    price: 'Custom',
-    cadence: 'Pricing',
+    name: commercialPlans.ENTERPRISE.displayName,
+    ...formatPlanPriceParts(commercialPlans.ENTERPRISE.pricing),
     note: 'Enterprise-scale governance, audit infrastructure, and dedicated success.',
-    features: [
-      'Enterprise-scale users and systems',
-      'Enterprise Memory Graph',
-      'Advanced AI Copilot',
-      'SSO and identity controls',
-      'Custom retention and integrations',
-      'Dedicated success and SLA',
-      'Flexible deployment options',
-      'Annual enterprise agreements',
-    ],
+    features: commercialPlans.ENTERPRISE.marketingFeatures,
     cta: 'Talk to Sales',
     href: '/book-demo',
     featured: true,

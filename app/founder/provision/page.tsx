@@ -8,6 +8,7 @@ import {
   getFounderAccess,
   provisionFounderCustomer,
 } from '@/services/founder';
+import { commercialPlans, formatPlanPrice } from '@/lib/plans';
 import { ProvisionWizard, type ProvisionActionState } from '@/components/founder/ProvisionWizard';
 
 export const dynamic = 'force-dynamic';
@@ -77,6 +78,13 @@ export default async function FounderProvisionPage() {
       features={founderFeatures.map((f) => ({ key: f.key, label: f.label, category: f.category, description: f.description, defaultEnabled: f.defaultEnabled }))}
       integrations={founderIntegrationCatalog.map((i) => ({ key: i.key, label: i.label, category: i.category }))}
       adminRoles={founderManagedUserRoles.map((r) => ({ key: r.key, label: r.label }))}
+      plans={Object.values(commercialPlans).map((plan) => ({
+        tier: plan.tier,
+        displayName: plan.displayName,
+        priceLabel: formatPlanPrice(plan.pricing),
+        seatLimit: plan.seatLimit,
+        connectedSystemLimit: plan.connectedSystemLimit,
+      }))}
       checkDomainAction={checkDomainAction}
       provisionAction={provisionAction}
     />

@@ -15,6 +15,10 @@ export type ProvisionActionState = {
 
 type CatalogItem = { key: string; label: string; category: string; description?: string; defaultEnabled?: boolean };
 type RoleItem = { key: string; label: string };
+// Mirrors lib/plans.ts's CommercialPlan, trimmed to what the wizard needs to
+// display — the server (page.tsx) is the only place that reads the catalog
+// module itself; the wizard only ever sees this plain-data prop.
+type PlanCatalogItem = { tier: string; displayName: string; priceLabel: string; seatLimit: number | null; connectedSystemLimit: number | null };
 
 type DomainCheckResult = { available: boolean; existingCompanyName?: string };
 
@@ -24,6 +28,7 @@ type ProvisionWizardProps = {
   features: CatalogItem[];
   integrations: CatalogItem[];
   adminRoles: RoleItem[];
+  plans: PlanCatalogItem[];
   checkDomainAction: (domain: string) => Promise<DomainCheckResult>;
   provisionAction: (prevState: ProvisionActionState, formData: FormData) => Promise<ProvisionActionState>;
 };
@@ -37,13 +42,6 @@ const STEPS = [
   { id: 'admin', label: 'Customer Admin' },
   { id: 'review', label: 'Review' },
   { id: 'provision', label: 'Provision' },
-] as const;
-
-const PLAN_OPTIONS = [
-  ['FREE_TRIAL', 'Free Trial'],
-  ['STARTER', 'Starter'],
-  ['GROWTH', 'Growth'],
-  ['ENTERPRISE', 'Enterprise'],
 ] as const;
 
 const DRAFT_KEY = 'approvline:founder:provision-draft:v1';
@@ -132,7 +130,7 @@ function Field({ label, required, children, hint, error }: { label: string; requ
 
 const inputClass = 'min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-[#2557dc] focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100';
 
-export function ProvisionWizard({ readOnly, accessSafeError, features, integrations, adminRoles, checkDomainAction, provisionAction }: ProvisionWizardProps) {
+export function ProvisionWizard({ readOnly, accessSafeError, features, integrations, adminRoles, plans, checkDomainAction, provisionAction }: ProvisionWizardProps) {
   const [step, setStep] = useState(0);
   const [furthestStep, setFurthestStep] = useState(0);
   const [draft, setDraft] = useState<DraftState>(() => defaultDraft(features, integrations));
@@ -191,6 +189,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
   }, [draft.domain, checkDomainAction]);
 
   const domainTaken = domainCheck.result?.available === false;
+  const selectedPlan = plans.find((p) => p.tier === draft.planTier);
 
   const validation = useMemo(() => {
     const errors: Record<string, string> = {};
@@ -199,10 +198,13 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
     else if (domainTaken) errors.domain = `${draft.domain} already belongs to "${domainCheck.result?.existingCompanyName}".`;
     if (!Number.isFinite(draft.seats) || draft.seats < 1) errors.seats = 'Seats must be at least 1.';
     else if (draft.seats > 50_000) errors.seats = 'Seats cannot exceed 50,000.';
+    else if (selectedPlan?.seatLimit != null && draft.seats > selectedPlan.seatLimit) {
+      errors.seats = `${selectedPlan.displayName} includes up to ${selectedPlan.seatLimit} users. Reduce seats or switch to a plan with contract-defined seats.`;
+    }
     if (!draft.adminName.trim()) errors.adminName = 'Administrator name is required.';
     if (!EMAIL_PATTERN.test(draft.adminEmail.trim())) errors.adminEmail = 'Enter a valid administrator email.';
     return errors;
-  }, [draft, domainTaken, domainCheck.result]);
+  }, [draft, domainTaken, domainCheck.result, selectedPlan]);
 
   const stepErrorKeys: Record<number, string[]> = {
     0: ['companyName', 'domain'],
@@ -418,9 +420,9 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
             <div className="grid gap-5">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">2. Plan & Commercial</p>
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Plan" required>
+                <Field label="Plan" required hint={selectedPlan?.priceLabel}>
                   <select className={inputClass} value={draft.planTier} onChange={(e) => set('planTier', e.target.value)}>
-                    {PLAN_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    {plans.map((p) => <option key={p.tier} value={p.tier}>{p.displayName}</option>)}
                   </select>
                 </Field>
                 <Field label="Billing Type">
@@ -450,8 +452,13 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
           {step === 2 && (
             <div className="grid gap-5">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">3. Seats</p>
-              <Field label="Number of Seats" required error={validation.seats}>
-                <input type="number" min={1} max={50000} className={`${inputClass} max-w-xs`} value={draft.seats} onChange={(e) => set('seats', Math.round(Number(e.target.value)))} />
+              <Field
+                label="Number of Seats"
+                required
+                error={validation.seats}
+                hint={selectedPlan?.seatLimit != null ? `${selectedPlan.displayName} includes up to ${selectedPlan.seatLimit} users.` : undefined}
+              >
+                <input type="number" min={1} max={selectedPlan?.seatLimit ?? 50000} className={`${inputClass} max-w-xs`} value={draft.seats} onChange={(e) => set('seats', Math.round(Number(e.target.value)))} />
               </Field>
               <p className="text-sm font-semibold text-slate-500">Seats can be adjusted later according to the customer&apos;s plan and billing configuration.</p>
             </div>
@@ -494,6 +501,11 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
                 All {integrations.length} integrations are granted access by default for new customers. Deselect any that shouldn&apos;t be available to this one.
               </div>
+              {selectedPlan?.connectedSystemLimit != null && draft.enabledIntegrations.length > selectedPlan.connectedSystemLimit ? (
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-xs font-bold text-blue-900">
+                  {selectedPlan.displayName} includes up to {selectedPlan.connectedSystemLimit} connected systems — {draft.enabledIntegrations.length} are selected. This does not block provisioning; confirm it&apos;s intentional or reduce the selection to match the plan.
+                </div>
+              ) : null}
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {integrations.map((integration) => {
                   const enabled = draft.enabledIntegrations.includes(integration.key);
@@ -544,7 +556,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               </div>
               {[
                 { title: 'Company', stepIndex: 0, rows: [['Company', draft.companyName], ['Domain', draft.domain], ['Industry', draft.industry || '—'], ['Headquarters', draft.headquarters || '—']] },
-                { title: 'Plan & Commercial', stepIndex: 1, rows: [['Plan', PLAN_OPTIONS.find(([v]) => v === draft.planTier)?.[1] ?? draft.planTier], ['Billing type', draft.billingType === 'ANNUAL' ? 'Annual' : 'Monthly'], ['Contract start', draft.contractStartDate || '—'], ['Contract end', draft.contractEndDate || '—']] },
+                { title: 'Plan & Commercial', stepIndex: 1, rows: [['Plan', selectedPlan?.displayName ?? draft.planTier], ['Price', selectedPlan?.priceLabel ?? '—'], ['Billing type', draft.billingType === 'ANNUAL' ? 'Annual' : 'Monthly'], ['Contract start', draft.contractStartDate || '—'], ['Contract end', draft.contractEndDate || '—']] },
                 { title: 'Seats', stepIndex: 2, rows: [['Seats', String(draft.seats)]] },
                 { title: 'Feature Access', stepIndex: 3, rows: [['Enabled', `${draft.enabledFeatures.length} of ${features.length} features`]] },
                 { title: 'Integration Access', stepIndex: 4, rows: [['Granted', `${draft.enabledIntegrations.length} of ${integrations.length} integrations`]] },
@@ -582,8 +594,8 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
             </div>
             <div className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
               <div>
-                <p className="font-black text-slate-950">{PLAN_OPTIONS.find(([v]) => v === draft.planTier)?.[1]}</p>
-                <p className="text-xs font-semibold text-slate-400">{draft.billingType === 'ANNUAL' ? 'Annual billing' : 'Monthly billing'}</p>
+                <p className="font-black text-slate-950">{selectedPlan?.displayName ?? draft.planTier}</p>
+                <p className="text-xs font-semibold text-slate-400">{selectedPlan?.priceLabel}</p>
               </div>
               <button type="button" onClick={() => jumpToStep(1)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>

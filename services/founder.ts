@@ -9,6 +9,7 @@ import { csvCell } from '@/lib/csv';
 import { DASHBOARD_TENANT_CACHE_TAG } from '@/lib/auth';
 import { isFounderIdentity } from '@/lib/founder-identity';
 import { assertSeatAvailable } from '@/lib/seat-enforcement';
+import { commercialPlans } from '@/lib/plans';
 
 export type FounderRole = 'SUPER_ADMIN' | 'FOUNDER_ADMIN' | 'SUPPORT_ADMIN';
 
@@ -1096,6 +1097,18 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
   if (!validPlans.has(planTier)) throw new FounderProvisioningError('Choose a valid plan.', 'VALIDATION');
   if (!Number.isFinite(seats) || seats < 1) throw new FounderProvisioningError('Seats must be a positive whole number.', 'VALIDATION');
   if (seats > MAX_PROVISIONING_SEATS) throw new FounderProvisioningError(`Seats cannot exceed ${MAX_PROVISIONING_SEATS.toLocaleString()}.`, 'VALIDATION');
+  // Plan-specific seat ceiling (e.g. Business's included 25 users) — never
+  // trust the wizard's own client-side check. Sourced from lib/plans.ts, the
+  // same catalog the wizard reads, so the limit is never duplicated here.
+  {
+    const plan = commercialPlans[planTier];
+    if (plan.seatLimit != null && seats > plan.seatLimit) {
+      throw new FounderProvisioningError(
+        `${plan.displayName} includes up to ${plan.seatLimit} users. Reduce seats or choose a plan with contract-defined seats.`,
+        'VALIDATION',
+      );
+    }
+  }
   if (!primaryAdminName) throw new FounderProvisioningError('Administrator name is required.', 'VALIDATION');
   if (!EMAIL_PATTERN.test(primaryAdminEmail)) throw new FounderProvisioningError('Enter a valid administrator email.', 'VALIDATION');
 

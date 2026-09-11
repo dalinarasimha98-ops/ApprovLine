@@ -228,3 +228,85 @@ assert.match(founderService, /export function arrFromPlanTier/);
 assert.match(founderService, /expectedArr: arrFromPlanTier\(/);
 
 console.log('Validated Provision Customer displays no fabricated ARR while leaving arrFromPlanTier and its legitimate Founder Revenue/pipeline callers intact.');
+
+// ─── Authoritative commercial plan catalog (lib/plans.ts) ──────────────────
+const plansModule = read('lib/plans.ts');
+const landingPage = read('components/landing/LandingPage.tsx');
+const founderPilots = read('services/founder-pilots.ts');
+const revenuePage = read('app/founder/revenue/page.tsx');
+const featuresPage = read('app/founder/features/page.tsx');
+const prismaSchemaSource = prismaSchema; // already read above for the onboardingCompletedSteps regression
+
+// 25. Business exists, with its published price, seat limit, and
+//     connected-system limit — matching the current landing page exactly.
+assert.match(plansModule, /displayName: 'Business'/);
+assert.match(plansModule, /pricing: \{ type: 'fixed', amountUsd: 999, cadence: 'month' \}/);
+assert.match(plansModule, /seatLimit: 25/);
+assert.match(plansModule, /connectedSystemLimit: 3/);
+
+// 26. Enterprise exists, with Custom pricing — never a number, never an
+//     arbitrary seat limit like Business's 25. Contract-defined (null) for
+//     both seats and connected systems.
+{
+  const enterpriseBlock = plansModule.match(/ENTERPRISE: \{[\s\S]*?\n {2}\},/)?.[0] ?? '';
+  assert.notEqual(enterpriseBlock, '', 'ENTERPRISE catalog entry not found');
+  assert.match(enterpriseBlock, /displayName: 'Enterprise'/);
+  assert.match(enterpriseBlock, /pricing: \{ type: 'custom' \}/);
+  assert.match(enterpriseBlock, /seatLimit: null/);
+  assert.match(enterpriseBlock, /connectedSystemLimit: null/);
+  assert.doesNotMatch(enterpriseBlock, /amountUsd/);
+}
+
+// 27. formatPlanPrice never fabricates a number for 'custom' or 'unset'
+//     pricing — only 'fixed' pricing ever produces a dollar figure.
+assert.match(plansModule, /if \(pricing\.type === 'custom'\) return 'Custom pricing';/);
+assert.doesNotMatch(plansModule.match(/function formatPlanPrice[\s\S]*?\n\}/)?.[0] ?? '', /\$\{.*custom/);
+
+// 28. Provision Customer consumes this exact catalog — no second,
+//     duplicated plan/pricing definition inside the wizard or its page.
+assert.match(provisionPage, /import \{ commercialPlans, formatPlanPrice \} from '@\/lib\/plans'/);
+assert.match(provisionPage, /Object\.values\(commercialPlans\)\.map/);
+assert.doesNotMatch(wizard, /amountUsd: 999/);
+assert.doesNotMatch(wizard, /'Business'/); // display name comes from the plans prop, never a wizard-local literal
+
+// 29. Provision Customer still shows no ARR after adding real plan
+//     pricing — the earlier no-ARR regression coverage (assertion set 22)
+//     must still hold with the plan catalog wired in.
+assert.doesNotMatch(wizard, /estimateArr|formatArr\(/);
+
+// 30. Business's seat limit is enforced both client-side (the wizard) and
+//     server-side (provisionFounderCustomer never trusts the client) —
+//     sourced from the shared catalog, not a hardcoded 25 in two places.
+assert.match(wizard, /selectedPlan\?\.seatLimit != null && draft\.seats > selectedPlan\.seatLimit/);
+assert.match(founderService, /import \{ commercialPlans \} from '@\/lib\/plans'/);
+assert.match(founderService, /plan\.seatLimit != null && seats > plan\.seatLimit/);
+assert.doesNotMatch(founderService.match(/const plan = commercialPlans\[planTier\][\s\S]{0,300}/)?.[0] ?? '', /seatLimit: 25|> 25\b/);
+
+// 31. Feature Management does not define a second, competing plan/pricing
+//     catalog — it only ever dealt with founderFeatures (assertion set
+//     14), and still does.
+assert.doesNotMatch(featuresPage, /commercialPlans|amountUsd|999/);
+
+// 32. Founder Revenue's pipeline ARR (a separate, pre-existing, clearly
+//     "expected"/pipeline metric — see services/founder-pilots.ts's
+//     arrForPlan) never treats Enterprise's custom pricing as a real
+//     number, and Enterprise is not hardcoded to a fabricated dollar
+//     amount anywhere in that pipeline.
+assert.match(founderPilots, /expectedArr/);
+assert.doesNotMatch(revenuePage, /ENTERPRISE.{0,40}\$\d/s);
+
+// 33. The landing page — the commercial reference this task points to —
+//     sources its price, seat limit, and feature bullets from the same
+//     catalog rather than a second hardcoded pricing array.
+assert.match(landingPage, /import \{ commercialPlans, formatPlanPriceParts \} from '@\/lib\/plans'/);
+assert.match(landingPage, /commercialPlans\.STARTER\.marketingFeatures/);
+assert.match(landingPage, /commercialPlans\.ENTERPRISE\.marketingFeatures/);
+assert.doesNotMatch(landingPage, /price: '\$999'/); // no more locally-hardcoded price literal
+
+// 34. No schema/migration change: CustomerPlanTier keeps its existing four
+//     values untouched, so every existing customer's stored planTier
+//     remains valid — the new catalog only adds a display/commercial layer
+//     on top of the unchanged enum.
+assert.match(prismaSchemaSource, /enum CustomerPlanTier \{\s*FREE_TRIAL\s*STARTER\s*GROWTH\s*ENTERPRISE\s*\}/);
+
+console.log('Validated the authoritative commercial plan catalog (lib/plans.ts): Business ($999/month, 25 seats, 3 connected systems) and Enterprise (custom, contract-defined) are consistent across the landing page and Provision Customer, seat limits are enforced client- and server-side from one source, and no fabricated pricing or duplicate catalog exists anywhere.');
