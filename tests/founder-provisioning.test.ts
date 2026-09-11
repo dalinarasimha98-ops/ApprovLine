@@ -201,3 +201,30 @@ assert.match(provisionPage, /No customer was created\. Please retry or contact p
 assert.doesNotMatch(provisionPage, /Safe diagnostic: \$\{safeProvisionError\(error\)\}/);
 
 console.log('Validated Founder Console provisioning: authorization gates, duplicate-domain rejection, seat/admin validation, feature/integration configuration, audit events, transactional writes, idempotent replay, honest invitation status, single-source-of-truth feature catalog parity with Feature Management, Organization.onboardingCompletedSteps null-constraint regression coverage across every Organization creation call site, and a safe (non-leaking) Founder-facing failure message.');
+
+// 22. Provision Customer must never fabricate or display an ARR figure —
+//     no plan-tier-derived revenue estimate anywhere in the wizard, no
+//     duplicated copy of arrFromPlanTier, no "Estimated ARR" label, no
+//     currency-formatted output, and no leftover hardcoded 25000/25,000
+//     sample value from the removed card.
+assert.doesNotMatch(wizard, /estimateArr/);
+assert.doesNotMatch(wizard, /formatArr/);
+assert.doesNotMatch(wizard, /Estimated ARR/i);
+assert.doesNotMatch(wizard, /Plan-based estimate/i);
+assert.doesNotMatch(wizard, /₹/);
+assert.doesNotMatch(wizard, /25,?000/);
+
+// 23. Contract Start Date and Contract End Date remain — removing the ARR
+//     card must not have removed real, already-collected commercial
+//     fields along with it.
+assert.match(wizard, /Contract Start Date/);
+assert.match(wizard, /Contract End Date/);
+
+// 24. arrFromPlanTier itself is untouched and still serves its legitimate
+//     callers (the Founder customer list's pipeline ARR metric) — this
+//     task removes provisioning's *display* of a fabricated estimate, not
+//     the shared helper other Founder Revenue/pipeline features rely on.
+assert.match(founderService, /export function arrFromPlanTier/);
+assert.match(founderService, /expectedArr: arrFromPlanTier\(/);
+
+console.log('Validated Provision Customer displays no fabricated ARR while leaving arrFromPlanTier and its legitimate Founder Revenue/pipeline callers intact.');

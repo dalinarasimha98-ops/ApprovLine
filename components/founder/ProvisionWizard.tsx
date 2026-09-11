@@ -50,21 +50,6 @@ const DRAFT_KEY = 'approvline:founder:provision-draft:v1';
 const DOMAIN_PATTERN = /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Mirrors arrFromPlanTier() in services/founder.ts — kept in sync manually
-// since a 'use client' component cannot import a module that pulls in
-// server-only dependencies (Prisma, Clerk server SDK) for this one pure
-// formula. Display-only estimate; the server computes the same value again.
-function estimateArr(planTier: string, seats: number): number {
-  if (planTier === 'ENTERPRISE') return Math.max(25_000, seats * 1_200);
-  if (planTier === 'GROWTH') return Math.max(6_000, seats * 600);
-  if (planTier === 'STARTER') return Math.max(1_200, seats * 240);
-  return 0;
-}
-
-function formatArr(n: number) {
-  return `₹${n.toLocaleString('en-IN')}`;
-}
-
 type DraftState = {
   companyName: string;
   domain: string;
@@ -256,8 +241,6 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
       return { ...d, [key]: Array.from(current) };
     });
   };
-
-  const estArr = estimateArr(draft.planTier, draft.seats);
 
   // ─── Post-provision success screen ───────────────────────────────────────
   if (state.ok) {
@@ -461,11 +444,6 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
                   <input type="date" className={inputClass} value={draft.contractEndDate} onChange={(e) => set('contractEndDate', e.target.value)} />
                 </Field>
               </div>
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-700">Estimated ARR</p>
-                <p className="mt-1 text-2xl font-black text-blue-900">{formatArr(estArr)}</p>
-                <p className="mt-1 text-xs font-semibold text-blue-700">Plan-based estimate — updated with actual billing once configured. Not actual revenue.</p>
-              </div>
             </div>
           )}
 
@@ -566,7 +544,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
               </div>
               {[
                 { title: 'Company', stepIndex: 0, rows: [['Company', draft.companyName], ['Domain', draft.domain], ['Industry', draft.industry || '—'], ['Headquarters', draft.headquarters || '—']] },
-                { title: 'Plan & Commercial', stepIndex: 1, rows: [['Plan', PLAN_OPTIONS.find(([v]) => v === draft.planTier)?.[1] ?? draft.planTier], ['Billing type', draft.billingType === 'ANNUAL' ? 'Annual' : 'Monthly'], ['Contract start', draft.contractStartDate || '—'], ['Estimated ARR', formatArr(estArr)]] },
+                { title: 'Plan & Commercial', stepIndex: 1, rows: [['Plan', PLAN_OPTIONS.find(([v]) => v === draft.planTier)?.[1] ?? draft.planTier], ['Billing type', draft.billingType === 'ANNUAL' ? 'Annual' : 'Monthly'], ['Contract start', draft.contractStartDate || '—'], ['Contract end', draft.contractEndDate || '—']] },
                 { title: 'Seats', stepIndex: 2, rows: [['Seats', String(draft.seats)]] },
                 { title: 'Feature Access', stepIndex: 3, rows: [['Enabled', `${draft.enabledFeatures.length} of ${features.length} features`]] },
                 { title: 'Integration Access', stepIndex: 4, rows: [['Granted', `${draft.enabledIntegrations.length} of ${integrations.length} integrations`]] },
@@ -605,7 +583,7 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
             <div className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
               <div>
                 <p className="font-black text-slate-950">{PLAN_OPTIONS.find(([v]) => v === draft.planTier)?.[1]}</p>
-                <p className="text-xs font-semibold text-slate-400">{draft.billingType === 'ANNUAL' ? 'Annual billing' : 'Monthly billing'} · Est. {formatArr(estArr)}</p>
+                <p className="text-xs font-semibold text-slate-400">{draft.billingType === 'ANNUAL' ? 'Annual billing' : 'Monthly billing'}</p>
               </div>
               <button type="button" onClick={() => jumpToStep(1)} className="shrink-0 text-xs font-black text-[#2557dc]">Edit</button>
             </div>
