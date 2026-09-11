@@ -53,6 +53,8 @@ jobs:
         run: npm run test:go-live-readiness
       - name: Test — feature management
         run: npm run test:features
+      - name: Test — integration catalog
+        run: npm run test:integrations
       - name: Test — gateway entitlement enforcement
         run: npm run test:gateway-entitlement
       - name: Test — reliability hardening
