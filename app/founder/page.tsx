@@ -478,7 +478,13 @@ export default async function FounderHomePage() {
                 { href: '/founder/pilots', label: 'Pilot pipeline' },
                 { href: '/founder/audit', label: 'Audit logs' },
                 { href: '/founder/operations', label: 'System health' },
-                { href: '/founder/readiness', label: 'Go-live readiness' },
+                // Relabeled from "Go-live readiness": this links to the
+                // platform's own production/launch certification report
+                // (app/founder/readiness — "Founder Control Center v2"),
+                // a different subject from the new per-customer Go-Live
+                // Readiness console at /founder/go-live-readiness, which
+                // now owns that label in the primary sidebar.
+                { href: '/founder/readiness', label: 'Production readiness' },
               ] as const).map((action) => (
                 <Link
                   key={action.href}

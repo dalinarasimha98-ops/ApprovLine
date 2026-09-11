@@ -24,6 +24,7 @@
     "test:founder-provisioning": "node --import tsx tests/founder-provisioning.test.ts",
     "test:customer-health": "node --import tsx tests/founder-customer-health.test.ts",
     "test:onboarding-pipeline": "node --import tsx tests/founder-onboarding.test.ts",
+    "test:go-live-readiness": "node --import tsx tests/founder-go-live-readiness.test.ts",
     "test:reliability": "node --import tsx tests/reliability-hardening.test.ts",
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
     "test:rbac": "node --import tsx scripts/test-rbac.ts",

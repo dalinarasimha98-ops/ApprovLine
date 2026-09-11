@@ -36,7 +36,7 @@ const NAV: NavGroup[] = [
     label: 'Onboarding',
     items: [
       { label: 'Onboarding Pipeline', href: '/founder/onboarding' },
-      { label: 'Go-Live Readiness', href: '/founder/readiness' },
+      { label: 'Go-Live Readiness', href: '/founder/go-live-readiness' },
     ],
   },
   {

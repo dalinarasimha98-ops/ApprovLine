@@ -209,7 +209,7 @@ assert.match(service, /if \(blockers\.some\(\(b\) => b\.priority === 1\)\) retur
 //     a third, unrequested sidebar entry. It's removed here rather than
 //     renamed-and-kept or replaced with something else — /founder/pilots
 //     itself is untouched and still reachable from the Founder home page.
-assert.match(navClient, /\{ label: 'Onboarding Pipeline', href: '\/founder\/onboarding' \},\s*\n\s*\{ label: 'Go-Live Readiness', href: '\/founder\/readiness' \},/);
+assert.match(navClient, /\{ label: 'Onboarding Pipeline', href: '\/founder\/onboarding' \},\s*\n\s*\{ label: 'Go-Live Readiness', href: '\/founder\/go-live-readiness' \},/);
 assert.doesNotMatch(navClient, /Pilot Command Center/);
 assert.doesNotMatch(navClient, /label: 'Onboarding Pipeline', href: '\/founder\/pilots'/);
 
