@@ -188,3 +188,28 @@ assert.match(service, /connectionState === 'ERROR' \|\| i\.connectionState === '
 assert.match(founderService, /connectionState: \{ in: \['ERROR', 'NEEDS_REAUTH'\] \}/);
 
 console.log('Validated the Customer Health command center: authoritative CustomerHealth status/score reused with no second scoring engine, real-signal-derived (not fabricated) primary reasons with an honest fallback, batched no-N+1 queries, real AuditLog-based Last Activity (not updatedAt), per-organization tenant-scoped activity lookups, honest empty states, Customer 360 reuse for detail navigation, read-only-safe viewing with export gated to admins, no secrets exposed, and the old /founder/health route consolidated into this one canonical page.');
+
+// ─── Layout regression: wide tables must never force the page to overflow
+// horizontally underneath the fixed Founder sidebar ──────────────────────
+//
+// Bug: Tailwind's built-in grid-cols-N utilities already wrap each track in
+// minmax(0, 1fr), but a custom arbitrary grid-template value (grid-cols-[...])
+// is used exactly as written — a bare `1fr` track has no such safeguard, so
+// a grid item's default "automatic minimum size" (based on its content,
+// here the min-w-[820px]/min-w-[960px] tables) can force the whole track —
+// and the page — wider than the viewport. Since the Founder sidebar is
+// `fixed`, that horizontal overflow makes page content appear to slide out
+// from underneath it once the page scrolls right.
+
+// 23. The two-column grid's flexible track is written as minmax(0, 1fr),
+//     not a bare 1fr, so it can actually shrink to the viewport instead of
+//     growing to fit the wide tables inside it.
+assert.match(client, /xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
+assert.doesNotMatch(client, /xl:grid-cols-\[1fr_360px\]/);
+
+// 24. The grid item holding the wide, horizontally-scrollable tables has an
+//     explicit min-w-0, overriding the browser's default content-based
+//     automatic minimum size for grid items.
+assert.match(client, /<div className="min-w-0 space-y-6">/);
+
+console.log('Validated the Customer Health layout: the two-column grid track is minmax(0, 1fr) and its table-holding grid item has min-w-0, so wide tables scroll internally instead of forcing the whole page to overflow horizontally underneath the fixed Founder sidebar.');

@@ -61,8 +61,8 @@ export function CustomerHealthClient({ rows, attention, canExport }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-6">
           {/* Founder Attention */}
           <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 px-6 py-5">
@@ -227,7 +227,7 @@ export function CustomerHealthClient({ rows, attention, canExport }: Props) {
         </div>
 
         {/* Customer detail panel */}
-        <aside className="h-fit space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:sticky xl:top-6">
+        <aside className="h-fit min-w-0 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:sticky xl:top-6">
           {!selected ? (
             <p className="text-sm font-semibold text-slate-500">Select a customer to see health details.</p>
           ) : (
