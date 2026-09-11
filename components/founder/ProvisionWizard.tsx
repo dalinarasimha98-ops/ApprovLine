@@ -255,6 +255,21 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
   const readyToProvision = Object.keys(validation).length === 0 && !readOnly;
   const outstandingCount = Object.keys(validation).length;
 
+  // Reverse of stepErrorKeys (key -> the step that field lives on), so the
+  // final Provision panel can name exactly which outstanding item to fix and
+  // jump straight to it — a bare "N items need attention" count on the last
+  // step leaves the Founder no way to tell which field is wrong without
+  // manually re-clicking through every prior step.
+  const keyToStep: Record<string, number> = {};
+  for (const [stepIndexKey, keys] of Object.entries(stepErrorKeys)) {
+    for (const key of keys) keyToStep[key] = Number(stepIndexKey);
+  }
+  const outstandingItems = Object.entries(validation).map(([key, message]) => ({
+    key,
+    message,
+    stepIndex: keyToStep[key] ?? 0,
+  }));
+
   const goToStep = (index: number) => {
     if (index <= furthestStep) setStep(index);
   };
@@ -717,6 +732,21 @@ export function ProvisionWizard({ readOnly, accessSafeError, features, integrati
                 <p className={`text-xs font-black uppercase tracking-wide ${readyToProvision ? 'text-emerald-600' : 'text-amber-600'}`}>
                   {readyToProvision ? 'Ready to provision' : readOnly ? 'Read-only role — provisioning disabled' : `${outstandingCount} item${outstandingCount === 1 ? '' : 's'} need attention`}
                 </p>
+                {!readyToProvision && !readOnly ? (
+                  <ul className="grid gap-1 rounded-xl bg-amber-50 p-3">
+                    {outstandingItems.map((item) => (
+                      <li key={item.key}>
+                        <button
+                          type="button"
+                          onClick={() => jumpToStep(item.stepIndex)}
+                          className="text-left text-xs font-bold text-amber-800 underline decoration-amber-300 underline-offset-2 hover:text-amber-950"
+                        >
+                          {item.message}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
                 <div className="flex gap-2">
                   <button type="button" onClick={back} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-100">Back</button>
                   <button

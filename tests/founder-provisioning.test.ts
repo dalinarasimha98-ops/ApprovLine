@@ -579,3 +579,26 @@ assert.match(customerSuccessService, /Object\.values\(commercialPlans\)\s*\n\s*\
 assert.doesNotMatch(customerSuccessPage, /plan\.audience/);
 
 console.log('Validated the commercial plan naming audit: STARTER is confirmed a purely internal/legacy CustomerPlanTier enum identifier (never renamed, never exposed as a database value change) with exactly one authoritative display mapping (lib/plans.ts\'s planDisplayName/commercialPlans), and every surface that previously leaked the raw "STARTER"/"Starter" string or a separately fabricated stale plan list — the live customer app shell, the Founder home page, Plans & Billing, All Customers, Founder Pilots, Revenue, and the customer-facing Plan readiness upgrade widget — now renders "Business" consistently and sources pricing from the same $999/month catalog entry used by Provision Customer\'s Estimated ARR suggestion.');
+
+// ─── Provision step must name its outstanding items, not just count them ───
+// Regression: the final "8. Provision" panel showed a bare "N items need
+// attention" with no indication of which field(s), leaving the Founder no
+// way to fix it without manually re-clicking through every prior step.
+
+// 62. The Provision panel derives a reverse (field key -> step index) map
+//     from the existing stepErrorKeys table — never a second, separately
+//     maintained mapping that could drift from it — and lists every
+//     outstanding validation message as a clickable jump-to-step control.
+assert.match(wizard, /const keyToStep: Record<string, number> = \{\};/);
+assert.match(wizard, /for \(const \[stepIndexKey, keys\] of Object\.entries\(stepErrorKeys\)\)/);
+assert.match(wizard, /const outstandingItems = Object\.entries\(validation\)\.map/);
+assert.match(wizard, /onClick=\{\(\) => jumpToStep\(item\.stepIndex\)\}/);
+assert.match(wizard, /\{item\.message\}/);
+
+// 63. The outstanding-items list only renders when there is something to
+//     fix (never shown alongside "Ready to provision", and never for a
+//     read-only role where the message is about permissions, not a
+//     fixable field).
+assert.match(wizard, /\{!readyToProvision && !readOnly \? \(/);
+
+console.log('Validated the Provision step names every outstanding item (not just a bare count) and lets the Founder jump straight to the step that needs fixing.');
