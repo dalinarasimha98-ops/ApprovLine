@@ -47,6 +47,8 @@ jobs:
         run: npm run test:founder-provisioning
       - name: Test — customer health
         run: npm run test:customer-health
+      - name: Test — onboarding pipeline
+        run: npm run test:onboarding-pipeline
       - name: Test — reliability hardening
         run: npm run test:reliability
       - name: Test — tenant isolation

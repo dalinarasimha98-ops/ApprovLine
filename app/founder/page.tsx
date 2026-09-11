@@ -416,11 +416,18 @@ export default async function FounderHomePage() {
             )}
           </section>
 
-          {/* Onboarding pipeline */}
+          {/* Pilot pipeline — renamed from "Onboarding Pipeline": this widget
+              shows pilot-to-paid-conversion stage counts (Pilot Command
+              Center's own PILOT_STAGE_ORDER data, linking to /founder/pilots),
+              not the provisioning-to-Go-Live onboarding journey. Now that a
+              distinct Onboarding Pipeline page exists at /founder/onboarding,
+              keeping this widget's old label would show two unrelated
+              "Onboarding Pipeline" surfaces with different data. Label-only
+              change; the widget's data/link are untouched. */}
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Onboarding Pipeline</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Pilot Pipeline</p>
                 <p className="mt-0.5 text-base font-black text-slate-950">
                   {pilots?.metrics.totalPilots ?? 0} account{(pilots?.metrics.totalPilots ?? 0) !== 1 ? 's' : ''} tracked
                 </p>
