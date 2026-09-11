@@ -19,7 +19,7 @@ const NAV: NavGroup[] = [
     label: 'Command Center',
     items: [
       { label: 'Overview', href: '/founder', exact: true },
-      { label: 'Founder Attention', href: '/founder/health' },
+      { label: 'Founder Attention', href: '/founder/customer-health' },
     ],
   },
   {
@@ -27,7 +27,7 @@ const NAV: NavGroup[] = [
     label: 'Customers',
     items: [
       { label: 'All Customers', href: '/founder/customers' },
-      { label: 'Customer Health', href: '/founder/health' },
+      { label: 'Customer Health', href: '/founder/customer-health' },
       { label: 'Provision Customer', href: '/founder/provision' },
     ],
   },

@@ -444,7 +444,7 @@ export default async function FounderRevenuePage() {
           <p className="font-black text-slate-950">Task tracking is managed externally</p>
           <p className="mt-2 text-sm font-semibold text-slate-500">
             Use your team&apos;s project management tool (Linear, Notion, etc.) to track revenue and CS tasks. Customer health signals are available on the{' '}
-            <Link href="/founder/health" className="text-[#2557dc] hover:underline">Customer Health</Link> and{' '}
+            <Link href="/founder/customer-health" className="text-[#2557dc] hover:underline">Customer Health</Link> and{' '}
             <Link href="/founder/pilots" className="text-[#2557dc] hover:underline">Pilots</Link> pages.
           </p>
         </div>

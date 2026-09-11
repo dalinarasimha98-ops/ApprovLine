@@ -278,7 +278,7 @@ export default async function FounderHomePage() {
                 <p className="text-sm font-bold text-amber-900">{attentionItems.length} item{attentionItems.length > 1 ? 's' : ''} require your attention</p>
               </div>
             </div>
-            <Link href="/founder/health" className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-black text-white hover:bg-amber-700">
+            <Link href="/founder/customer-health" className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-black text-white hover:bg-amber-700">
               Review all →
             </Link>
           </div>
@@ -467,7 +467,7 @@ export default async function FounderHomePage() {
               </Link>
               {([
                 { href: '/founder/customers', label: 'Customer directory' },
-                { href: '/founder/health', label: 'Customer health' },
+                { href: '/founder/customer-health', label: 'Customer health' },
                 { href: '/founder/pilots', label: 'Pilot pipeline' },
                 { href: '/founder/audit', label: 'Audit logs' },
                 { href: '/founder/operations', label: 'System health' },

@@ -45,6 +45,8 @@ jobs:
         run: npm run test:founder
       - name: Test — founder provisioning
         run: npm run test:founder-provisioning
+      - name: Test — customer health
+        run: npm run test:customer-health
       - name: Test — reliability hardening
         run: npm run test:reliability
       - name: Test — tenant isolation
