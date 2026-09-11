@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { FounderBadge, FounderMetricCard, MigrationNotice } from '@/components/founder/FounderShell';
 import { getFounderAccess, updateCustomerSeats } from '@/services/founder';
 import { prisma } from '@/lib/prisma';
+import { planDisplayName } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,7 +122,7 @@ export default async function FounderBillingPage() {
                         <p className="mt-0.5 text-xs font-semibold text-slate-500">{customer.domain}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <FounderBadge tone={planTone(customer.planTier)}>{customer.planTier.replace('_', ' ')}</FounderBadge>
+                        <FounderBadge tone={planTone(customer.planTier)}>{planDisplayName(customer.planTier)}</FounderBadge>
                       </td>
                       <td className="px-5 py-4">
                         <FounderBadge tone={statusTone(customer.status)}>{customer.status}</FounderBadge>

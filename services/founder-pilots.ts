@@ -1,6 +1,7 @@
 import type { CustomerAccount, CustomerHealth, CustomerIntegrationStatus, CustomerSeatAllocation, FounderManagedUser } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
+import { planDisplayName } from '@/lib/plans';
 
 export type PilotStatus = 'Prospect' | 'Demo Scheduled' | 'Pilot Active' | 'Pilot At Risk' | 'Pilot Completed' | 'Converted' | 'Lost';
 export type PilotHealthLabel = 'Healthy' | 'Needs Attention' | 'At Risk' | 'Critical';
@@ -245,7 +246,7 @@ async function buildPilotFromCustomer(customer: CustomerWithFounderRelations): P
     integrationsConnected,
     expectedArr,
     probabilityToClose: probability,
-    planTier: customer.planTier.replace('_', ' '),
+    planTier: planDisplayName(customer.planTier),
     seats,
     successCriteria: criteria,
     adoptionMetrics: [
@@ -285,7 +286,7 @@ async function buildPilotFromCustomer(customer: CustomerWithFounderRelations): P
     conversion: {
       expectedSeats: seats,
       expectedRenewalDate: dateLabel(addDays(customer.createdAt, status === 'Converted' ? 365 : 60)),
-      packageTarget: customer.planTier === 'FREE_TRIAL' ? 'Growth' : customer.planTier.replace('_', ' '),
+      packageTarget: customer.planTier === 'FREE_TRIAL' ? 'Growth' : planDisplayName(customer.planTier),
       probabilityToClose: probability,
     },
   };

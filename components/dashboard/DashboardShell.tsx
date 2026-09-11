@@ -13,13 +13,7 @@ import {
 } from '@/components/dashboard/DashboardHeaderControls';
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-
-const PLAN_LABELS: Record<string, string> = {
-  FREE_TRIAL: 'Free Trial',
-  STARTER: 'Starter',
-  GROWTH: 'Growth',
-  ENTERPRISE: 'Enterprise',
-};
+import { planDisplayName } from '@/lib/plans';
 
 async function getWorkspacePlan(organizationId: string) {
   try {
@@ -32,7 +26,7 @@ async function getWorkspacePlan(organizationId: string) {
     });
     if (!account) return null;
     return {
-      planLabel: PLAN_LABELS[account.planTier] ?? account.planTier,
+      planLabel: planDisplayName(account.planTier),
       usedSeats: account.seatAllocation?.usedSeats ?? null,
       purchasedSeats: account.seatAllocation?.purchasedSeats ?? null,
     };

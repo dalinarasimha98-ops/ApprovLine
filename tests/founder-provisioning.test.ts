@@ -494,3 +494,88 @@ assert.match(founderService, /action: 'customer\.provision\.commercial_configure
 }
 
 console.log('Validated Founder-entered Estimated ARR: required client- and server-side with exact copy for empty/zero/negative/invalid input, a shared sane ceiling, Enterprise never auto-calculated, Business\'s suggestion derived at runtime from the authoritative $999/month price (never a hardcoded 11,988), the suggestion clearly labeled and freely editable, live Provisioning Summary and Review display, correct persistence into CustomerAccount.estimatedArrUsd, no path that ever promotes the estimate into actual/recognized revenue, Revenue/Billing pages and tenant isolation left untouched, and a dedicated commercial_configured audit event with no PII over-logging.');
+
+// ─── Commercial plan naming audit: STARTER is an internal legacy identifier
+// only — every surface that shows a plan name to a Founder or a real
+// customer must render it through lib/plans.ts, never the raw
+// CustomerPlanTier enum value or a second hardcoded label map ──────────────
+const dashboardShell = read('components/dashboard/DashboardShell.tsx');
+const customersTableClient = read('components/founder/CustomersTableClient.tsx');
+const founderHomePage = read('app/founder/page.tsx');
+const founderPilotsService = read('services/founder-pilots.ts');
+const customerSuccessService = read('services/customerSuccess.ts');
+const customerSuccessPage = read('app/dashboard/customer-success/page.tsx');
+const billingPageSource = read('app/founder/billing/page.tsx');
+const revenuePageSource = revenuePage; // already read above
+
+// 55. The real, live customer-facing app shell (components/dashboard/
+//     DashboardShell.tsx — rendered on every /dashboard, /approvals, etc.
+//     page for actual paying customers) no longer has its own separate
+//     PLAN_LABELS map with the literal 'Starter' — it sources the label
+//     from lib/plans.ts's planDisplayName, the same authoritative mapping
+//     used everywhere else.
+assert.doesNotMatch(dashboardShell, /PLAN_LABELS/);
+assert.doesNotMatch(dashboardShell, /STARTER:\s*'Starter'/);
+assert.match(dashboardShell, /import \{ planDisplayName \} from '@\/lib\/plans'/);
+assert.match(dashboardShell, /planLabel: planDisplayName\(account\.planTier\)/);
+
+// 56. The Founder Console home page's "Recent Customers" widget — the very
+//     first page a Founder sees — renders the plan name via
+//     planDisplayName, not a raw enum replace.
+assert.doesNotMatch(founderHomePage, /customer\.planTier\.replace/);
+assert.match(founderHomePage, /import \{ planDisplayName \} from '@\/lib\/plans'/);
+assert.match(founderHomePage, /\{planDisplayName\(customer\.planTier\)\}/);
+
+// 57. Founder Plans & Billing's "Plan and seat summary" table renders the
+//     plan name via planDisplayName, not a raw enum replace (this was the
+//     same bug already fixed on Customer 360 in an earlier task, but had
+//     been missed on Billing itself).
+assert.doesNotMatch(billingPageSource, /customer\.planTier\.replace/);
+assert.match(billingPageSource, /import \{ planDisplayName \} from '@\/lib\/plans'/);
+assert.match(billingPageSource, /\{planDisplayName\(customer\.planTier\)\}/);
+
+// 58. The All Customers list (CustomersTableClient.tsx) — its plan filter
+//     dropdown, its mobile card view, and its desktop table row all source
+//     the plan name/options from lib/plans.ts rather than a hardcoded
+//     '<option value="STARTER">Starter</option>' or a raw enum replace.
+assert.doesNotMatch(customersTableClient, /<option value="STARTER">Starter<\/option>/);
+assert.match(customersTableClient, /import \{ commercialPlans, planDisplayName \} from '@\/lib\/plans'/);
+assert.match(customersTableClient, /Object\.values\(commercialPlans\)\.map\(\(plan\) => \(\s*\n\s*<option key=\{plan\.tier\} value=\{plan\.tier\}>\{plan\.displayName\}<\/option>/);
+assert.doesNotMatch(customersTableClient, /customer\.planTier\.replace/);
+assert.match(customersTableClient, /\{ label: 'Plan', value: planDisplayName\(customer\.planTier\) \}/);
+assert.match(customersTableClient, /\{planDisplayName\(customer\.planTier\)\}/);
+
+// 59. Founder Pilots (the pipeline profile shown on /founder/pilots/[id],
+//     and its "target package" conversion metric) render the plan name via
+//     planDisplayName rather than a raw single-underscore replace — the
+//     FREE_TRIAL upsell-target special case ('Growth' as the suggested next
+//     package) is untouched, since that is a separate business decision,
+//     not a naming bug.
+assert.doesNotMatch(founderPilotsService, /customer\.planTier\.replace\(/);
+assert.match(founderPilotsService, /import \{ planDisplayName \} from '@\/lib\/plans'/);
+assert.match(founderPilotsService, /planTier: planDisplayName\(customer\.planTier\)/);
+assert.match(founderPilotsService, /packageTarget: customer\.planTier === 'FREE_TRIAL' \? 'Growth' : planDisplayName\(customer\.planTier\)/);
+
+// 60. Founder Revenue's "Commercial Management" table still buckets its
+//     Plan column by ARR thresholds (a pre-existing heuristic — PilotListItem
+//     carries no real planTier field, so this is a separate, larger design
+//     question this audit did not rebuild), but the label itself now says
+//     "Business" instead of the wrong "Starter" — consistent with every
+//     other page's naming.
+assert.doesNotMatch(revenuePageSource, /: 'Starter'\}<\/td>/);
+assert.match(revenuePageSource, /pilot\.expectedArr >= 25000 \? 'Enterprise' : pilot\.expectedArr >= 6000 \? 'Growth' : 'Business'/);
+
+// 61. The customer-facing "Plan readiness" upgrade widget on
+//     /dashboard/customer-success no longer offers a fabricated, stale
+//     four-tier catalog ("Starter $49/mo", "Growth $199/mo") that
+//     contradicted the real Business/Enterprise model — its plan list is
+//     now derived from lib/plans.ts's commercialPlans, filtered to the
+//     plans ApprovLine currently sells (publiclyOffered), so it always
+//     matches the landing page and Provision Customer.
+assert.doesNotMatch(customerSuccessService, /\$49\/mo|\$199\/mo/);
+assert.doesNotMatch(customerSuccessService, /name: 'Starter'/);
+assert.match(customerSuccessService, /import \{ commercialPlans, formatPlanPrice \} from '@\/lib\/plans'/);
+assert.match(customerSuccessService, /Object\.values\(commercialPlans\)\s*\n\s*\.filter\(\(plan\) => plan\.publiclyOffered\)/);
+assert.doesNotMatch(customerSuccessPage, /plan\.audience/);
+
+console.log('Validated the commercial plan naming audit: STARTER is confirmed a purely internal/legacy CustomerPlanTier enum identifier (never renamed, never exposed as a database value change) with exactly one authoritative display mapping (lib/plans.ts\'s planDisplayName/commercialPlans), and every surface that previously leaked the raw "STARTER"/"Starter" string or a separately fabricated stale plan list — the live customer app shell, the Founder home page, Plans & Billing, All Customers, Founder Pilots, Revenue, and the customer-facing Plan readiness upgrade widget — now renders "Business" consistently and sources pricing from the same $999/month catalog entry used by Provision Customer\'s Estimated ARR suggestion.');

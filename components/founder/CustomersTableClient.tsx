@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import type { CustomerRow } from '@/services/founder';
+import { commercialPlans, planDisplayName } from '@/lib/plans';
 
 // ── Health tone ───────────────────────────────────────────────────────────────
 function healthTone(status: string): { bg: string; text: string } {
@@ -119,7 +120,7 @@ function PreviewDrawer({
 
           <dl className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Plan', value: customer.planTier.replace(/_/g, ' ') },
+              { label: 'Plan', value: planDisplayName(customer.planTier) },
               { label: 'Health Score', value: `${customer.healthScore}/100` },
               { label: 'Seats', value: `${customer.activeSeats}/${customer.allocatedSeats}` },
               { label: 'Integrations', value: String(customer.integrationsConnected) },
@@ -234,10 +235,9 @@ export function FilterBar({
           className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
         >
           <option value="">Plan</option>
-          <option value="FREE_TRIAL">Free Trial</option>
-          <option value="STARTER">Starter</option>
-          <option value="GROWTH">Growth</option>
-          <option value="ENTERPRISE">Enterprise</option>
+          {Object.values(commercialPlans).map((plan) => (
+            <option key={plan.tier} value={plan.tier}>{plan.displayName}</option>
+          ))}
         </select>
 
         <select
@@ -319,7 +319,7 @@ export function CustomersTableClient({
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <Badge className="bg-slate-50 border-slate-200 text-slate-600">
-                      {customer.planTier.replace(/_/g, ' ')}
+                      {planDisplayName(customer.planTier)}
                     </Badge>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">

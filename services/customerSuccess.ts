@@ -1,37 +1,23 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
+import { commercialPlans, formatPlanPrice } from '@/lib/plans';
 
-const plans = [
-  {
-    name: 'Free Trial',
-    price: '$0',
-    audience: 'Pilot validation',
-    limits: '14 days, demo-ready workspace',
-    features: ['Core approvals', 'Slack/Gmail/Jira pilots', 'ROI preview'],
-  },
-  {
-    name: 'Starter',
-    price: '$49/mo',
-    audience: 'Small teams',
-    limits: '5 users, 2 integrations',
-    features: ['Approval history', 'CSV export', 'Basic health score'],
-  },
-  {
-    name: 'Growth',
-    price: '$199/mo',
-    audience: 'Scaling compliance teams',
-    limits: '25 users, 5 integrations',
-    features: ['Playbook AI', 'Investigations', 'Executive ROI reports'],
-  },
-  {
-    name: 'Enterprise',
-    price: 'Custom',
-    audience: 'Regulated organizations',
-    limits: 'Unlimited users, custom controls',
-    features: ['SSO placeholders', 'Security center', 'Retention controls'],
-  },
-] as const;
+// Sourced from the authoritative commercial catalog (lib/plans.ts), filtered
+// to the plans ApprovLine currently sells (publiclyOffered) — this used to be
+// a separately hardcoded, stale price list that no longer matched the real
+// commercial model shown on the landing page and in Provision Customer.
+const plans = Object.values(commercialPlans)
+  .filter((plan) => plan.publiclyOffered)
+  .map((plan) => ({
+    name: plan.displayName,
+    price: formatPlanPrice(plan.pricing),
+    limits:
+      plan.seatLimit != null && plan.connectedSystemLimit != null
+        ? `Up to ${plan.seatLimit} users · ${plan.connectedSystemLimit} connected systems`
+        : 'Contract-defined seats and connected systems',
+    features: plan.marketingFeatures,
+  }));
 
 type CustomerSuccessAction =
   | 'customer_success.feedback_submitted'

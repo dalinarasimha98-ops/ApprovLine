@@ -4,6 +4,7 @@ import { FounderBadge, MigrationNotice } from '@/components/founder/FounderShell
 import { buildFounderOverview, buildFounderOperationsCenter, getFounderAccess, listFounderAuditLogs } from '@/services/founder';
 import { buildFounderPilotCommandCenter } from '@/services/founder-pilots';
 import type { PilotStatus } from '@/services/founder-pilots';
+import { planDisplayName } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -361,7 +362,7 @@ export default async function FounderHomePage() {
                             <p className="mt-0.5 text-xs font-semibold text-slate-400">{customer.domain}</p>
                           </td>
                           <td className="px-5 py-3.5 font-bold text-slate-600">
-                            {customer.planTier.replace(/_/g, ' ')}
+                            {planDisplayName(customer.planTier)}
                           </td>
                           <td className="px-5 py-3.5">
                             <FounderBadge tone={statusTone(customer.status)}>{customer.status}</FounderBadge>

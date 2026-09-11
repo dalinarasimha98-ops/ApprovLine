@@ -188,10 +188,7 @@ export default async function CustomerSuccessPage({
               <form key={plan.name} action={choosePlan} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <input type="hidden" name="plan" value={plan.name} />
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-black text-slate-950">{plan.name}</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-500">{plan.audience}</p>
-                  </div>
+                  <p className="text-base font-black text-slate-950">{plan.name}</p>
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700 ring-1 ring-slate-200">{plan.price}</span>
                 </div>
                 <p className="mt-3 text-sm font-bold text-slate-700">{plan.limits}</p>

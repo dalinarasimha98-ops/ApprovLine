@@ -361,7 +361,12 @@ export default async function FounderRevenuePage() {
                 {pilots.slice(0, 7).map((pilot) => (
                   <tr key={pilot.id}>
                     <td className="py-4 pr-4 font-black text-slate-950">{pilot.companyName}</td>
-                    <td className="py-4 pr-4 font-bold text-slate-700">{pilot.expectedArr >= 25000 ? 'Enterprise' : pilot.expectedArr >= 6000 ? 'Growth' : 'Starter'}</td>
+                    {/* This is an ARR-bucket estimate, not the pilot's actual assigned
+                        plan (PilotListItem has no planTier field) — kept as-is, only the
+                        label is fixed to match the authoritative catalog's naming
+                        (STARTER's founder/customer-facing name is "Business", not
+                        "Starter" — see lib/plans.ts). */}
+                    <td className="py-4 pr-4 font-bold text-slate-700">{pilot.expectedArr >= 25000 ? 'Enterprise' : pilot.expectedArr >= 6000 ? 'Growth' : 'Business'}</td>
                     <td className="py-4 pr-4 font-bold text-slate-700">{Math.max(10, Math.round(pilot.expectedArr / 1200))}</td>
                     <td className="py-4 pr-4 font-bold text-slate-700">{pilot.probabilityToClose >= 70 ? '10%' : '0%'}</td>
                     <td className="py-4 pr-4 font-black text-slate-950">{dollars(pilot.expectedArr)}</td>
