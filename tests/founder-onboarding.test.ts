@@ -201,14 +201,16 @@ assert.match(service, /if \(blockers\.some\(\(b\) => b\.priority === 1\)\) retur
 // "two nav items, same label, different pages" breadcrumb bug already fixed
 // for Customer Health ─────────────────────────────────────────────────────
 
-// 23. The new Onboarding Pipeline nav item points at the new page, and the
-//     previously mislabeled nav item pointing at /founder/pilots (a
-//     pilot-to-paid-conversion tracker that identifies itself as "Pilot
-//     Command Center") is renamed to match its own real page identity
-//     instead of sharing the "Onboarding Pipeline" label with a different
-//     page.
-assert.match(navClient, /\{ label: 'Onboarding Pipeline', href: '\/founder\/onboarding' \}/);
-assert.match(navClient, /\{ label: 'Pilot Command Center', href: '\/founder\/pilots' \}/);
+// 23. The primary Founder sidebar's Onboarding group contains exactly the
+//     locked two items — Onboarding Pipeline (the new page) and Go-Live
+//     Readiness — with no "Pilot Command Center" entry re-added: a prior
+//     pass fixed the "Onboarding Pipeline" label collision by renaming the
+//     mislabeled /founder/pilots nav item in place, which accidentally left
+//     a third, unrequested sidebar entry. It's removed here rather than
+//     renamed-and-kept or replaced with something else — /founder/pilots
+//     itself is untouched and still reachable from the Founder home page.
+assert.match(navClient, /\{ label: 'Onboarding Pipeline', href: '\/founder\/onboarding' \},\s*\n\s*\{ label: 'Go-Live Readiness', href: '\/founder\/readiness' \},/);
+assert.doesNotMatch(navClient, /Pilot Command Center/);
 assert.doesNotMatch(navClient, /label: 'Onboarding Pipeline', href: '\/founder\/pilots'/);
 
 // 24. The Founder home page's own "Onboarding Pipeline" widget — which
@@ -220,4 +222,39 @@ assert.match(homePage, /Pilot Pipeline<\/p>/);
 assert.doesNotMatch(homePage, /Onboarding Pipeline<\/p>/);
 assert.match(homePage, /href="\/founder\/pilots"/);
 
-console.log('Validated the Onboarding Pipeline command center: the existing authoritative deriveProvisioningOnboardingStage reused with no second onboarding/scoring engine, real-signal-derived (not fabricated) blockers and stage timestamps, an honest ordinal progress percentage and "Not set" Target Go-Live (no field exists for it), batched no-N+1 queries, honest empty states, Customer 360/users-page reuse for detail navigation and real actions, read-only-safe viewing with export gated to admins, no secrets exposed, tables kept horizontally scrollable without whole-page overflow, and the pre-existing "Onboarding Pipeline" label collision (Pilot Command Center\'s nav item and the Founder home page widget) resolved instead of repeated.');
+// ─── Final refinement pass: Needs Attention semantics, verified actions ───
+
+// 25. "Waiting on Founder" / "Waiting on Customer" / "Technical blocker" is
+//     a presentation label on the SAME existing blocker (not a new status
+//     model, not a second onboarding/health engine): every blocker still
+//     carries its original reason/priority/action, and the label is
+//     computed deterministically alongside them in the same
+//     BLOCKER_ACTION_BY_PRIORITY table — never inferred separately.
+assert.match(pureLib, /export type OnboardingWaitingOn = 'FOUNDER' \| 'CUSTOMER' \| 'TECHNICAL';/);
+assert.match(pureLib, /FOUNDER: 'Waiting on Founder'/);
+assert.match(pureLib, /CUSTOMER: 'Waiting on Customer'/);
+assert.match(pureLib, /TECHNICAL: 'Technical blocker'/);
+assert.match(service, /waitingOn: 'TECHNICAL' \}/); // priority 1: integration error
+assert.match(service, /waitingOn: 'FOUNDER' \}/); // priority 3: admin not yet invited
+assert.doesNotMatch(service, /export type OnboardingStatus/); // no second status enum introduced
+assert.match(client, /ONBOARDING_WAITING_ON_LABELS\[top\.waitingOn\]/);
+assert.match(client, /ONBOARDING_WAITING_ON_LABELS\[blocker\.waitingOn\]/);
+
+// 26. Days in Stage still never uses CustomerAccount.updatedAt, and Go-Live
+//     (the one stage with no authoritative "went live at" timestamp) still
+//     renders "—" rather than a computed guess — unchanged by this pass.
+assert.doesNotMatch(service, /stageEnteredAt.*customer\.updatedAt/s);
+assert.doesNotMatch(client, /customer\.updatedAt/);
+assert.match(client, /if \(days === null\) return '—';/);
+
+// 27. No fake actions: every visible action is a real navigation Link (no
+//     <button> pretending to perform an in-place resend/invite), and the
+//     "resend invitation"/"invite admin" actions route to the existing
+//     users page where the real resend action lives — this page never
+//     claims an invitation was sent.
+assert.doesNotMatch(client, /<button/);
+assert.match(service, /2: \{ label: 'Resend invitation', linkToUsersPage: true, waitingOn: 'CUSTOMER' \}/); // priority 2 -> users page, not an in-place resend
+assert.doesNotMatch(service, /invitation (was |has been )?sent/i);
+assert.doesNotMatch(client, /invitation (was |has been )?sent/i);
+
+console.log('Validated the Onboarding Pipeline command center and its refinement pass: the existing authoritative deriveProvisioningOnboardingStage reused with no second onboarding/scoring engine, real-signal-derived (not fabricated) blockers, stage timestamps, and Waiting on Founder/Customer/Technical blocker labels (a presentation label on the same blocker, not a new status model), an honest ordinal progress percentage and "Not set" Target Go-Live (no field exists for it), batched no-N+1 queries, honest empty states, Customer 360/users-page reuse for detail navigation with no fake actions, read-only-safe viewing with export gated to admins, no secrets exposed, tables kept horizontally scrollable without whole-page overflow, and the primary Founder sidebar corrected to exactly Onboarding Pipeline + Go-Live Readiness with no accidental Pilot Command Center entry.');

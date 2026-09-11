@@ -16,3 +16,17 @@ export const ONBOARDING_BUCKET_LABELS: Record<OnboardingBucket, string> = {
   BLOCKED: 'Blocked',
   LIVE: 'Live',
 };
+
+// Who needs to act next on a given blocker — derived from the same real
+// fact that produced the blocker itself (an integration's connection
+// state, whether the Founder has sent an invite yet, whether the customer
+// has accepted/connected/approved anything), never a separate guess. Not a
+// new status model: it labels the existing blocker, it doesn't replace the
+// bucket or reason.
+export type OnboardingWaitingOn = 'FOUNDER' | 'CUSTOMER' | 'TECHNICAL';
+
+export const ONBOARDING_WAITING_ON_LABELS: Record<OnboardingWaitingOn, string> = {
+  FOUNDER: 'Waiting on Founder',
+  CUSTOMER: 'Waiting on Customer',
+  TECHNICAL: 'Technical blocker',
+};

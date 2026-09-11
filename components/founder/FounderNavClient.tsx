@@ -36,14 +36,6 @@ const NAV: NavGroup[] = [
     label: 'Onboarding',
     items: [
       { label: 'Onboarding Pipeline', href: '/founder/onboarding' },
-      // Previously mislabeled "Onboarding Pipeline" here too, even though
-      // /founder/pilots is its own page identifying itself as "Pilot
-      // Command Center" (a pilot-to-paid-conversion tracker, not the
-      // provisioning-to-Go-Live onboarding journey) — the same
-      // label/page-identity mismatch already fixed for Customer Health's
-      // breadcrumb. Renamed to match that page's real identity instead of
-      // creating a second nav item with the same label as this new route.
-      { label: 'Pilot Command Center', href: '/founder/pilots' },
       { label: 'Go-Live Readiness', href: '/founder/readiness' },
     ],
   },

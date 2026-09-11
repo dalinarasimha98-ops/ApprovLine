@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { planDisplayName } from '@/lib/plans';
-import { ONBOARDING_BUCKET_LABELS, type OnboardingBucket } from '@/lib/onboarding-pipeline';
+import { ONBOARDING_BUCKET_LABELS, ONBOARDING_WAITING_ON_LABELS, type OnboardingBucket, type OnboardingWaitingOn } from '@/lib/onboarding-pipeline';
 import type { OnboardingRow } from '@/services/founder-onboarding';
 
 type Props = {
@@ -36,6 +36,12 @@ function bucketTone(bucket: OnboardingBucket): { badge: string; dot: string; bar
 
 function initials(name: string): string {
   return name.trim().charAt(0).toUpperCase() || '?';
+}
+
+function waitingOnTone(waitingOn: OnboardingWaitingOn): string {
+  if (waitingOn === 'TECHNICAL') return 'text-rose-600';
+  if (waitingOn === 'FOUNDER') return 'text-amber-600';
+  return 'text-slate-500';
 }
 
 function daysInStageLabel(days: number | null): string {
@@ -124,7 +130,14 @@ export function OnboardingPipelineClient({ rows, needsAttention, canExport }: Pr
                               {ONBOARDING_BUCKET_LABELS[row.bucket]}
                             </span>
                           </td>
-                          <td className="px-6 py-4 font-bold text-slate-700">{top?.reason}</td>
+                          <td className="px-6 py-4">
+                            {top ? (
+                              <p className={`text-[10px] font-black uppercase tracking-wide ${waitingOnTone(top.waitingOn)}`}>
+                                {ONBOARDING_WAITING_ON_LABELS[top.waitingOn]}
+                              </p>
+                            ) : null}
+                            <p className="font-bold text-slate-700">{top?.reason}</p>
+                          </td>
                           <td className="px-6 py-4 font-bold text-slate-700">
                             <span className={row.bucket === 'BLOCKED' ? 'text-rose-600' : ''}>{daysInStageLabel(row.daysInStage)}</span>
                           </td>
@@ -257,7 +270,7 @@ export function OnboardingPipelineClient({ rows, needsAttention, canExport }: Pr
         </div>
 
         {/* Customer detail panel */}
-        <aside className="h-fit min-w-0 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm 2xl:sticky 2xl:top-6">
+        <aside className="h-fit min-w-0 space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm 2xl:sticky 2xl:top-6">
           {!selected ? (
             <p className="text-sm font-semibold text-slate-500">Select a customer to see onboarding details.</p>
           ) : (
@@ -291,11 +304,16 @@ export function OnboardingPipelineClient({ rows, needsAttention, canExport }: Pr
               {selected.blockers.length > 0 ? (
                 <div>
                   <p className="text-xs font-black uppercase tracking-wide text-slate-500">Blocking Issue</p>
-                  <ul className="mt-2 space-y-1.5">
+                  <ul className="mt-2.5 space-y-2">
                     {selected.blockers.map((blocker) => (
                       <li key={blocker.priority} className="flex items-start gap-2 text-sm font-semibold text-slate-700">
                         <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-400" />
-                        {blocker.reason}
+                        <span>
+                          <span className={`block text-[10px] font-black uppercase tracking-wide ${waitingOnTone(blocker.waitingOn)}`}>
+                            {ONBOARDING_WAITING_ON_LABELS[blocker.waitingOn]}
+                          </span>
+                          {blocker.reason}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -304,7 +322,7 @@ export function OnboardingPipelineClient({ rows, needsAttention, canExport }: Pr
 
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-slate-500">Onboarding Progress</p>
-                <ul className="mt-2 space-y-1.5">
+                <ul className="mt-2.5 space-y-2">
                   {STAGE_SEQUENCE.map((step) => {
                     const done = STAGE_INDEX[selected.stage] >= STAGE_INDEX[step.stage];
                     return (
@@ -321,7 +339,7 @@ export function OnboardingPipelineClient({ rows, needsAttention, canExport }: Pr
 
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-slate-500">Key Information</p>
-                <dl className="mt-2 space-y-2">
+                <dl className="mt-2.5 space-y-2.5">
                   {[
                     ['Days in Current Stage', daysInStageLabel(selected.daysInStage)],
                     ['Target Go-Live', 'Not set'],
@@ -339,7 +357,7 @@ export function OnboardingPipelineClient({ rows, needsAttention, canExport }: Pr
 
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-slate-500">Recommended Actions</p>
-                <div className="mt-2 space-y-2">
+                <div className="mt-2.5 space-y-2">
                   {selected.blockers.length > 0 ? (
                     selected.blockers.map((blocker) => (
                       <Link
@@ -365,7 +383,7 @@ export function OnboardingPipelineClient({ rows, needsAttention, canExport }: Pr
 
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-slate-500">Quick Links</p>
-                <div className="mt-2 space-y-1.5">
+                <div className="mt-2.5 space-y-2">
                   <Link href={`/founder/customers/${selected.id}`} className="flex items-center justify-between text-sm font-bold text-[#2557dc] hover:text-blue-700">
                     Open Customer 360 <span>→</span>
                   </Link>

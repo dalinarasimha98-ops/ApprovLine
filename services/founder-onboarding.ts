@@ -11,10 +11,10 @@
 import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
 import { deriveProvisioningOnboardingStage } from '@/services/founder';
-import { ONBOARDING_BUCKET_LABELS, type OnboardingBucket } from '@/lib/onboarding-pipeline';
+import { ONBOARDING_BUCKET_LABELS, ONBOARDING_WAITING_ON_LABELS, type OnboardingBucket, type OnboardingWaitingOn } from '@/lib/onboarding-pipeline';
 
-export { ONBOARDING_BUCKET_LABELS };
-export type { OnboardingBucket };
+export { ONBOARDING_BUCKET_LABELS, ONBOARDING_WAITING_ON_LABELS };
+export type { OnboardingBucket, OnboardingWaitingOn };
 
 export type OnboardingStage = ReturnType<typeof deriveProvisioningOnboardingStage>;
 
@@ -112,14 +112,25 @@ export type OnboardingBlocker = {
   // Customer 360 — so these two blockers link there instead of fabricating
   // an in-place email-send action.
   linkToUsersPage?: boolean;
+  // Who needs to act next — see lib/onboarding-pipeline.ts's doc comment.
+  // A presentation label on the existing blocker, not a second status model.
+  waitingOn: OnboardingWaitingOn;
 };
 
-const BLOCKER_ACTION_BY_PRIORITY: Record<OnboardingBlockerPriority, { label: string; tab?: string; linkToUsersPage?: boolean }> = {
-  1: { label: 'Review integration', tab: 'integrations' },
-  2: { label: 'Resend invitation', linkToUsersPage: true },
-  3: { label: 'Invite admin', linkToUsersPage: true },
-  4: { label: 'Review integrations', tab: 'integrations' },
-  5: { label: 'Follow up with customer' },
+const BLOCKER_ACTION_BY_PRIORITY: Record<OnboardingBlockerPriority, { label: string; tab?: string; linkToUsersPage?: boolean; waitingOn: OnboardingWaitingOn }> = {
+  // A broken integration is a real system fact, not something either party
+  // is "waiting" on in the invite/accept sense.
+  1: { label: 'Review integration', tab: 'integrations', waitingOn: 'TECHNICAL' },
+  // The Founder already sent the invite; the customer's admin hasn't
+  // accepted it yet.
+  2: { label: 'Resend invitation', linkToUsersPage: true, waitingOn: 'CUSTOMER' },
+  // Nobody has been invited yet — that's the Founder's own outstanding step.
+  3: { label: 'Invite admin', linkToUsersPage: true, waitingOn: 'FOUNDER' },
+  // The admin is in; connecting an integration is the customer's own step.
+  4: { label: 'Review integrations', tab: 'integrations', waitingOn: 'CUSTOMER' },
+  // Integrations are connected; generating an approval is the customer's
+  // own usage of the product.
+  5: { label: 'Follow up with customer', waitingOn: 'CUSTOMER' },
 };
 
 /**
@@ -146,6 +157,14 @@ const BLOCKER_ACTION_BY_PRIORITY: Record<OnboardingBlockerPriority, { label: str
  * "Health requires review"-style fallback — when the customer has a real
  * onboarding condition that doesn't match any of the above; the row simply
  * doesn't appear in Needs Attention.
+ *
+ * Each blocker also carries a "waitingOn" label (Waiting on Founder /
+ * Waiting on Customer / Technical blocker) — see BLOCKER_ACTION_BY_PRIORITY.
+ * This is not a new status model: it's a deterministic label on the same
+ * real fact that already produced the blocker (whether the Founder has
+ * sent an invite yet, whether the customer has accepted/connected/approved
+ * anything, or a genuine integration failure), computed alongside the
+ * reason/action — never a separate guess or a second source of truth.
  */
 function deriveBlockers(input: {
   stage: OnboardingStage;
@@ -160,7 +179,7 @@ function deriveBlockers(input: {
   const blockers: OnboardingBlocker[] = [];
   const push = (priority: OnboardingBlockerPriority, reason: string) => {
     const action = BLOCKER_ACTION_BY_PRIORITY[priority];
-    blockers.push({ reason, priority, action: action.label, tab: action.tab, linkToUsersPage: action.linkToUsersPage });
+    blockers.push({ reason, priority, action: action.label, tab: action.tab, linkToUsersPage: action.linkToUsersPage, waitingOn: action.waitingOn });
   };
 
   if (input.integrationErrors > 0) {
@@ -323,7 +342,7 @@ export async function buildOnboardingPipeline(): Promise<SafeResult<OnboardingPi
 export function onboardingPipelineCsv(rows: OnboardingRow[]): string {
   const header = [
     'Company', 'Domain', 'Stage', 'Current Step', 'Progress %', 'Days in Stage', 'Target Go-Live',
-    'Integrations Connected', 'Integration Errors', 'Approvals Processed', 'Blocking Issue', 'Next Action',
+    'Integrations Connected', 'Integration Errors', 'Approvals Processed', 'Blocking Issue', 'Waiting On', 'Next Action',
   ];
   const lines = rows.map((row) => {
     const top = row.blockers[0];
@@ -339,6 +358,7 @@ export function onboardingPipelineCsv(rows: OnboardingRow[]): string {
       row.integrationErrors,
       row.approvalsProcessed,
       top?.reason ?? '',
+      top ? ONBOARDING_WAITING_ON_LABELS[top.waitingOn] : '',
       top?.action ?? '',
     ].map(csvCell).join(',');
   });
