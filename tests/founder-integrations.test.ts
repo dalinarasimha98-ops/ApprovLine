@@ -24,6 +24,7 @@ const prismaSchema = read('prisma/schema.prisma');
 const navClient = read('components/founder/FounderNavClient.tsx');
 const seedFile = read('prisma/seeds/integration-providers.ts');
 const customerProvidersRoute = read('app/api/integrations/providers/route.ts');
+const founderServiceFull = read('services/founder.ts');
 
 // ─── Architecture: reuse the existing 6-model registry, no duplicates ──────
 
@@ -59,11 +60,80 @@ for (const value of ['PENDING', 'UNDER_REVIEW', 'PLANNED', 'IN_DEVELOPMENT', 'AV
 }
 
 // 4. Legacy CustomerIntegrationStatus system (used by Go-Live Readiness /
-//    Onboarding Pipeline) is preserved functionally intact, not deleted or
-//    silently replaced.
+//    Provision Customer) is preserved functionally intact, not deleted or
+//    silently replaced — but is no longer rendered as a second, competing
+//    provider catalog (see the "no competing catalog UI" block below).
 assert.match(page, /founderIntegrationCatalog/);
 assert.match(page, /updateCustomerIntegrationAccess/);
-assert.match(page, /Legacy: Connector Access Gates/);
+assert.match(page, /Go-Live Readiness Legacy Access \(compatibility\)/);
+
+// ─── Regression: MarketplaceProvider is the ONE authoritative provider
+// registry — self-heals an empty production table, never falls back to a
+// hardcoded/legacy provider list, and no second provider grid competes
+// with it visually (the exact bug this correction pass fixes) ────────────
+
+// 4b. Root cause, proven from source: the MarketplaceProvider seed
+//     (idempotent upsert-by-unique-slug) exists but is never invoked from
+//     any automatic deploy/build/migrate path — only manual CLI execution.
+//     This is why a real deployment can have the schema (migration applied)
+//     but zero MarketplaceProvider rows while the unrelated, hardcoded
+//     founderIntegrationCatalog legacy list still renders real cards.
+const prismaSeedTs = read('prisma/seed.ts');
+const packageJson = read('package.json');
+assert.doesNotMatch(prismaSeedTs, /seedIntegrationProviders/);
+assert.doesNotMatch(packageJson, /seedIntegrationProviders/);
+assert.match(seedFile, /export async function seedIntegrationProviders\(client: MarketplaceProviderClient\)/);
+// Idempotent: looked up by the unique slug before deciding create vs
+// update — running it twice can never create a duplicate row.
+assert.match(seedFile, /const existing = await client\.marketplaceProvider\.findUnique\(\{ where: \{ slug: provider\.slug \} \}\);/);
+
+// 4c. The self-heal is the one, memoized (per-process), count-gated
+//     bootstrap — mirroring services/founder.ts's ensureFounderStorage()
+//     idiom exactly (check once, fix only if actually needed, reset the
+//     cached promise on failure so a later request can retry) — never a
+//     second ad hoc seeding mechanism, and never re-run on every request
+//     once the table is genuinely populated.
+assert.match(service, /let marketplaceSeedPromise: Promise<void> \| null = null;/);
+assert.match(service, /async function ensureMarketplaceProvidersSeeded\(\): Promise<void> \{/);
+assert.match(service, /const existingCount = await prisma\.marketplaceProvider\.count\(\);/);
+assert.match(service, /if \(existingCount > 0\) return;/);
+assert.match(service, /await seedIntegrationProviders\(prisma\);/);
+assert.match(service, /marketplaceSeedPromise = null;\s*\n\s*throw error;/);
+assert.match(service, /await ensureMarketplaceProvidersSeeded\(\);/);
+// It reuses the app's shared Prisma singleton, never a second connection.
+assert.match(service, /import \{ seedIntegrationProviders \} from '@\/prisma\/seeds\/integration-providers';/);
+assert.doesNotMatch(service, /new PrismaClient\(/);
+
+// 4d. No UI seed/initialize button was added anywhere — this is a
+//     transparent data-integrity fix on read, not a Founder-triggered
+//     runtime action.
+for (const file of [page, client]) {
+  assert.doesNotMatch(file, /Seed Providers|Initialize Catalog|Create Providers/i);
+}
+
+// 4e. The legacy compatibility section can no longer visually read as a
+//     second provider catalog: it is collapsed by default (<details>, not
+//     an always-open grid of provider cards) and rendered as a single
+//     compact table, not per-provider cards with logos.
+assert.match(page, /<details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">/);
+assert.doesNotMatch(page, /grid gap-4 md:grid-cols-2 xl:grid-cols-3/); // the old card-grid layout is gone
+assert.match(page, /<table className="w-full min-w-\[640px\] text-left text-sm">/);
+
+// 4f. The legacy section's own copy explicitly distinguishes it from the
+//     Provider Catalog / TenantProviderAccess above it — the exact
+//     documentation the correction pass requires before keeping any
+//     "genuinely different, still required" control.
+assert.match(page, /Not the provider catalog above\./);
+assert.match(page, /TenantProviderAccess/);
+
+// 4g. updateCustomerIntegrationAccess (the legacy mutator) still only
+//     writes CustomerIntegrationStatus — it was not silently repointed at
+//     TenantProviderAccess (which would create a third, inconsistent
+//     access mechanism) and still audits via the one canonical helper.
+const legacyUpdateFn = founderServiceFull.match(/export async function updateCustomerIntegrationAccess\([\s\S]*?\n\}\n/)?.[0] ?? '';
+assert.match(legacyUpdateFn, /prisma\.customerIntegrationStatus\.upsert\(/);
+assert.doesNotMatch(legacyUpdateFn, /prisma\.tenantProviderAccess\./);
+assert.match(legacyUpdateFn, /await logFounderAction\(\{/);
 
 // ─── Security: no client-supplied actor identity (the explicit CRITICAL fix) ─
 
@@ -330,4 +400,4 @@ assert.doesNotMatch(navClient, /Coming Soon/);
 //     scope per the spec.
 assert.match(customerProvidersRoute, /informational/i);
 
-console.log('Validated Founder Integration Catalog: reuses the exact existing MarketplaceProvider/TenantProviderAccess/IntegrationRequest/Integration/CustomerIntegrationStatus/FounderAuditLog architecture with no duplicate models or audit systems, removes client-trusted actor identity from enableProviderForTenant/disableProviderForTenant in favor of server-derived getFounderAccess().email, validates organization/provider/request existence and provider lifecycle before every mutation, audits every mutation with before/after state via the one canonical logFounderAction helper, keeps Customer Availability and Connection State honestly distinct (including an UNKNOWN state for the ~21 marketplace providers with no trackable Integration row), computes every KPI from real batched (N+1-free) queries, preserves the legacy Connector Access Gates section, exposes no credentials, and ships an accessible, non-dead-button, honestly-empty-stated catalog and request UI with working search/filters/pagination and a mandated confirmation dialog for dangerous lifecycle transitions.');
+console.log('Validated Founder Integration Catalog: reuses the exact existing MarketplaceProvider/TenantProviderAccess/IntegrationRequest/Integration/CustomerIntegrationStatus/FounderAuditLog architecture with no duplicate models or audit systems, removes client-trusted actor identity from enableProviderForTenant/disableProviderForTenant in favor of server-derived getFounderAccess().email, validates organization/provider/request existence and provider lifecycle before every mutation, audits every mutation with before/after state via the one canonical logFounderAction helper, keeps Customer Availability and Connection State honestly distinct (including an UNKNOWN state for the ~21 marketplace providers with no trackable Integration row), computes every KPI from real batched (N+1-free) queries, exposes no credentials, and ships an accessible, non-dead-button, honestly-empty-stated catalog and request UI with working search/filters/pagination and a mandated confirmation dialog for dangerous lifecycle transitions. Correction pass: proved from source that the MarketplaceProvider seed was never wired into any automatic deploy/build/migrate path (the real root cause of an empty catalog next to real legacy connector cards), added a self-healing, memoized, count-gated bootstrap mirroring ensureFounderStorage\'s exact idiom (reusing the one idempotent seed against the shared Prisma singleton, no UI seed button, no second seeding mechanism), and turned the still-required legacy CustomerIntegrationStatus compatibility control from an always-open competing provider-card grid into a collapsed, clearly-labeled, table-based compatibility section that documents exactly how it differs from TenantProviderAccess and cannot be mistaken for a second catalog.');

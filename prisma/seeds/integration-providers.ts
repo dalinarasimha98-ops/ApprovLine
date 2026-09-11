@@ -2,8 +2,12 @@
  * Integration Marketplace Provider Registry Seed
  *
  * Seeds the MarketplaceProvider table with known integration providers.
- * Run via: npx tsx prisma/seeds/integration-providers.ts
- * Or call seedIntegrationProviders() from prisma/seed.ts
+ * Run standalone via: npx tsx prisma/seeds/integration-providers.ts
+ * Or call seedIntegrationProviders(client) with an existing PrismaClient —
+ * this is how services/founder-integrations.ts self-heals a production
+ * database where this seed was never run (see ensureMarketplaceProvidersSeeded),
+ * reusing the app's shared @/lib/prisma singleton rather than opening a
+ * second connection pool.
  *
  * Providers marked isNative: true have working OAuth / webhook connectors.
  * Providers marked isNative: false require custom connector work per provider.
@@ -11,7 +15,11 @@
 
 import { PrismaClient, Prisma } from '@prisma/client';
 
-const prisma = new PrismaClient();
+// A structural subset of PrismaClient — accepts either a fresh standalone
+// client (CLI usage below) or the app's shared singleton (@/lib/prisma),
+// without importing the singleton itself and risking a circular import with
+// services/founder-integrations.ts.
+type MarketplaceProviderClient = { marketplaceProvider: PrismaClient['marketplaceProvider'] };
 
 type ProviderSeed = {
   slug: string;
@@ -339,15 +347,15 @@ const providers: ProviderSeed[] = [
   },
 ];
 
-export async function seedIntegrationProviders() {
+export async function seedIntegrationProviders(client: MarketplaceProviderClient) {
   console.log('[seed] Seeding integration marketplace providers...');
   let created = 0;
   let updated = 0;
 
   for (const provider of providers) {
-    const existing = await prisma.marketplaceProvider.findUnique({ where: { slug: provider.slug } });
+    const existing = await client.marketplaceProvider.findUnique({ where: { slug: provider.slug } });
     if (existing) {
-      await prisma.marketplaceProvider.update({
+      await client.marketplaceProvider.update({
         where: { slug: provider.slug },
         data: {
           displayName: provider.displayName,
@@ -362,7 +370,7 @@ export async function seedIntegrationProviders() {
       });
       updated += 1;
     } else {
-      await prisma.marketplaceProvider.create({
+      await client.marketplaceProvider.create({
         data: {
           slug: provider.slug,
           displayName: provider.displayName,
@@ -384,7 +392,8 @@ export async function seedIntegrationProviders() {
 
 // Allow direct execution: npx tsx prisma/seeds/integration-providers.ts
 if (require.main === module) {
-  seedIntegrationProviders()
+  const cliClient = new PrismaClient();
+  seedIntegrationProviders(cliClient)
     .catch(console.error)
-    .finally(() => prisma.$disconnect());
+    .finally(() => cliClient.$disconnect());
 }

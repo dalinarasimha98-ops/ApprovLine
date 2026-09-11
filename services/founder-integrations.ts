@@ -14,12 +14,41 @@
 // services/founder.ts's logFounderAction (the one canonical audit writer).
 import { prisma } from '@/lib/prisma';
 import type { IntegrationProvider } from '@prisma/client';
+import { seedIntegrationProviders } from '@/prisma/seeds/integration-providers';
 import {
   type CustomerAvailability,
   type CustomerConnectionState,
 } from '@/lib/founder-integrations';
 
 type SafeResult<T> = { data: T; migrationRequired: boolean; safeError?: string };
+
+// Self-healing bootstrap for the MarketplaceProvider registry, mirroring the
+// exact memoized-promise idiom services/founder.ts's ensureFounderStorage()
+// already uses for other founder tables: check once per warm process, fix
+// only if actually needed, and let a failed attempt retry on the next call
+// rather than caching a permanent failure. This is NOT a second seed
+// mechanism — it calls the one authoritative, idempotent (upsert-by-unique-
+// slug) prisma/seeds/integration-providers.ts seed against the app's shared
+// Prisma singleton, so a production database where that seed migration was
+// applied but the data seed itself was never run (the root cause of an
+// empty catalog with a populated legacy connector list) self-heals the
+// first time any Founder loads the Integration Catalog, with no "Seed
+// Providers" button anywhere in the UI.
+let marketplaceSeedPromise: Promise<void> | null = null;
+
+async function ensureMarketplaceProvidersSeeded(): Promise<void> {
+  if (!marketplaceSeedPromise) {
+    marketplaceSeedPromise = (async () => {
+      const existingCount = await prisma.marketplaceProvider.count();
+      if (existingCount > 0) return;
+      await seedIntegrationProviders(prisma);
+    })().catch((error) => {
+      marketplaceSeedPromise = null;
+      throw error;
+    });
+  }
+  return marketplaceSeedPromise;
+}
 
 function safeError(error: unknown) {
   if (error instanceof Error) return error.message.replace(/\s+/g, ' ').slice(0, 320);
@@ -166,6 +195,8 @@ function extractCapabilities(capabilities: unknown): string[] {
  */
 export async function buildIntegrationCatalogPortfolio(): Promise<SafeResult<IntegrationCatalogPortfolio>> {
   try {
+    await ensureMarketplaceProvidersSeeded();
+
     const [providers, tenantAccess, requests, customers, mappableIntegrations, providerAuditLogs] = await Promise.all([
       prisma.marketplaceProvider.findMany({ orderBy: [{ sortOrder: 'asc' }, { displayName: 'asc' }] }),
       prisma.tenantProviderAccess.findMany({
