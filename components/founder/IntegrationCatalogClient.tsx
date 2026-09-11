@@ -298,12 +298,12 @@ export function IntegrationCatalogClient({
                     <th className="px-6 py-3">Capabilities</th>
                     <th className="px-6 py-3">Customer Access</th>
                     <th className="px-6 py-3">Requests</th>
-                    <th className="px-6 py-3"></th>
+                    <th className="sticky right-0 w-32 border-l border-slate-100 bg-white px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredProviders.map((provider) => (
-                    <tr key={provider.slug} className="transition hover:bg-slate-50">
+                    <tr key={provider.slug} className="group transition hover:bg-slate-50">
                       <td className="px-6 py-4">
                         <div className="flex items-start gap-3">
                           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-blue-100 bg-blue-50 text-xs font-black text-[#2557dc]">
@@ -340,11 +340,11 @@ export function IntegrationCatalogClient({
                       </td>
                       <td className="px-6 py-4 font-bold text-slate-700">{provider.customerAccessCount}</td>
                       <td className="px-6 py-4 font-bold text-slate-700">{provider.requestCount}</td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="sticky right-0 w-32 whitespace-nowrap border-l border-slate-100 bg-white px-4 py-4 text-right group-hover:bg-slate-50">
                         <button
                           type="button"
                           onClick={() => openDrawer(provider.slug)}
-                          className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50"
+                          className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100"
                         >
                           View Details →
                         </button>

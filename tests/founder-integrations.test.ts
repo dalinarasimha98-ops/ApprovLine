@@ -389,6 +389,22 @@ assert.match(client, /No lifecycle changes recorded for this provider yet\./);
 assert.match(client, /className="fixed inset-0 z-50"/);
 assert.equal((client.match(/overflow-x-auto/g) ?? []).length >= 2, true);
 
+// 33b. The page's root establishes the same bounded-intrinsic-width grid
+//      boundary Customer Health already proved necessary (a wide min-w-[…px]
+//      table can otherwise grow the frozen FounderNavClient <main> flex item
+//      past the viewport) — fixed entirely within this page's own file, the
+//      frozen FounderShell/FounderNavClient files are untouched.
+assert.match(page, /className="grid min-w-0 grid-cols-1 gap-8"/);
+assert.doesNotMatch(page, /^import.*FounderNavClient/m); // the frozen shell is not imported/modified by this fix
+
+// 33c. The provider table's Action column is sticky (right-0) with its own
+//      opaque background, so "View Details" stays fully visible and
+//      clickable regardless of horizontal scroll position — never clipped
+//      at the edge of the content area — and carries a real header label
+//      for accessibility (not a bare, unlabeled trailing column).
+assert.match(client, /<th className="sticky right-0 w-32 border-l border-slate-100 bg-white px-4 py-3 text-right">Action<\/th>/);
+assert.match(client, /<td className="sticky right-0 w-32 whitespace-nowrap border-l border-slate-100 bg-white px-4 py-4 text-right group-hover:bg-slate-50">/);
+
 // ─── Regression: locked/adjacent surfaces untouched ────────────────────────
 
 // 34. The locked Founder sidebar/nav is untouched by this task.

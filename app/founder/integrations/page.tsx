@@ -61,8 +61,16 @@ export default async function FounderIntegrationsPage() {
   ]);
   const data = portfolioResult.data;
 
+  // grid grid-cols-1 (Tailwind's default minmax(0,1fr) track) + min-w-0
+  // establishes the same bounded-intrinsic-width boundary Customer Health
+  // already uses (components/founder/CustomerHealthClient.tsx's
+  // grid-cols-[minmax(0,1fr)_360px] + min-w-0) — without it, a wide
+  // min-w-[…px] table anywhere below can grow this page's <main> flex item
+  // (the frozen components/founder/FounderNavClient.tsx, not edited here)
+  // past the viewport, causing real page-level horizontal overflow instead
+  // of the intended internal overflow-x-auto scroll on each table wrapper.
   return (
-    <div className="space-y-8">
+    <div className="grid min-w-0 grid-cols-1 gap-8">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
