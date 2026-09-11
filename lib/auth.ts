@@ -211,6 +211,10 @@ export async function getCurrentTenant() {
         slug: orgId ?? `personal-${session.userId}`,
         departments: [],
         approvalCategories: [],
+        // NOT NULL with no DB default (see migration
+        // 20260812025358_rbac_verified) — must be set explicitly, same as
+        // departments/approvalCategories above.
+        onboardingCompletedSteps: [],
       },
     });
     console.info(`[tenant] organization upsert finished in ${Date.now() - startedAt}ms`);

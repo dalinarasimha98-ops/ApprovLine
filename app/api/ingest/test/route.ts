@@ -24,6 +24,9 @@ async function getDemoOrganization() {
     create: {
       name: slug === 'public-demo' ? 'Public Demo' : slug,
       slug,
+      departments: [],
+      approvalCategories: [],
+      onboardingCompletedSteps: [],
     },
   });
 }

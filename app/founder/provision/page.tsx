@@ -48,11 +48,17 @@ async function provisionAction(_prevState: ProvisionActionState, formData: FormD
       adminInviteLink: founderInviteLink(customer.primaryAdminEmail),
     };
   } catch (error) {
-    console.error('[founder] customer provisioning failed', error);
+    // Full diagnostic goes to server logs and (inside provisionFounderCustomer's
+    // own catch) the customer.provision.failed audit event — never to the
+    // browser. Only FounderProvisioningError carries a message written for
+    // Founder eyes (validation/duplicate-domain copy); any other error is a
+    // raw Prisma/DB failure and must not leak internals like table/column
+    // names, SQL, or stack traces into the UI.
+    console.error('[founder] customer provisioning failed', safeProvisionError(error));
     if (error instanceof FounderProvisioningError) {
       return { error: error.message, errorCode: error.code };
     }
-    return { error: `Customer provisioning could not complete. Safe diagnostic: ${safeProvisionError(error)}`, errorCode: 'UNKNOWN' };
+    return { error: 'Customer provisioning could not be completed. No customer was created. Please retry or contact platform support.', errorCode: 'UNKNOWN' };
   }
 }
 

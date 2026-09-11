@@ -536,6 +536,7 @@ export async function generateFounderDemoWorkspace(access: FounderAccess, indust
       slug: organizationSlug,
       departments,
       approvalCategories: categories,
+      onboardingCompletedSteps: [],
       onboardedAt: new Date(),
     },
   });

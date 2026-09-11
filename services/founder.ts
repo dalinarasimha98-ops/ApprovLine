@@ -1135,6 +1135,13 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
           slug,
           departments: ['Finance', 'Legal', 'Procurement', 'Compliance'],
           approvalCategories: ['Finance', 'Procurement', 'Legal', 'Security', 'Compliance'],
+          // Organization.onboardingCompletedSteps is String[] NOT NULL with
+          // no DB-level default (dropped in migration
+          // 20260812025358_rbac_verified alongside departments/
+          // approvalCategories' defaults) — it must be initialized
+          // explicitly on create, exactly like those two fields above, or
+          // Postgres rejects the insert with a null constraint violation.
+          onboardingCompletedSteps: [],
           onboardedAt: new Date(),
         },
       });

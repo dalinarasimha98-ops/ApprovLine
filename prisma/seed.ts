@@ -23,6 +23,7 @@ async function main() {
       slug: 'public-demo',
       departments: ['Finance', 'Legal', 'Procurement', 'Engineering'],
       approvalCategories: ['Finance', 'Legal', 'Procurement', 'Engineering', 'Security', 'Compliance'],
+      onboardingCompletedSteps: [],
     },
   });
 

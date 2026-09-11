@@ -81,6 +81,7 @@ export async function getGatewayOrganization(slug = 'public-demo') {
       slug,
       departments: [],
       approvalCategories: [],
+      onboardingCompletedSteps: [],
       onboardedAt: new Date(),
     },
   });

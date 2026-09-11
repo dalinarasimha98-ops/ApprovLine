@@ -59,6 +59,9 @@ async function resolveStorageOrganization(organizationId?: string) {
     create: {
       name: 'Public Demo',
       slug: 'public-demo',
+      departments: [],
+      approvalCategories: [],
+      onboardingCompletedSteps: [],
     },
   });
   return organization.id;
