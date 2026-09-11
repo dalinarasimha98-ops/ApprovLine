@@ -37,7 +37,13 @@ function initials(name: string): string {
 }
 
 function lastActivityLabel(row: CustomerHealthRow): string {
-  if (row.lastActivityDays === null) return 'No activity recorded';
+  if (row.lastActivityDays === null) {
+    // A customer that hasn't reached Go-Live yet is expected to have no
+    // activity — "Not yet active" is truthful. An account that HAS gone
+    // live with zero recorded activity is a real gap worth flagging as
+    // "No activity recorded". Never derived from CustomerAccount.updatedAt.
+    return row.onboardingStage === 'Go-Live' ? 'No activity recorded' : 'Not yet active';
+  }
   if (row.lastActivityDays === 0) return 'Today';
   if (row.lastActivityDays === 1) return '1 day ago';
   return `${row.lastActivityDays} days ago`;
@@ -61,7 +67,12 @@ export function CustomerHealthClient({ rows, attention, canExport }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      {/* Split into two columns only at 2xl+: the detail panel's fixed 360px
+          was eating into the table's available width at xl (1280px), which
+          made the All Customers table feel clipped even with its own
+          overflow-x-auto. Below 2xl the panel stacks under the table full-width,
+          leaving the table its own row's full width for the horizontal scroller. */}
+      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
           {/* Founder Attention */}
           <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -227,7 +238,7 @@ export function CustomerHealthClient({ rows, attention, canExport }: Props) {
         </div>
 
         {/* Customer detail panel */}
-        <aside className="h-fit min-w-0 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:sticky xl:top-6">
+        <aside className="h-fit min-w-0 space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm 2xl:sticky 2xl:top-6">
           {!selected ? (
             <p className="text-sm font-semibold text-slate-500">Select a customer to see health details.</p>
           ) : (

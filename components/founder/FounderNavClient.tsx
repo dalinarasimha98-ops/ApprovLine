@@ -117,7 +117,21 @@ function findFirstActiveKey(pathname: string): string {
   return '';
 }
 
+// Route → canonical page title for the header breadcrumb, independent of
+// findFirstActiveKey's first-match-wins sidebar-highlighting order. Some
+// routes are pointed at by more than one differently-labeled nav item (e.g.
+// /founder/customer-health is "Founder Attention" under Command Center and
+// "Customer Health" under Customers); the breadcrumb must always name the
+// page's own identity rather than whichever nav item happens to be listed
+// first. This does not change which sidebar item highlights as active.
+const PAGE_TITLES: Record<string, string> = {
+  '/founder/customer-health': 'Customer Health',
+};
+
 function getPageTitle(pathname: string): string {
+  for (const [href, title] of Object.entries(PAGE_TITLES)) {
+    if (pathname === href || pathname.startsWith(href + '/')) return title;
+  }
   for (const group of NAV) {
     for (const item of group.items) {
       if (item.href && isItemActive(item, pathname)) return item.label;

@@ -204,8 +204,8 @@ console.log('Validated the Customer Health command center: authoritative Custome
 // 23. The two-column grid's flexible track is written as minmax(0, 1fr),
 //     not a bare 1fr, so it can actually shrink to the viewport instead of
 //     growing to fit the wide tables inside it.
-assert.match(client, /xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
-assert.doesNotMatch(client, /xl:grid-cols-\[1fr_360px\]/);
+assert.match(client, /grid-cols-\[minmax\(0,1fr\)_360px\]/);
+assert.doesNotMatch(client, /grid-cols-\[1fr_360px\]/);
 
 // 24. The grid item holding the wide, horizontally-scrollable tables has an
 //     explicit min-w-0, overriding the browser's default content-based
@@ -213,3 +213,77 @@ assert.doesNotMatch(client, /xl:grid-cols-\[1fr_360px\]/);
 assert.match(client, /<div className="min-w-0 space-y-6">/);
 
 console.log('Validated the Customer Health layout: the two-column grid track is minmax(0, 1fr) and its table-holding grid item has min-w-0, so wide tables scroll internally instead of forcing the whole page to overflow horizontally underneath the fixed Founder sidebar.');
+
+// ─── Final UX + health semantics refinement pass ────────────────────────────
+
+// 25. Breadcrumb correctness: the header breadcrumb names this page's own
+//     identity ("Customer Health") via an explicit route→title map, rather
+//     than reusing findFirstActiveKey's first-match-wins sidebar-highlight
+//     order (which would otherwise surface "Founder Attention" — the first
+//     nav item pointing at this same route — as the page title). The
+//     in-page "Founder Attention" section itself is untouched.
+assert.match(navClient, /const PAGE_TITLES: Record<string, string> = \{\s*\n\s*'\/founder\/customer-health': 'Customer Health',/);
+assert.match(navClient, /for \(const \[href, title\] of Object\.entries\(PAGE_TITLES\)\)/);
+assert.match(client, /Founder Attention<\/p>/);
+
+// 26. Table horizontal usability: the two-column split only kicks in at 2xl
+//     (not xl), so the detail panel's fixed 360px column no longer eats into
+//     the All Customers/Founder Attention tables' available width at
+//     common laptop widths — while each table keeps its own overflow-x-auto
+//     scroller and every column (never overflow-x-hidden, never a removed
+//     column, never a shrunk-to-illegibility font).
+assert.match(client, /2xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
+assert.match(client, /2xl:sticky 2xl:top-6/);
+assert.doesNotMatch(client, /overflow-x-hidden/);
+// "Actions" itself is rendered as an untitled trailing <th> holding each
+// row's action link, not a literal "Actions" header — so it's verified by
+// presence of the action link/href rather than a header string match.
+for (const column of ['Customer', 'Health', 'Adoption', 'Integrations', 'Approvals', 'Onboarding', 'Last Activity']) {
+  assert.match(client, new RegExp(`<th className="px-6 py-3">${column}`));
+}
+assert.match(client, /Open →/);
+assert.doesNotMatch(client, /text-\[9px\]|text-\[8px\]/); // no excessively shrunk table text introduced to fake more room
+
+// 27. CustomerHealth remains the sole authoritative status/score source even
+//     after this refinement pass — no parallel scoring system (CustomerHealthV2,
+//     FounderHealthScore, CustomerSuccessScore, ActivationScore) was introduced,
+//     and the new priority-0 "never activated" signal never writes to or
+//     recomputes healthStatus/healthScore.
+for (const forbidden of ['CustomerHealthV2', 'FounderHealthScore', 'CustomerSuccessScore', 'ActivationScore']) {
+  assert.doesNotMatch(service, new RegExp(forbidden));
+  assert.doesNotMatch(client, new RegExp(forbidden));
+}
+assert.match(service, /healthStatus,\s*\n\s*healthScore,/);
+
+// 28. New-customer health semantics: a customer that hasn't reached Go-Live
+//     and has no recorded activity is a distinct ("never activated") signal
+//     category from real inactivity, reusing the existing onboarding stage
+//     rather than inventing new vocabulary — and its reason is truthful,
+//     stage-specific text, never a fabricated "Low adoption caused Critical"
+//     explanation for a brand-new account.
+assert.match(service, /const neverActivated = input\.onboardingStage !== 'Go-Live' && input\.lastActivityDays === null/);
+assert.match(service, /function activationReason\(stage: OnboardingStage\): string/);
+assert.match(service, /if \(stage === 'Provisioned'\) return 'Not yet activated'/);
+assert.match(service, /if \(stage === 'Admin Invited'\) return 'Admin invitation pending'/);
+assert.match(service, /return 'Onboarding in progress'/);
+assert.doesNotMatch(service, /Low adoption caused Critical/);
+
+// 29. Primary-reason truthfulness + deterministic Founder Attention
+//     prioritization: priority 0 ("never activated") is capped at Medium
+//     severity and is explicitly exempted from the CRITICAL-status-floors-
+//     to-High rule, so a brand-new zero-usage customer can never automatically
+//     outrank an established customer with a real High-severity problem
+//     (e.g. an integration error). Signals are sorted by severity before
+//     signals[0] is used as "the" reason/severity, so a genuine High-severity
+//     signal always leads even if a lower-severity one was derived first.
+assert.match(service, /if \(priority === 0\) return SEVERITY_BY_PRIORITY\[0\]/);
+assert.match(service, /0: 'Medium'/);
+assert.match(service, /severityRank\[a\.severity\] - severityRank\[b\.severity\]/);
+
+// 30. Recommended actions for a never-activated customer point at onboarding
+//     follow-up / Customer 360, never an action implying an existing usage
+//     regression (e.g. "Schedule success call" for a customer with no usage
+//     history to review).
+assert.match(service, /0: \{ label: 'Follow up on onboarding', tab: 'onboarding' \}/);
+
+console.log('Validated the final UX + health semantics refinement pass: breadcrumb names the page\'s own identity, the All Customers/Founder Attention tables keep every column and their own horizontal scroller at common laptop widths, CustomerHealth remains the sole authoritative status/score source with no parallel scoring system, never-activated customers get truthful onboarding-stage-derived reasons instead of a fabricated usage-regression explanation, and Founder Attention prioritization is deterministic and severity-sorted so a real operational problem always outranks a brand-new zero-usage account.');
