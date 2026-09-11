@@ -107,6 +107,15 @@ export const commercialPlans: Record<CustomerPlanTier, CommercialPlan> = {
   },
 };
 
+/**
+ * Founder-facing plan name for a raw planTier string, falling back to a
+ * humanized version of the enum key for any value not in the catalog
+ * (defensive only — every current CustomerPlanTier value is covered).
+ */
+export function planDisplayName(tier: string): string {
+  return (commercialPlans as Record<string, CommercialPlan>)[tier]?.displayName ?? tier.replace(/_/g, ' ');
+}
+
 export function formatPlanPrice(pricing: PlanPricing): string {
   if (pricing.type === 'fixed') return `$${pricing.amountUsd.toLocaleString('en-US')}/${pricing.cadence}`;
   if (pricing.type === 'custom') return 'Custom pricing';

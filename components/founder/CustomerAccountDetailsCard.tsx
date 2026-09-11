@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useState } from 'react';
+import { commercialPlans, planDisplayName } from '@/lib/plans';
 import { FounderBadge } from './FounderShell';
 
 export type CustomerAccountDetailsActionState = {
@@ -30,12 +31,10 @@ type CustomerAccountDetailsCardProps = {
   saveAction: (state: CustomerAccountDetailsActionState, formData: FormData) => Promise<CustomerAccountDetailsActionState>;
 };
 
-const planOptions = [
-  ['FREE_TRIAL', 'Free Trial'],
-  ['STARTER', 'Starter'],
-  ['GROWTH', 'Growth'],
-  ['ENTERPRISE', 'Enterprise'],
-];
+// Sourced from lib/plans.ts, the same authoritative catalog Provision
+// Customer and the landing page use — no second, locally-hardcoded set of
+// plan labels.
+const planOptions = Object.values(commercialPlans).map((plan) => [plan.tier, plan.displayName]);
 
 const statusOptions = [
   ['TRIAL', 'Trial'],
@@ -131,7 +130,7 @@ export function CustomerAccountDetailsCard({ customer, canEdit, saveAction }: Cu
     ['Company Name', customer.companyName],
     ['Company Domain', customer.domain],
     ['Industry', customer.industry],
-    ['Plan', customer.planTier.replace('_', ' ')],
+    ['Plan', planDisplayName(customer.planTier)],
     ['Status', customer.status],
     ['Seat Limit', customer.seatLimit],
     ['Data Retention Period', `${customer.dataRetentionDays} days`],

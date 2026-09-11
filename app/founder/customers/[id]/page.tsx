@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { CustomerAccountDetailsCard, type CustomerAccountDetailsActionState } from '@/components/founder/CustomerAccountDetailsCard';
 import { FounderBadge, MigrationNotice } from '@/components/founder/FounderShell';
 import { TabNav, TABS, type TabId } from '@/components/founder/Customer360Tabs';
+import { planDisplayName } from '@/lib/plans';
 import {
   addCustomerNote,
   deleteCustomerNote,
@@ -302,7 +303,7 @@ export default async function FounderCustomerProfilePage({
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <FounderBadge tone={statusTone(customer.status)}>{customer.status}</FounderBadge>
-                  <FounderBadge tone="blue">{customer.planTier.replaceAll('_', ' ')}</FounderBadge>
+                  <FounderBadge tone="blue">{planDisplayName(customer.planTier)}</FounderBadge>
                   <FounderBadge tone={healthTone(healthStatus)}>{healthStatus.replaceAll('_', ' ')}</FounderBadge>
                   <FounderBadge tone="slate">{lifecycle}</FounderBadge>
                 </div>
@@ -314,7 +315,7 @@ export default async function FounderCustomerProfilePage({
               <MetricPill label="Health" value={`${healthScore}/100`} sub={healthStatus.replaceAll('_', ' ')} />
               <MetricPill label="Seats" value={`${activeUsers}/${purchasedSeats}`} sub={`${availableSeats} available`} />
               <MetricPill label="Integrations" value={connectedIntegrations} sub="Connected" />
-              <MetricPill label="Est. ARR" value={fmtMoney(estimatedArr)} sub={customer.planTier.replaceAll('_', ' ')} />
+              <MetricPill label="Est. ARR" value={fmtMoney(estimatedArr)} sub={planDisplayName(customer.planTier)} />
             </div>
           </div>
         </div>
@@ -337,7 +338,7 @@ export default async function FounderCustomerProfilePage({
                   <SectionHead label="Account Snapshot" />
                   <InfoRow label="Status" value={<FounderBadge tone={statusTone(customer.status)}>{customer.status}</FounderBadge>} />
                   <InfoRow label="Lifecycle" value={lifecycle} />
-                  <InfoRow label="Plan" value={customer.planTier.replaceAll('_', ' ')} />
+                  <InfoRow label="Plan" value={planDisplayName(customer.planTier)} />
                   <InfoRow label="Seats" value={`${activeUsers} active · ${purchasedSeats} purchased`} />
                   <InfoRow label="Integrations" value={`${connectedIntegrations} connected`} />
                   <InfoRow label="Est. ARR" value={fmtMoney(estimatedArr)} />
@@ -654,7 +655,7 @@ export default async function FounderCustomerProfilePage({
             <>
               <Card>
                 <SectionHead label="Commercial" />
-                <InfoRow label="Plan" value={customer.planTier.replaceAll('_', ' ')} />
+                <InfoRow label="Plan" value={planDisplayName(customer.planTier)} />
                 <InfoRow label="Seats purchased" value={purchasedSeats} />
                 <InfoRow label="Active seats" value={activeUsers} />
                 <InfoRow label="Est. ARR" value={fmtMoney(estimatedArr)} />
@@ -934,7 +935,7 @@ export default async function FounderCustomerProfilePage({
             <div className="space-y-2 text-sm">
               <div className="flex justify-between gap-2">
                 <span className="font-semibold text-slate-500">Plan</span>
-                <span className="font-black text-slate-800 text-right">{customer.planTier.replaceAll('_', ' ')}</span>
+                <span className="font-black text-slate-800 text-right">{planDisplayName(customer.planTier)}</span>
               </div>
               <div className="flex justify-between gap-2">
                 <span className="font-semibold text-slate-500">Seats</span>

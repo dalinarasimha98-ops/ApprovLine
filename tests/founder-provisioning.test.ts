@@ -310,3 +310,16 @@ assert.doesNotMatch(landingPage, /price: '\$999'/); // no more locally-hardcoded
 assert.match(prismaSchemaSource, /enum CustomerPlanTier \{\s*FREE_TRIAL\s*STARTER\s*GROWTH\s*ENTERPRISE\s*\}/);
 
 console.log('Validated the authoritative commercial plan catalog (lib/plans.ts): Business ($999/month, 25 seats, 3 connected systems) and Enterprise (custom, contract-defined) are consistent across the landing page and Provision Customer, seat limits are enforced client- and server-side from one source, and no fabricated pricing or duplicate catalog exists anywhere.');
+
+// 35. Customer 360 now displays "Business" for STARTER too, sourced from
+//     the same lib/plans.ts catalog — no separate hardcoded label, and the
+//     underlying stored enum value (still 'STARTER') is untouched.
+const customer360Page = read('app/founder/customers/[id]/page.tsx');
+const accountDetailsCard = read('components/founder/CustomerAccountDetailsCard.tsx');
+assert.match(customer360Page, /import \{ planDisplayName \} from '@\/lib\/plans'/);
+assert.doesNotMatch(customer360Page, /customer\.planTier\.replaceAll\('_', ' '\)/);
+assert.match(accountDetailsCard, /import \{ commercialPlans, planDisplayName \} from '@\/lib\/plans'/);
+assert.match(accountDetailsCard, /Object\.values\(commercialPlans\)\.map\(\(plan\) => \[plan\.tier, plan\.displayName\]\)/);
+assert.doesNotMatch(accountDetailsCard, /\['STARTER', 'Starter'\]/);
+
+console.log('Validated Customer 360 (page and CustomerAccountDetailsCard) displays plan names from lib/plans.ts, so "Business" is shown consistently everywhere a Founder sees a customer\'s plan.');
