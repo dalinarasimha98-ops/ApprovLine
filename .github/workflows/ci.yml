@@ -51,6 +51,8 @@ jobs:
         run: npm run test:onboarding-pipeline
       - name: Test — go-live readiness
         run: npm run test:go-live-readiness
+      - name: Test — feature management
+        run: npm run test:features
       - name: Test — reliability hardening
         run: npm run test:reliability
       - name: Test — tenant isolation

@@ -1636,20 +1636,82 @@ export async function updateFounderCustomerUser(access: Extract<FounderAccess, {
   await logFounderAction({ access, customerAccountId, action: auditAction, targetType: 'FounderManagedUser', targetId: userId, metadata: { email: user.email, role: user.role } });
 }
 
+// Every field here is re-validated server-side against real data — never
+// trusting a client-supplied customerAccountId, feature key, or the caller's
+// own claimed access level. `access` itself is only ever constructed by
+// getFounderAccess() inside a 'use server' action; nothing here accepts it
+// from a client payload.
 export async function updateCustomerFeatureFlag(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
   if (access.readOnly) throw new Error('Support admins cannot update feature flags.');
   await ensureFounderStorage();
-  const customerAccountId = String(formData.get('customerAccountId') ?? '');
-  const key = String(formData.get('key') ?? '');
+  const customerAccountId = String(formData.get('customerAccountId') ?? '').trim();
+  const key = String(formData.get('key') ?? '').trim();
   const enabled = formData.get('enabled') === 'on';
   const feature = founderFeatures.find((item) => item.key === key);
-  if (!customerAccountId || !feature) throw new Error('Customer and feature are required.');
+  if (!feature) throw new Error('Unknown feature key.');
+  if (!customerAccountId) throw new Error('Customer is required.');
+
+  // Confirms the id is a real, existing customer before writing anything —
+  // never just "non-empty string" — and gives logFounderAction a real
+  // company name for its metadata rather than trusting the id alone.
+  const customer = await prisma.customerAccount.findUnique({ where: { id: customerAccountId }, select: { id: true, companyName: true } });
+  if (!customer) throw new Error('Customer not found.');
+
+  // Read the prior override (if any) before writing, so the audit trail
+  // records a real previous -> new transition instead of only the new value.
+  const previous = await prisma.customerFeatureFlag.findUnique({
+    where: { customerAccountId_key: { customerAccountId, key } },
+    select: { enabled: true },
+  });
+
   await prisma.customerFeatureFlag.upsert({
     where: { customerAccountId_key: { customerAccountId, key } },
     update: { enabled, category: feature.category, updatedBy: access.email },
     create: { customerAccountId, key, enabled, category: feature.category, updatedBy: access.email },
   });
-  await logFounderAction({ access, customerAccountId, action: 'customer.feature_flag.updated', targetType: 'CustomerFeatureFlag', targetId: key, metadata: { enabled } });
+  await logFounderAction({
+    access,
+    customerAccountId,
+    action: 'customer.feature_flag.updated',
+    targetType: 'CustomerFeatureFlag',
+    targetId: key,
+    metadata: { key, companyName: customer.companyName, previousEnabled: previous?.enabled ?? null, newEnabled: enabled, hadPriorOverride: !!previous },
+  });
+}
+
+// Removes a Founder override entirely — the customer reverts to pure plan
+// entitlement (or the catalog's own defaultEnabled for a Founder-controlled,
+// non-entitlement key), which CustomerFeatureFlag already represents
+// natively as "no row for this customer+key" (no schema change needed: the
+// absence of a row IS the "no override" state resolveEntitlement already
+// checks for via `account.featureFlags[0]`).
+export async function resetCustomerFeatureOverride(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
+  if (access.readOnly) throw new Error('Support admins cannot update feature flags.');
+  await ensureFounderStorage();
+  const customerAccountId = String(formData.get('customerAccountId') ?? '').trim();
+  const key = String(formData.get('key') ?? '').trim();
+  const feature = founderFeatures.find((item) => item.key === key);
+  if (!feature) throw new Error('Unknown feature key.');
+  if (!customerAccountId) throw new Error('Customer is required.');
+
+  const customer = await prisma.customerAccount.findUnique({ where: { id: customerAccountId }, select: { id: true, companyName: true } });
+  if (!customer) throw new Error('Customer not found.');
+
+  const previous = await prisma.customerFeatureFlag.findUnique({
+    where: { customerAccountId_key: { customerAccountId, key } },
+    select: { enabled: true },
+  });
+  if (!previous) return; // already has no override — nothing to reset, no-op
+
+  await prisma.customerFeatureFlag.delete({ where: { customerAccountId_key: { customerAccountId, key } } });
+  await logFounderAction({
+    access,
+    customerAccountId,
+    action: 'customer.feature_flag.reset',
+    targetType: 'CustomerFeatureFlag',
+    targetId: key,
+    metadata: { key, companyName: customer.companyName, previousEnabled: previous.enabled, newEnabled: null },
+  });
 }
 
 export async function updateCustomerIntegrationAccess(access: Extract<FounderAccess, { ok: true }>, formData: FormData) {
