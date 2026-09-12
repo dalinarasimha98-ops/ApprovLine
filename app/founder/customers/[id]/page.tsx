@@ -92,13 +92,6 @@ async function saveAccountDetails(_state: CustomerAccountDetailsActionState, for
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function calcArr(planTier: string, seats: number): number {
-  if (planTier === 'ENTERPRISE') return Math.max(25_000, seats * 1_200);
-  if (planTier === 'GROWTH') return Math.max(6_000, seats * 600);
-  if (planTier === 'STARTER') return Math.max(1_200, seats * 240);
-  return 0;
-}
-
 function lifecycleLabel(status: string, planTier: string, healthScore: number): string {
   if (status === 'CHURNED') return 'Lost';
   if (status === 'ACTIVE' && planTier !== 'FREE_TRIAL') return 'Converted';
@@ -128,6 +121,16 @@ function fmtMoney(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n}`;
+}
+
+/**
+ * estimatedArrUsd is Founder-entered at provisioning (see ProvisionWizard /
+ * services/founder.ts) and nullable — customers provisioned before that
+ * field existed have no value. Render "Not set" rather than fabricating a
+ * number from plan/seats.
+ */
+function fmtArr(estimatedArrUsd: number | null): string {
+  return estimatedArrUsd != null ? fmtMoney(estimatedArrUsd) : 'Not set';
 }
 
 function fmtDate(d: Date | null | undefined): string {
@@ -259,7 +262,7 @@ export default async function FounderCustomerProfilePage({
   const healthScore = customer.health?.score ?? 50;
   const healthStatus = customer.health?.status ?? 'NEEDS_ATTENTION';
   const connectedIntegrations = customer.integrationStatuses.filter((i) => i.connectionState === 'CONNECTED').length;
-  const estimatedArr = calcArr(customer.planTier, purchasedSeats);
+  const estimatedArr = customer.estimatedArrUsd;
   const lifecycle = lifecycleLabel(customer.status, customer.planTier, healthScore);
 
   const canEditAccountDetails = access.ok && (access.role === 'SUPER_ADMIN' || access.role === 'FOUNDER_ADMIN');
@@ -315,7 +318,7 @@ export default async function FounderCustomerProfilePage({
               <MetricPill label="Health" value={`${healthScore}/100`} sub={healthStatus.replaceAll('_', ' ')} />
               <MetricPill label="Seats" value={`${activeUsers}/${purchasedSeats}`} sub={`${availableSeats} available`} />
               <MetricPill label="Integrations" value={connectedIntegrations} sub="Connected" />
-              <MetricPill label="Est. ARR" value={fmtMoney(estimatedArr)} sub={planDisplayName(customer.planTier)} />
+              <MetricPill label="Est. ARR" value={fmtArr(estimatedArr)} sub={planDisplayName(customer.planTier)} />
             </div>
           </div>
         </div>
@@ -341,7 +344,7 @@ export default async function FounderCustomerProfilePage({
                   <InfoRow label="Plan" value={planDisplayName(customer.planTier)} />
                   <InfoRow label="Seats" value={`${activeUsers} active · ${purchasedSeats} purchased`} />
                   <InfoRow label="Integrations" value={`${connectedIntegrations} connected`} />
-                  <InfoRow label="Est. ARR" value={fmtMoney(estimatedArr)} />
+                  <InfoRow label="Est. ARR" value={fmtArr(estimatedArr)} />
                   <InfoRow label="Admin" value={customer.primaryAdminEmail} />
                   <InfoRow label="Customer since" value={fmtDate(customer.createdAt)} />
                   <InfoRow label="Last updated" value={fmtDate(customer.updatedAt)} />
@@ -658,7 +661,7 @@ export default async function FounderCustomerProfilePage({
                 <InfoRow label="Plan" value={planDisplayName(customer.planTier)} />
                 <InfoRow label="Seats purchased" value={purchasedSeats} />
                 <InfoRow label="Active seats" value={activeUsers} />
-                <InfoRow label="Est. ARR" value={fmtMoney(estimatedArr)} />
+                <InfoRow label="Est. ARR" value={fmtArr(estimatedArr)} />
                 <InfoRow label="Data retention" value={`${customer.dataRetentionDays} days`} />
                 <InfoRow label="Customer since" value={fmtDate(customer.createdAt)} />
                 <InfoRow label="Last updated" value={fmtDate(customer.updatedAt)} />
@@ -943,7 +946,7 @@ export default async function FounderCustomerProfilePage({
               </div>
               <div className="flex justify-between gap-2">
                 <span className="font-semibold text-slate-500">Est. ARR</span>
-                <span className="font-black text-slate-800">{fmtMoney(estimatedArr)}</span>
+                <span className="font-black text-slate-800">{fmtArr(estimatedArr)}</span>
               </div>
               <div className="flex justify-between gap-2">
                 <span className="font-semibold text-slate-500">Health</span>
