@@ -141,11 +141,17 @@ assert.match(client, /No customers match your current filters\./);
 assert.doesNotMatch(client, /\{totalCustomers === 0 \? \(/);
 
 // ─── KPI dataset consistency: KPIs and table share the same CustomerAccount
-//     population (unlike the pre-fix Customer Integrations bug) — every KPI
-//     count and the table's `where` filter both query CustomerAccount, so
-//     there is no cross-model population mismatch possible here. ──────────
-assert.match(service, /prisma\.customerAccount\.count\(\{ where: \{ planTier: 'STARTER' \} \}\)/);
-assert.match(service, /prisma\.customerAccount\.count\(\{ where: \{ planTier: 'ENTERPRISE' \} \}\)/);
+//     population (unlike the pre-fix Customer Integrations bug) — the plan
+//     groupBy, the Active count, and the table's `where` filter all query
+//     CustomerAccount directly, so there is no cross-model population
+//     mismatch possible here. Business/Enterprise/Trial-Legacy counts are
+//     derived from one groupBy rather than three separate count() calls
+//     (a redundant-query fix made during the final polish pass — the
+//     groupBy already carried this data). ──────────
+assert.match(service, /prisma\.customerAccount\.groupBy\(\{ by: \['planTier'\], _count: \{ _all: true \} \}\)/);
+assert.match(service, /countForTier\('STARTER'\)/);
+assert.match(service, /countForTier\('ENTERPRISE'\)/);
+assert.doesNotMatch(service, /prisma\.customerAccount\.count\(\{ where: \{ planTier:/); // no redundant per-tier count query
 assert.match(service, /prisma\.customerAccount\.count\(\{ where: \{ status: 'ACTIVE' \} \}\)/);
 
 // ─── Estimated ARR aggregation ignores null, never substitutes a formula ───
@@ -168,6 +174,16 @@ assert.match(client, /closeButtonRef\.current\?\.focus\(\)/);
 assert.match(page, /grid min-w-0 grid-cols-1 gap-6/);
 assert.match(client, /overflow-x-auto/);
 assert.match(client, /sticky right-0/);
+
+// ─── Final polish pass: KPI strip stacks 2-per-row on mobile (matching
+//     Founder Overview's established convention) rather than 1-per-row ────
+assert.match(page, /grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6/);
+
+// ─── Final polish pass: Trial/Legacy is visually de-emphasized in Plan
+//     Distribution, not presented as a normal commercial plan alongside
+//     Business/Enterprise ──────────────────────────────────────────────
+assert.match(page, /isLegacy = bucket\.bucket === 'TRIAL_LEGACY'/);
+assert.match(page, /border-dashed border-slate-200/);
 
 // ─── Seat-limit mismatch is surfaced, never silently enforced/blocked ──────
 assert.match(pureLib, /export function seatLimitWarning/);

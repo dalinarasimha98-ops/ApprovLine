@@ -103,8 +103,6 @@ export async function buildBillingPortfolio(filters: BillingFilters): Promise<Sa
       customers,
       filteredTotal,
       totalCustomers,
-      businessCount,
-      enterpriseCount,
       activeCount,
       seatAgg,
       arrAgg,
@@ -122,17 +120,19 @@ export async function buildBillingPortfolio(filters: BillingFilters): Promise<Sa
       }),
       prisma.customerAccount.count({ where }),
       prisma.customerAccount.count(),
-      prisma.customerAccount.count({ where: { planTier: 'STARTER' } }),
-      prisma.customerAccount.count({ where: { planTier: 'ENTERPRISE' } }),
       prisma.customerAccount.count({ where: { status: 'ACTIVE' } }),
       prisma.customerSeatAllocation.aggregate({ _sum: { purchasedSeats: true } }),
       prisma.customerAccount.aggregate({ _sum: { estimatedArrUsd: true } }),
       prisma.customerAccount.groupBy({ by: ['planTier'], _count: { _all: true } }),
     ]);
 
-    const trialLegacyCount = planGroups
-      .filter((g) => g.planTier === 'FREE_TRIAL' || g.planTier === 'GROWTH')
-      .reduce((sum, g) => sum + g._count._all, 0);
+    // Business/Enterprise/Trial-Legacy counts all derive from this one
+    // groupBy — a separate count() per bucket would just re-query data this
+    // call already returns.
+    const countForTier = (tier: CustomerPlanTier) => planGroups.find((g) => g.planTier === tier)?._count._all ?? 0;
+    const businessCount = countForTier('STARTER');
+    const enterpriseCount = countForTier('ENTERPRISE');
+    const trialLegacyCount = countForTier('FREE_TRIAL') + countForTier('GROWTH');
 
     const rows: BillingRow[] = customers.map((customer) => ({
       id: customer.id,

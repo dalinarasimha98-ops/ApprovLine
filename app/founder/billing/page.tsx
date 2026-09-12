@@ -56,24 +56,37 @@ export default async function FounderBillingPage({
         </p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         <FounderMetricCard label="Total Customers" value={data.kpis.totalCustomers} detail="All provisioned customer accounts" />
         <FounderMetricCard label="Business" value={data.kpis.businessCount} detail="Business (STARTER) plan customers" />
         <FounderMetricCard label="Enterprise" value={data.kpis.enterpriseCount} detail="Enterprise plan customers" />
         <FounderMetricCard label="Active Accounts" value={data.kpis.activeCount} detail="Account status: Active" />
         <FounderMetricCard label="Purchased Seats" value={data.kpis.purchasedSeatsTotal} detail="Aggregate across all customers" />
+        {/* `|| null` reads a 0 total as "nothing set" rather than "$0": safe
+            because provisioning rejects estimatedArrUsd <= 0 (services/founder.ts),
+            so the only way this sum is exactly 0 is that no customer has a
+            value at all. */}
         <FounderMetricCard label="Estimated ARR" value={fmtEstimatedArr(data.kpis.estimatedArrTotal || null)} detail="Sum of Founder-entered estimates only" />
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Plan Distribution</p>
         <div className="mt-3 flex flex-wrap gap-3">
-          {data.planDistribution.map((bucket) => (
-            <div key={bucket.bucket} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5">
-              <span className="text-sm font-black text-slate-950">{bucket.label}</span>
-              <span className="text-sm font-bold tabular-nums text-slate-500">{bucket.count}</span>
-            </div>
-          ))}
+          {data.planDistribution.map((bucket) => {
+            const isLegacy = bucket.bucket === 'TRIAL_LEGACY';
+            return (
+              <div
+                key={bucket.bucket}
+                className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 ${
+                  isLegacy ? 'border-dashed border-slate-200 bg-white' : 'border-slate-100 bg-slate-50'
+                }`}
+              >
+                <span className={`text-sm font-black ${isLegacy ? 'text-slate-500' : 'text-slate-950'}`}>{bucket.label}</span>
+                <span className="text-sm font-bold tabular-nums text-slate-500">{bucket.count}</span>
+                {isLegacy ? <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Internal</span> : null}
+              </div>
+            );
+          })}
         </div>
       </section>
 
