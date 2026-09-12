@@ -29,7 +29,6 @@ const NAV: NavGroup[] = [
       { label: 'All Customers', href: '/founder/customers' },
       { label: 'Customer Health', href: '/founder/customer-health' },
       { label: 'Provision Customer', href: '/founder/provision' },
-      { label: 'Managed Users', href: '/founder/users' },
     ],
   },
   {

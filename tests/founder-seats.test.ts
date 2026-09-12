@@ -202,7 +202,7 @@ assert.match(service, /await Promise\.all\(\[/);
 // 17. Real semantic table headers (scope="col"), no clickable <tr> hack —
 //     the sticky Action column trigger is a real, keyboard-reachable
 //     <button>.
-assert.match(client, /<th scope="col" className="w-\[240px\] whitespace-nowrap px-5 py-3">Customer<\/th>/);
+assert.match(client, /<th scope="col" className="w-\[180px\] whitespace-nowrap px-5 py-3">Customer<\/th>/);
 assert.doesNotMatch(client, /<tr[^>]*onClick/);
 assert.match(client, /<button\s*\n\s*type="button"\s*\n\s*onClick=\{\(\) => setSelectedId\(customer\.id\)\}/);
 
@@ -214,17 +214,52 @@ assert.match(page, /grid min-w-0 grid-cols-1 gap-6/);
 assert.match(client, /overflow-x-auto/);
 assert.match(client, /sticky right-0/);
 
+// 18b. Follow-up visual QA fix: explicit column widths sum to exactly
+//      the table's own min-width (1106px, not a mismatched 1230px) — and
+//      that width was chosen so the whole table fits the real Founder
+//      shell's 1440px main-content area (1440 - 260px sidebar - 64px
+//      lg:px-8 padding = 1116px) with zero horizontal scroll, verified
+//      against a harness that reproduces the actual shell chrome.
+assert.match(client, /min-w-\[1106px\]/);
+assert.doesNotMatch(client, /min-w-\[1230px\]/);
+
+// 18c. The sticky Action column's separating shadow is conditional on
+//      the table actually needing to scroll (measured live via
+//      ResizeObserver on the scroll container), not a permanent
+//      decoration. A permanent shadow bled over the Updated column's
+//      text even at widths where nothing was stuck/scrolled — visually
+//      indistinguishable from the clipped-column defect this exists to
+//      fix, just self-inflicted. It must render conditionally instead.
+assert.match(client, /ResizeObserver/);
+assert.match(client, /tableScrollable/);
+assert.match(client, /el\.scrollWidth > el\.clientWidth/);
+assert.match(client, /\$\{tableScrollable \? 'shadow-\[-6px_0_8px_-4px_rgba\(15,23,42,0\.18\)\]' : ''\}/);
+assert.doesNotMatch(client, /className="sticky right-0 w-24 whitespace-nowrap bg-slate-50 px-4 py-3 text-right shadow-/); // not unconditionally applied on the header cell
+assert.doesNotMatch(client, /text-right shadow-\[-6px_0_8px_-4px_rgba\(15,23,42,0\.18\)\] group-hover/); // not unconditionally applied on the body cell
+
+// 18d. The Updated column is wide enough for fmtDate's actual output
+//      ("Sep 10, 2026"-style strings) and degrades with a visible
+//      ellipsis (`truncate`) rather than `whitespace-nowrap` alone,
+//      which let overflow be silently swallowed by the next opaque
+//      cell — indistinguishable from a clipped-column bug in a
+//      screenshot, discovered by rendering the real component rather
+//      than trusting the pixel math.
+assert.match(client, /w-\[115px\] whitespace-nowrap px-5 py-3">Updated<\/th>/);
+assert.match(client, /className="truncate px-5 py-4 text-xs font-semibold text-slate-500" title=\{fmtDate\(customer\.updatedAt\)\}>\{fmtDate\(customer\.updatedAt\)\}<\/td>/);
+
 // ─── Nav fix ────────────────────────────────────────────────────────────────
 
 // 19. The pre-existing "Seats & Usage" sidebar entry pointed at
 //     /founder/users (the unrelated Managed Users directory) — a
 //     mislabeled link that would have made this exact deliverable
-//     unreachable/misleading from the sidebar. Fixed to point at the real
-//     new page, and the Managed Users page (still fully functional, just
-//     previously reachable only by direct URL) now has its own honest nav
-//     entry rather than being silently orphaned.
+//     unreachable/misleading from the sidebar. Fixed to point at the
+//     real new page. A separate "Managed Users" entry was added and then
+//     removed again per explicit follow-up QA: it isn't part of the
+//     locked Founder sidebar, so /founder/users stays reachable only by
+//     direct URL, same as before this module existed — no sidebar change
+//     beyond the one stale link this module actually needed fixed.
 assert.match(navClient, /\{ label: 'Seats & Usage', href: '\/founder\/seats' \}/);
-assert.match(navClient, /\{ label: 'Managed Users', href: '\/founder\/users' \}/);
+assert.doesNotMatch(navClient, /\{ label: 'Managed Users', href: '\/founder\/users' \}/);
 assert.doesNotMatch(navClient, /\{ label: 'Seats & Usage', href: '\/founder\/users' \}/);
 
 // ─── Regression: Plans & Billing / tenant isolation untouched ───────────────
@@ -241,4 +276,6 @@ assert.match(billingClient, /seatUtilizationPercent\(customer\.usedSeats, custom
 //     module, as with every other Founder commercial page.
 assert.doesNotMatch(tenantIsolationLib, /CustomerSeatAllocation|utilizationBucket/);
 
-console.log('Validated Seats & Usage (/founder/seats): built entirely on the existing CustomerAccount/CustomerSeatAllocation/FounderManagedUser/CustomerHealth models with no new seat/usage/billing model, documents (rather than assumes) the exact write-path trace proving CustomerSeatAllocation.usedSeats is authoritative-by-convention and distinct from CustomerHealth.activeUsers, never clamps utilization or floors available seats to hide over-capacity, filters plan/status via real SQL columns while honestly documenting why utilization must be a JS-side filter (a cross-column ratio Prisma cannot express), distinguishes true system-empty from filtered-to-zero, reuses the shared FounderDrawer and the existing updateCustomerSeats mutation/audit path with no duplication, batches every query with no N+1, uses real semantic table headers and a keyboard-reachable trigger button, fixes the pre-existing "Seats & Usage" sidebar link that pointed at the unrelated Managed Users page (giving that page its own honest nav entry rather than orphaning it), and leaves Plans & Billing\'s own clamped utilization helper and tenant isolation completely untouched.');
+console.log('Validated Seats & Usage (/founder/seats): built entirely on the existing CustomerAccount/CustomerSeatAllocation/FounderManagedUser/CustomerHealth models with no new seat/usage/billing model, documents (rather than assumes) the exact write-path trace proving CustomerSeatAllocation.usedSeats is authoritative-by-convention and distinct from CustomerHealth.activeUsers, never clamps utilization or floors available seats to hide over-capacity, filters plan/status via real SQL columns while honestly documenting why utilization must be a JS-side filter (a cross-column ratio Prisma cannot express), distinguishes true system-empty from filtered-to-zero, reuses the shared FounderDrawer and the existing updateCustomerSeats mutation/audit path with no duplication, batches every query with no N+1, uses real semantic table headers and a keyboard-reachable trigger button, and fixes the pre-existing "Seats & Usage" sidebar link that pointed at the unrelated Managed Users page — without adding a second, unlocked "Managed Users" sidebar entry of its own.');
+
+console.log('Validated the follow-up visual QA fix: the Managed Users nav item added in the prior pass was removed since it is not part of the locked Founder sidebar; the table\'s explicit column widths were tightened to sum exactly to its own min-width (1106px) so it fits the real Founder shell\'s 1440px main-content area with zero horizontal scroll (eliminating the sticky-column-overlap that read as a clipped column between Utilization and Action); and the sticky Action column\'s separating shadow — added to make any *remaining* scroll at narrower widths read as an intentional floating action rail — is applied conditionally via a live ResizeObserver measurement rather than permanently, since an always-on shadow bled over the Updated column\'s text even when nothing was actually scrolled, reproducing the same defect for a new reason. Plans & Billing\'s own table/drawer/utilization helper remain untouched.');

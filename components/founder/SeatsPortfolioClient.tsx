@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { planDisplayName } from '@/lib/plans';
@@ -75,6 +75,27 @@ export function SeatsPortfolioClient({ rows, page, totalPages, totalCustomers, h
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [seatsInput, setSeatsInput] = useState('');
   const selected = rows.find((r) => r.id === selectedId) ?? null;
+
+  // The sticky Action column's edge shadow should only render while the
+  // table actually needs horizontal scrolling. Rendered unconditionally,
+  // it visually bleeds over the Updated column's text even at widths
+  // where the whole table already fits with no scroll at all (1440px) —
+  // that looked exactly like the clipped-column defect this is meant to
+  // fix, just for a new, self-inflicted reason. Measured via
+  // ResizeObserver on the scroll container so it responds to viewport
+  // resizes and filter/page changes without a hydration mismatch (starts
+  // false, matching server-rendered markup, then corrects after mount).
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [tableScrollable, setTableScrollable] = useState(false);
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const update = () => setTableScrollable(el.scrollWidth > el.clientWidth + 1);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [rows]);
 
   function pushParams(next: Partial<{ q: string; plan: string; status: string; utilization: string; page: string }>) {
     const params = new URLSearchParams();
@@ -181,7 +202,7 @@ export function SeatsPortfolioClient({ rows, page, totalPages, totalCustomers, h
             <p className="font-bold text-slate-500">No customers match your current filters.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" ref={scrollerRef}>
             {/* table-fixed + an explicit width on every header cell —
                 deliberately not the plain `auto` layout the sibling Founder
                 tables use. With a sticky-positioned last column, `auto`
@@ -194,20 +215,48 @@ export function SeatsPortfolioClient({ rows, page, totalPages, totalCustomers, h
                 `position: sticky` and table auto-layout's column-width
                 calculation, not a whitespace/overflow issue. `table-fixed`
                 sidesteps it entirely by sizing every column from this
-                header row alone, independent of sticky positioning. */}
-            <table className="w-full min-w-[1230px] table-fixed text-left text-sm">
+                header row alone, independent of sticky positioning.
+
+                Column widths are also deliberately tight (summing to
+                1106px) rather than merely "enough": at the 1440px desktop
+                breakpoint the Founder main content area (viewport minus
+                the 260px sidebar and lg:px-8 padding) is 1116px, so the
+                whole table fits with no horizontal scroll at all — the
+                one width this module is most commonly viewed at. Narrower
+                widths (1280 and below) still scroll; the sticky Action
+                column's shadow (instead of a bare 1px border) is what
+                keeps that scroll reading as an intentional floating
+                action rail rather than a clipped/broken column, since
+                position: sticky visually overlaps whatever else would
+                render in that screen slot at scrollLeft 0 — a shadow-less
+                opaque cell reads as an accidental cut, a shadowed one
+                reads as "pinned on purpose, scroll for the rest of the
+                row" (confirmed against real rendered screenshots).
+
+                Updated is 115px (not a tighter number) because fmtDate
+                (shared with Billing, not altered here) renders "Sep 10,
+                2026"-style strings — narrower and the text would overflow
+                into the sticky Action cell's own opaque background and
+                look silently truncated, the same failure mode this pass
+                exists to remove, just caused by a width budget instead of
+                position: sticky. Its cell also uses `truncate` instead of
+                a bare `whitespace-nowrap` as a second line of defense: if
+                a locale ever produces a longer string than this budget
+                assumes, it degrades to a visible ellipsis instead of
+                being invisibly eaten by the next cell. */}
+            <table className="w-full min-w-[1106px] table-fixed text-left text-sm">
               <thead className="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th scope="col" className="w-[240px] whitespace-nowrap px-5 py-3">Customer</th>
-                  <th scope="col" className="w-[110px] whitespace-nowrap px-5 py-3">Plan</th>
-                  <th scope="col" className="w-[140px] whitespace-nowrap px-5 py-3">Account Status</th>
-                  <th scope="col" className="w-[100px] whitespace-nowrap px-5 py-3">Purchased</th>
-                  <th scope="col" className="w-[100px] whitespace-nowrap px-5 py-3">Allocated</th>
-                  <th scope="col" className="w-[90px] whitespace-nowrap px-5 py-3">Used</th>
-                  <th scope="col" className="w-[100px] whitespace-nowrap px-5 py-3">Available</th>
-                  <th scope="col" className="w-[140px] whitespace-nowrap px-5 py-3">Utilization</th>
-                  <th scope="col" className="w-[110px] whitespace-nowrap px-5 py-3">Updated</th>
-                  <th scope="col" className="sticky right-0 w-24 whitespace-nowrap border-l border-slate-100 bg-slate-50 px-4 py-3 text-right">Action</th>
+                  <th scope="col" className="w-[180px] whitespace-nowrap px-5 py-3">Customer</th>
+                  <th scope="col" className="w-[100px] whitespace-nowrap px-5 py-3">Plan</th>
+                  <th scope="col" className="w-[135px] whitespace-nowrap px-5 py-3">Account Status</th>
+                  <th scope="col" className="w-[90px] whitespace-nowrap px-5 py-3">Purchased</th>
+                  <th scope="col" className="w-[90px] whitespace-nowrap px-5 py-3">Allocated</th>
+                  <th scope="col" className="w-[80px] whitespace-nowrap px-5 py-3">Used</th>
+                  <th scope="col" className="w-[90px] whitespace-nowrap px-5 py-3">Available</th>
+                  <th scope="col" className="w-[130px] whitespace-nowrap px-5 py-3">Utilization</th>
+                  <th scope="col" className="w-[115px] whitespace-nowrap px-5 py-3">Updated</th>
+                  <th scope="col" className={`sticky right-0 w-24 whitespace-nowrap bg-slate-50 px-4 py-3 text-right ${tableScrollable ? 'shadow-[-6px_0_8px_-4px_rgba(15,23,42,0.18)]' : ''}`}>Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -238,8 +287,8 @@ export function SeatsPortfolioClient({ rows, page, totalPages, totalCustomers, h
                           <span className={`text-xs font-bold tabular-nums ${tone === 'red' ? 'text-rose-600' : 'text-slate-600'}`}>{fmtUtilization(pct)}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-xs font-semibold text-slate-500 whitespace-nowrap">{fmtDate(customer.updatedAt)}</td>
-                      <td className="sticky right-0 whitespace-nowrap border-l border-slate-100 bg-white px-4 py-4 text-right group-hover:bg-slate-50">
+                      <td className="truncate px-5 py-4 text-xs font-semibold text-slate-500" title={fmtDate(customer.updatedAt)}>{fmtDate(customer.updatedAt)}</td>
+                      <td className={`sticky right-0 whitespace-nowrap bg-white px-4 py-4 text-right group-hover:bg-slate-50 ${tableScrollable ? 'shadow-[-6px_0_8px_-4px_rgba(15,23,42,0.18)]' : ''}`}>
                         <button
                           type="button"
                           onClick={() => setSelectedId(customer.id)}
