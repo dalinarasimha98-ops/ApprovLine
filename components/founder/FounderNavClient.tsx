@@ -45,7 +45,7 @@ const NAV: NavGroup[] = [
     items: [
       { label: 'Feature Management', href: '/founder/features' },
       { label: 'Integration Catalog', href: '/founder/integrations' },
-      { label: 'Customer Integrations', href: '/founder/integrations' },
+      { label: 'Customer Integrations', href: '/founder/customer-integrations' },
     ],
   },
   {
