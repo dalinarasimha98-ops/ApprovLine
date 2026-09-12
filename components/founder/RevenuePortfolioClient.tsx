@@ -43,6 +43,11 @@ type Props = {
   filters: { q: string; plan: string; status: string; coverage: string };
   canWrite: boolean;
   updateSeatsAction: (formData: FormData) => void | Promise<void>;
+  /** Set when the page resolved a Commercial Attention deep-link (e.g.
+   *  "Inactive account with ARR") that the plain q/plan/status/coverage
+   *  filter bar can't represent as one of its own values — shown as an
+   *  honest banner instead of silently mismatching the filter dropdowns. */
+  attentionBanner?: string | null;
 };
 
 function Badge({ tone, children }: { tone: 'green' | 'blue' | 'amber' | 'red' | 'slate'; children: React.ReactNode }) {
@@ -60,7 +65,7 @@ function Badge({ tone, children }: { tone: 'green' | 'blue' | 'amber' | 'red' | 
   );
 }
 
-export function RevenuePortfolioClient({ rows, page, totalPages, totalCustomers, hasAnyCustomers, filters, canWrite, updateSeatsAction }: Props) {
+export function RevenuePortfolioClient({ rows, page, totalPages, totalCustomers, hasAnyCustomers, filters, canWrite, updateSeatsAction, attentionBanner }: Props) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -179,6 +184,15 @@ export function RevenuePortfolioClient({ rows, page, totalPages, totalCustomers,
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Revenue Portfolio</p>
         </div>
 
+        {attentionBanner ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-100 bg-amber-50 px-6 py-3">
+            <p className="text-xs font-semibold text-amber-900">{attentionBanner}</p>
+            <Link href={pathname} className="text-xs font-black text-amber-900 underline underline-offset-2 hover:text-amber-950">
+              Clear
+            </Link>
+          </div>
+        ) : null}
+
         {!hasAnyCustomers ? (
           <div className="px-6 py-10 text-center">
             <p className="text-base font-black text-slate-950">No customer accounts have been provisioned yet.</p>
@@ -192,24 +206,30 @@ export function RevenuePortfolioClient({ rows, page, totalPages, totalCustomers,
           </div>
         ) : (
           <div className="overflow-x-auto" ref={scrollerRef}>
-            {/* table-fixed + explicit widths + a scroll-conditional sticky
-                shadow — the same fix applied to Seats & Usage's identical
-                table after visual QA found the un-fixed version silently
-                clipped whatever column fell under the sticky Action
-                column's pinned slot. Column widths sum to 946px, comfortably
-                under the Founder shell's main-content width at both 1440px
-                (1116px) and 1280px (956px), so the table needs no
-                horizontal scroll at all at either common desktop width. */}
-            <table className="w-full min-w-[946px] table-fixed text-left text-sm">
+            {/* Responsive column strategy (not just intentional scroll): the
+                5 columns that matter most for a fast commercial scan —
+                Customer/Plan/Account Status/Est. ARR/Action — are ALWAYS
+                rendered (606px) and need no scroll at 1024px or 768px, not
+                just 1440/1280. Seats/Revenue Status/Updated are secondary
+                detail already fully available in the drawer, so they only
+                render at xl+ (1280px), where there's genuinely room for
+                them (946px, still under 1280's 956px main-content area).
+                This eliminates the sticky-column-overlap defect entirely
+                at 1024/768, rather than merely dressing it up with a
+                shadow — it's now only possible at 390px, where no realistic
+                8-or-even-5-column table fits a phone screen without some
+                scroll; the scroll-conditional shadow (still present) keeps
+                that one remaining case reading as intentional. */}
+            <table className="w-full min-w-[606px] table-fixed text-left text-sm xl:min-w-[946px]">
               <thead className="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
                 <tr>
                   <th scope="col" className="w-[185px] whitespace-nowrap px-5 py-3">Customer</th>
                   <th scope="col" className="w-[95px] whitespace-nowrap px-5 py-3">Plan</th>
                   <th scope="col" className="w-[130px] whitespace-nowrap px-5 py-3">Account Status</th>
                   <th scope="col" className="w-[100px] whitespace-nowrap px-5 py-3">Est. ARR</th>
-                  <th scope="col" className="w-[75px] whitespace-nowrap px-5 py-3">Seats</th>
-                  <th scope="col" className="w-[150px] whitespace-nowrap px-5 py-3">Revenue Status</th>
-                  <th scope="col" className="w-[115px] whitespace-nowrap px-5 py-3">Updated</th>
+                  <th scope="col" className="hidden w-[75px] whitespace-nowrap px-5 py-3 xl:table-cell">Seats</th>
+                  <th scope="col" className="hidden w-[150px] whitespace-nowrap px-5 py-3 xl:table-cell">Revenue Status</th>
+                  <th scope="col" className="hidden w-[115px] whitespace-nowrap px-5 py-3 xl:table-cell">Updated</th>
                   <th scope="col" className={`sticky right-0 w-24 whitespace-nowrap bg-slate-50 px-4 py-3 text-right ${tableScrollable ? 'shadow-[-6px_0_8px_-4px_rgba(15,23,42,0.18)]' : ''}`}>Action</th>
                 </tr>
               </thead>
@@ -225,9 +245,9 @@ export function RevenuePortfolioClient({ rows, page, totalPages, totalCustomers,
                       <td className="whitespace-nowrap px-5 py-4"><Badge tone={planTone(customer.planTier)}>{planDisplayName(customer.planTier)}</Badge></td>
                       <td className="whitespace-nowrap px-5 py-4"><Badge tone={accountStatusTone(customer.status)}>{customer.status}</Badge></td>
                       <td className="whitespace-nowrap px-5 py-4 font-black text-slate-950 tabular-nums">{fmtEstimatedArr(customer.estimatedArrUsd)}</td>
-                      <td className="whitespace-nowrap px-5 py-4 font-bold text-slate-700 tabular-nums">{customer.purchasedSeats}</td>
-                      <td className="px-5 py-4"><Badge tone={revenueStatusTone(revenueStatus)}>{revenueStatusLabel(revenueStatus)}</Badge></td>
-                      <td className="truncate px-5 py-4 text-xs font-semibold text-slate-500" title={fmtDate(customer.updatedAt)}>{fmtDate(customer.updatedAt)}</td>
+                      <td className="hidden whitespace-nowrap px-5 py-4 font-bold text-slate-700 tabular-nums xl:table-cell">{customer.purchasedSeats}</td>
+                      <td className="hidden px-5 py-4 xl:table-cell"><Badge tone={revenueStatusTone(revenueStatus)}>{revenueStatusLabel(revenueStatus)}</Badge></td>
+                      <td className="hidden truncate px-5 py-4 text-xs font-semibold text-slate-500 xl:table-cell" title={fmtDate(customer.updatedAt)}>{fmtDate(customer.updatedAt)}</td>
                       <td className={`sticky right-0 whitespace-nowrap bg-white px-4 py-4 text-right group-hover:bg-slate-50 ${tableScrollable ? 'shadow-[-6px_0_8px_-4px_rgba(15,23,42,0.18)]' : ''}`}>
                         <button
                           type="button"

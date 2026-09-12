@@ -28,6 +28,8 @@
  *     CustomerAccount.status, CustomerSeatAllocation), reused via
  *     lib/founder-billing.ts's own exports below rather than duplicated.
  */
+import { fmtEstimatedArr } from './founder-billing';
+
 export {
   PLAN_FILTER_OPTIONS,
   ACCOUNT_STATUS_FILTER_OPTIONS,
@@ -73,4 +75,18 @@ export function arrCoveragePercent(customersWithArr: number, totalCustomers: num
 
 export function fmtCoveragePercent(pct: number | null): string {
   return pct == null ? 'N/A' : `${pct}%`;
+}
+
+/**
+ * A portfolio-wide (or per-plan) ARR *sum*, not a single customer's field.
+ * Deliberately separate from fmtEstimatedArr: "Not set" is correct for one
+ * customer's genuinely-unset nullable column, but reusing that same word
+ * for an aggregate total reads as "this metric is broken/unconfigured"
+ * rather than its real meaning — "zero because nothing has been recorded
+ * across every account counted here." Also avoids the "Not set estimated
+ * ARR" string-concatenation bug (grammatically broken, and implies a
+ * literal field named "Not set estimated ARR").
+ */
+export function fmtAggregateArrLine(total: number): string {
+  return total > 0 ? `${fmtEstimatedArr(total)} estimated ARR` : 'No estimated ARR recorded';
 }

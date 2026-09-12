@@ -121,6 +121,14 @@ export type RevenueFilters = {
   plan?: PlanBucket;
   status?: CustomerAccountStatus;
   coverage?: RevenueCoverage;
+  /**
+   * A named drill-down that doesn't map onto a single status/coverage
+   * value — currently only 'inactive_with_arr' (status in SUSPENDED or
+   * CHURNED, with a recorded estimate), which the plain single-select
+   * status filter can't express as one value. Overrides `status` and
+   * `coverage` when present so the two never silently disagree.
+   */
+  attention?: 'inactive_with_arr';
   page?: number;
 };
 
@@ -169,9 +177,18 @@ export async function buildRevenuePortfolio(filters: RevenueFilters): Promise<Sa
   }
   const planFilter = planTierFilterFor(filters.plan);
   if (planFilter) Object.assign(where, planFilter);
-  if (filters.status) where.status = filters.status;
-  const coverageFilter = coverageFilterFor(filters.coverage);
-  if (coverageFilter) Object.assign(where, coverageFilter);
+  if (filters.attention === 'inactive_with_arr') {
+    // Overrides status/coverage rather than combining with them: this is a
+    // named drill-down, not a composable filter, so it always means
+    // exactly one thing regardless of what stale status/coverage values a
+    // caller might also pass.
+    where.status = { in: ['SUSPENDED', 'CHURNED'] };
+    where.estimatedArrUsd = { not: null };
+  } else {
+    if (filters.status) where.status = filters.status;
+    const coverageFilter = coverageFilterFor(filters.coverage);
+    if (coverageFilter) Object.assign(where, coverageFilter);
+  }
 
   try {
     const [

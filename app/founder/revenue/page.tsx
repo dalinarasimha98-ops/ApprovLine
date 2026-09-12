@@ -4,9 +4,13 @@ import { FounderMetricCard, MigrationNotice } from '@/components/founder/Founder
 import { RevenuePortfolioClient } from '@/components/founder/RevenuePortfolioClient';
 import { getFounderAccess, updateCustomerSeats } from '@/services/founder';
 import { buildRevenuePortfolio } from '@/services/founder-revenue';
-import { fmtEstimatedArr, fmtCoveragePercent } from '@/lib/founder-revenue';
+import { fmtEstimatedArr, fmtCoveragePercent, fmtAggregateArrLine } from '@/lib/founder-revenue';
 import type { CustomerAccountStatus } from '@prisma/client';
 import type { PlanBucket, RevenueCoverage } from '@/lib/founder-revenue';
+
+const VALID_PLANS = new Set(['BUSINESS', 'ENTERPRISE', 'TRIAL_LEGACY']);
+const VALID_STATUSES = new Set(['TRIAL', 'ACTIVE', 'SUSPENDED', 'CHURNED']);
+const VALID_COVERAGE = new Set(['RECORDED', 'MISSING']);
 
 export const dynamic = 'force-dynamic';
 
@@ -23,23 +27,37 @@ async function updateSeats(formData: FormData) {
 export default async function FounderRevenuePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ q?: string; plan?: string; status?: string; coverage?: string; page?: string }>;
+  searchParams?: Promise<{ q?: string; plan?: string; status?: string; coverage?: string; attention?: string; page?: string }>;
 }) {
   const access = await getFounderAccess();
   const readOnly = !access.ok || access.readOnly;
 
   const sp = await searchParams;
   const q = sp?.q ?? '';
-  const plan = (sp?.plan ?? '') as PlanBucket | '';
-  const status = (sp?.status ?? '') as CustomerAccountStatus | '';
-  const coverage = (sp?.coverage ?? '') as RevenueCoverage | '';
+  // Every filter value from the query string is validated against its real
+  // allowed set before use — a malformed/tampered URL (e.g. ?status=x) must
+  // be ignored, not silently misinterpreted by Prisma into a thrown error
+  // that this page would otherwise render as the wrong empty state ("no
+  // customers provisioned" instead of "bad filter value").
+  const plan = (VALID_PLANS.has(sp?.plan ?? '') ? sp!.plan : '') as PlanBucket | '';
+  const status = (VALID_STATUSES.has(sp?.status ?? '') ? sp!.status : '') as CustomerAccountStatus | '';
+  const coverage = (VALID_COVERAGE.has(sp?.coverage ?? '') ? sp!.coverage : '') as RevenueCoverage | '';
+  const isInactiveWithArrAttention = sp?.attention === 'inactive_with_arr';
   const page = Math.max(1, Number(sp?.page ?? '1') || 1);
 
   const result = await buildRevenuePortfolio({
     q: q || undefined,
     plan: plan || undefined,
-    status: status || undefined,
-    coverage: coverage || undefined,
+    // The "Inactive account with ARR" Commercial Attention deep-link
+    // combines two statuses (SUSPENDED, CHURNED) that the single-select
+    // status filter can't express as one value — rather than leave that
+    // card as a dead, unclickable control, this dedicated attention flag
+    // drives a real server-side filter override (see services/founder-revenue.ts),
+    // surfaced honestly via a banner (not a misleading dropdown state,
+    // since no single status option matches an OR of two).
+    status: isInactiveWithArrAttention ? undefined : status || undefined,
+    coverage: isInactiveWithArrAttention ? 'RECORDED' : coverage || undefined,
+    attention: isInactiveWithArrAttention ? 'inactive_with_arr' : undefined,
     page,
   });
   const data = result.data;
@@ -71,10 +89,10 @@ export default async function FounderRevenuePage({
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         <FounderMetricCard label="Estimated ARR" value={fmtEstimatedArr(data.kpis.estimatedArrTotal || null)} detail="Founder-entered estimate" />
         <FounderMetricCard label="Active Estimated ARR" value={fmtEstimatedArr(data.kpis.activeEstimatedArrTotal || null)} detail="From active accounts" />
-        <FounderMetricCard label="Customers with ARR" value={`${data.kpis.customersWithArr} / ${data.kpis.totalCustomers}`} detail="Non-null estimate recorded" />
+        <FounderMetricCard label="Customers with ARR" value={`${data.kpis.customersWithArr} / ${data.kpis.totalCustomers}`} detail="Customers with a recorded estimate" />
         <FounderMetricCard label="ARR Coverage" value={fmtCoveragePercent(data.kpis.arrCoveragePercent)} detail={`${data.kpis.customersWithArr} of ${data.kpis.totalCustomers} customers`} />
-        <FounderMetricCard label="Business Accounts" value={data.kpis.businessCount} detail={`${fmtEstimatedArr(data.planMix.find((p) => p.bucket === 'BUSINESS')?.estimatedArrTotal || null)} estimated ARR`} />
-        <FounderMetricCard label="Enterprise Accounts" value={data.kpis.enterpriseCount} detail={`${fmtEstimatedArr(data.planMix.find((p) => p.bucket === 'ENTERPRISE')?.estimatedArrTotal || null)} estimated ARR`} />
+        <FounderMetricCard label="Business Accounts" value={data.kpis.businessCount} detail={fmtAggregateArrLine(data.planMix.find((p) => p.bucket === 'BUSINESS')?.estimatedArrTotal ?? 0)} />
+        <FounderMetricCard label="Enterprise Accounts" value={data.kpis.enterpriseCount} detail={fmtAggregateArrLine(data.planMix.find((p) => p.bucket === 'ENTERPRISE')?.estimatedArrTotal ?? 0)} />
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -88,8 +106,14 @@ export default async function FounderRevenuePage({
                 <p className={`text-sm font-black ${isLegacy ? 'text-slate-500' : 'text-slate-950'}`}>{entry.label}</p>
                 <p className="mt-2 text-2xl font-black tracking-tight text-slate-950">{entry.customerCount}</p>
                 <p className="text-xs font-semibold text-slate-500">customers</p>
-                <p className="mt-2 text-sm font-black text-slate-950">{fmtEstimatedArr(entry.estimatedArrTotal || null)}</p>
-                <p className="text-xs font-semibold text-slate-500">estimated ARR</p>
+                {entry.estimatedArrTotal > 0 ? (
+                  <>
+                    <p className="mt-2 text-sm font-black text-slate-950">{fmtEstimatedArr(entry.estimatedArrTotal)}</p>
+                    <p className="text-xs font-semibold text-slate-500">estimated ARR</p>
+                  </>
+                ) : (
+                  <p className="mt-2 text-xs font-semibold text-slate-400">No estimated ARR recorded</p>
+                )}
               </div>
             );
           })}
@@ -109,6 +133,7 @@ export default async function FounderRevenuePage({
         filters={{ q, plan, status, coverage }}
         canWrite={!readOnly}
         updateSeatsAction={updateSeats}
+        attentionBanner={isInactiveWithArrAttention ? 'Showing inactive accounts (Suspended or Churned) that still carry a recorded ARR estimate.' : null}
       />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -137,11 +162,17 @@ export default async function FounderRevenuePage({
             </div>
             <span className="text-rose-600" aria-hidden="true">→</span>
           </Link>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-2xl font-black text-slate-800">{data.attention.inactiveWithArrCount}</p>
-            <p className="text-xs font-bold text-slate-800">Inactive account with ARR</p>
-            <p className="mt-1 text-[11px] font-semibold text-slate-600">Account retains a recorded ARR estimate but is not active.</p>
-          </div>
+          <Link
+            href="/founder/revenue?attention=inactive_with_arr"
+            className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300"
+          >
+            <div>
+              <p className="text-2xl font-black text-slate-800">{data.attention.inactiveWithArrCount}</p>
+              <p className="text-xs font-bold text-slate-800">Inactive account with ARR</p>
+              <p className="mt-1 text-[11px] font-semibold text-slate-600">Account retains a recorded ARR estimate but is not active.</p>
+            </div>
+            <span className="text-slate-500" aria-hidden="true">→</span>
+          </Link>
         </div>
       </section>
     </div>
