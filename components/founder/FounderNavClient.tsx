@@ -29,6 +29,7 @@ const NAV: NavGroup[] = [
       { label: 'All Customers', href: '/founder/customers' },
       { label: 'Customer Health', href: '/founder/customer-health' },
       { label: 'Provision Customer', href: '/founder/provision' },
+      { label: 'Managed Users', href: '/founder/users' },
     ],
   },
   {
@@ -53,7 +54,7 @@ const NAV: NavGroup[] = [
     label: 'Commercial',
     items: [
       { label: 'Plans & Billing', href: '/founder/billing' },
-      { label: 'Seats & Usage', href: '/founder/users' },
+      { label: 'Seats & Usage', href: '/founder/seats' },
       { label: 'Revenue', href: '/founder/revenue' },
     ],
   },

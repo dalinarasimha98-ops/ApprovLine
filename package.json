@@ -30,6 +30,7 @@
     "test:customer-integrations": "node --import tsx tests/founder-customer-integrations.test.ts",
     "test:billing": "node --import tsx tests/founder-billing.test.ts",
     "test:founder-drawer": "node --import tsx tests/founder-drawer.test.ts",
+    "test:seats": "node --import tsx tests/founder-seats.test.ts",
     "test:gateway-entitlement": "node --import tsx tests/universal-gateway-entitlement.test.ts",
     "test:reliability": "node --import tsx tests/reliability-hardening.test.ts",
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
