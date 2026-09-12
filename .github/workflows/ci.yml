@@ -63,6 +63,8 @@ jobs:
         run: npm run test:founder-drawer
       - name: Test — seats and usage
         run: npm run test:seats
+      - name: Test — revenue
+        run: npm run test:revenue
       - name: Test — gateway entitlement enforcement
         run: npm run test:gateway-entitlement
       - name: Test — reliability hardening

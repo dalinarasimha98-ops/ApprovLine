@@ -569,14 +569,21 @@ assert.match(founderPilotsService, /import \{ planDisplayName \} from '@\/lib\/p
 assert.match(founderPilotsService, /planTier: planDisplayName\(customer\.planTier\)/);
 assert.match(founderPilotsService, /packageTarget: customer\.planTier === 'FREE_TRIAL' \? 'Growth' : planDisplayName\(customer\.planTier\)/);
 
-// 60. Founder Revenue's "Commercial Management" table still buckets its
-//     Plan column by ARR thresholds (a pre-existing heuristic — PilotListItem
-//     carries no real planTier field, so this is a separate, larger design
-//     question this audit did not rebuild), but the label itself now says
-//     "Business" instead of the wrong "Starter" — consistent with every
-//     other page's naming.
+// 60. (Superseded by the Revenue rebuild — see tests/founder-revenue.test.ts
+//     for full coverage of that task.) Founder Revenue's Plan column used
+//     to bucket by ARR thresholds because it was built on PilotListItem,
+//     which carries no real planTier field — the exact "larger design
+//     question" this naming audit explicitly deferred at the time. Revenue
+//     has since been rebuilt entirely on the real CustomerAccount record,
+//     so the ARR-bucket heuristic no longer exists anywhere and the Plan
+//     column renders the real planTier via the same authoritative
+//     planDisplayName used everywhere else.
+const revenuePortfolioClient = read('components/founder/RevenuePortfolioClient.tsx');
 assert.doesNotMatch(revenuePageSource, /: 'Starter'\}<\/td>/);
-assert.match(revenuePageSource, /pilot\.expectedArr >= 25000 \? 'Enterprise' : pilot\.expectedArr >= 6000 \? 'Growth' : 'Business'/);
+assert.doesNotMatch(revenuePageSource, /pilot\.expectedArr >= 25000 \? 'Enterprise'/);
+assert.doesNotMatch(revenuePortfolioClient, /pilot\.expectedArr/);
+assert.match(revenuePortfolioClient, /import \{ planDisplayName \} from '@\/lib\/plans'/);
+assert.match(revenuePortfolioClient, /\{planDisplayName\(customer\.planTier\)\}/);
 
 // 61. The customer-facing "Plan readiness" upgrade widget on
 //     /dashboard/customer-success no longer offers a fabricated, stale
