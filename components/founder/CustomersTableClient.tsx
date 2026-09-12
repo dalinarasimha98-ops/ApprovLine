@@ -293,9 +293,20 @@ export function CustomersTableClient({
                   className={`cursor-pointer transition-colors hover:bg-slate-50 ${previewId === customer.id ? 'bg-blue-50/60' : ''}`}
                 >
                   <td className="px-4 py-4">
-                    <p className="font-black text-slate-950 leading-snug truncate max-w-[200px]">{customer.companyName}</p>
-                    <p className="mt-0.5 text-xs font-semibold text-slate-400 truncate max-w-[200px]">{customer.domain}</p>
-                    <p className="mt-0.5 text-xs font-semibold text-slate-400 truncate max-w-[200px]">{customer.primaryAdminEmail}</p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewId(customer.id === previewId ? null : customer.id);
+                      }}
+                      aria-expanded={previewId === customer.id}
+                      aria-label={`Preview ${customer.companyName}`}
+                      className="block w-full rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc]"
+                    >
+                      <p className="font-black text-slate-950 leading-snug truncate max-w-[200px]">{customer.companyName}</p>
+                      <p className="mt-0.5 text-xs font-semibold text-slate-400 truncate max-w-[200px]">{customer.domain}</p>
+                      <p className="mt-0.5 text-xs font-semibold text-slate-400 truncate max-w-[200px]">{customer.primaryAdminEmail}</p>
+                    </button>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <Badge className="bg-slate-50 border-slate-200 text-slate-600">

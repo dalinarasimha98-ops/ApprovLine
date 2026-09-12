@@ -63,6 +63,12 @@ export function FounderDrawer({ open = true, onClose, titleId, descriptionId, si
     // "Manage" button that triggered it) so it can be restored on close.
     triggerRef.current = document.activeElement;
 
+    // Lock background scroll while open — the overlay blocks clicks and
+    // the trap blocks keyboard focus, but neither stops a wheel/touch
+    // scroll gesture from reaching the page underneath without this.
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const panel = panelRef.current;
     const focusables = () => (panel ? Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)) : []);
     const first = focusables()[0];
@@ -98,6 +104,7 @@ export function FounderDrawer({ open = true, onClose, titleId, descriptionId, si
     document.addEventListener('keydown', onKeyDown, true);
     return () => {
       document.removeEventListener('keydown', onKeyDown, true);
+      document.body.style.overflow = previousBodyOverflow;
       const trigger = triggerRef.current;
       if (trigger instanceof HTMLElement) trigger.focus();
     };

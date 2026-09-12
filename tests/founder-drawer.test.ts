@@ -153,4 +153,47 @@ assert.doesNotMatch(drawer, /prisma|fetch\(|await /);
 //     not assumed, and left completely untouched by this hardening pass.
 assert.doesNotMatch(customer360Page, /role="dialog"|FounderDrawer/);
 
-console.log('Validated the shared FounderDrawer primitive: no competing modal framework was introduced (none existed to reuse), all five Founder drawers (Plans & Billing, Customer Integrations, Integration Catalog, Feature Management, and the Customers list preview) now go through this one implementation with zero duplicate role="dialog"/aria-modal declarations, real focus capture/move-in/trap/restore (not a document-wide hack), a capture-phase Escape/Tab handler that owns keyboard behavior ahead of any nested content, aria-labelledby correctly wired to each caller\'s own title element, every module\'s original drawer width preserved exactly under a named size, a real pre-existing z-40/z-50 stacking inconsistency resolved as a side effect of consolidation, no data-fetching or credential surface added to the shared component itself, and Customer 360 (which has no drawer at all) left completely untouched.');
+// ─── Final remediation pass: background scroll lock ────────────────────────
+
+// 17. Opening the drawer locks body scroll (the overlay blocks clicks and
+//     the Tab trap blocks keyboard focus, but neither stops a wheel/touch
+//     scroll gesture from reaching the page behind the drawer without
+//     this), and the previous value is restored on close rather than
+//     hardcoding 'visible' back (which would clobber a page that had
+//     already locked scroll for some other reason).
+assert.match(drawer, /const previousBodyOverflow = document\.body\.style\.overflow;/);
+assert.match(drawer, /document\.body\.style\.overflow = 'hidden';/);
+assert.match(drawer, /document\.body\.style\.overflow = previousBodyOverflow;/);
+
+// ─── Final remediation pass: Customers list preview trigger is keyboard-
+//     operable ───────────────────────────────────────────────────────────
+
+// 18. The row itself is no longer the only way to open the preview: a real
+//     <button> inside the customer-identity cell is reachable via Tab,
+//     carries an accessible name identifying the customer (not a bare
+//     "Preview" with no context), and is not a <tr tabIndex>/role="button"
+//     hack — a native button gets Enter and Space activation for free,
+//     which the WAI-ARIA APG guidelines require a role="button" div to
+//     reimplement by hand.
+assert.match(customersTableClient, /<button\s*\n\s*type="button"\s*\n\s*onClick=\{\(e\) => \{\s*\n\s*e\.stopPropagation\(\);\s*\n\s*setPreviewId\(customer\.id === previewId \? null : customer\.id\);/);
+assert.match(customersTableClient, /aria-label=\{`Preview \$\{customer\.companyName\}`\}/);
+assert.doesNotMatch(customersTableClient, /<tr\s[^>]*tabIndex/);
+assert.doesNotMatch(customersTableClient, /<tr\s[^>]*role="button"/);
+
+// 19. The button calls the exact same setPreviewId state setter the row's
+//     own onClick already used — no second, parallel "which customer is
+//     previewed" state was introduced, and no second drawer/dialog was
+//     built for the keyboard path. Both paths open the identical
+//     PreviewDrawer, which itself still renders through the one shared
+//     FounderDrawer (already asserted above).
+assert.equal((customersTableClient.match(/setPreviewId\(customer\.id === previewId \? null : customer\.id\)/g) ?? []).length, 2); // once on <tr onClick>, once on the new button
+assert.equal((customersTableClient.match(/function PreviewDrawer/g) ?? []).length, 1);
+assert.equal((customersTableClient.match(/<FounderDrawer/g) ?? []).length, 1);
+
+// 20. e.stopPropagation() on the button prevents the click from also
+//     bubbling to the row's own onClick (which would otherwise fire a
+//     second, cancelling toggle for every mouse click on the button —
+//     the same pattern already used for the row's Open/Suspend actions).
+assert.match(customersTableClient, /onClick=\{\(e\) => e\.stopPropagation\(\)\}/); // the pre-existing Open/Suspend action cell
+
+console.log('Validated the shared FounderDrawer primitive: no competing modal framework was introduced (none existed to reuse), all five Founder drawers (Plans & Billing, Customer Integrations, Integration Catalog, Feature Management, and the Customers list preview) now go through this one implementation with zero duplicate role="dialog"/aria-modal declarations, real focus capture/move-in/trap/restore (not a document-wide hack), background scroll now locked while any drawer is open and restored to its prior value on close, a capture-phase Escape/Tab handler that owns keyboard behavior ahead of any nested content, aria-labelledby correctly wired to each caller\'s own title element, every module\'s original drawer width preserved exactly under a named size, a real pre-existing z-40/z-50 stacking inconsistency resolved as a side effect of consolidation, the Customers list preview trigger is now a real keyboard-operable button with an accessible name reusing the exact same state and drawer (no duplicate state, no duplicate drawer), no data-fetching or credential surface added to the shared component itself, and Customer 360 (which has no drawer at all) left completely untouched.');
