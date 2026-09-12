@@ -88,6 +88,7 @@ export default async function FounderCustomerIntegrationsPage({
           page={data.page}
           totalPages={data.totalPages}
           totalCustomers={data.totalCustomers}
+          hasAnyCustomerIntegrations={data.hasAnyCustomerIntegrations}
           filters={{ q: params.q ?? '', provider: params.provider ?? '', connection: params.connection ?? '', health: params.health ?? '' }}
           canManage={canManage}
           onEnableAccess={enableAccessAction}

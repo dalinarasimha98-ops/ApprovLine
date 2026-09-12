@@ -137,6 +137,13 @@ export type CustomerIntegrationsPortfolio = {
   page: number;
   totalPages: number;
   totalCustomers: number;
+  // True system-wide state (Phase 6's "TRUE SYSTEM EMPTY STATE"): whether
+  // ANY customer has a relevant integration/access at all, ignoring every
+  // active search/provider/connection/health filter. This is what
+  // distinguishes "nothing exists yet" from "your filters matched nothing" —
+  // totalCustomers/rows above are already filtered, so they cannot make
+  // that distinction on their own.
+  hasAnyCustomerIntegrations: boolean;
   providerOptions: Array<{ slug: string; displayName: string }>;
 };
 
@@ -147,6 +154,7 @@ function emptyPortfolio(): CustomerIntegrationsPortfolio {
     page: 1,
     totalPages: 1,
     totalCustomers: 0,
+    hasAnyCustomerIntegrations: false,
     providerOptions: [],
   };
 }
@@ -238,7 +246,22 @@ export async function buildCustomerIntegrationsPortfolio(filters: CustomerIntegr
 
     const where: Prisma.CustomerAccountWhereInput = conditions.length > 1 ? { AND: conditions } : conditions[0];
 
-    const [customers, totalCustomers, statusGroups, tenantAccessForKpi, integrationOrgPairsForKpi, providers] = await Promise.all([
+    // KPI scope MUST match the table's canonical dataset exactly. The table
+    // starts from CustomerAccount (an Organization has one only if a
+    // Founder actually provisioned it — CustomerAccount is a Founder-ops
+    // record layered on top of the core, broader Organization model, not
+    // guaranteed to exist for every Organization), so a bare
+    // Integration/TenantProviderAccess query scoped only by provider would
+    // silently include organizations with real connections but no
+    // CustomerAccount — counting them in the KPIs while the table (correctly)
+    // never displays them, since it has no company name, domain, or Customer
+    // 360 destination to show for them. This is the exact bug this fix
+    // corrects: both now require organization.customerAccount to exist.
+    const belongsToCustomerAccount: Prisma.OrganizationWhereInput = { customerAccount: { isNot: null } };
+    const integrationKpiScope: Prisma.IntegrationWhereInput = { provider: { in: MAPPABLE_ENUMS }, organization: belongsToCustomerAccount };
+    const tenantAccessKpiScope: Prisma.TenantProviderAccessWhereInput = { providerSlug: { in: MAPPABLE_SLUGS }, organization: belongsToCustomerAccount };
+
+    const [customers, totalCustomers, hasAnyCustomerIntegrationsCount, statusGroups, tenantAccessForKpi, integrationOrgPairsForKpi, providers] = await Promise.all([
       prisma.customerAccount.findMany({
         where,
         orderBy: { companyName: 'asc' },
@@ -263,11 +286,18 @@ export async function buildCustomerIntegrationsPortfolio(filters: CustomerIntegr
         take,
       }),
       prisma.customerAccount.count({ where }),
-      // Portfolio-wide KPIs — independent of the current page/filters,
-      // computed once from the same real Integration.status field.
-      prisma.integration.groupBy({ by: ['status'], where: { provider: { in: MAPPABLE_ENUMS } }, _count: true }),
-      prisma.tenantProviderAccess.findMany({ where: { providerSlug: { in: MAPPABLE_SLUGS } }, select: { organizationId: true, providerSlug: true } }),
-      prisma.integration.findMany({ where: { provider: { in: MAPPABLE_ENUMS } }, select: { organizationId: true, provider: true } }),
+      // Unfiltered baseline count (Phase 6): whether ANY customer has a
+      // relevant integration/access at all, ignoring search/provider/
+      // connection/health filters — this is what lets the UI distinguish a
+      // true system empty state from a filtered-to-zero result.
+      prisma.customerAccount.count({ where: baselineRelevance }),
+      // Portfolio-wide KPIs — independent of the current page/filters, but
+      // scoped to the exact same canonical dataset as the table (see
+      // belongsToCustomerAccount above), computed once from the same real
+      // Integration.status field.
+      prisma.integration.groupBy({ by: ['status'], where: integrationKpiScope, _count: true }),
+      prisma.tenantProviderAccess.findMany({ where: tenantAccessKpiScope, select: { organizationId: true, providerSlug: true } }),
+      prisma.integration.findMany({ where: integrationKpiScope, select: { organizationId: true, provider: true } }),
       prisma.marketplaceProvider.findMany({ where: { slug: { in: MAPPABLE_SLUGS } }, select: { slug: true, displayName: true }, orderBy: { sortOrder: 'asc' } }),
     ]);
 
@@ -365,6 +395,7 @@ export async function buildCustomerIntegrationsPortfolio(filters: CustomerIntegr
         page,
         totalPages: Math.max(1, Math.ceil(totalCustomers / take)),
         totalCustomers,
+        hasAnyCustomerIntegrations: hasAnyCustomerIntegrationsCount > 0,
         providerOptions: providers,
       },
     };

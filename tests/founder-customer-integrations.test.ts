@@ -158,7 +158,7 @@ assert.match(client, /Credentials are securely encrypted and not displayed\./);
 // 15. The portfolio query batches everything in one Promise.all (customer
 //     page fetch, count, KPI groupBy/findMany, provider list) — never a
 //     per-customer or per-row query.
-assert.match(service, /const \[customers, totalCustomers, statusGroups, tenantAccessForKpi, integrationOrgPairsForKpi, providers\] = await Promise\.all\(\[/);
+assert.match(service, /const \[customers, totalCustomers, hasAnyCustomerIntegrationsCount, statusGroups, tenantAccessForKpi, integrationOrgPairsForKpi, providers\] = await Promise\.all\(\[/);
 assert.doesNotMatch(service, /customers\.map\(async/);
 assert.doesNotMatch(service, /for \(const \w+ of customers\) \{\s*\n\s*await prisma/);
 
@@ -238,6 +238,66 @@ assert.match(page, /value: data\.kpis\.failed/);
 assert.match(page, /value: data\.kpis\.pendingConnections/);
 assert.match(service, /prisma\.integration\.groupBy\(\{ by: \['status'\]/);
 
+// ─── KPI/table dataset consistency (data-consistency correction pass) ──────
+//
+// Root cause this section proves fixed: the KPI queries originally counted
+// Integration/TenantProviderAccess rows for ANY organization matching the
+// provider filter, while the table's dataset starts from CustomerAccount
+// and therefore only ever includes organizations that actually have one
+// (CustomerAccount is a Founder-ops record layered on top of Organization —
+// not every Organization with real Integration rows has been provisioned
+// through Founder's CustomerAccount flow). That mismatch is exactly how a
+// KPI strip could read "12 Connected" while the table legitimately showed
+// zero rows for organizations it has no company name/domain/Customer 360
+// destination to display.
+
+// 24b. Both the table's customer-selection filter and the three KPI
+//      queries require organization.customerAccount to exist — the single,
+//      shared canonical-dataset guard (belongsToCustomerAccount) — so a
+//      KPI count can never include an organization the table would exclude.
+assert.match(service, /const belongsToCustomerAccount: Prisma\.OrganizationWhereInput = \{ customerAccount: \{ isNot: null \} \};/);
+assert.match(service, /const integrationKpiScope: Prisma\.IntegrationWhereInput = \{ provider: \{ in: MAPPABLE_ENUMS \}, organization: belongsToCustomerAccount \};/);
+assert.match(service, /const tenantAccessKpiScope: Prisma\.TenantProviderAccessWhereInput = \{ providerSlug: \{ in: MAPPABLE_SLUGS \}, organization: belongsToCustomerAccount \};/);
+assert.match(service, /prisma\.integration\.groupBy\(\{ by: \['status'\], where: integrationKpiScope, _count: true \}\)/);
+assert.match(service, /prisma\.tenantProviderAccess\.findMany\(\{ where: tenantAccessKpiScope,/);
+assert.match(service, /prisma\.integration\.findMany\(\{ where: integrationKpiScope,/);
+// The bug this replaces: a bare provider-only filter with no
+// customerAccount guard must not reappear in either KPI query.
+assert.doesNotMatch(service, /prisma\.integration\.groupBy\(\{ by: \['status'\], where: \{ provider: \{ in: MAPPABLE_ENUMS \} \}, _count/);
+assert.doesNotMatch(service, /prisma\.tenantProviderAccess\.findMany\(\{ where: \{ providerSlug: \{ in: MAPPABLE_SLUGS \} \} /);
+
+// 24c. A true, unfiltered baseline count (ignoring every active
+//      search/provider/connection/health filter) is computed and returned
+//      alongside the filtered totalCustomers, specifically so the UI can
+//      tell "nothing exists yet" apart from "your filters matched nothing" —
+//      the two states Phase 6 requires to never be conflated.
+assert.match(service, /prisma\.customerAccount\.count\(\{ where: baselineRelevance \}\)/);
+assert.match(service, /hasAnyCustomerIntegrations: hasAnyCustomerIntegrationsCount > 0,/);
+assert.match(service, /hasAnyCustomerIntegrations: boolean;/);
+
+// 24d. The client renders the TRUE system empty state only when the
+//      unfiltered baseline is empty, and the FILTERED empty state whenever
+//      the current (filtered) row set is empty but the baseline is not —
+//      never the reverse, and never conflating the two conditions into a
+//      single totalCustomers check.
+assert.match(client, /\{!hasAnyCustomerIntegrations \? \(/);
+assert.doesNotMatch(client, /\{totalCustomers === 0 \? \(/);
+assert.match(client, /hasAnyCustomerIntegrations: boolean;/);
+
+// 24e. Pagination's own "N of M" / Previous-Next controls use the filtered
+//      totalCustomers (correct: pagination reflects the active filters),
+//      never the unfiltered baseline — so a real 12-row filtered result
+//      still paginates correctly instead of being swallowed by the
+//      true-empty-state branch.
+assert.match(client, /\{totalCustomers > 0 \? \(/);
+
+// 24f. Row-scoped lookups (evidence counts, and the per-customer
+//      integrations/tenantProviderAccess used to build rows) are always
+//      scoped by organizationId — never a query that could return another
+//      tenant's rows onto this page.
+assert.match(service, /organizationId: \{ in: pageOrgIds \}/);
+assert.match(service, /integrations: \{\s*\n\s*where: integrationScope,/);
+
 // ─── Search / filters actually change the result set ───────────────────────
 
 // 25. Search/provider/connection/health filters are pushed into the real
@@ -274,4 +334,4 @@ assert.match(client, /sticky right-0 w-28 border-l border-slate-100 bg-white px-
 assert.match(integrationCatalogActions, /export async function enableProviderForTenant\(\s*providerSlug: string,\s*organizationId: string,\s*\)/);
 assert.match(integrationCatalogActions, /export async function disableProviderForTenant\(\s*providerSlug: string,\s*organizationId: string,\s*\)/);
 
-console.log('Validated Founder Customer Integrations: reuses the exact existing MarketplaceProvider/TenantProviderAccess/Integration/CustomerAccount/Event/CanonicalEvidenceEvent/FounderAuditLog architecture and Integration Catalog\'s own enableProviderForTenant/disableProviderForTenant (no duplicate access mutator, no new model, no second health/sync/evidence engine), proved from source that the newer Evidence Provider SDK tables have zero real callers today (registerEvidenceProvider is invoked only from a test file) and correctly built Sync/Evidence instead on the real Integration.status/Event/CanonicalEvidenceEvent fields every actual connector route writes, derived Health as one explicit documented rollup of that same real status field (no time-based heuristic), enforces Founder authorization/read-only protection/server-side validation on every mutation with no client-supplied actor identity, excludes Slack from Founder-triggered sync honestly (no polling sync route exists) rather than faking it, never selects or renders credential-bearing fields, batches every query (no N+1, page-scoped evidence lookups, server-side pagination mirroring the established listFounderCustomers pattern), fixed the Founder nav\'s stale "Customer Integrations" link to point at this new page, and ships an accessible drawer with real wired actions, working server-side search/filters, and honest empty states.');
+console.log('Validated Founder Customer Integrations: reuses the exact existing MarketplaceProvider/TenantProviderAccess/Integration/CustomerAccount/Event/CanonicalEvidenceEvent/FounderAuditLog architecture and Integration Catalog\'s own enableProviderForTenant/disableProviderForTenant (no duplicate access mutator, no new model, no second health/sync/evidence engine), proved from source that the newer Evidence Provider SDK tables have zero real callers today (registerEvidenceProvider is invoked only from a test file) and correctly built Sync/Evidence instead on the real Integration.status/Event/CanonicalEvidenceEvent fields every actual connector route writes, derived Health as one explicit documented rollup of that same real status field (no time-based heuristic), enforces Founder authorization/read-only protection/server-side validation on every mutation with no client-supplied actor identity, excludes Slack from Founder-triggered sync honestly (no polling sync route exists) rather than faking it, never selects or renders credential-bearing fields, batches every query (no N+1, page-scoped evidence lookups, server-side pagination mirroring the established listFounderCustomers pattern), fixed the Founder nav\'s stale "Customer Integrations" link to point at this new page, and ships an accessible drawer with real wired actions, working server-side search/filters, and honest empty states. Data-consistency correction: found and fixed the exact reason the KPI strip could disagree with the table (KPI queries counted Integration/TenantProviderAccess rows for any organization, while the table\'s dataset starts from CustomerAccount and only includes organizations that actually have one) by scoping both to the identical belongsToCustomerAccount-gated canonical dataset, and added a true unfiltered baseline count (hasAnyCustomerIntegrations) so the UI can finally distinguish a genuine system-empty state from a filtered-to-zero result instead of conflating the two.');

@@ -28,6 +28,7 @@ type Props = {
   page: number;
   totalPages: number;
   totalCustomers: number;
+  hasAnyCustomerIntegrations: boolean;
   filters: { q: string; provider: string; connection: string; health: string };
   canManage: boolean;
   onEnableAccess: (input: { providerSlug: string; organizationId: string }) => Promise<MutationResult>;
@@ -51,6 +52,7 @@ export function CustomerIntegrationsClient({
   page,
   totalPages,
   totalCustomers,
+  hasAnyCustomerIntegrations,
   filters,
   canManage,
   onEnableAccess,
@@ -189,7 +191,7 @@ export function CustomerIntegrationsClient({
           </form>
         </div>
 
-        {totalCustomers === 0 ? (
+        {!hasAnyCustomerIntegrations ? (
           <div className="px-6 py-10 text-center">
             <p className="text-base font-black text-slate-950">No customer integrations found</p>
             <p className="mt-1 text-sm font-semibold text-slate-500">No customer has a connected or available integration yet.</p>
