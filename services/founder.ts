@@ -1757,7 +1757,14 @@ export async function updateCustomerNote(access: Extract<FounderAccess, { ok: tr
   const noteId = String(formData.get('noteId') ?? '');
   const body = String(formData.get('body') ?? '').trim();
   if (!customerAccountId || !noteId || !body) throw new Error('Customer, note, and body are required.');
-  await prisma.customerNote.update({ where: { id: noteId }, data: { body } });
+  // updateMany + a compound where (rather than update({where:{id}})) so a
+  // mismatched customerAccountId/noteId pair — whether a stale client
+  // state or a tampered hidden form field — is rejected instead of
+  // silently mutating a different customer's note under the wrong
+  // customer's audit attribution. Found during the Support & Notes
+  // architecture audit; applies to every canonical note mutation below.
+  const result = await prisma.customerNote.updateMany({ where: { id: noteId, customerAccountId }, data: { body } });
+  if (result.count === 0) throw new Error('Note not found for this customer.');
   await logFounderAction({ access, customerAccountId, action: 'customer.note.updated', targetType: 'CustomerNote', targetId: noteId });
 }
 
@@ -1768,7 +1775,8 @@ export async function toggleCustomerNotePinned(access: Extract<FounderAccess, { 
   const noteId = String(formData.get('noteId') ?? '');
   const pinned = formData.get('pinned') === 'true';
   if (!customerAccountId || !noteId) throw new Error('Customer and note are required.');
-  await prisma.customerNote.update({ where: { id: noteId }, data: { pinned } });
+  const result = await prisma.customerNote.updateMany({ where: { id: noteId, customerAccountId }, data: { pinned } });
+  if (result.count === 0) throw new Error('Note not found for this customer.');
   await logFounderAction({ access, customerAccountId, action: pinned ? 'customer.note.pinned' : 'customer.note.unpinned', targetType: 'CustomerNote', targetId: noteId });
 }
 
@@ -1778,7 +1786,8 @@ export async function deleteCustomerNote(access: Extract<FounderAccess, { ok: tr
   const customerAccountId = String(formData.get('customerAccountId') ?? '');
   const noteId = String(formData.get('noteId') ?? '');
   if (!customerAccountId || !noteId) throw new Error('Customer and note are required.');
-  await prisma.customerNote.delete({ where: { id: noteId } });
+  const result = await prisma.customerNote.deleteMany({ where: { id: noteId, customerAccountId } });
+  if (result.count === 0) throw new Error('Note not found for this customer.');
   await logFounderAction({ access, customerAccountId, action: 'customer.note.deleted', targetType: 'CustomerNote', targetId: noteId });
 }
 
