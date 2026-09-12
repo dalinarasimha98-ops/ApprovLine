@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { planDisplayName } from '@/lib/plans';
@@ -63,6 +64,22 @@ function Badge({ tone, children }: { tone: 'green' | 'blue' | 'amber' | 'red' | 
   );
 }
 
+// useFormStatus only reports the status of the nearest enclosing <form> —
+// it must be called from a component rendered *inside* that form, not from
+// NotesPortfolioClient's own body (which wraps all three forms). This one
+// button is reused for Add Note / Pin / Unpin / Delete so every note
+// mutation gets a real pending state (disabled + a "…" label) rather than
+// letting a slow request sit there looking clickable, which is what let a
+// double-click file two submissions of the same mutation.
+function FormSubmitButton({ className, disabled, pendingLabel, children }: { className: string; disabled?: boolean; pendingLabel: string; children: React.ReactNode }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={disabled || pending} aria-busy={pending} className={className}>
+      {pending ? pendingLabel : children}
+    </button>
+  );
+}
+
 export function NotesPortfolioClient({ rows, page, totalPages, totalCustomers, hasAnyCustomers, filters, canWrite, addNoteAction, togglePinAction, deleteNoteAction }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -114,6 +131,20 @@ export function NotesPortfolioClient({ rows, page, totalPages, totalCustomers, h
   useEffect(() => {
     setNoteBody('');
   }, [selected?.id]);
+
+  // Wiring addNoteAction directly as the form's action only cleared
+  // noteBody when selected?.id changes (switching customers) — adding a
+  // second note for the SAME customer left the just-submitted text sitting
+  // in a controlled textarea, since revalidatePath refreshes the row data
+  // but never
+  // touches this component's local state. That looked like the save had
+  // silently failed, and a second click of "Save note" would have
+  // resubmitted the identical body as a genuine duplicate note. Wrapping
+  // the action to clear noteBody once it resolves fixes both.
+  async function handleAddNote(formData: FormData) {
+    await addNoteAction(formData);
+    setNoteBody('');
+  }
 
   const hasActiveFilters = Boolean(filters.q || filters.status || filters.coverage);
 
@@ -318,16 +349,22 @@ export function NotesPortfolioClient({ rows, page, totalPages, totalCustomers, h
                           <input type="hidden" name="noteId" value={selected.latestNote.id} />
                           <input type="hidden" name="customerAccountId" value={selected.id} />
                           <input type="hidden" name="pinned" value={selected.latestNote.pinned ? 'false' : 'true'} />
-                          <button className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-700 hover:bg-amber-100">
+                          <FormSubmitButton
+                            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            pendingLabel={selected.latestNote.pinned ? 'Unpinning…' : 'Pinning…'}
+                          >
                             {selected.latestNote.pinned ? 'Unpin' : 'Pin'}
-                          </button>
+                          </FormSubmitButton>
                         </form>
                         <form action={deleteNoteAction}>
                           <input type="hidden" name="noteId" value={selected.latestNote.id} />
                           <input type="hidden" name="customerAccountId" value={selected.id} />
-                          <button className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-700 hover:bg-rose-100">
+                          <FormSubmitButton
+                            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            pendingLabel="Deleting…"
+                          >
                             Delete
-                          </button>
+                          </FormSubmitButton>
                         </form>
                       </div>
                     ) : null}
@@ -338,7 +375,7 @@ export function NotesPortfolioClient({ rows, page, totalPages, totalCustomers, h
               </div>
 
               {canWrite ? (
-                <form action={addNoteAction} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <form action={handleAddNote} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Add Note</p>
                   <input type="hidden" name="customerAccountId" value={selected.id} />
                   <textarea
@@ -352,9 +389,13 @@ export function NotesPortfolioClient({ rows, page, totalPages, totalCustomers, h
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
                   />
                   <div className="mt-2 flex justify-end">
-                    <button disabled={!noteBody.trim()} className="rounded-lg bg-[#2557dc] px-4 py-1.5 text-xs font-black text-white hover:bg-[#1a44be] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[#2557dc]">
+                    <FormSubmitButton
+                      disabled={!noteBody.trim()}
+                      pendingLabel="Saving…"
+                      className="rounded-lg bg-[#2557dc] px-4 py-1.5 text-xs font-black text-white hover:bg-[#1a44be] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[#2557dc]"
+                    >
                       Save note
-                    </button>
+                    </FormSubmitButton>
                   </div>
                 </form>
               ) : null}

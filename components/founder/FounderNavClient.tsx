@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
@@ -159,6 +159,18 @@ function SidebarContent({
   const readOnly = role === 'SUPPORT_ADMIN';
   const activeKey = findFirstActiveKey(pathname);
 
+  // The nav list (8 groups + Internal Tools + Settings) is taller than the
+  // viewport on common laptop screen heights, and its own scroll position
+  // persists across client-side navigations rather than resetting — so
+  // navigating to a group further down the list (e.g. Customer Success)
+  // could leave its own active item scrolled out of view. `block: 'nearest'`
+  // moves it into view only when actually needed, without disturbing scroll
+  // position when it's already visible.
+  const activeItemRef = useRef<HTMLAnchorElement | null>(null);
+  useEffect(() => {
+    activeItemRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [activeKey]);
+
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
@@ -212,6 +224,7 @@ function SidebarContent({
               return (
                 <Link
                   key={itemKey}
+                  ref={active ? activeItemRef : undefined}
                   href={item.href!}
                   onClick={onClose}
                   className={`flex items-center rounded-lg px-2.5 py-1.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] ${
@@ -238,6 +251,7 @@ function SidebarContent({
             return (
               <Link
                 key={item.href}
+                ref={active ? activeItemRef : undefined}
                 href={item.href!}
                 onClick={onClose}
                 className={`flex items-center rounded-lg px-2.5 py-1.5 text-[12.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] ${
@@ -263,6 +277,7 @@ function SidebarContent({
             return (
               <Link
                 key={item.href}
+                ref={active ? activeItemRef : undefined}
                 href={item.href!}
                 onClick={onClose}
                 className={`flex items-center rounded-lg px-2.5 py-1.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] ${

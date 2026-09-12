@@ -285,4 +285,42 @@ assert.match(navClient, /\{ label: 'Support & Notes', href: '\/founder\/notes' \
 assert.doesNotMatch(service, /tenantScopedWhere|assertTenantAccess/); // Founder console operates across all tenants by design; scoping is per-customerAccountId, not per-organizationId
 assert.match(tenantIsolationLib, /export function tenantScopedWhere/); // confirms the real helper this module deliberately does not duplicate or bypass
 
+// ─── Found during the 10/10 polish pass, before certification ─────────────
+
+// 28. Every note mutation form (Add Note / Pin-Unpin / Delete) renders a
+//     FormSubmitButton, which reads useFormStatus() from its own enclosing
+//     <form> to disable itself and show a pending label while the mutation
+//     is in flight — this is what actually prevents a double-click from
+//     firing the same server action twice (a genuine risk for Add Note,
+//     which would otherwise create two identical notes).
+assert.match(client, /import \{ useFormStatus \} from 'react-dom';/);
+assert.match(client, /function FormSubmitButton/);
+assert.match(client, /disabled=\{disabled \|\| pending\}/);
+assert.equal((client.match(/<FormSubmitButton/g) ?? []).length, 3); // Add Note, Pin/Unpin, Delete — no mutation button left un-guarded
+
+// 29. A controlled `<form action={addNoteAction}>` only cleared noteBody
+//     when selected?.id changed (switching customers) — adding a SECOND
+//     note for the SAME customer left the just-submitted text sitting in
+//     the textarea after a successful save, since revalidatePath refreshes
+//     server data but never touches this component's local state. That
+//     looked like the save silently failed, and clicking Save again would
+//     have resubmitted the identical body as a real duplicate note. Fixed
+//     by wrapping the action so it clears noteBody once the mutation
+//     resolves, instead of relying solely on the selected?.id effect.
+assert.match(client, /async function handleAddNote\(formData: FormData\) \{\s*\n\s*await addNoteAction\(formData\);\s*\n\s*setNoteBody\(''\);/);
+assert.match(client, /<form action=\{handleAddNote\}/);
+assert.doesNotMatch(client, /<form action=\{addNoteAction\}/); // the raw prop is no longer wired directly to the form
+
+// 30. The Founder sidebar's own nav list (8 groups + Internal Tools +
+//     Settings) is taller than common viewport heights and keeps its
+//     scroll position across client-side navigations — so navigating to a
+//     group further down the list (Support & Notes, under Customer
+//     Success) could leave its own active item scrolled out of view.
+//     scrollIntoView({block:'nearest'}) on the active item fixes this
+//     without disturbing scroll when the item is already visible, and
+//     without reordering or restructuring the locked nav.
+assert.match(navClient, /const activeItemRef = useRef<HTMLAnchorElement \| null>\(null\);/);
+assert.match(navClient, /activeItemRef\.current\?\.scrollIntoView\(\{ block: 'nearest' \}\);/);
+assert.equal((navClient.match(/ref=\{active \? activeItemRef : undefined\}/g) ?? []).length, 3); // main nav groups, Internal Tools, Settings — every render path that can be "active" is covered
+
 console.log('Validated Support & Notes (/founder/notes): rebuilds the pre-existing (functionally honest but visually outdated) notes page onto the now-established Founder Console pattern, reusing CustomerNote and its four existing canonical mutations verbatim — no second note/ticket/support model, and no Priority/Status/SLA/Assignee/Ticket-ID concept anywhere, since none of those fields exist on CustomerNote. Shows only each customer\'s latest note for portfolio-wide triage, deliberately not duplicating Customer 360\'s own complete note history, and links out to the real /founder/audit?customerAccountId= deep-link for Customer Activity rather than re-reading FounderAuditLog. Found and fixed a real pre-existing defect in three of the four canonical note mutations — a noteId/customerAccountId mismatch could mutate the wrong customer\'s note under the wrong customer\'s audit attribution — now rejected via a compound where clause and a zero-count guard, verified with real spoofing attempts. Every filter (search across customer fields AND note body text, status, notes coverage) is real SQL via Prisma\'s native relation existence filters, malformed query-string values are validated before use, and the table applies the responsive-column-hiding and scroll-conditional-shadow fixes already proven for Revenue from the start, catching and fixing one new instance of the same class of defect (a too-narrow Pinned column) during this module\'s own visual QA before shipping.');
