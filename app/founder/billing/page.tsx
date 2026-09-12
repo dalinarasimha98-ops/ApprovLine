@@ -1,7 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import { FounderMetricCard, MigrationNotice } from '@/components/founder/FounderShell';
 import { BillingPortfolioClient } from '@/components/founder/BillingPortfolioClient';
-import { getFounderAccess, updateCustomerSeats } from '@/services/founder';
+import { getFounderAccess, updateCustomerSeats, founderFeatures } from '@/services/founder';
 import { buildBillingPortfolio } from '@/services/founder-billing';
 import { fmtEstimatedArr } from '@/lib/founder-billing';
 import type { CustomerAccountStatus } from '@prisma/client';
@@ -40,6 +40,13 @@ export default async function FounderBillingPage({
     page,
   });
   const data = result.data;
+
+  // Derived from the one authoritative catalog (services/founder.ts's
+  // founderFeatures — the same array Feature Management renders) rather
+  // than a second hardcoded label map. founderFeatures itself imports
+  // server-only modules (Clerk, Prisma), so it can only be read here in
+  // the Server Component and passed down as plain serializable data.
+  const featureLabels: Record<string, string> = Object.fromEntries(founderFeatures.map((f) => [f.key, f.label]));
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-6">
@@ -103,6 +110,7 @@ export default async function FounderBillingPage({
         filters={{ q, plan, status }}
         canWrite={!readOnly}
         updateSeatsAction={updateSeats}
+        featureLabels={featureLabels}
       />
     </div>
   );

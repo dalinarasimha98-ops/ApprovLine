@@ -73,7 +73,7 @@ assert.doesNotMatch(service, /model\s+\w*SeatAllocation\w*(?!\s*\{)/); // no dup
 assert.doesNotMatch(prismaSchema, /model CustomerSeatAllocation2|model BillingSeatAllocation/);
 
 // ─── 9. No duplicate seat mutation — Plans & Billing reuses updateCustomerSeats ─
-assert.match(page, /import \{ getFounderAccess, updateCustomerSeats \} from '@\/services\/founder'/);
+assert.match(page, /import \{ getFounderAccess, updateCustomerSeats, founderFeatures \} from '@\/services\/founder'/);
 assert.match(page, /await updateCustomerSeats\(access, formData\)/);
 assert.doesNotMatch(service, /function updateCustomerSeats|function updateSeats\(/);
 assert.doesNotMatch(client, /function updateCustomerSeats/);
@@ -207,4 +207,46 @@ assert.doesNotMatch(founderHomePage, /label="Est\. ARR"/);
 assert.match(founderHomePage, /label="Pipeline ARR"/);
 assert.match(founderService, /Never render\s*\n \* this value under an "Est\. ARR" \/ "Estimated ARR" label/);
 
-console.log('Validated Plans & Billing: Customer 360 and Plans & Billing both read the real Founder-entered CustomerAccount.estimatedArrUsd (never calcArr/arrFromPlanTier/arrForPlan) with an honest "Not set" empty state, seats are sourced exclusively from CustomerSeatAllocation with no duplicate seat model or mutation, no payment provider/Subscription/MRR/payment-status functionality was introduced, Account Status is never mislabeled as billing/payment status, every mutation reuses the existing Founder-authorized updateCustomerSeats with server-derived actor identity and the canonical audit log, pagination is server-side and bounded, true-empty and filtered-empty states are distinguished, the drawer is an accessible dialog with Escape-to-close, no page-level horizontal overflow was introduced, seat-limit mismatches are surfaced non-destructively, and the pre-existing plan/seat-based "Pipeline ARR" pipeline heuristic can no longer be confused with the real Estimated ARR figure anywhere it appears.');
+// ─── Drawer polish pass: Feature Access uses the authoritative catalog ─────
+
+// Feature Management's own catalog (services/founder.ts's founderFeatures)
+// is the single source of these labels — the billing page derives a lookup
+// from it rather than hardcoding a second copy, and passes that lookup down
+// as a plain prop (founderFeatures itself imports server-only modules, so a
+// Client Component cannot import it directly).
+assert.match(page, /const featureLabels: Record<string, string> = Object\.fromEntries\(founderFeatures\.map\(\(f\) => \[f\.key, f\.label\]\)\);/);
+assert.match(page, /featureLabels=\{featureLabels\}/);
+assert.match(client, /featureLabels\[flag\.key\] \?\? flag\.key\.replaceAll\('_', ' '\)/);
+// No second hardcoded key->label map was introduced in the client.
+assert.doesNotMatch(client, /demo_mode['"]?\s*:\s*['"]Demo Mode/i);
+assert.doesNotMatch(client, /'playbook_ai':\s*'Playbook AI'/);
+
+// ─── Drawer polish pass: Manage Seats "Save changes" is dirty-tracked ──────
+assert.match(client, /const \[seatsInput, setSeatsInput\] = useState\(''\);/);
+assert.match(client, /const seatsUnchanged = selected != null && seatsInput === String\(selected\.purchasedSeats\);/);
+assert.match(client, /disabled=\{seatsUnchanged\}/);
+assert.match(client, />\s*Save changes\s*</);
+// The input stays a real form field (name="purchasedSeats") so FormData/
+// server-side validation and updateCustomerSeats() are completely
+// unchanged — this is a controlled-value UX addition, not an architecture
+// change.
+assert.match(client, /name="purchasedSeats"/);
+assert.match(client, /value=\{seatsInput\}/);
+assert.match(client, /onChange=\{\(e\) => setSeatsInput\(e\.target\.value\)\}/);
+
+// ─── Preserve: no commercial semantics changed by this pass ────────────────
+assert.match(client, /Purchased Seats/);
+assert.match(client, /Allocated Seats/);
+assert.match(client, /Used Seats/);
+assert.match(client, /Seat Utilization/);
+assert.match(client, /Estimated ARR is a Founder-entered planning figure captured at provisioning\. It is not actual or recognized revenue, and ApprovLine does not process payments\./);
+assert.match(client, /fmtEstimatedArr\(selected\.estimatedArrUsd\)/);
+
+// ─── Preserve: Feature Access remains read-only (no edit control added) ───
+assert.doesNotMatch(client, /onToggleFeature|toggleFeature|updateFeatureFlag/);
+
+// ─── Preserve: audit action and authorization are untouched ───────────────
+assert.match(founderService, /action: 'customer\.seats\.updated'/);
+assert.match(page, /if \(!access\.ok \|\| access\.readOnly\) return;/);
+
+console.log('Validated the Plans & Billing drawer polish pass: Feature Access now renders founderFeatures\' own authoritative labels (Demo Mode, Playbook AI, AI Copilot, Investigation Center, Executive ROI, Universal Gateway, Pilot Readiness) via a lookup derived from that single catalog rather than a second hardcoded map, Manage Seats\' Save button is disabled until the purchased-seats value actually changes and relabeled "Save changes" while the underlying form field, validation, authorization, and audit path are completely untouched, Feature Access remains read-only with no edit control introduced, and Customer 360 and Plans & Billing both still read the real Founder-entered CustomerAccount.estimatedArrUsd (never calcArr/arrFromPlanTier/arrForPlan) with an honest "Not set" empty state, seats sourced exclusively from CustomerSeatAllocation, no payment/MRR/Subscription functionality, and the drawer\'s accessible dialog semantics (role, aria-modal, aria-labelledby, Escape-to-close) unchanged.');

@@ -40,6 +40,8 @@ type Props = {
   filters: { q: string; plan: string; status: string };
   canWrite: boolean;
   updateSeatsAction: (formData: FormData) => void | Promise<void>;
+  /** key -> label, derived from services/founder.ts's founderFeatures (the same catalog Feature Management uses) — not a second mapping. */
+  featureLabels: Record<string, string>;
 };
 
 function Badge({ tone, children }: { tone: 'green' | 'blue' | 'amber' | 'red' | 'slate'; children: React.ReactNode }) {
@@ -57,12 +59,13 @@ function Badge({ tone, children }: { tone: 'green' | 'blue' | 'amber' | 'red' | 
   );
 }
 
-export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers, hasAnyCustomers, filters, canWrite, updateSeatsAction }: Props) {
+export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers, hasAnyCustomers, filters, canWrite, updateSeatsAction, featureLabels }: Props) {
   const router = useRouter();
   const pathname = usePathname();
 
   const [q, setQ] = useState(filters.q);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [seatsInput, setSeatsInput] = useState('');
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const selected = rows.find((r) => r.id === selectedId) ?? null;
 
@@ -96,6 +99,12 @@ export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers,
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selected]);
+
+  useEffect(() => {
+    if (selected) setSeatsInput(String(selected.purchasedSeats));
+  }, [selected]);
+
+  const seatsUnchanged = selected != null && seatsInput === String(selected.purchasedSeats);
 
   const hasActiveFilters = Boolean(filters.q || filters.plan || filters.status);
 
@@ -295,13 +304,17 @@ export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers,
                     <input
                       type="number"
                       name="purchasedSeats"
-                      defaultValue={selected.purchasedSeats}
+                      value={seatsInput}
+                      onChange={(e) => setSeatsInput(e.target.value)}
                       min={1}
                       aria-label="Purchased seats"
                       className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm font-bold outline-none focus:border-[#2557dc]"
                     />
-                    <button className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100">
-                      Save
+                    <button
+                      disabled={seatsUnchanged}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+                    >
+                      Save changes
                     </button>
                   </div>
                   <p className="mt-2 text-[11px] font-semibold leading-4 text-slate-500">Purchased seats cannot be set below the customer&apos;s current active user count.</p>
@@ -316,7 +329,7 @@ export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers,
                   <div className="space-y-1.5">
                     {selected.featureFlags.map((flag) => (
                       <div key={flag.key} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                        <span className="text-xs font-bold text-slate-700">{flag.key.replaceAll('_', ' ')}</span>
+                        <span className="text-xs font-bold text-slate-700">{featureLabels[flag.key] ?? flag.key.replaceAll('_', ' ')}</span>
                         <Badge tone={flag.enabled ? 'green' : 'slate'}>{flag.enabled ? 'Enabled' : 'Disabled'}</Badge>
                       </div>
                     ))}
