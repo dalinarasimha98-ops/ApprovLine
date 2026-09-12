@@ -124,7 +124,7 @@ function PreviewDrawer({
               { label: 'Health Score', value: `${customer.healthScore}/100` },
               { label: 'Seats', value: `${customer.activeSeats}/${customer.allocatedSeats}` },
               { label: 'Integrations', value: String(customer.integrationsConnected) },
-              { label: 'Est. ARR', value: fmtArr(customer.expectedArr) },
+              { label: 'Pipeline ARR', value: fmtArr(customer.expectedArr) },
               { label: 'Customer Since', value: fmtDate(customer.createdAt) },
             ].map(({ label, value }) => (
               <div key={label} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
@@ -293,7 +293,7 @@ export function CustomersTableClient({
                 { label: 'Health', className: 'w-[110px]' },
                 { label: 'Seats', className: 'w-[70px]' },
                 { label: 'Integrations', className: 'w-[80px]' },
-                { label: 'Est. ARR', className: 'w-[80px]' },
+                { label: 'Pipeline ARR', className: 'w-[80px]' },
                 { label: 'Last Updated', className: 'w-[90px]' },
                 { label: '', className: 'w-[150px]' },
               ].map((h) => (

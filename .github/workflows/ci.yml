@@ -57,6 +57,8 @@ jobs:
         run: npm run test:integrations
       - name: Test — customer integrations
         run: npm run test:customer-integrations
+      - name: Test — plans and billing
+        run: npm run test:billing
       - name: Test — gateway entitlement enforcement
         run: npm run test:gateway-entitlement
       - name: Test — reliability hardening

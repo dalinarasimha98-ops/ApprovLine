@@ -137,6 +137,16 @@ function healthLabel(score: number): PilotHealthLabel {
   return 'Critical';
 }
 
+/**
+ * Pilot pipeline forecast heuristic ("Expected ARR" throughout Founder
+ * Pilots / Founder Revenue). This is NOT actual revenue, NOT contracted/
+ * recognized ARR, and NOT the Founder-entered commercial estimate
+ * (CustomerAccount.estimatedArrUsd). It intentionally differs from
+ * services/founder.ts's arrFromPlanTier in its FREE_TRIAL/default-tier
+ * handling (a non-zero floor, since an active pilot with no plan yet
+ * assigned still represents pipeline value) — that divergence is
+ * deliberate, not a bug, and the two are not consolidated.
+ */
 function arrForPlan(planTier: string, seats: number) {
   if (planTier === 'ENTERPRISE') return Math.max(25000, seats * 1200);
   if (planTier === 'GROWTH') return Math.max(6000, seats * 600);

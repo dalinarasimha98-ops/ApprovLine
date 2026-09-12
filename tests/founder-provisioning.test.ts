@@ -466,11 +466,21 @@ assert.match(prismaSchema, /Founder-entered internal planning estimate[\s\S]{0,4
 assert.doesNotMatch(revenuePage, /estimatedArrUsd/);
 assert.match(founderPilots, /function arrForPlan\(planTier: string, seats: number\)/);
 
-// 52. (Scenario: Billing page not broken) /founder/billing's seat/plan
-//     management is untouched — it has no ARR figure of any kind, so
-//     adding estimatedArrUsd elsewhere introduces no naming collision or
-//     unintended coupling there.
-assert.doesNotMatch(billingPage, /estimatedArrUsd|Estimated ARR/);
+// 52. (Superseded by the Plans & Billing control-plane build: Plans &
+//     Billing now legitimately surfaces the Founder-entered Estimated ARR
+//     as an explicit, first-class KPI/column — this is that task's own
+//     scope, not a naming collision. It must read the real
+//     CustomerAccount.estimatedArrUsd field via the shared fmtEstimatedArr
+//     helper (lib/founder-billing.ts) and never fall back to a plan/seat-
+//     derived formula for that figure.)
+const founderBillingService = read('services/founder-billing.ts');
+const billingLib = read('lib/founder-billing.ts');
+const billingDrawer = read('components/founder/BillingPortfolioClient.tsx');
+assert.match(billingPage, /import \{ fmtEstimatedArr \} from '@\/lib\/founder-billing'/);
+assert.doesNotMatch(billingPage, /calcArr\(|arrFromPlanTier\(|arrForPlan\(/);
+assert.doesNotMatch(billingDrawer, /calcArr\(|arrFromPlanTier\(|arrForPlan\(/);
+assert.match(founderBillingService, /_sum: \{ estimatedArrUsd: true \}/);
+assert.match(billingLib, /estimatedArrUsd == null\) return 'Not set'/);
 
 // 53. (Scenario: tenant isolation intact) CustomerAccount.estimatedArrUsd
 //     lives on the same tenant-scoped commercial record as every other
@@ -505,7 +515,6 @@ const founderHomePage = read('app/founder/page.tsx');
 const founderPilotsService = read('services/founder-pilots.ts');
 const customerSuccessService = read('services/customerSuccess.ts');
 const customerSuccessPage = read('app/dashboard/customer-success/page.tsx');
-const billingPageSource = read('app/founder/billing/page.tsx');
 const revenuePageSource = revenuePage; // already read above
 
 // 55. The real, live customer-facing app shell (components/dashboard/
@@ -526,13 +535,17 @@ assert.doesNotMatch(founderHomePage, /customer\.planTier\.replace/);
 assert.match(founderHomePage, /import \{ planDisplayName \} from '@\/lib\/plans'/);
 assert.match(founderHomePage, /\{planDisplayName\(customer\.planTier\)\}/);
 
-// 57. Founder Plans & Billing's "Plan and seat summary" table renders the
-//     plan name via planDisplayName, not a raw enum replace (this was the
-//     same bug already fixed on Customer 360 in an earlier task, but had
-//     been missed on Billing itself).
-assert.doesNotMatch(billingPageSource, /customer\.planTier\.replace/);
-assert.match(billingPageSource, /import \{ planDisplayName \} from '@\/lib\/plans'/);
-assert.match(billingPageSource, /\{planDisplayName\(customer\.planTier\)\}/);
+// 57. Founder Plans & Billing's customer commercial table renders the plan
+//     name via planDisplayName, not a raw enum replace (this was the same
+//     bug already fixed on Customer 360 in an earlier task, but had been
+//     missed on Billing itself). The table itself lives in
+//     BillingPortfolioClient.tsx (page.tsx is a thin server wrapper that
+//     fetches data and renders KPIs), so the naming guarantee is checked
+//     there.
+const billingPortfolioClient = read('components/founder/BillingPortfolioClient.tsx');
+assert.doesNotMatch(billingPortfolioClient, /customer\.planTier\.replace/);
+assert.match(billingPortfolioClient, /import \{ commercialPlans, planDisplayName \} from '@\/lib\/plans'/);
+assert.match(billingPortfolioClient, /\{planDisplayName\(customer\.planTier\)\}/);
 
 // 58. The All Customers list (CustomersTableClient.tsx) — its plan filter
 //     dropdown, its mobile card view, and its desktop table row all source

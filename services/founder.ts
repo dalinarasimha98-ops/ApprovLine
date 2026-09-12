@@ -777,6 +777,16 @@ export type CustomerListResult = {
   summary: { total: number; active: number; atRisk: number; trial: number };
 };
 
+/**
+ * Plan/seat-based pipeline forecast heuristic used by the Founder customer
+ * list's "Pipeline ARR" column and Founder Overview's portfolio pipeline
+ * KPI. This is NOT actual revenue, NOT contracted/recognized ARR, and NOT
+ * the Founder-entered commercial estimate (CustomerAccount.estimatedArrUsd,
+ * surfaced on Customer 360 and Plans & Billing as "Est. ARR"). Never render
+ * this value under an "Est. ARR" / "Estimated ARR" label — only "Pipeline
+ * ARR" or an equivalently qualified label that cannot be confused with the
+ * Founder-entered figure.
+ */
 export function arrFromPlanTier(planTier: string, seats: number): number {
   if (planTier === 'ENTERPRISE') return Math.max(25_000, seats * 1_200);
   if (planTier === 'GROWTH') return Math.max(6_000, seats * 600);

@@ -254,9 +254,9 @@ export default async function FounderHomePage() {
           sub="all workspaces"
         />
         <KpiCard
-          label="Est. ARR"
+          label="Pipeline ARR"
           value={formatArr(totalEstArr)}
-          sub="plan-based estimate"
+          sub="plan-based pipeline estimate, not Founder-entered ARR"
           accent
         />
       </section>
@@ -501,7 +501,7 @@ export default async function FounderHomePage() {
           {/* Revenue estimate */}
           <section className="rounded-2xl border border-[#2557dc]/20 bg-[#2557dc]/5 p-5 shadow-sm">
             <div className="mb-1 flex items-center justify-between gap-3">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2557dc]/70">Est. ARR</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#2557dc]/70">Plan-Based ARR</p>
               <span className="rounded-full border border-[#2557dc]/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#2557dc]/60">Plan-based estimate</span>
             </div>
             <p className="text-3xl font-black tabular-nums text-[#2557dc]">{formatArr(totalEstArr)}</p>
