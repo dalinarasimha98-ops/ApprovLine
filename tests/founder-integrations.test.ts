@@ -391,13 +391,19 @@ assert.match(client, /Granting access makes this provider available to the custo
 
 // ─── Accessibility: dialog semantics, Escape, focus management ────────────
 
-// 31. Drawer is a proper labeled dialog, closes on Escape, and moves focus
-//     to the close button on open.
-assert.match(client, /role="dialog"/);
-assert.match(client, /aria-modal="true"/);
-assert.match(client, /aria-labelledby="provider-drawer-title"/);
-assert.match(client, /closeButtonRef\.current\?\.focus\(\);/);
-assert.match(client, /if \(e\.key === 'Escape'\) \{/);
+// 31. Drawer semantics (role="dialog", aria-modal, focus-on-open, Escape,
+//     focus restoration, Tab trap) are now owned by the shared
+//     components/founder/FounderDrawer.tsx primitive used by every Founder
+//     drawer (see tests/founder-drawer.test.ts for its own contract
+//     assertions), not re-implemented locally a second time here. The
+//     drawer's own confirmingStatus-first dismiss semantics (Escape/
+//     overlay-click/Close all back out of an open lifecycle confirmation
+//     before closing the whole drawer) are preserved via closeDrawer().
+assert.match(client, /import \{ FounderDrawer \} from '\.\/FounderDrawer'/);
+assert.match(client, /<FounderDrawer onClose=\{closeDrawer\} titleId="provider-drawer-title" size="lg">/);
+assert.match(client, /function closeDrawer\(\) \{\s*\n\s*if \(confirmingStatus\) setConfirmingStatus\(null\);\s*\n\s*else setSelectedSlug\(null\);\s*\n\s*\}/);
+assert.doesNotMatch(client, /role="dialog"|aria-modal="true"/);
+assert.doesNotMatch(client, /closeButtonRef/);
 
 // ─── Empty states ───────────────────────────────────────────────────────────
 
@@ -413,9 +419,12 @@ assert.match(client, /No lifecycle changes recorded for this provider yet\./);
 
 // ─── Layout: no page-level horizontal overflow ─────────────────────────────
 
-// 33. The drawer is `fixed`, so it cannot itself cause page-level horizontal
-//     overflow, and both tables use their own overflow-x-auto scroller.
-assert.match(client, /className="fixed inset-0 z-50"/);
+// 33. The drawer is `fixed` (inside the shared FounderDrawer component now,
+//     not re-declared here), so it cannot itself cause page-level
+//     horizontal overflow, and both tables use their own overflow-x-auto
+//     scroller.
+const founderDrawerComponent = read('components/founder/FounderDrawer.tsx');
+assert.match(founderDrawerComponent, /className="fixed inset-0 z-50"/);
 assert.equal((client.match(/overflow-x-auto/g) ?? []).length >= 2, true);
 
 // 33b. The page's root establishes the same bounded-intrinsic-width grid

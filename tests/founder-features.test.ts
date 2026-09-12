@@ -256,13 +256,14 @@ assert.match(client, /feature\.label\.toLowerCase\(\)\.includes\(q\) \|\| featur
 assert.match(client, /if \(category !== 'ALL' && feature\.category !== category\) return false;/);
 assert.match(client, /row\.companyName\.toLowerCase\(\)\.includes\(q\) \|\| row\.domain\.toLowerCase\(\)\.includes\(q\)/);
 
-// 21. Drawer accessibility: Escape closes it, it's a labeled dialog, and
-//     focus moves to the close button on open.
-assert.match(client, /if \(e\.key === 'Escape'\) setSelectedKey\(null\);/);
-assert.match(client, /role="dialog"/);
-assert.match(client, /aria-modal="true"/);
-assert.match(client, /aria-labelledby="feature-drawer-title"/);
-assert.match(client, /closeButtonRef\.current\?\.focus\(\);/);
+// 21. Drawer semantics (role="dialog", aria-modal, focus-on-open, Escape,
+//     focus restoration, Tab trap) are owned by the shared
+//     components/founder/FounderDrawer.tsx primitive used by every Founder
+//     drawer (see tests/founder-drawer.test.ts), not re-implemented here.
+assert.match(client, /import \{ FounderDrawer \} from '\.\/FounderDrawer'/);
+assert.match(client, /<FounderDrawer onClose=\{\(\) => setSelectedKey\(null\)\} titleId="feature-drawer-title" size="md">/);
+assert.doesNotMatch(client, /role="dialog"|aria-modal="true"/);
+assert.doesNotMatch(client, /closeButtonRef/);
 
 // 22. Empty/loading-adjacent states are honest: no feature catalog, no
 //     customers at all, and no activity are each explained rather than
@@ -273,11 +274,13 @@ assert.match(client, /No Founder activity recorded for this feature yet\./);
 
 // ─── Layout / performance ──────────────────────────────────────────────────
 
-// 23. The drawer is `fixed`, so it structurally cannot cause page-level
-//     horizontal overflow (unlike a persistent grid column would), and the
-//     catalog table keeps its own overflow-x-auto scroller with every
-//     column intact.
-assert.match(client, /className="fixed inset-0 z-40"/);
+// 23. The drawer is `fixed` (inside the shared FounderDrawer component,
+//     which also fixed a pre-existing z-40 vs. z-50 inconsistency across
+//     Founder drawers — z-40 collided with FounderNavClient's own mobile
+//     sidebar layer), so it structurally cannot cause page-level horizontal
+//     overflow, and the catalog table keeps its own overflow-x-auto
+//     scroller with every column intact.
+assert.match(read('components/founder/FounderDrawer.tsx'), /className="fixed inset-0 z-50"/);
 assert.doesNotMatch(client, /overflow-x-hidden/);
 for (const column of ['Feature', 'Category', 'Plan Access', 'Effective Status', 'Customers', 'Overrides', 'Default']) {
   assert.match(client, new RegExp(`<th className="px-6 py-3">${column}`));

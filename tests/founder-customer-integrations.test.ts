@@ -199,13 +199,14 @@ assert.match(navClient, /\{ label: 'Integration Catalog', href: '\/founder\/inte
 
 // ─── Accessibility ──────────────────────────────────────────────────────
 
-// 21. Drawer is a proper labeled dialog, closes on Escape, and moves focus
-//     to the close button on open.
-assert.match(client, /role="dialog"/);
-assert.match(client, /aria-modal="true"/);
-assert.match(client, /aria-labelledby="customer-integration-drawer-title"/);
-assert.match(client, /closeButtonRef\.current\?\.focus\(\);/);
-assert.match(client, /if \(e\.key === 'Escape'\) setSelected\(null\);/);
+// 21. Drawer semantics (role="dialog", aria-modal, focus-on-open, Escape,
+//     focus restoration, Tab trap) are owned by the shared
+//     components/founder/FounderDrawer.tsx primitive used by every Founder
+//     drawer (see tests/founder-drawer.test.ts), not re-implemented here.
+assert.match(client, /import \{ FounderDrawer \} from '\.\/FounderDrawer'/);
+assert.match(client, /<FounderDrawer onClose=\{\(\) => setSelected\(null\)\} titleId="customer-integration-drawer-title" size="lg">/);
+assert.doesNotMatch(client, /role="dialog"|aria-modal="true"/);
+assert.doesNotMatch(client, /closeButtonRef/);
 
 // ─── No dead buttons ────────────────────────────────────────────────────
 
@@ -323,7 +324,7 @@ assert.match(client, /No Founder activity recorded for this integration yet\./);
 //     Catalog (grid-cols-1 + min-w-0), and a sticky, always-visible Actions
 //     column so "View" is never clipped.
 assert.match(page, /className="grid min-w-0 grid-cols-1 gap-8"/);
-assert.match(client, /className="fixed inset-0 z-50"/);
+assert.match(read('components/founder/FounderDrawer.tsx'), /className="fixed inset-0 z-50"/);
 assert.match(client, /sticky right-0 w-28 border-l border-slate-100 bg-white px-4 py-3 text-right/);
 
 // ─── Regression: Integration Catalog untouched ─────────────────────────────

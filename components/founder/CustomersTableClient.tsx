@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useRef, useEffect, useState, useTransition } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import Link from 'next/link';
 import type { CustomerRow } from '@/services/founder';
 import { commercialPlans, planDisplayName } from '@/lib/plans';
+import { FounderDrawer } from './FounderDrawer';
 
 // ── Health tone ───────────────────────────────────────────────────────────────
 function healthTone(status: string): { bg: string; text: string } {
@@ -70,34 +71,14 @@ function PreviewDrawer({
   readOnly: boolean;
   updateStatusAction: (formData: FormData) => Promise<void>;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
   const ht = healthTone(customer.healthStatus);
 
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
-
   return (
-    <>
-      <div
-        className="fixed inset-0 z-30 bg-slate-950/20 backdrop-blur-[2px]"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <div
-        ref={ref}
-        role="dialog"
-        aria-label={`Preview: ${customer.companyName}`}
-        className="fixed right-0 top-0 z-40 h-full w-full max-w-sm overflow-y-auto bg-white shadow-2xl ring-1 ring-slate-200 flex flex-col"
-      >
+    <FounderDrawer onClose={onClose} titleId="customer-preview-drawer-title" size="sm">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
           <div className="min-w-0">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Customer Preview</p>
-            <h3 className="mt-1 truncate text-xl font-black text-slate-950">{customer.companyName}</h3>
+            <h3 id="customer-preview-drawer-title" className="mt-1 truncate text-xl font-black text-slate-950">{customer.companyName}</h3>
             <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{customer.domain}</p>
           </div>
           <button
@@ -165,8 +146,7 @@ function PreviewDrawer({
             </form>
           )}
         </div>
-      </div>
-    </>
+    </FounderDrawer>
   );
 }
 

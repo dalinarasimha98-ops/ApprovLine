@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { planDisplayName } from '@/lib/plans';
+import { FounderDrawer } from './FounderDrawer';
 import {
   EFFECTIVE_ACCESS_LABELS,
   FEATURE_EFFECTIVE_SUMMARY_LABELS,
@@ -60,7 +61,6 @@ export function FeatureManagementClient({ features, canManage, onSetOverride, on
   const [customerQuery, setCustomerQuery] = useState('');
   const [pending, startTransition] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const categories = useMemo(() => Array.from(new Set(features.map((f) => f.category))), [features]);
 
@@ -81,18 +81,6 @@ export function FeatureManagementClient({ features, canManage, onSetOverride, on
     if (!q) return selected.customerAccess;
     return selected.customerAccess.filter((row) => row.companyName.toLowerCase().includes(q) || row.domain.toLowerCase().includes(q));
   }, [selected, customerQuery]);
-
-  // Escape closes the drawer; opening a drawer moves focus to its close
-  // button so keyboard users land somewhere sensible immediately.
-  useEffect(() => {
-    if (!selected) return;
-    closeButtonRef.current?.focus();
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedKey(null);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected]);
 
   function openDrawer(key: string) {
     setActionError(null);
@@ -221,14 +209,7 @@ export function FeatureManagementClient({ features, canManage, onSetOverride, on
           cause page-level horizontal overflow, unlike a persistent grid
           column would. */}
       {selected ? (
-        <div className="fixed inset-0 z-40" role="presentation">
-          <div className="absolute inset-0 bg-slate-950/30" onClick={() => setSelectedKey(null)} aria-hidden="true" />
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="feature-drawer-title"
-            className="absolute inset-y-0 right-0 flex w-full max-w-[440px] flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-2xl"
-          >
+        <FounderDrawer onClose={() => setSelectedKey(null)} titleId="feature-drawer-title" size="md">
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-5">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -245,7 +226,6 @@ export function FeatureManagementClient({ features, canManage, onSetOverride, on
                 </div>
               </div>
               <button
-                ref={closeButtonRef}
                 type="button"
                 onClick={() => setSelectedKey(null)}
                 aria-label="Close feature details"
@@ -400,8 +380,7 @@ export function FeatureManagementClient({ features, canManage, onSetOverride, on
                 )}
               </div>
             </div>
-          </aside>
-        </div>
+        </FounderDrawer>
       ) : null}
     </div>
   );

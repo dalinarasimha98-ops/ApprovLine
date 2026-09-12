@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { FounderDrawer } from './FounderDrawer';
 import {
   ACCESS_STATE_LABELS,
   CONNECTION_STATE_LABELS,
@@ -72,7 +73,6 @@ export function CustomerIntegrationsClient({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   function pushParams(next: Partial<{ q: string; provider: string; connection: string; health: string; page: string }>) {
     const params = new URLSearchParams();
@@ -109,16 +109,6 @@ export function CustomerIntegrationsClient({
     if (result.ok) setDetail(result.data);
     else setDetailError(result.error);
   }
-
-  useEffect(() => {
-    if (!selected) return;
-    closeButtonRef.current?.focus();
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelected(null);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected]);
 
   function runMutation(promise: Promise<MutationResult>, successMessage: string, onDone?: () => void) {
     setActionError(null);
@@ -299,14 +289,7 @@ export function CustomerIntegrationsClient({
       </section>
 
       {selected ? (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-slate-950/30" onClick={() => setSelected(null)} aria-hidden="true" />
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="customer-integration-drawer-title"
-            className="absolute inset-y-0 right-0 flex w-full max-w-[480px] flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-2xl"
-          >
+        <FounderDrawer onClose={() => setSelected(null)} titleId="customer-integration-drawer-title" size="lg">
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-5">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -323,7 +306,7 @@ export function CustomerIntegrationsClient({
                 <p className="mt-2 text-sm font-black text-slate-700">{selected.companyName}</p>
                 <p className="text-xs font-semibold text-slate-400">{selected.domain}</p>
               </div>
-              <button ref={closeButtonRef} type="button" onClick={() => setSelected(null)} aria-label="Close integration details" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-500 hover:bg-slate-50">
+              <button type="button" onClick={() => setSelected(null)} aria-label="Close integration details" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-500 hover:bg-slate-50">
                 Close
               </button>
             </div>
@@ -525,8 +508,7 @@ export function CustomerIntegrationsClient({
                 </>
               ) : null}
             </div>
-          </aside>
-        </div>
+        </FounderDrawer>
       ) : null}
     </div>
   );

@@ -59,6 +59,8 @@ jobs:
         run: npm run test:customer-integrations
       - name: Test — plans and billing
         run: npm run test:billing
+      - name: Test — shared Founder drawer
+        run: npm run test:founder-drawer
       - name: Test — gateway entitlement enforcement
         run: npm run test:gateway-entitlement
       - name: Test — reliability hardening

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
+import { FounderDrawer } from './FounderDrawer';
 import {
   CUSTOMER_AVAILABILITY_LABELS,
   CUSTOMER_CONNECTION_LABELS,
@@ -89,7 +90,6 @@ export function IntegrationCatalogClient({
   const [pending, startTransition] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const categories = useMemo(() => Array.from(new Set(providers.map((p) => p.category))).sort(), [providers]);
   const capabilities = useMemo(
@@ -175,18 +175,14 @@ export function IntegrationCatalogClient({
     return customers.filter((c) => !grantedOrgIds.has(c.organizationId));
   }, [selected, customers]);
 
-  useEffect(() => {
-    if (!selected) return;
-    closeButtonRef.current?.focus();
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (confirmingStatus) setConfirmingStatus(null);
-        else setSelectedSlug(null);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected, confirmingStatus]);
+  // Dismissing the drawer (Escape, overlay click, or the visible Close
+  // button — FounderDrawer treats all three identically) backs out of an
+  // open lifecycle confirmation first, rather than closing the whole
+  // drawer out from under it.
+  function closeDrawer() {
+    if (confirmingStatus) setConfirmingStatus(null);
+    else setSelectedSlug(null);
+  }
 
   function openDrawer(slug: string) {
     setActionError(null);
@@ -474,14 +470,7 @@ export function IntegrationCatalogClient({
       {/* Backdrop + drawer for a selected provider's details. Fixed
           positioning keeps this overflow-proof at every viewport width. */}
       {selected ? (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-slate-950/30" onClick={() => setSelectedSlug(null)} aria-hidden="true" />
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="provider-drawer-title"
-            className="absolute inset-y-0 right-0 flex w-full max-w-[480px] flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-2xl"
-          >
+        <FounderDrawer onClose={closeDrawer} titleId="provider-drawer-title" size="lg">
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-5">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -496,7 +485,7 @@ export function IntegrationCatalogClient({
                   </div>
                 </div>
               </div>
-              <button ref={closeButtonRef} type="button" onClick={() => setSelectedSlug(null)} aria-label="Close provider details" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-500 hover:bg-slate-50">
+              <button type="button" onClick={closeDrawer} aria-label="Close provider details" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-500 hover:bg-slate-50">
                 Close
               </button>
             </div>
@@ -711,8 +700,7 @@ export function IntegrationCatalogClient({
                 </div>
               ) : null}
             </div>
-          </aside>
-        </div>
+        </FounderDrawer>
       ) : null}
     </div>
   );

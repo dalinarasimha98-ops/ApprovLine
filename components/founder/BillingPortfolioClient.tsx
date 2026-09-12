@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { commercialPlans, planDisplayName } from '@/lib/plans';
+import { FounderDrawer } from './FounderDrawer';
 import {
   PLAN_FILTER_OPTIONS,
   ACCOUNT_STATUS_FILTER_OPTIONS,
@@ -66,7 +67,6 @@ export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers,
   const [q, setQ] = useState(filters.q);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [seatsInput, setSeatsInput] = useState('');
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const selected = rows.find((r) => r.id === selectedId) ?? null;
 
   function pushParams(next: Partial<{ q: string; plan: string; status: string; page: string }>) {
@@ -89,16 +89,6 @@ export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers,
     setQ('');
     router.push(pathname);
   }
-
-  useEffect(() => {
-    if (!selected) return;
-    closeButtonRef.current?.focus();
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedId(null);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected]);
 
   useEffect(() => {
     if (selected) setSeatsInput(String(selected.purchasedSeats));
@@ -255,14 +245,7 @@ export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers,
       </section>
 
       {selected ? (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-slate-950/30" onClick={() => setSelectedId(null)} aria-hidden="true" />
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="billing-drawer-title"
-            className="absolute inset-y-0 right-0 flex w-full max-w-[440px] flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-2xl"
-          >
+        <FounderDrawer onClose={() => setSelectedId(null)} titleId="billing-drawer-title" size="md">
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-5">
               <div className="min-w-0">
                 <h3 id="billing-drawer-title" className="truncate text-lg font-black text-slate-950">{selected.companyName}</h3>
@@ -272,7 +255,7 @@ export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers,
                   <Badge tone={accountStatusTone(selected.status)}>{selected.status}</Badge>
                 </div>
               </div>
-              <button ref={closeButtonRef} type="button" onClick={() => setSelectedId(null)} aria-label="Close billing details" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-500 hover:bg-slate-50">
+              <button type="button" onClick={() => setSelectedId(null)} aria-label="Close billing details" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-500 hover:bg-slate-50">
                 Close
               </button>
             </div>
@@ -344,8 +327,7 @@ export function BillingPortfolioClient({ rows, page, totalPages, totalCustomers,
                 Open Customer 360 →
               </Link>
             </div>
-          </aside>
-        </div>
+        </FounderDrawer>
       ) : null}
     </div>
   );

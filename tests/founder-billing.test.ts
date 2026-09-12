@@ -162,12 +162,15 @@ for (const file of [service, client]) {
   assert.doesNotMatch(file, /encryptedTokens/);
 }
 
-// ─── Accessibility: dialog semantics + Escape-to-close on the drawer ───────
-assert.match(client, /role="dialog"/);
-assert.match(client, /aria-modal="true"/);
-assert.match(client, /aria-labelledby="billing-drawer-title"/);
-assert.match(client, /e\.key === 'Escape'/);
-assert.match(client, /closeButtonRef\.current\?\.focus\(\)/);
+// ─── Accessibility: the shared FounderDrawer owns dialog semantics/focus/
+//     Escape (see tests/founder-drawer.test.ts for its own contract
+//     assertions) — Billing wires into it rather than re-implementing
+//     role="dialog"/aria-modal/focus-trap/Escape a fourth time. ───────────
+assert.match(client, /import \{ FounderDrawer \} from '\.\/FounderDrawer'/);
+assert.match(client, /<FounderDrawer onClose=\{\(\) => setSelectedId\(null\)\} titleId="billing-drawer-title" size="md">/);
+assert.match(client, /<h3 id="billing-drawer-title"/);
+assert.doesNotMatch(client, /role="dialog"|aria-modal="true"/); // not re-implemented locally
+assert.doesNotMatch(client, /closeButtonRef/); // focus-on-open is FounderDrawer's job now
 
 // ─── No page-level horizontal overflow (established grid-cols-1 + min-w-0
 //     fix, proven for Integration Catalog / Customer Integrations) ────────
