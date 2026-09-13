@@ -391,7 +391,11 @@ export async function seedIntegrationProviders(client: MarketplaceProviderClient
 }
 
 // Allow direct execution: npx tsx prisma/seeds/integration-providers.ts
-if (require.main === module) {
+// (require.main/module don't exist under this file's own ESM `import`
+// syntax — checking them unconditionally threw on every import, not only
+// direct execution, breaking any script that imports this module's other
+// exports without itself being a CJS entry point.)
+if (import.meta.url === `file://${process.argv[1]}`) {
   const cliClient = new PrismaClient();
   seedIntegrationProviders(cliClient)
     .catch(console.error)

@@ -71,6 +71,8 @@ jobs:
         run: npm run test:customer-activity
       - name: Test — system health
         run: npm run test:system-health
+      - name: Test — integration health
+        run: npm run test:integration-health
       - name: Test — gateway entitlement enforcement
         run: npm run test:gateway-entitlement
       - name: Test — reliability hardening

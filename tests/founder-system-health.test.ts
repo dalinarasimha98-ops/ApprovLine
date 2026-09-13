@@ -305,10 +305,12 @@ assert.doesNotMatch(client, /overflow-x-scroll/); // -auto only, never a forced 
 // 19. The locked Platform sidebar section still has exactly System Health /
 //     Integration Health / Background Jobs, in that order, with only System
 //     Health's href changed to the new real page — no new nav item, no
-//     renamed/reordered locked items.
+//     renamed/reordered locked items. (Integration Health's own href moved
+//     on from the /founder/operations placeholder to its own real page in a
+//     later task — expected, and re-verified by that task's own test file.)
 const platformSection = navClient.match(/id: 'platform',[\s\S]*?items: \[([\s\S]*?)\],\s*\},/)?.[1] ?? '';
 assert.match(platformSection, /\{ label: 'System Health', href: '\/founder\/system-health' \}/);
-assert.match(platformSection, /\{ label: 'Integration Health', href: '\/founder\/operations' \}/);
+assert.match(platformSection, /\{ label: 'Integration Health', href: '\/founder\/integration-health' \}/);
 assert.match(platformSection, /\{ label: 'Background Jobs', href: '\/founder\/reliability' \}/);
 assert.equal((platformSection.match(/\{ label:/g) ?? []).length, 3); // no fourth item introduced
 // The pre-existing, separate "Internal Tools" section (Demo Generator /

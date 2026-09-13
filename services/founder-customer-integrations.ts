@@ -76,7 +76,10 @@ export function computeIntegrationHealth(connection: CustomerIntegrationConnecti
   return 'ATTENTION'; // NOT_CONNECTED, PENDING, SYNCING
 }
 
-function connectionStateForIntegrationStatus(status: IntegrationStatus): CustomerIntegrationConnectionState {
+// Exported (additive-only — no logic change) so /founder/integration-health
+// can reuse the exact same rollup instead of a second one; see that
+// module's own header comment for the full reuse rationale.
+export function connectionStateForIntegrationStatus(status: IntegrationStatus): CustomerIntegrationConnectionState {
   switch (status) {
     case 'CONNECTED': return 'CONNECTED';
     case 'SYNCING': return 'SYNCING';
