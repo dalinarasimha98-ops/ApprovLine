@@ -67,6 +67,8 @@ jobs:
         run: npm run test:revenue
       - name: Test — support and notes
         run: npm run test:support-notes
+      - name: Test — customer activity
+        run: npm run test:customer-activity
       - name: Test — gateway entitlement enforcement
         run: npm run test:gateway-entitlement
       - name: Test — reliability hardening

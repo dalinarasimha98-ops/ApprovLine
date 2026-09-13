@@ -1383,11 +1383,18 @@ export async function provisionFounderCustomer(access: Extract<FounderAccess, { 
 export async function updateCustomerStatus(access: Extract<FounderAccess, { ok: true }>, customerId: string, status: string) {
   if (access.readOnly) throw new Error('Support admins cannot change customer status.');
   await ensureFounderStorage();
+  // One extra indexed primary-key lookup so the audit trail captures the
+  // real prior status alongside the new one — .update() alone only returns
+  // the post-write row, so without this a reader could never honestly
+  // distinguish "reactivated" from "suspended" from a first-time
+  // "activated" (Customer Activity needs this to avoid fabricating that
+  // distinction from a single value).
+  const previous = await prisma.customerAccount.findUnique({ where: { id: customerId }, select: { status: true } });
   const customer = await prisma.customerAccount.update({
     where: { id: customerId },
     data: { status: status as 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'CHURNED' },
   });
-  await logFounderAction({ access, customerAccountId: customerId, action: 'customer.status.updated', targetType: 'CustomerAccount', targetId: customerId, metadata: { status } });
+  await logFounderAction({ access, customerAccountId: customerId, action: 'customer.status.updated', targetType: 'CustomerAccount', targetId: customerId, metadata: { status, previousStatus: previous?.status ?? null } });
   return customer;
 }
 

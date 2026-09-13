@@ -62,7 +62,7 @@ const NAV: NavGroup[] = [
     label: 'Customer Success',
     items: [
       { label: 'Support & Notes', href: '/founder/notes' },
-      { label: 'Customer Activity', href: '/founder/audit' },
+      { label: 'Customer Activity', href: '/founder/activity' },
     ],
   },
   {

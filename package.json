@@ -33,6 +33,7 @@
     "test:seats": "node --import tsx tests/founder-seats.test.ts",
     "test:revenue": "node --import tsx tests/founder-revenue.test.ts",
     "test:support-notes": "node --import tsx tests/founder-support-notes.test.ts",
+    "test:customer-activity": "node --import tsx tests/founder-customer-activity.test.ts",
     "test:gateway-entitlement": "node --import tsx tests/universal-gateway-entitlement.test.ts",
     "test:reliability": "node --import tsx tests/reliability-hardening.test.ts",
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
