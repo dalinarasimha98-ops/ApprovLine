@@ -277,6 +277,67 @@ export function fmtActivityTarget(targetType: string, targetId: string | null): 
   return targetId ? `${targetType} · ${targetId}` : targetType;
 }
 
+const TARGET_TYPE_LABELS: Record<string, string> = {
+  CustomerAccount: 'Customer Account',
+  FounderManagedUser: 'User',
+  CustomerNote: 'Note',
+  CustomerSeatAllocation: 'Seat Allocation',
+  CustomerFeatureFlag: 'Feature Flag',
+  TenantProviderAccess: 'Integration',
+  Integration: 'Integration',
+  IntegrationRequest: 'Integration Request',
+};
+
+function humanTargetType(targetType: string): string {
+  return TARGET_TYPE_LABELS[targetType] ?? humanizeAction(targetType);
+}
+
+// cuid2 (this schema's default @id) is a distinctive, never-hand-authored
+// shape — unlike a real slug/key a Founder action already logs (a feature
+// flag key like "copilot", a provider slug like "quickbooks"), so this is
+// a safe, narrow heuristic for "this targetId is an opaque database
+// identifier with no meaning to a Founder," not a guess about content.
+const OPAQUE_ID_PATTERN = /^c[a-z0-9]{20,}$/;
+
+function isOpaqueId(value: string | null): value is string {
+  return !!value && OPAQUE_ID_PATTERN.test(value);
+}
+
+export type ResolvedActivityTarget = { primary: string; rawId: string | null };
+
+/**
+ * Resolves a Target label a Founder can actually read, using only data
+ * already available to the caller — never a fabricated lookup. In order:
+ *   1. The target IS the row's own customer (provably true when
+ *      targetId === customer.id) — use the real, already-joined domain.
+ *   2. The target is a FounderManagedUser and the writer's own metadata
+ *      already includes that user's email (every user.* action does) —
+ *      use it.
+ *   3. targetId is already a real, human-authored key (a feature flag
+ *      key, a provider slug) rather than an opaque database id — show it
+ *      as-is, unchanged from the existing /founder/audit convention.
+ *   4. Otherwise there is genuinely no authoritative human label for this
+ *      opaque id — show only the target type, never a raw cuid, as the
+ *      PRIMARY label. The raw id is still returned (never discarded) so a
+ *      caller can surface it through a secondary/details mechanism.
+ */
+export function resolveActivityTarget(input: { targetType: string; targetId: string | null; customer: { id: string; domain: string }; metadata: unknown }): ResolvedActivityTarget {
+  const { targetType, targetId, customer, metadata } = input;
+  const record = asRecord(metadata);
+  const typeLabel = humanTargetType(targetType);
+
+  if (targetType === 'CustomerAccount' && targetId === customer.id) {
+    return { primary: `${typeLabel} · ${customer.domain}`, rawId: targetId };
+  }
+  if (targetType === 'FounderManagedUser' && typeof record?.email === 'string' && record.email) {
+    return { primary: `${typeLabel} · ${record.email}`, rawId: targetId };
+  }
+  if (isOpaqueId(targetId)) {
+    return { primary: typeLabel, rawId: targetId };
+  }
+  return { primary: fmtActivityTarget(typeLabel, targetId), rawId: targetId };
+}
+
 export type SafeMetadataEntry = { label: string; value: string };
 
 const METADATA_KEY_LABELS: Record<string, string> = {

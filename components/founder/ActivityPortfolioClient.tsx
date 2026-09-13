@@ -16,7 +16,7 @@ import {
   activityCategoryTone,
   activityContextSuffix,
   activityLabelFor,
-  fmtActivityTarget,
+  resolveActivityTarget,
   fmtDateTime,
   fmtRelativeTime,
   healthStatusLabel,
@@ -76,6 +76,10 @@ function Badge({ tone, children }: { tone: 'green' | 'blue' | 'amber' | 'red' | 
 
 function eventDisplayLabel(row: ActivityRowClient): string {
   return `${activityLabelFor(row.action, row.metadata)}${activityContextSuffix(row.action, row.metadata, row.targetId)}`;
+}
+
+function targetFor(row: ActivityRowClient) {
+  return resolveActivityTarget({ targetType: row.targetType, targetId: row.targetId, customer: row.customer, metadata: row.metadata });
 }
 
 const DRAWER_TABS = ['overview', 'recent', 'details'] as const;
@@ -160,6 +164,7 @@ export function ActivityPortfolioClient({ rows, page, totalPages, totalEvents, h
   const recentForSelectedCustomer = selected
     ? rows.filter((r) => r.customer.id === selected.customer.id && r.id !== selected.id).slice(0, 5)
     : [];
+  const selectedTarget = selected ? targetFor(selected) : null;
 
   return (
     <div className="space-y-6">
@@ -257,6 +262,7 @@ export function ActivityPortfolioClient({ rows, page, totalPages, totalEvents, h
               <tbody className="divide-y divide-slate-100">
                 {rows.map((row) => {
                   const category = activityCategoryFor(row.action);
+                  const target = targetFor(row);
                   return (
                     <tr key={row.id} className="group transition hover:bg-slate-50">
                       <td className="whitespace-nowrap px-5 py-4 text-xs font-semibold text-slate-500" title={fmtDateTime(row.createdAt)}>
@@ -276,8 +282,8 @@ export function ActivityPortfolioClient({ rows, page, totalPages, totalEvents, h
                       <td className="hidden w-[150px] truncate whitespace-nowrap px-5 py-4 text-xs font-semibold text-slate-500 xl:table-cell" title={row.actorEmail ?? 'System'}>
                         {row.actorEmail ?? 'System'}
                       </td>
-                      <td className="hidden w-[160px] truncate whitespace-nowrap px-5 py-4 text-xs font-semibold text-slate-500 xl:table-cell" title={fmtActivityTarget(row.targetType, row.targetId)}>
-                        {fmtActivityTarget(row.targetType, row.targetId)}
+                      <td className="hidden w-[160px] truncate whitespace-nowrap px-5 py-4 text-xs font-semibold text-slate-500 xl:table-cell" title={target.primary}>
+                        {target.primary}
                       </td>
                       <td className={`sticky right-0 whitespace-nowrap bg-white px-4 py-4 text-right group-hover:bg-slate-50 ${tableScrollable ? 'shadow-[-6px_0_8px_-4px_rgba(15,23,42,0.18)]' : ''}`}>
                         <button
@@ -381,7 +387,7 @@ export function ActivityPortfolioClient({ rows, page, totalPages, totalEvents, h
                   Actor: <span className="text-slate-700">{selected.actorEmail ?? 'System'}</span>
                 </p>
                 <p className="mt-1 text-xs font-semibold text-slate-500">
-                  Target: <span className="text-slate-700">{fmtActivityTarget(selected.targetType, selected.targetId)}</span>
+                  Target: <span className="text-slate-700">{selectedTarget!.primary}</span>
                 </p>
               </div>
 
@@ -442,7 +448,14 @@ export function ActivityPortfolioClient({ rows, page, totalPages, totalEvents, h
                 <div><dt className="font-bold text-slate-400">Timestamp</dt><dd className="mt-0.5 font-semibold text-slate-700">{fmtDateTime(selected.createdAt)}</dd></div>
                 <div><dt className="font-bold text-slate-400">Actor</dt><dd className="mt-0.5 font-semibold text-slate-700">{selected.actorEmail ?? 'System'}</dd></div>
                 <div><dt className="font-bold text-slate-400">Category</dt><dd className="mt-0.5 font-semibold text-slate-700">{ACTIVITY_CATEGORY_LABELS[activityCategoryFor(selected.action)]}</dd></div>
-                <div><dt className="font-bold text-slate-400">Target</dt><dd className="mt-0.5 font-semibold text-slate-700">{fmtActivityTarget(selected.targetType, selected.targetId)}</dd></div>
+                <div><dt className="font-bold text-slate-400">Target</dt><dd className="mt-0.5 font-semibold text-slate-700">{selectedTarget!.primary}</dd></div>
+                {selectedTarget!.rawId && !selectedTarget!.primary.endsWith(selectedTarget!.rawId) ? (
+                  // The primary label above intentionally omits this opaque
+                  // database id (no human-readable name was available) —
+                  // it stays reachable here for debugging, never as the
+                  // main Target label.
+                  <div><dt className="font-bold text-slate-400">Internal Reference</dt><dd className="mt-0.5 font-mono text-[11px] text-slate-400">{selectedTarget!.rawId}</dd></div>
+                ) : null}
               </dl>
               {sanitizeActivityMetadata(selected.metadata).length > 0 ? (
                 <div className="rounded-xl border border-slate-200 p-4">

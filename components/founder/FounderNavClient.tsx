@@ -331,6 +331,24 @@ export function FounderNavClient({
   const readOnly = role === 'SUPPORT_ADMIN';
   const pageTitle = getPageTitle(pathname);
 
+  // Root cause of a page's own heading rendering underneath the sticky
+  // header on "fresh" navigation: every /founder/* route shares this one
+  // persisted layout (app/founder/layout.tsx never remounts across
+  // sibling routes), so Next.js's own scroll-to-top-on-navigation
+  // behavior does not reliably fire here — the window scroll position
+  // from whichever page the Founder was previously scrolled down on
+  // carries over, and the new (often shorter) page's own header renders
+  // partially behind the sticky bar at that inherited offset. Explicitly
+  // resetting window scroll on every real route change (usePathname()
+  // only changes for the path itself, never for search-param-only
+  // updates) fixes this at the root rather than patching one page's
+  // markup, and never touches the sidebar's own independently-scrollable
+  // nav container — that keeps its separate active-item auto-scroll
+  // behavior (see activeItemRef below) untouched.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
   return (
     <div className="min-h-screen bg-[#f0f2f7] text-slate-950">
       {/* Mobile backdrop */}

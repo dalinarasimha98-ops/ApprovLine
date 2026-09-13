@@ -9,6 +9,7 @@ import {
   fmtDateTime,
   fmtRelativeTime,
   fmtActivityTarget,
+  resolveActivityTarget,
   sanitizeActivityMetadata,
   healthStatusLabel,
   healthStatusTone,
@@ -88,6 +89,42 @@ assert.equal(fmtRelativeTime(new Date(Date.now() + 60 * 60 * 1000)), fmtDateTime
 
 assert.equal(fmtActivityTarget('CustomerNote', 'n1'), 'CustomerNote · n1');
 assert.equal(fmtActivityTarget('CustomerAccount', null), 'CustomerAccount');
+
+// ─── Target resolution: a Founder-facing label, never a raw opaque id ─────
+// Found during the visual polish pass: the drawer showed
+// "CustomerAccount · cmtwutv0o0003l504cdioiewf" as the primary Target
+// label. resolveActivityTarget only ever substitutes a value the caller
+// already has proof of (the row's own joined customer, or the writer's
+// own logged metadata) — it never invents one.
+
+{
+  const cuid = 'cmtwutv0o0003l504cdioiewf';
+  // 1. The target IS the row's own customer — use the real, already-joined domain.
+  const r1 = resolveActivityTarget({ targetType: 'CustomerAccount', targetId: cuid, customer: { id: cuid, domain: 'sasma.com' }, metadata: {} });
+  assert.equal(r1.primary, 'Customer Account · sasma.com');
+  assert.equal(r1.rawId, cuid); // never discarded — still reachable for a details/debug view
+
+  // 2. A FounderManagedUser target whose email the writer already logged.
+  const r2 = resolveActivityTarget({ targetType: 'FounderManagedUser', targetId: cuid, customer: { id: 'other', domain: 'x.com' }, metadata: { email: 'sarah@northstar.com', role: 'ADMIN' } });
+  assert.equal(r2.primary, 'User · sarah@northstar.com');
+
+  // 3. targetId is already a real, human-authored key (not an opaque id) — shown as-is.
+  const r3 = resolveActivityTarget({ targetType: 'CustomerFeatureFlag', targetId: 'copilot', customer: { id: 'other', domain: 'x.com' }, metadata: {} });
+  assert.equal(r3.primary, 'Feature Flag · copilot');
+
+  // 4. No authoritative label exists for this opaque id — the raw cuid is
+  //    NEVER the primary label (only the type), but it is still returned
+  //    for a secondary/debug surface.
+  const r4 = resolveActivityTarget({ targetType: 'CustomerNote', targetId: cuid, customer: { id: 'other', domain: 'x.com' }, metadata: {} });
+  assert.equal(r4.primary, 'Note');
+  assert.doesNotMatch(r4.primary, /cmtwutv0o0003l504cdioiewf/);
+  assert.equal(r4.rawId, cuid);
+
+  // 5. No target id at all.
+  const r5 = resolveActivityTarget({ targetType: 'CustomerAccount', targetId: null, customer: { id: 'other', domain: 'x.com' }, metadata: {} });
+  assert.equal(r5.primary, 'Customer Account');
+  assert.equal(r5.rawId, null);
+}
 
 // ─── Metadata sanitization: never a raw dump, never a leaked secret ───────
 
@@ -294,5 +331,39 @@ assert.match(navClient, /\{ label: 'Founder Audit Logs', href: '\/founder\/audit
 
 // 15. Support & Notes (locked) was not modified by this task.
 assert.match(notesService, /export async function buildNotesPortfolio/); // still present, unchanged shape
+
+// ─── Found during the visual/UX polish pass, before final certification ───
+
+// 16. Every /founder/* route shares one persisted layout, so navigating
+//     between sibling routes (e.g. Revenue -> Customer Activity) could
+//     leave the new page's own heading rendered underneath the sticky
+//     header at an inherited scroll offset. Reset window scroll on every
+//     real route change (usePathname() only fires for the path itself,
+//     never for search-param-only updates, so filtering/pagination on
+//     the SAME page is untouched) — verified against a real, composed
+//     FounderNavClient + page harness: navigating away from a page
+//     scrolled 1200px down left the new page at scrollY 0 with its
+//     heading fully below the sticky header, at 1440px, a short 480px-tall
+//     viewport, and a 390px mobile viewport, across rapid back-and-forth
+//     navigation, without disturbing the sidebar's own independent
+//     active-item scroll-into-view (also re-verified still visible and
+//     correctly positioned in the same harness run).
+assert.match(navClient, /useEffect\(\(\) => \{\s*\n\s*window\.scrollTo\(0, 0\);\s*\n\s*\}, \[pathname\]\);/);
+// This must be a SEPARATE effect from the sidebar's own active-item
+// scroll-into-view — the fix must never touch the nav's own scrollTop
+// (that would undo the active-item-visible behavior this same file
+// already locked in for Support & Notes).
+assert.doesNotMatch(navClient, /window\.scrollTo\(0, 0\)[\s\S]{0,80}activeItemRef/);
+assert.match(navClient, /activeItemRef\.current\?\.scrollIntoView\(\{ block: 'nearest' \}\);/); // still present, unchanged
+
+// 17. The table, Overview tab, and Details tab all resolve Target through
+//     resolveActivityTarget — never the raw type+id formatter directly —
+//     so a raw opaque database id can never reach the primary UI again.
+//     Resolved once per render into `selectedTarget` and reused by both
+//     the Overview and Details tabs, rather than recomputed on every read.
+assert.equal((client.match(/targetFor\(/g) ?? []).length, 3); // 1 definition + table cell + selectedTarget
+assert.match(client, /const selectedTarget = selected \? targetFor\(selected\) : null;/);
+assert.doesNotMatch(client, /\bfmtActivityTarget\(/); // the raw formatter is never called directly from this component
+assert.match(client, /Internal Reference/); // the opaque id, when hidden from the primary label, stays reachable in Details
 
 console.log('Validated Customer Activity (/founder/activity): a read-only, customer-centric timeline built entirely on the existing FounderAuditLog table, joined to CustomerAccount for company/domain/status/health — no second event store, no second audit logger, no mutations of its own. Every taxonomy entry maps to a real action string actually written somewhere in services/founder.ts; two mockup elements (a customer self-service integration-connect event, and "onboarding stage changed" as a discrete event) are deliberately excluded because the real data cannot honestly support them, and a third ("Integration errors" attention card) is excluded because that signal belongs to Integration Health\'s own CustomerIntegrationStatus, not this module. The one write-side change, an additive previousStatus enrichment on updateCustomerStatus, exists solely so a status-change event can honestly say "reactivated" only when it can prove it from real metadata. The Founder nav\'s pre-existing "Customer Activity" placeholder (previously pointing at /founder/audit) now points at this real page.');
