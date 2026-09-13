@@ -126,16 +126,18 @@ export async function POST(request: NextRequest) {
   const senderEmail = optionalString(userProfile.email);
   const sourceLink = slackMessageLink(teamId, channel, messageTs);
 
+  // Captured once and reused below (rather than re-spreading the stale
+  // pre-fetch `integration.metadata` a second time) so the error and
+  // success paths below don't clobber the lastEventAt/lastSlackEventId
+  // this update is about to write.
+  const syncingMetadata = {
+    ...(integration.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {}),
+    lastEventAt: new Date().toISOString(),
+    lastSlackEventId: eventId ?? null,
+  };
   await prisma.integration.update({
     where: { id: integration.id },
-    data: {
-      status: 'SYNCING',
-      metadata: {
-        ...(integration.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {}),
-        lastEventAt: new Date().toISOString(),
-        lastSlackEventId: eventId ?? null,
-      },
-    },
+    data: { status: 'SYNCING', metadata: syncingMetadata },
   });
 
   const queued = await enqueueIncomingMessage({
@@ -175,11 +177,7 @@ export async function POST(request: NextRequest) {
       where: { id: integration.id },
       data: {
         status: 'ERROR',
-        metadata: {
-          ...(integration.metadata && typeof integration.metadata === 'object' && !Array.isArray(integration.metadata) ? integration.metadata : {}),
-          lastError: queued.reason,
-          lastErrorAt: new Date().toISOString(),
-        },
+        metadata: { ...syncingMetadata, lastError: queued.reason, lastErrorAt: new Date().toISOString() },
       },
     });
     await writeSlackEvent({
@@ -192,6 +190,19 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ ok: true, queued: false, warning: queued.reason }, { status: 202 });
   }
+
+  // Root-cause fix: this used to leave status at 'SYNCING' indefinitely on
+  // every successful event, since nothing ever transitioned it back.
+  // resolveIntegrationTenant() only matches status: 'CONNECTED', so any
+  // workspace's second-and-later webhook would 404 with "Slack workspace
+  // is not connected" the moment the first message was processed. Slack's
+  // ingestion is synchronous per-event (no long-running async job the way
+  // Gmail/Jira's polling sync represents), so by the time we reach here
+  // processing has genuinely already completed — restore CONNECTED.
+  await prisma.integration.update({
+    where: { id: integration.id },
+    data: { status: 'CONNECTED', metadata: syncingMetadata },
+  });
 
   await writeSlackEvent({
     organizationId: integration.organizationId,
