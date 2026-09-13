@@ -10,6 +10,7 @@ import {
   systemHealthDotColor,
   fmtDateTime,
   fmtRelativeTime,
+  formatProviderList,
   type SystemHealthStatus,
 } from '@/lib/founder-system-health';
 import type { SystemHealthCard, QueueSummary, IntegrationProviderSummary, RecentSystemEvent } from '@/services/founder-system-health';
@@ -57,6 +58,7 @@ export function SystemHealthClient({ generatedAt, overall, cards, queue, integra
   const [drawer, setDrawer] = useState<{ type: 'queue' } | { type: 'integration'; provider: IntegrationProviderSummaryClient } | null>(null);
 
   function refresh() {
+    if (pending) return; // never fire a second refresh while one is already in flight
     startTransition(() => {
       router.refresh();
     });
@@ -67,17 +69,17 @@ export function SystemHealthClient({ generatedAt, overall, cards, queue, integra
   return (
     <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[1fr_340px]">
       <div className="min-w-0 space-y-6 xl:col-start-1">
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+        <section className="rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2557dc]">Platform Operations</p>
-              <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">System Health</h2>
-              <p className="mt-2 max-w-2xl text-base font-semibold leading-7 text-slate-600">
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">System Health</h2>
+              <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
                 Real-time status of ApprovLine&rsquo;s core infrastructure, services, and background processing.
               </p>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <p className="text-xs font-bold text-slate-500">
+            <div className="flex items-center gap-3">
+              <p className="text-right text-xs font-bold text-slate-500">
                 Last updated<br />
                 <span className="text-sm text-slate-700">{fmtDateTime(generatedAt)}</span>
               </p>
@@ -86,8 +88,9 @@ export function SystemHealthClient({ generatedAt, overall, cards, queue, integra
                 onClick={refresh}
                 disabled={pending}
                 aria-busy={pending}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-black text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
               >
+                <span aria-hidden="true" className={pending ? 'inline-block animate-spin' : 'inline-block'}>↻</span>
                 {pending ? 'Refreshing…' : 'Refresh'}
               </button>
             </div>
@@ -96,14 +99,49 @@ export function SystemHealthClient({ generatedAt, overall, cards, queue, integra
 
         <section aria-label="Core system health" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {cards.map((card) => (
-            <article key={card.key} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <article key={card.key} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-black text-slate-950">{card.label}</p>
                 <StatusBadge status={card.status} />
               </div>
               <p className="mt-3 text-sm font-bold text-slate-700">{card.headline}</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{card.detail}</p>
-              <p className="mt-3 text-[11px] font-bold text-slate-400">Last checked: {fmtRelativeTime(card.lastChecked)}</p>
+
+              {card.key === 'background-jobs' ? (
+                <div className="mt-2 space-y-1.5 text-xs font-semibold leading-5 text-slate-500">
+                  <p>
+                    Queue: <span className="font-black text-slate-800">{queue.queueName}</span>
+                  </p>
+                  <p>
+                    {queue.counts
+                      ? `${queue.counts.waiting} waiting · ${queue.counts.active} active · ${queue.counts.failed} failed`
+                      : 'Queue metrics are not currently available.'}
+                  </p>
+                </div>
+              ) : card.key === 'integrations' ? (
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                  {integrations.length === 0 ? card.detail : formatProviderList(integrations.map((r) => r.provider))}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{card.detail}</p>
+              )}
+
+              {card.key === 'background-jobs' ? (
+                <button
+                  type="button"
+                  onClick={() => setDrawer({ type: 'queue' })}
+                  className="mt-3 self-start text-xs font-black text-[#2557dc] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] focus-visible:ring-offset-1"
+                >
+                  View queue details →
+                </button>
+              ) : card.key === 'integrations' ? (
+                <Link href="/founder/customer-integrations" className="mt-3 text-xs font-black text-[#2557dc] hover:underline">
+                  View Integration Health →
+                </Link>
+              ) : card.key === 'error-monitoring' ? (
+                <Link href="/founder/observability" className="mt-3 text-xs font-black text-[#2557dc] hover:underline">
+                  Open Observability →
+                </Link>
+              ) : null}
             </article>
           ))}
         </section>
@@ -165,7 +203,7 @@ export function SystemHealthClient({ generatedAt, overall, cards, queue, integra
               </Link>
             </div>
             {integrations.length === 0 ? (
-              <p className="px-6 py-8 text-center text-sm font-semibold text-slate-500">No integration connections recorded yet.</p>
+              <p className="px-6 py-5 text-center text-sm font-semibold text-slate-500">No integration connections recorded yet.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[440px] table-fixed text-left text-sm">
@@ -205,7 +243,10 @@ export function SystemHealthClient({ generatedAt, overall, cards, queue, integra
             <p className="mt-0.5 text-[11px] font-semibold text-slate-400">Recorded background-job and outbox failures requiring attention.</p>
           </div>
           {recentEvents.length === 0 ? (
-            <p className="px-6 py-8 text-center text-sm font-semibold text-slate-500">No recent system events are recorded.</p>
+            <div className="px-6 py-5 text-center">
+              <p className="text-sm font-black text-slate-700">No recent system events</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Operational events will appear here when recorded.</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[660px] table-fixed text-left text-sm">

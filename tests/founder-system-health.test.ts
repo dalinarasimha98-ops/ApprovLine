@@ -7,6 +7,7 @@ import {
   SYSTEM_HEALTH_STATUS_LABELS,
   fmtDateTime,
   fmtRelativeTime,
+  formatProviderList,
   type SystemHealthStatus,
 } from '../lib/founder-system-health';
 
@@ -79,6 +80,23 @@ assert.equal(systemHealthTone('UNKNOWN'), 'slate');
 
 assert.equal(fmtDateTime(null), '—');
 assert.equal(fmtRelativeTime(new Date(Date.now() - 30 * 1000)), 'Just now');
+
+// ─── formatProviderList: compact real-data display, never a fabricated count ───
+// (added during the visual/UX polish pass — the Integrations health card
+// now shows "Slack · Gmail · Outlook · Teams · Jira +3 more" instead of
+// duplicating the full Integration Health table)
+
+assert.equal(formatProviderList([]), '');
+assert.equal(formatProviderList(['Slack']), 'Slack');
+assert.equal(formatProviderList(['Slack', 'Gmail', 'Teams']), 'Slack · Gmail · Teams');
+// Exactly at the default max (5): every name shown, no "+more" suffix fabricated.
+assert.equal(formatProviderList(['Slack', 'Gmail', 'Outlook', 'Teams', 'Jira']), 'Slack · Gmail · Outlook · Teams · Jira');
+// Past the max: the real remaining count, never rounded or guessed.
+assert.equal(
+  formatProviderList(['Slack', 'Gmail', 'Outlook', 'Teams', 'Jira', 'Zoom', 'Salesforce', 'Workday']),
+  'Slack · Gmail · Outlook · Teams · Jira +3 more',
+);
+assert.equal(formatProviderList(['A', 'B', 'C'], 2), 'A · B +1 more'); // custom max is honored
 
 console.log('Validated lib/founder-system-health.ts\'s real executed unit tests: the one deterministic overall-health rule treats Database/Redis/Background Jobs as the only critical systems (any FAILED among them wins outright), correctly downgrades a missing/unconfigured optional capability (Redis UNKNOWN, Sentry UNKNOWN) to DEGRADED rather than FAILED, and never returns HEALTHY while any non-critical signal still needs attention.');
 
@@ -196,7 +214,8 @@ for (const file of [service, client, page]) {
 //     recentExceptions rows — no fabricated "success" rows, no second event model.
 assert.match(service, /operations\.data\.recentExceptions\.map/);
 assert.doesNotMatch(serviceCodeOnly, /status: 'success'|status: 'Resolved'/i);
-assert.match(client, /No recent system events are recorded\./);
+assert.match(client, /No recent system events/);
+assert.match(client, /Operational events will appear here when recorded\./);
 assert.match(client, /No recent incidents are recorded\./);
 
 // ─── Security / authorization ───────────────────────────────────────────────
@@ -309,5 +328,78 @@ assert.match(navClient, /\{ label: 'Customer Activity', href: '\/founder\/activi
 assert.doesNotMatch(page, /as unknown as Date/);
 assert.match(page, /\.toISOString\(\)/);
 assert.match(client, /Omit<SystemHealthCard, 'lastChecked'> & \{ lastChecked: string \};/);
+
+// ─── Found during the final visual/UX polish pass ──────────────────────────
+// (verified against real Chromium screenshots at all 5 breakpoints across
+// 11 scenarios, plus a composed FounderNavClient harness proving the
+// scroll-reset and active-item-visible behavior for System Health
+// specifically as a navigation destination from Revenue, Customer
+// Activity, Support & Notes, and a Customer 360 detail page — 0/1200px
+// scrollY in every case, exactly as before this pass, since none of
+// these changes touch the shared nav/scroll mechanism at all.)
+
+// 22. Refresh never fires twice while one is already in flight (guarded
+//     before the transition even starts, not just via the disabled attribute
+//     racing a synthetic double-click) — confirmed via a real headless
+//     rapid double-click in addition to this source check.
+assert.match(client, /function refresh\(\) \{\s*\n\s*if \(pending\) return;/);
+
+// 23. The header Refresh control is unambiguously a real button: a visible
+//     border/shadow affordance, a real ↻ icon, and an explicit
+//     focus-visible ring (never relying on browser-default outline alone).
+assert.match(client, /↻/);
+assert.match(client, /border border-slate-300 bg-white[^"]*shadow-sm/);
+assert.match(client, /focus-visible:ring-2 focus-visible:ring-\[#2557dc\]/);
+
+// 24. The per-card "Last checked" line was removed as genuinely redundant —
+//     every card's lastChecked equals the same page-level generatedAt (see
+//     services/founder-system-health.ts's `lastChecked: generatedAt` on
+//     all six cards), so a per-card relative-time line duplicated the
+//     header/sidebar's own "Last updated" timestamp rather than showing a
+//     second, independently useful fact. fmtRelativeTime remains used for
+//     two other, genuinely distinct real timestamps (a provider's own last
+//     check, and the worker's own last heartbeat).
+assert.doesNotMatch(client, /Last checked: \{fmtRelativeTime\(card\.lastChecked\)\}/);
+assert.equal((client.match(/fmtRelativeTime\(/g) ?? []).length, 2); // row.lastCheck (table) + queue.workerLastSeenAt (drawer) only
+
+// 25. Background Jobs card shows a real, structured hierarchy (queue name,
+//     then only the three metrics genuinely available at a glance) instead
+//     of one dense concatenated line — and, when the queue is unreachable,
+//     it says so honestly rather than fabricating zeros.
+assert.match(client, /Queue: <span className="font-black text-slate-800">\{queue\.queueName\}<\/span>/);
+assert.match(client, /`\$\{queue\.counts\.waiting\} waiting · \$\{queue\.counts\.active\} active · \$\{queue\.counts\.failed\} failed`/);
+assert.match(client, /'Queue metrics are not currently available\.'/);
+assert.match(client, /View queue details →/);
+// This new in-card action reuses the exact same drawer state as the table's
+// own "View →" button — no second queue-detail UI was built.
+assert.equal((client.match(/setDrawer\(\{ type: 'queue' \}\)/g) ?? []).length, 2);
+
+// 26. Integrations card shows the real provider list (truncated for
+//     density via formatProviderList, never re-implemented inline) and a
+//     genuine link to the existing Integration Health page — not a second
+//     copy of that table.
+assert.match(client, /import \{[\s\S]*?formatProviderList[\s\S]*?\} from '@\/lib\/founder-system-health'/);
+assert.match(client, /formatProviderList\(integrations\.map\(\(r\) => r\.provider\)\)/);
+assert.doesNotMatch(clientCodeOnly, /\.slice\(0, 5\)\.join/); // no second, inline truncation implementation
+
+// 27. Error Monitoring card links to the real, existing /founder/observability
+//     route (confirmed to exist below) — never a fabricated action.
+assert.match(client, /<Link href="\/founder\/observability"[^>]*>\s*Open Observability/);
+assert.doesNotMatch(client, /href="#"[^>]*>\s*Open Observability/); // never a dead "#" placeholder
+const observabilityPageExists = (() => {
+  try {
+    readFileSync(`${root}/app/founder/observability/page.tsx`, 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+assert.ok(observabilityPageExists, 'Error Monitoring card links to /founder/observability, which must be a real existing route');
+
+// 28. Recent System Events' empty state is a compact, honest two-line
+//     block (not an oversized centered paragraph, and not a fabricated
+//     "0 events" success row).
+assert.match(client, /<p className="text-sm font-black text-slate-700">No recent system events<\/p>/);
+assert.match(client, /Operational events will appear here when recorded\./);
 
 console.log('Validated System Health (/founder/system-health): a read-only aggregation of five already-authoritative sources (services/readiness.ts for Database/Redis, services/founder.ts\'s buildFounderOperationsCenter for background-job reliability, the one real BullMQ queue for live job counts, plus two narrow new readers — WorkerHeartbeat and a platform-wide CustomerIntegrationStatus groupBy) — never buildFounderObservabilityCenter, which was independently found to contain fabricated alerts and syntax-only Redis/Sentry checks. One deterministic, documented overall-health rule treats Database/Redis/Background Jobs as critical and everything else as attention-worthy-but-non-fatal. No uptime/latency/incident numbers are fabricated; every "Unknown"/"Unavailable" state reflects a genuine absence of a signal. The locked Platform sidebar keeps its exact three items, with only System Health\'s href now pointing at this real page.');

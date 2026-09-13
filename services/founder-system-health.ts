@@ -310,9 +310,9 @@ export async function buildFounderSystemHealth(): Promise<SystemHealthReport> {
       key: 'error-monitoring',
       label: 'Error Monitoring',
       status: errorMonitoringStatus,
-      headline: sentryConfigured ? 'Sentry error capture is active.' : 'Sentry is not configured.',
+      headline: sentryConfigured ? 'Sentry error capture is configured.' : 'Sentry is not configured.',
       detail: sentryConfigured
-        ? 'Browser, server, and edge error capture are configured. Review real error rates in the Sentry dashboard — this application does not query Sentry’s API for counts.'
+        ? 'Error-rate metrics are available in Sentry rather than queried here.'
         : 'No SENTRY_DSN is configured, so error rates cannot be observed from this application.',
       lastChecked: generatedAt,
     },

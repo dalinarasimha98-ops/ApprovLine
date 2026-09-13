@@ -47,6 +47,19 @@ export function systemHealthDotColor(status: SystemHealthStatus): string {
 export { fmtDateTime, fmtRelativeTime } from './founder-activity';
 
 /**
+ * Compact, real-data-only provider list for the Integrations health card
+ * ("Slack · Gmail · Outlook +3 more") — never fabricates a count, just
+ * truncates the actual list of connected provider labels for display
+ * density. Returns every name joined when the list already fits.
+ */
+export function formatProviderList(providers: string[], max = 5): string {
+  if (providers.length <= max) return providers.join(' · ');
+  const shown = providers.slice(0, max);
+  const remaining = providers.length - max;
+  return `${shown.join(' · ')} +${remaining} more`;
+}
+
+/**
  * The one deterministic overall-status rule, computed once here (both the
  * service layer and, for the same-render KPI strip, the page itself, call
  * this — never re-derived ad hoc in a component) so the frontend can never
