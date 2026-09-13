@@ -69,7 +69,7 @@ const NAV: NavGroup[] = [
     id: 'platform',
     label: 'Platform',
     items: [
-      { label: 'System Health', href: '/founder/operations' },
+      { label: 'System Health', href: '/founder/system-health' },
       { label: 'Integration Health', href: '/founder/operations' },
       { label: 'Background Jobs', href: '/founder/reliability' },
     ],
