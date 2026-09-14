@@ -274,11 +274,14 @@ assert.match(client, /No customer is currently affected\./);
 // ─── Regression protection ────────────────────────────────────────────────
 
 // 19. The locked Platform sidebar's Integration Health entry now points at
-//     this real page; System Health and Background Jobs are unchanged.
+//     this real page; System Health is unchanged. Background Jobs' own href
+//     later moved on from the /founder/reliability placeholder to its own
+//     real page in a later task — expected, and re-verified by that task's
+//     own test file.
 const platformSection = navClient.match(/id: 'platform',[\s\S]*?items: \[([\s\S]*?)\],\s*\},/)?.[1] ?? '';
 assert.match(platformSection, /\{ label: 'Integration Health', href: '\/founder\/integration-health' \}/);
 assert.match(platformSection, /\{ label: 'System Health', href: '\/founder\/system-health' \}/);
-assert.match(platformSection, /\{ label: 'Background Jobs', href: '\/founder\/reliability' \}/);
+assert.match(platformSection, /\{ label: 'Background Jobs', href: '\/founder\/background-jobs' \}/);
 assert.equal((platformSection.match(/\{ label:/g) ?? []).length, 3);
 
 // 20. Customer Integrations and Integration Catalog (locked, pre-existing

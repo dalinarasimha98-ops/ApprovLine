@@ -37,10 +37,12 @@
  *     'approval-classification' (services/queue/approvalQueue.ts) — there
  *     is no 'emails'/'integrations'/'webhooks' queue anywhere; those names
  *     in the reference mockup this page was built from are illustrative
- *     only. getApprovalQueue().getJobCounts() is called directly here (its
- *     first reader anywhere in the codebase) for a genuinely live
- *     waiting/active/failed/completed/delayed snapshot, timeout-guarded
- *     exactly like the readiness checks.
+ *     only. getApprovalQueueCounts() (services/queue/approvalQueue.ts, the
+ *     first reader of this queue anywhere in the codebase, extracted there
+ *     so a later page needing the same live counts — e.g. Background Jobs —
+ *     reuses this exact reader instead of a second one) is called directly
+ *     here for a genuinely live waiting/active/failed/completed/delayed
+ *     snapshot, timeout-guarded exactly like the readiness checks.
  *   - WorkerHeartbeat (schema-only until now — grepped, no prior reader
  *     anywhere) is a real signal for "is a worker process actually
  *     consuming jobs," distinct from "is the queue backend reachable." A
@@ -84,13 +86,16 @@
  *     table exists anywhere — none of those are displayed.
  */
 import { prisma } from '@/lib/prisma';
-import { withTimeout } from '@/lib/performance';
 import { buildReadinessReport } from '@/services/readiness';
 import { buildFounderOperationsCenter, founderIntegrationCatalog } from '@/services/founder';
-import { getApprovalQueue, approvalQueueName } from '@/services/queue/approvalQueue';
+import { getApprovalQueueCounts, approvalQueueName } from '@/services/queue/approvalQueue';
 import { computeOverallSystemHealth, type SystemHealthStatus } from '@/lib/founder-system-health';
 
-const WORKER_STALE_AFTER_MS = 5 * 60 * 1000; // a worker that hasn't reported in 5 minutes is treated as not actively processing, not as "still fine"
+// Exported (additive-only — no logic change) so a second Founder page
+// needing the same "is this worker still active" judgment — Background
+// Jobs — uses the exact same threshold rather than a second, potentially
+// diverging one.
+export const WORKER_STALE_AFTER_MS = 5 * 60 * 1000; // a worker that hasn't reported in 5 minutes is treated as not actively processing, not as "still fine"
 
 export type SystemHealthCard = {
   key: string;
@@ -151,28 +156,7 @@ export async function buildFounderSystemHealth(): Promise<SystemHealthReport> {
   const [readiness, operations, queueCounts, workerHeartbeat, integrationRows] = await Promise.all([
     buildReadinessReport(),
     buildFounderOperationsCenter(),
-    (async () => {
-      const queue = getApprovalQueue();
-      if (!queue) return { ok: false as const, reason: 'Redis is not configured; the approval-classification queue cannot be reached.' };
-      try {
-        // getJobCounts() returns a loosely-typed {[type: string]: number} —
-        // normalized here into the fixed shape the rest of this module (and
-        // the UI) depends on, defensively defaulting to 0 only for a type
-        // BullMQ didn't return at all (never silently swallowing a real
-        // failure — that's what the outer try/catch is for).
-        const raw = await withTimeout('system-health:queue-counts', queue.getJobCounts('waiting', 'active', 'failed', 'completed', 'delayed'), 2500);
-        const counts = {
-          waiting: raw.waiting ?? 0,
-          active: raw.active ?? 0,
-          failed: raw.failed ?? 0,
-          completed: raw.completed ?? 0,
-          delayed: raw.delayed ?? 0,
-        };
-        return { ok: true as const, counts };
-      } catch (error) {
-        return { ok: false as const, reason: error instanceof Error ? error.message : 'Queue metrics request failed.' };
-      }
-    })(),
+    getApprovalQueueCounts(),
     prisma.workerHeartbeat.findFirst({ where: { queueName: approvalQueueName }, orderBy: { lastSeenAt: 'desc' }, select: { lastSeenAt: true } }).catch(() => null),
     prisma.customerIntegrationStatus.groupBy({
       by: ['provider', 'connectionState'],

@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq';
 import { prisma } from '@/lib/prisma';
+import { withTimeout } from '@/lib/performance';
 import { createRedisConnection, getRedisConfigurationStatus } from '@/services/queue/connection';
 import { getJobRegistryEntry, type StandardJobEnvelope } from '@/services/queue/jobRegistry';
 import {
@@ -63,6 +64,40 @@ export function getApprovalQueue() {
     console.error(`[queue:${approvalQueueName}] ${error.message}`);
   });
   return approvalQueue;
+}
+
+export type ApprovalQueueCounts = { waiting: number; active: number; failed: number; completed: number; delayed: number };
+export type ApprovalQueueCountsResult = { ok: true; counts: ApprovalQueueCounts } | { ok: false; reason: string };
+
+/**
+ * getApprovalQueueCounts — the one real BullMQ job-count reader for the
+ * approval-classification queue, extracted here (rather than left inline in
+ * services/founder-system-health.ts, its original caller) so a second
+ * Founder page needing the same live counts — e.g. Background Jobs — reuses
+ * this exact reader instead of a second one. getJobCounts() returns a
+ * loosely-typed {[type: string]: number}; normalized here into a fixed
+ * shape, defensively defaulting to 0 only for a type BullMQ didn't return at
+ * all (never silently swallowing a real failure — the outer try/catch below
+ * is what handles that).
+ */
+export async function getApprovalQueueCounts(timeoutMs = 2500): Promise<ApprovalQueueCountsResult> {
+  const queue = getApprovalQueue();
+  if (!queue) return { ok: false, reason: 'Redis is not configured; the approval-classification queue cannot be reached.' };
+  try {
+    const raw = await withTimeout('approval-queue:counts', queue.getJobCounts('waiting', 'active', 'failed', 'completed', 'delayed'), timeoutMs);
+    return {
+      ok: true,
+      counts: {
+        waiting: raw.waiting ?? 0,
+        active: raw.active ?? 0,
+        failed: raw.failed ?? 0,
+        completed: raw.completed ?? 0,
+        delayed: raw.delayed ?? 0,
+      },
+    };
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : 'Queue metrics request failed.' };
+  }
 }
 
 export interface EnqueueIncomingMessageOptions {

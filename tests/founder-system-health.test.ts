@@ -146,9 +146,13 @@ assert.match(service, /buildFounderOperationsCenter\(\),/);
 assert.doesNotMatch(service, /prisma\.backgroundJob\.count\(|prisma\.deadLetterJob\.count\(/); // those counts live only in buildFounderOperationsCenter
 
 // 4. The one real named BullMQ queue is reused via its own module, not a
-//    second Queue instance constructed here.
-assert.match(service, /import \{ getApprovalQueue, approvalQueueName \} from '@\/services\/queue\/approvalQueue'/);
+//    second Queue instance constructed here. getApprovalQueueCounts() itself
+//    was later extracted from this file into services/queue/approvalQueue.ts
+//    so a second Founder page (Background Jobs) could reuse the same reader
+//    instead of a second one — this file now imports that shared function.
+assert.match(service, /import \{ getApprovalQueueCounts, approvalQueueName \} from '@\/services\/queue\/approvalQueue'/);
 assert.doesNotMatch(service, /new Queue\(/);
+assert.doesNotMatch(service, /getApprovalQueue\(\)/); // no second inline queue-counts reader
 assert.match(approvalQueue, /export const approvalQueueName = 'approval-classification';/);
 
 // 5. Integration Health reuses the existing per-provider label catalog —
@@ -277,8 +281,11 @@ assert.equal((service.match(/await Promise\.all\(\[/g) ?? []).length, 1);
 // No per-row query loop anywhere in this module.
 assert.doesNotMatch(service, /for \(const \w+ of \w+\) \{[\s\S]{0,200}?await/);
 // The live queue check is timeout-guarded exactly like the readiness checks,
-// so one slow/hanging external call can't block the whole aggregation.
-assert.match(service, /withTimeout\('system-health:queue-counts',/);
+// so one slow/hanging external call can't block the whole aggregation. The
+// guard itself now lives inside the shared getApprovalQueueCounts() reader
+// (extracted so Background Jobs can reuse it), not duplicated in this file.
+assert.match(approvalQueue, /withTimeout\('approval-queue:counts',/);
+assert.doesNotMatch(service, /withTimeout\(/); // no second timeout-guarded call built in this file
 
 // ─── Accessibility ──────────────────────────────────────────────────────────
 
@@ -305,13 +312,14 @@ assert.doesNotMatch(client, /overflow-x-scroll/); // -auto only, never a forced 
 // 19. The locked Platform sidebar section still has exactly System Health /
 //     Integration Health / Background Jobs, in that order, with only System
 //     Health's href changed to the new real page — no new nav item, no
-//     renamed/reordered locked items. (Integration Health's own href moved
-//     on from the /founder/operations placeholder to its own real page in a
-//     later task — expected, and re-verified by that task's own test file.)
+//     renamed/reordered locked items. (Integration Health's and Background
+//     Jobs' own hrefs each later moved on from a placeholder page to their
+//     own real page in a later task — expected, and re-verified by that
+//     task's own test file.)
 const platformSection = navClient.match(/id: 'platform',[\s\S]*?items: \[([\s\S]*?)\],\s*\},/)?.[1] ?? '';
 assert.match(platformSection, /\{ label: 'System Health', href: '\/founder\/system-health' \}/);
 assert.match(platformSection, /\{ label: 'Integration Health', href: '\/founder\/integration-health' \}/);
-assert.match(platformSection, /\{ label: 'Background Jobs', href: '\/founder\/reliability' \}/);
+assert.match(platformSection, /\{ label: 'Background Jobs', href: '\/founder\/background-jobs' \}/);
 assert.equal((platformSection.match(/\{ label:/g) ?? []).length, 3); // no fourth item introduced
 // The pre-existing, separate "Internal Tools" section (Demo Generator /
 // Observability / Certification, pointing at the existing, untouched

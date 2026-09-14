@@ -153,7 +153,7 @@ export function SystemHealthClient({ generatedAt, overall, cards, queue, integra
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Background Job Queues</p>
                 <p className="mt-0.5 text-[11px] font-semibold text-slate-400">The one real BullMQ queue in this application.</p>
               </div>
-              <Link href="/founder/reliability" className="text-xs font-black text-[#2557dc] hover:underline">
+              <Link href="/founder/background-jobs" className="text-xs font-black text-[#2557dc] hover:underline">
                 View all queues →
               </Link>
             </div>
@@ -327,7 +327,7 @@ export function SystemHealthClient({ generatedAt, overall, cards, queue, integra
             >
               {pending ? 'Running…' : 'Run Full Health Check'}
             </button>
-            <Link href="/founder/reliability" className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-black text-slate-700 hover:bg-slate-50">
+            <Link href="/founder/background-jobs" className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-black text-slate-700 hover:bg-slate-50">
               View Background Jobs →
             </Link>
             <Link href="/founder/customer-integrations" className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-black text-slate-700 hover:bg-slate-50">
@@ -378,7 +378,7 @@ export function SystemHealthClient({ generatedAt, overall, cards, queue, integra
                 <div><dt className="font-bold text-slate-400">Queue backlog</dt><dd className="mt-0.5 font-semibold text-slate-700">{queue.reliabilityBacklog.queueBacklogs}</dd></div>
               </dl>
             </div>
-            <Link href="/founder/reliability" className="block w-full rounded-xl bg-[#2557dc] px-4 py-2.5 text-center text-sm font-black text-white hover:bg-blue-700">
+            <Link href="/founder/background-jobs" className="block w-full rounded-xl bg-[#2557dc] px-4 py-2.5 text-center text-sm font-black text-white hover:bg-blue-700">
               Open Background Jobs →
             </Link>
           </div>
