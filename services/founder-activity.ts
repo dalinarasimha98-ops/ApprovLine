@@ -11,11 +11,13 @@
  *     record of what happened to a customer. It already carries the exact
  *     indexes this needs (`[customerAccountId, createdAt]`, `[createdAt]`)
  *     — no new index, no new table.
- *   - /founder/audit (listFounderAuditLogs in services/founder.ts) already
- *     reads this same table, but as a flat, ungrouped, customer-name-blind
- *     governance list with no pagination/count/category/KPIs. This module
- *     is a second, purpose-built READ MODEL over the same table — not a
- *     second event store, and not a modification of that locked page or
+ *     [Note: /founder/audit itself was originally a flat, ungrouped,
+ *     customer-name-blind list with no pagination/count/category/KPIs when
+ *     this comment was written; it was later rebuilt in its own dedicated
+ *     task into a real paginated/joined/categorized governance view
+ *     (services/founder-audit-logs.ts), still over this same table.] This
+ *     module is a second, purpose-built READ MODEL over the same table —
+ *     not a second event store, and not a modification of that locked page or
  *     its reader function.
  *   - Every action string in lib/founder-activity.ts's taxonomy map is one
  *     actually written today with a real customerAccountId (verified by

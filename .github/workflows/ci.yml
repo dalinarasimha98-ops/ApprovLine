@@ -75,6 +75,8 @@ jobs:
         run: npm run test:integration-health
       - name: Test — background jobs
         run: npm run test:background-jobs
+      - name: Test — founder audit logs
+        run: npm run test:audit-logs
       - name: Test — gateway entitlement enforcement
         run: npm run test:gateway-entitlement
       - name: Test — reliability hardening

@@ -197,11 +197,16 @@ assert.doesNotMatch(service, /export async function logFounderAction|export asyn
 assert.doesNotMatch(client, /action=\{.*Action\}/); // no <form action={...}> anywhere — this page has zero mutations
 assert.doesNotMatch(page, /'use server'/); // no server actions defined for this page
 
-// 4. /founder/audit (the governance page) is read, not modified — this
-//    module is a second, purpose-built read model over the same table,
-//    not an edit of the existing one.
-assert.match(auditPage, /listFounderAuditLogs/); // confirms the locked page's own reader is untouched and still in place
-assert.doesNotMatch(service, /listFounderAuditLogs\(/); // this module never CALLS that reader (the header comment references it by name for documentation only) — its own query is independent
+// 4. /founder/audit (the governance page) is a second, purpose-built read
+//    model over the same FounderAuditLog table, not an edit of this one.
+//    /founder/audit itself was later rebuilt in its own dedicated task
+//    (from the flat, ungrouped, customer-name-blind list this comment
+//    originally described into a real paginated/joined/categorized
+//    governance view) — expected, and re-verified by that task's own test
+//    file — so this assertion now checks its NEW reader
+//    (buildFounderAuditLogs) rather than the old listFounderAuditLogs.
+assert.match(auditPage, /buildFounderAuditLogs/);
+assert.doesNotMatch(service, /listFounderAuditLogs\(|buildFounderAuditLogs\(/); // this module never CALLS either reader — its own query is independent
 
 // 5. Health/date/tone helpers are re-exported from existing modules, not
 //    duplicated a third time.

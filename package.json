@@ -37,6 +37,7 @@
     "test:system-health": "node --import tsx tests/founder-system-health.test.ts",
     "test:integration-health": "node --import tsx tests/founder-integration-health.test.ts",
     "test:background-jobs": "node --import tsx tests/founder-background-jobs.test.ts",
+    "test:audit-logs": "node --import tsx tests/founder-audit-logs.test.ts",
     "test:gateway-entitlement": "node --import tsx tests/universal-gateway-entitlement.test.ts",
     "test:reliability": "node --import tsx tests/reliability-hardening.test.ts",
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",
