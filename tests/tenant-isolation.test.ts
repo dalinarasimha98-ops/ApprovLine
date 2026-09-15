@@ -73,8 +73,12 @@ const founderService = read('services/founder.ts');
 assert.match(founderService, /buildFounderTenantIsolationReport/);
 assert.match(founderService, /tenant_isolation/);
 
-const founderNav = read('components/founder/FounderNavClient.tsx');
-assert.match(founderNav, /\/founder\/security\/isolation/);
+// The Governance sidebar's "Security" item now points at /founder/security
+// (the Security & Governance control center) rather than directly at this
+// isolation report — the isolation report remains real, unmodified, and
+// reachable from Founder Settings instead.
+const founderSettings = read('app/founder/settings/page.tsx');
+assert.match(founderSettings, /\/founder\/security\/isolation/);
 
 assert.equal(existsSync(`${root}/app/founder/security/isolation/page.tsx`), true);
 const isolationPage = read('app/founder/security/isolation/page.tsx');

@@ -437,7 +437,7 @@ assert.equal((client.match(/\{ scroll: false \}/g) ?? []).length, 2); // pushPar
 
 const governanceSection = navClient.match(/id: 'governance',[\s\S]*?items: \[([\s\S]*?)\],\s*\},/)?.[1] ?? '';
 assert.match(governanceSection, /\{ label: 'Founder Audit Logs', href: '\/founder\/audit' \}/);
-assert.match(governanceSection, /\{ label: 'Security', href: '\/founder\/security\/isolation' \}/);
+assert.match(governanceSection, /\{ label: 'Security', href: '\/founder\/security' \}/);
 assert.equal((governanceSection.match(/\{ label:/g) ?? []).length, 2); // no third item introduced
 assert.doesNotMatch(governanceSection, /'Pilot Command Center'/);
 

@@ -77,6 +77,8 @@ jobs:
         run: npm run test:background-jobs
       - name: Test — founder audit logs
         run: npm run test:audit-logs
+      - name: Test — founder security
+        run: npm run test:security
       - name: Test — gateway entitlement enforcement
         run: npm run test:gateway-entitlement
       - name: Test — reliability hardening

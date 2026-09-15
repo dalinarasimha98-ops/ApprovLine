@@ -79,7 +79,7 @@ const NAV: NavGroup[] = [
     label: 'Governance',
     items: [
       { label: 'Founder Audit Logs', href: '/founder/audit' },
-      { label: 'Security', href: '/founder/security/isolation' },
+      { label: 'Security', href: '/founder/security' },
     ],
   },
 ];
