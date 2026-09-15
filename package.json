@@ -39,6 +39,7 @@
     "test:background-jobs": "node --import tsx tests/founder-background-jobs.test.ts",
     "test:audit-logs": "node --import tsx tests/founder-audit-logs.test.ts",
     "test:security": "node --import tsx tests/founder-security.test.ts",
+    "test:oauth-state-signing": "node --import tsx tests/oauth-state-signing.test.ts",
     "test:gateway-entitlement": "node --import tsx tests/universal-gateway-entitlement.test.ts",
     "test:reliability": "node --import tsx tests/reliability-hardening.test.ts",
     "test:tenant-isolation": "node --import tsx tests/tenant-isolation.test.ts",

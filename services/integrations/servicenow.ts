@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import type { Integration, Prisma } from '@prisma/client';
 import { env } from '@/config/env';
+import { requireOAuthStateSecret } from './oauthState';
 import { prisma } from '@/lib/prisma';
 import { enqueueIncomingMessage, type IncomingMessageJob } from '@/services/queue/approvalQueue';
 import { processIncomingMessage } from '@/services/ingestion/processIncomingMessage';
@@ -122,11 +123,7 @@ const serviceNowTables: ServiceNowSyncTable[] = [
 ];
 
 function stateSecret() {
-  const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY;
-  if (!secret) {
-    throw new Error('Cannot sign or verify ServiceNow OAuth state: configure ENCRYPTION_KEY or CLERK_SECRET_KEY before starting this OAuth flow.');
-  }
-  return secret;
+  return requireOAuthStateSecret('ServiceNow');
 }
 
 function metadataObject(metadata: Prisma.JsonValue | null | undefined) {

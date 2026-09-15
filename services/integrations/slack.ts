@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { env } from '@/config/env';
+import { requireOAuthStateSecret } from './oauthState';
 
 export const SLACK_READ_ONLY_SCOPES = [
   'channels:history',
@@ -16,11 +17,7 @@ export const SLACK_READ_ONLY_SCOPES = [
 ].join(',');
 
 function stateSecret() {
-  const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY;
-  if (!secret) {
-    throw new Error('Cannot sign or verify Slack OAuth state: configure ENCRYPTION_KEY or CLERK_SECRET_KEY before starting this OAuth flow.');
-  }
-  return secret;
+  return requireOAuthStateSecret('Slack');
 }
 
 export function signSlackState(payload: { organizationId: string; userId: string; createdAt?: number }) {

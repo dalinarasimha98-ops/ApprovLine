@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import type { Integration, Prisma } from '@prisma/client';
 import { env } from '@/config/env';
+import { requireOAuthStateSecret } from './oauthState';
 import { prisma } from '@/lib/prisma';
 import { enqueueIncomingMessage, type IncomingMessageJob } from '@/services/queue/approvalQueue';
 import { processIncomingMessage } from '@/services/ingestion/processIncomingMessage';
@@ -118,11 +119,7 @@ export interface ZoomSyncResult {
 }
 
 function stateSecret() {
-  const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY;
-  if (!secret) {
-    throw new Error('Cannot sign or verify Zoom OAuth state: configure ENCRYPTION_KEY or CLERK_SECRET_KEY before starting this OAuth flow.');
-  }
-  return secret;
+  return requireOAuthStateSecret('Zoom');
 }
 
 function metadataObject(metadata: Prisma.JsonValue | null | undefined) {

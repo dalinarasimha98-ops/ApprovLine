@@ -95,11 +95,20 @@
  *     'approvline-dev-slack-state-secret') if BOTH ENCRYPTION_KEY and
  *     CLERK_SECRET_KEY were unconfigured — both are optional in
  *     config/env.ts's Zod schema, so nothing at the type level prevented
- *     that combination. Fixed: each stateSecret() now throws instead of
- *     falling back, so an unconfigured deployment fails closed (the OAuth
- *     install/callback route 500s) rather than signing a forgeable
- *     CSRF-state token with a source-visible value — re-verified by
- *     grepping for the old literal strings (zero matches remain).
+ *     that combination. Fixed: secret selection now lives in one shared
+ *     helper (services/integrations/oauthState.ts:requireOAuthStateSecret())
+ *     that throws a generic OAuthStateConfigurationError (no env var name,
+ *     no secret value) instead of falling back. Every install route signs
+ *     state, and every callback route verifies state, inside a try/catch
+ *     that maps this specific error to a safe `reason=
+ *     oauth_state_signing_unavailable` redirect — an unconfigured
+ *     deployment fails closed with a controlled, safe error rather than an
+ *     unhandled 500 or a forgeable CSRF-state token signed with a
+ *     source-visible value. Re-verified by grepping for the old literal
+ *     strings across the repository (zero matches in the active worktree;
+ *     one unrelated, out-of-scope git worktree on a different branch was
+ *     found still holding the old code — documented, not fixed here, since
+ *     it belongs to a separate, concurrent workstream).
  *   - Universal Gateway: lib/gateway-auth.ts binds exactly one
  *     UNIVERSAL_GATEWAY_API_KEY to exactly one UNIVERSAL_GATEWAY_ORG_SLUG
  *     via env vars — a single global operator credential, not a
@@ -392,10 +401,10 @@ function buildControls(readiness: Awaited<ReturnType<typeof buildReadinessReport
       status: 'VERIFIED',
       severity: null,
       summary: 'All 7 OAuth connectors now fail closed (throw before signing/verifying state) if both ENCRYPTION_KEY and CLERK_SECRET_KEY are unconfigured.',
-      whyThisStatus: 'A prior version of this control fell back to a hardcoded, source-visible per-provider literal in that misconfiguration window. Each stateSecret() helper was re-read directly and confirmed to now throw instead of returning a fallback value.',
-      evidence: 'IMPLEMENTED and TESTED: every one of services/integrations/{slack,gmail,outlook,jira,teams,zoom,servicenow}.ts\'s stateSecret() helper now does `const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY; if (!secret) throw new Error(...)` — no hardcoded literal remains anywhere in the codebase (grepped). Because the install and callback route handlers under app/api/integrations have no surrounding try/catch around signState/verifyState, an unconfigured deployment now returns a 500 and never starts or completes the OAuth flow, rather than issuing a forgeable CSRF-state token.',
-      sources: ['services/integrations/{slack,gmail,outlook,jira,teams,zoom,servicenow}.ts:stateSecret()', 'config/env.ts'],
-      securityImplication: 'A deployment missing both ENCRYPTION_KEY and CLERK_SECRET_KEY can no longer issue or accept an OAuth CSRF-state token at all, closing the narrow window where such tokens would previously have been signed with a value visible in source control.',
+      whyThisStatus: 'A prior version of this control fell back to a hardcoded, source-visible per-provider literal in that misconfiguration window. The secret-selection logic was then centralized into one shared helper (services/integrations/oauthState.ts) that every connector\'s stateSecret() delegates to, re-read directly and confirmed to throw instead of returning a fallback value — and every install/callback route was re-read directly and confirmed to catch that throw and fail closed with a safe, generic redirect rather than an unhandled framework error.',
+      evidence: 'IMPLEMENTED and TESTED: requireOAuthStateSecret() in services/integrations/oauthState.ts does `const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY; if (!secret) throw new OAuthStateConfigurationError(provider);` — no hardcoded literal remains anywhere in the codebase (grepped, including a stray unrelated git worktree found to still hold the old code, documented as out of scope for this fix). Every one of the 7 install routes signs state inside a try/catch, and every one of the 7 callback routes verifies state inside a try/catch; both catch this specific error and redirect to a safe `reason=oauth_state_signing_unavailable` slug mapped to a generic, no-secret-named message in the settings UI, rather than surfacing an unhandled 500. tests/oauth-state-signing.test.ts exercises this in real child processes: a configured secret signs/verifies correctly, a different secret / tampered signature / unsigned body / expired timestamp are all rejected, and a missing, empty, or whitespace-only secret makes signing and verification both throw a generic error naming no env var and no secret value. npm run test:oauth-state-signing passes today.',
+      sources: ['services/integrations/oauthState.ts:requireOAuthStateSecret()', 'services/integrations/{slack,gmail,outlook,jira,teams,zoom,servicenow}.ts:stateSecret()', 'app/api/integrations/{provider}/install/route.ts', 'app/api/integrations/{provider}/callback/route.ts', 'tests/oauth-state-signing.test.ts', 'config/env.ts'],
+      securityImplication: 'A deployment missing both ENCRYPTION_KEY and CLERK_SECRET_KEY can no longer issue or accept an OAuth CSRF-state token at all, closing the narrow window where such tokens would previously have been signed with a value visible in source control, and the resulting failure is a safe, controlled redirect rather than an unhandled server error.',
       nextAction: null,
     },
     {

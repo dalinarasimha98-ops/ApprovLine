@@ -10,6 +10,7 @@ import {
   storedJiraTokens,
   verifyJiraState,
 } from '@/services/integrations/jira';
+import { oauthStateFailureReason } from '@/services/integrations/oauthState';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +41,19 @@ export async function GET(request: NextRequest) {
   }
 
   const tenant = await getCurrentTenant();
-  const statePayload = verifyJiraState(state);
+  let statePayload;
+  try {
+    statePayload = verifyJiraState(state);
+  } catch (stateError) {
+    const reason = oauthStateFailureReason(stateError, 'invalid_oauth_state');
+    await writeAuditLog({
+      organizationId: tenant.organization.id,
+      actorUserId: tenant.user.id,
+      action: 'integration.jira.oauth_failed',
+      metadata: { reason },
+    });
+    return NextResponse.redirect(new URL(`/dashboard/settings/integrations?jira=error&reason=${encodeURIComponent(reason)}`, request.url));
+  }
   if (!statePayload || statePayload.organizationId !== tenant.organization.id || statePayload.userId !== tenant.user.id) {
     await writeAuditLog({
       organizationId: tenant.organization.id,

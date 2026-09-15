@@ -79,6 +79,8 @@ jobs:
         run: npm run test:audit-logs
       - name: Test — founder security
         run: npm run test:security
+      - name: Test — OAuth state-signing fail-closed
+        run: npm run test:oauth-state-signing
       - name: Test — gateway entitlement enforcement
         run: npm run test:gateway-entitlement
       - name: Test — reliability hardening

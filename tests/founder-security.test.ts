@@ -55,24 +55,13 @@ for (const status of Object.keys(SECURITY_STATUS_LABELS) as SecurityStatus[]) {
 
 console.log('Validated lib/founder-security.ts\'s real executed unit tests: exactly 4 honest status values (VERIFIED/ATTENTION/NOT_VERIFIED/FAILED) with distinct, non-green-defaulting tones, and complete, filterable category/severity taxonomies.');
 
-// Part 1b: REAL EXECUTED behavioral regression test for the OAuth
-// State-Signing Fallback fix. Previously, stateSecret() fell back to a
-// hardcoded, source-visible literal when both ENCRYPTION_KEY and
-// CLERK_SECRET_KEY were unconfigured; it must now fail closed (throw)
-// instead. Exercised against the real module (services/integrations/
-// slack.ts has no DB/queue side effects at import time, unlike the other
-// 6 connectors), with both env vars explicitly deleted first so this test
-// is not accidentally made to pass by an env var already set in the
-// calling shell.
-delete process.env.ENCRYPTION_KEY;
-delete process.env.CLERK_SECRET_KEY;
-delete process.env.SLACK_CLIENT_ID; // avoid colliding with tests/slack-integration.test.ts's own module-level env setup if ever run in the same process
-const { signSlackState: signSlackStateUnconfigured } = await import('../services/integrations/slack');
-assert.throws(
-  () => signSlackStateUnconfigured({ organizationId: 'org_1', userId: 'user_1', createdAt: Date.now() }),
-  /Cannot sign or verify Slack OAuth state/,
-);
-console.log('Validated the OAuth State-Signing Fallback fix: signSlackState() now throws (fails closed) rather than signing with a hardcoded literal when both ENCRYPTION_KEY and CLERK_SECRET_KEY are unconfigured.');
+// Part 1b: the OAuth State-Signing Fallback fix's own real, isolated
+// child-process behavioral proof (valid/wrong/missing/empty/whitespace
+// secret, tampered/unsigned/expired state, across all 7 connectors) lives
+// in tests/oauth-state-signing.test.ts (npm run test:oauth-state-signing)
+// — not duplicated here. This file's Part 2 below only asserts that this
+// page's control correctly reuses that shared module and reflects its
+// real, current (fixed) status.
 
 // Part 2: static-analysis assertions, matching the convention used across
 // tests/founder-*.test.ts in this repo. A real, Postgres+Redis-backed run
@@ -167,11 +156,24 @@ for (const key of ['founder-bootstrap-configuration', 'copilot-retrieval-scope',
 //     underlying gap was resolved.
 assert.match(serviceCodeOnly, /key: 'oauth-state-signing-fallback'[\s\S]{0,120}status: 'VERIFIED'/);
 // No hardcoded per-provider state-signing literal remains anywhere in the
-// 7 real connectors — the exact fallback this control used to flag.
+// 7 real connectors — the exact fallback this control used to flag. Each
+// connector now delegates secret selection to the one shared helper
+// (services/integrations/oauthState.ts) rather than re-inlining it.
+const oauthStateSharedLib = stripComments(read('services/integrations/oauthState.ts'));
+assert.match(oauthStateSharedLib, /export class OAuthStateConfigurationError extends Error/);
+assert.match(oauthStateSharedLib, /if \(!secret\) \{\s*\n\s*throw new OAuthStateConfigurationError\(provider\);/); // fails closed instead of falling back
 for (const provider of ['slack', 'gmail', 'outlook', 'jira', 'teams', 'zoom', 'servicenow']) {
   const connector = stripComments(read(`services/integrations/${provider}.ts`));
   assert.doesNotMatch(connector, /'approvline-dev-[a-z-]*state-secret'/);
-  assert.match(connector, /if \(!secret\) \{\s*\n\s*throw new Error\(/); // fails closed instead of falling back
+  assert.match(connector, /return requireOAuthStateSecret\(/);
+}
+// Every install and callback route fails closed with a safe, controlled
+// redirect (never an unhandled 500 exposing implementation details).
+for (const provider of ['slack', 'gmail', 'outlook', 'jira', 'teams', 'zoom', 'servicenow']) {
+  const installRoute = read(`app/api/integrations/${provider}/install/route.ts`);
+  const callbackRoute = read(`app/api/integrations/${provider}/callback/route.ts`);
+  assert.match(installRoute, /oauthStateFailureReason/);
+  assert.match(callbackRoute, /oauthStateFailureReason/);
 }
 
 // 8. Attention controls are surfaced via a real filter against the actual

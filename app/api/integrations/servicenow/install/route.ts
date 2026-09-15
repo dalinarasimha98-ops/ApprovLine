@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { env } from '@/config/env';
 import { requireRole } from '@/lib/auth';
 import { buildServiceNowInstallUrl, normalizeServiceNowInstanceUrl, signServiceNowState } from '@/services/integrations/servicenow';
+import { oauthStateFailureReason } from '@/services/integrations/oauthState';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.redirect(buildServiceNowInstallUrl({ requestUrl: request.url, state, instanceUrl }));
   } catch (error) {
-    const reason = error instanceof Error ? error.message : 'ServiceNow OAuth install failed';
+    const reason = oauthStateFailureReason(error, 'ServiceNow OAuth install failed');
     return NextResponse.redirect(new URL(`/dashboard/settings/integrations?servicenow=error&reason=${encodeURIComponent(reason)}`, request.url));
   }
 }

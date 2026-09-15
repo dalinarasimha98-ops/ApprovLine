@@ -10,6 +10,7 @@ import {
   storedGmailTokens,
   verifyGmailState,
 } from '@/services/integrations/gmail';
+import { oauthStateFailureReason } from '@/services/integrations/oauthState';
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
@@ -21,7 +22,19 @@ export async function GET(request: NextRequest) {
   }
 
   const tenant = await getCurrentTenant();
-  const statePayload = verifyGmailState(state);
+  let statePayload;
+  try {
+    statePayload = verifyGmailState(state);
+  } catch (stateError) {
+    const reason = oauthStateFailureReason(stateError, 'invalid_oauth_state');
+    await writeAuditLog({
+      organizationId: tenant.organization.id,
+      actorUserId: tenant.user.id,
+      action: 'integration.gmail.oauth_failed',
+      metadata: { reason },
+    });
+    return NextResponse.redirect(new URL(`/dashboard/settings/integrations?gmail=error&reason=${encodeURIComponent(reason)}`, request.url));
+  }
   if (!statePayload || statePayload.organizationId !== tenant.organization.id || statePayload.userId !== tenant.user.id) {
     await writeAuditLog({
       organizationId: tenant.organization.id,

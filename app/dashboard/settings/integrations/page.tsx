@@ -165,6 +165,7 @@ function oauthMessage(provider: OAuthProvider, status?: string, reason?: string)
 
   const messages: Record<string, string> = {
     access_denied: `${provider} installation was canceled before ApprovLine received authorization.`,
+    oauth_state_signing_unavailable: `${provider} connection is temporarily unavailable because secure state signing is not configured. Contact your ApprovLine administrator.`,
     missing_oauth_code_or_state: `${provider} did not return the required OAuth code or state. Start the install again from this page.`,
     invalid_oauth_state: `The ${provider} install session expired or did not match this organization. Start the install again.`,
     missing_workspace_token: `${provider} did not return a workspace token. Confirm scopes and OAuth settings.`,

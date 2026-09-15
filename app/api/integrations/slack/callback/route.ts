@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentTenant } from '@/lib/auth';
 import { encryptJson } from '@/utils/encryption';
 import { exchangeSlackOAuthCode, verifySlackState } from '@/services/integrations/slack';
+import { oauthStateFailureReason } from '@/services/integrations/oauthState';
 import { writeAuditLog } from '@/services/audit';
 
 export async function GET(request: NextRequest) {
@@ -15,7 +16,19 @@ export async function GET(request: NextRequest) {
   }
 
   const tenant = await getCurrentTenant();
-  const statePayload = verifySlackState(state);
+  let statePayload;
+  try {
+    statePayload = verifySlackState(state);
+  } catch (stateError) {
+    const reason = oauthStateFailureReason(stateError, 'invalid_oauth_state');
+    await writeAuditLog({
+      organizationId: tenant.organization.id,
+      actorUserId: tenant.user.id,
+      action: 'integration.slack.oauth_failed',
+      metadata: { reason },
+    });
+    return NextResponse.redirect(new URL(`/dashboard/settings/integrations?slack=error&reason=${encodeURIComponent(reason)}`, request.url));
+  }
   if (
     !statePayload ||
     statePayload.organizationId !== tenant.organization.id ||
