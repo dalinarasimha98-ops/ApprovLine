@@ -14,6 +14,7 @@ import {
   auditCategoryTone,
   auditLabelFor,
   resolveAuditTarget,
+  resolveStateChange,
   sanitizeActivityMetadata,
   actorDisplayName,
   truncateValue,
@@ -101,6 +102,7 @@ export function AuditLogsClient(props: Props) {
   const selected = rows.find((r) => r.id === selectedId) ?? null;
   const selectedTarget = selected ? targetFor(selected) : null;
   const selectedMetadata = selected ? sanitizeActivityMetadata(selected.metadata) : [];
+  const selectedStateChange = selected ? resolveStateChange(selected.metadata) : null;
 
   function openDrawer(id: string) {
     setTab('overview');
@@ -439,13 +441,12 @@ export function AuditLogsClient(props: Props) {
 
           {tab === 'details' ? (
             <div id="audit-tabpanel-details" role="tabpanel" aria-labelledby="audit-tab-details" className="flex-1 space-y-5 px-6 py-5">
-              {selectedMetadata.some((e) => e.label.toLowerCase().includes('previous')) || selectedMetadata.some((e) => e.label.toLowerCase().startsWith('new')) ? (
+              {selectedStateChange ? (
                 <div className="rounded-xl border border-slate-200 p-4">
                   <p className="mb-3 text-xs font-black uppercase tracking-wide text-slate-400">State Change</p>
                   <dl className="grid grid-cols-2 gap-3 text-xs">
-                    {selectedMetadata.filter((e) => e.label.toLowerCase().includes('previous') || e.label.toLowerCase().startsWith('new')).map((entry) => (
-                      <div key={entry.label}><dt className="font-bold text-slate-400">{entry.label}</dt><dd className="mt-0.5 font-semibold text-slate-700">{truncateValue(entry.value)}</dd></div>
-                    ))}
+                    <div><dt className="font-bold text-slate-400">Previous {selectedStateChange.label}</dt><dd className="mt-0.5 font-semibold text-slate-700">{selectedStateChange.previous}</dd></div>
+                    <div><dt className="font-bold text-slate-400">New {selectedStateChange.label}</dt><dd className="mt-0.5 font-semibold text-slate-700">{selectedStateChange.next}</dd></div>
                   </dl>
                 </div>
               ) : null}

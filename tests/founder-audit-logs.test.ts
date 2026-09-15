@@ -14,6 +14,7 @@ import {
   auditDateRangeCutoff,
   actorDisplayName,
   resolveAuditTarget,
+  resolveStateChange,
   truncateValue,
   sanitizeActivityMetadata,
   fmtDateTime,
@@ -184,6 +185,38 @@ assert.equal(truncateValue('short'), 'short');
 assert.equal(truncateValue('a'.repeat(140)), 'a'.repeat(140));
 assert.equal(truncateValue('a'.repeat(141)), `${'a'.repeat(139)}…`);
 
+// ─── resolveStateChange: real before/after pairs only, never fabricated ───
+// Found during adversarial re-review: customer.status.updated's real
+// metadata shape is {status, previousStatus} — the NEW value lives under
+// the plain `status` key, not `newStatus` like every other status-change
+// action. A naive "any previousXxx / newXxx key" heuristic would show only
+// "Previous status" with no matching new value for this one, common,
+// real action. Verified against the exact metadata shape every real
+// writer produces (grepped, not assumed).
+
+// customer.feature_flag.updated / .reset's real shape.
+assert.deepEqual(resolveStateChange({ previousEnabled: false, newEnabled: true }), { label: 'Feature Flag', previous: 'Disabled', next: 'Enabled' });
+assert.deepEqual(resolveStateChange({ previousEnabled: true, newEnabled: false }), { label: 'Feature Flag', previous: 'Enabled', next: 'Disabled' });
+// .reset's real shape sets newEnabled to null (override removed, no new
+// enabled/disabled state to honestly show) — never fabricates a boolean pair.
+assert.equal(resolveStateChange({ previousEnabled: true, newEnabled: null }), null);
+
+// integration.provider.status_changed / integration.request.status_changed's real shape.
+assert.deepEqual(resolveStateChange({ previousStatus: 'BETA', newStatus: 'GENERAL_AVAILABILITY' }), { label: 'Status', previous: 'BETA', next: 'GENERAL_AVAILABILITY' });
+
+// customer.status.updated's real, asymmetrically-named shape — the exact
+// bug this function exists to fix.
+assert.deepEqual(resolveStateChange({ status: 'ACTIVE', previousStatus: 'TRIAL' }), { label: 'Status', previous: 'TRIAL', next: 'ACTIVE' });
+
+// integration.sync.triggered's real shape has previousStatus but genuinely
+// no new status value (only an optional error) — correctly shows nothing,
+// never fabricates a "new" value that was never recorded.
+assert.equal(resolveStateChange({ providerSlug: 'slack', previousStatus: 'SYNCING', error: null }), null);
+
+// No metadata, or metadata with neither half of a real pair, resolves to null.
+assert.equal(resolveStateChange(null), null);
+assert.equal(resolveStateChange({ email: 'jane@acme.com', role: 'ORG_ADMIN' }), null);
+
 // ─── Reused, not reimplemented: metadata sanitization and date formatting ─
 
 assert.deepEqual(sanitizeActivityMetadata({ password: 'hunter2', status: 'ACTIVE' }), [{ label: 'Status', value: 'ACTIVE' }]);
@@ -298,6 +331,15 @@ for (const file of [service, client, page, pureLib]) {
 // Metadata is only ever rendered through the sanitizer — never a raw metadata dump.
 assert.doesNotMatch(clientCodeOnly, /\{selected\.metadata\}|\{JSON\.stringify\(selected\.metadata/);
 assert.match(client, /sanitizeActivityMetadata\(selected\.metadata\)/);
+
+// 9b. The drawer's "State Change" section uses the precise resolveStateChange
+//     pairing, not a fragile "label contains 'previous'/'new'" substring
+//     heuristic — the exact bug found during adversarial re-review
+//     (customer.status.updated's real {status, previousStatus} shape would
+//     otherwise show an orphaned "Previous status" with no matching new
+//     value, since its new value has no "new"-prefixed key).
+assert.match(client, /resolveStateChange\(selected\.metadata\)/);
+assert.doesNotMatch(clientCodeOnly, /label\.toLowerCase\(\)\.includes\(['"]previous['"]\)|label\.toLowerCase\(\)\.startsWith\(['"]new['"]\)/);
 
 // 10. Search never touches raw metadata — only structured, safe fields —
 //     so a search hit can never surface a secret-shaped metadata value

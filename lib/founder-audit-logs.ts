@@ -224,3 +224,43 @@ export function truncateValue(value: string, max = 140): string {
   if (value.length <= max) return value;
   return `${value.slice(0, max - 1)}…`;
 }
+
+export type StateChange = { label: string; previous: string; next: string };
+
+/**
+ * Resolves a real previous → new state pair for the drawer's dedicated
+ * "State Change" section, from the metadata shape each real writer
+ * actually uses — verified by direct grep against every logFounderAction
+ * call site, not assumed:
+ *   - customer.feature_flag.updated/reset: {previousEnabled, newEnabled}
+ *   - integration.provider.status_changed,
+ *     integration.request.status_changed: {previousStatus, newStatus}
+ *   - customer.status.updated: {status, previousStatus} — the new value
+ *     lives under the plain `status` key here, NOT `newStatus` like every
+ *     other status-change action, so it needs its own explicit pairing
+ *     rather than a generic "starts with new" heuristic, which would
+ *     otherwise silently show a "Previous status" with no matching new
+ *     value for this one, real, common action.
+ * Returns null (never a fabricated pair) when the metadata doesn't carry
+ * both halves of a real before/after pair — e.g. integration.sync.
+ * triggered only ever records {previousStatus, error}, genuinely no new
+ * status value, so it correctly shows nothing here.
+ */
+export function resolveStateChange(metadata: unknown): StateChange | null {
+  const record = asRecord(metadata);
+  if (!record) return null;
+
+  if (typeof record.previousEnabled === 'boolean' && 'newEnabled' in record) {
+    const next = record.newEnabled;
+    if (typeof next === 'boolean') {
+      return { label: 'Feature Flag', previous: record.previousEnabled ? 'Enabled' : 'Disabled', next: next ? 'Enabled' : 'Disabled' };
+    }
+  }
+  if (typeof record.previousStatus === 'string' && typeof record.newStatus === 'string') {
+    return { label: 'Status', previous: record.previousStatus, next: record.newStatus };
+  }
+  if (typeof record.previousStatus === 'string' && typeof record.status === 'string') {
+    return { label: 'Status', previous: record.previousStatus, next: record.status };
+  }
+  return null;
+}
