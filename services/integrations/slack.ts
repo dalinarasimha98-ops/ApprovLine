@@ -16,7 +16,11 @@ export const SLACK_READ_ONLY_SCOPES = [
 ].join(',');
 
 function stateSecret() {
-  return env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY ?? 'approvline-dev-state-secret';
+  const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY;
+  if (!secret) {
+    throw new Error('Cannot sign or verify Slack OAuth state: configure ENCRYPTION_KEY or CLERK_SECRET_KEY before starting this OAuth flow.');
+  }
+  return secret;
 }
 
 export function signSlackState(payload: { organizationId: string; userId: string; createdAt?: number }) {

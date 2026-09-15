@@ -122,7 +122,11 @@ const serviceNowTables: ServiceNowSyncTable[] = [
 ];
 
 function stateSecret() {
-  return env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY ?? 'approvline-dev-servicenow-state-secret';
+  const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY;
+  if (!secret) {
+    throw new Error('Cannot sign or verify ServiceNow OAuth state: configure ENCRYPTION_KEY or CLERK_SECRET_KEY before starting this OAuth flow.');
+  }
+  return secret;
 }
 
 function metadataObject(metadata: Prisma.JsonValue | null | undefined) {

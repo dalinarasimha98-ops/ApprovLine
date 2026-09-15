@@ -89,7 +89,11 @@ export interface TeamsSyncResult {
 }
 
 function stateSecret() {
-  return env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY ?? 'approvline-dev-teams-state-secret';
+  const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY;
+  if (!secret) {
+    throw new Error('Cannot sign or verify Teams OAuth state: configure ENCRYPTION_KEY or CLERK_SECRET_KEY before starting this OAuth flow.');
+  }
+  return secret;
 }
 
 export function signTeamsState(payload: { organizationId: string; userId: string; createdAt?: number }) {

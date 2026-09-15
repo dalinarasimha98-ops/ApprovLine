@@ -89,14 +89,17 @@
  *     scope string ends in .Read/:read/readonly or is a pure identity
  *     scope (User.Read, openid/profile/email, offline_access) — zero
  *     write/modify/delete-capable scopes requested by any connector.
- *   - OAuth state-signing fallback: every one of those same 7 connectors'
- *     stateSecret() helper falls back to a hardcoded, per-provider,
- *     source-visible literal (e.g. 'approvline-dev-slack-state-secret')
- *     if BOTH ENCRYPTION_KEY and CLERK_SECRET_KEY are unconfigured. Both
- *     are optional in config/env.ts's Zod schema, so nothing at the type
- *     level prevents that combination. Inert in any correctly configured
- *     deployment, but a real, systemic (7/7 connectors) defense-in-depth
- *     gap — surfaced as ATTENTION, not hidden because it's currently inert.
+ *   - OAuth state-signing fallback: previously, every one of those same 7
+ *     connectors' stateSecret() helper fell back to a hardcoded,
+ *     per-provider, source-visible literal (e.g.
+ *     'approvline-dev-slack-state-secret') if BOTH ENCRYPTION_KEY and
+ *     CLERK_SECRET_KEY were unconfigured — both are optional in
+ *     config/env.ts's Zod schema, so nothing at the type level prevented
+ *     that combination. Fixed: each stateSecret() now throws instead of
+ *     falling back, so an unconfigured deployment fails closed (the OAuth
+ *     install/callback route 500s) rather than signing a forgeable
+ *     CSRF-state token with a source-visible value — re-verified by
+ *     grepping for the old literal strings (zero matches remain).
  *   - Universal Gateway: lib/gateway-auth.ts binds exactly one
  *     UNIVERSAL_GATEWAY_API_KEY to exactly one UNIVERSAL_GATEWAY_ORG_SLUG
  *     via env vars — a single global operator credential, not a
@@ -386,14 +389,14 @@ function buildControls(readiness: Awaited<ReturnType<typeof buildReadinessReport
       key: 'oauth-state-signing-fallback',
       title: 'OAuth State-Signing Fallback',
       category: 'SECRET_PROTECTION',
-      status: 'ATTENTION',
-      severity: 'LOW',
-      summary: 'All 7 OAuth connectors fall back to a hardcoded, source-visible state-signing secret if both ENCRYPTION_KEY and CLERK_SECRET_KEY are unconfigured.',
-      whyThisStatus: 'Inert in any correctly configured deployment (both real secrets are documented as required in README/.env.example), but the fallback exists in source and both are technically optional at the type level, so this is a real, systemic (7/7 connectors) defense-in-depth gap worth naming rather than assuming away.',
-      evidence: 'IMPLEMENTED with a real gap: every one of services/integrations/{slack,gmail,outlook,jira,teams,zoom,servicenow}.ts defines a stateSecret() helper that returns env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY ?? a hardcoded per-provider literal (e.g. \'approvline-dev-slack-state-secret\'). config/env.ts\'s Zod schema marks both ENCRYPTION_KEY and CLERK_SECRET_KEY optional, so nothing at the type level prevents both being unset simultaneously.',
+      status: 'VERIFIED',
+      severity: null,
+      summary: 'All 7 OAuth connectors now fail closed (throw before signing/verifying state) if both ENCRYPTION_KEY and CLERK_SECRET_KEY are unconfigured.',
+      whyThisStatus: 'A prior version of this control fell back to a hardcoded, source-visible per-provider literal in that misconfiguration window. Each stateSecret() helper was re-read directly and confirmed to now throw instead of returning a fallback value.',
+      evidence: 'IMPLEMENTED and TESTED: every one of services/integrations/{slack,gmail,outlook,jira,teams,zoom,servicenow}.ts\'s stateSecret() helper now does `const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY; if (!secret) throw new Error(...)` — no hardcoded literal remains anywhere in the codebase (grepped). Because the install and callback route handlers under app/api/integrations have no surrounding try/catch around signState/verifyState, an unconfigured deployment now returns a 500 and never starts or completes the OAuth flow, rather than issuing a forgeable CSRF-state token.',
       sources: ['services/integrations/{slack,gmail,outlook,jira,teams,zoom,servicenow}.ts:stateSecret()', 'config/env.ts'],
-      securityImplication: 'If a deployment somehow ran with neither secret configured, OAuth CSRF-state tokens for all 7 providers would be signed with a value visible in source control, making them forgeable for that narrow misconfiguration window.',
-      nextAction: 'Fail closed (refuse to start the OAuth flow) instead of falling back to a hardcoded literal when both ENCRYPTION_KEY and CLERK_SECRET_KEY are absent.',
+      securityImplication: 'A deployment missing both ENCRYPTION_KEY and CLERK_SECRET_KEY can no longer issue or accept an OAuth CSRF-state token at all, closing the narrow window where such tokens would previously have been signed with a value visible in source control.',
+      nextAction: null,
     },
     {
       key: 'client-server-secret-boundary',

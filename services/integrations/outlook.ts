@@ -78,7 +78,11 @@ export interface OutlookSyncResult {
 }
 
 function stateSecret() {
-  return env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY ?? 'approvline-dev-outlook-state-secret';
+  const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY;
+  if (!secret) {
+    throw new Error('Cannot sign or verify Outlook OAuth state: configure ENCRYPTION_KEY or CLERK_SECRET_KEY before starting this OAuth flow.');
+  }
+  return secret;
 }
 
 function microsoftTenantSegment() {

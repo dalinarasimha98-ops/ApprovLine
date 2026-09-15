@@ -84,7 +84,11 @@ export interface GmailSyncResult {
 }
 
 function stateSecret() {
-  return env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY ?? 'approvline-dev-gmail-state-secret';
+  const secret = env.ENCRYPTION_KEY ?? env.CLERK_SECRET_KEY;
+  if (!secret) {
+    throw new Error('Cannot sign or verify Gmail OAuth state: configure ENCRYPTION_KEY or CLERK_SECRET_KEY before starting this OAuth flow.');
+  }
+  return secret;
 }
 
 function base64UrlDecode(value: string) {
