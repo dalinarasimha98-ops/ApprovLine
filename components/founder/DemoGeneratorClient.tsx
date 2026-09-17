@@ -356,7 +356,7 @@ export function DemoGeneratorClient(props: Props) {
                     type="button"
                     onClick={() => applyScenario(s.key)}
                     aria-pressed={active}
-                    className={`relative flex h-full flex-col items-start rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] ${
+                    className={`relative flex h-full w-full flex-col items-center rounded-xl border p-4 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] ${
                       active ? 'border-[#2557dc] bg-blue-50/60 ring-1 ring-[#2557dc]' : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
@@ -367,12 +367,16 @@ export function DemoGeneratorClient(props: Props) {
                         </svg>
                       </span>
                     ) : null}
-                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${active ? 'bg-[#2557dc] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className={active ? 'text-[#2557dc]' : 'text-slate-500'}>
                       <ScenarioIcon scenario={s.key} />
                     </span>
-                    <p className="mt-3 font-black text-slate-950">{s.title}</p>
-                    <p className="mt-1.5 flex-1 text-xs font-semibold leading-5 text-slate-600">{s.description}</p>
-                    {s.recommended ? <span className="mt-3"><Badge tone="blue">Recommended</Badge></span> : null}
+                    <p className="mt-2 w-full text-sm font-black text-slate-950">{s.title}</p>
+                    <p className="mt-1.5 w-full flex-1 text-xs font-semibold leading-5 text-slate-500">{s.description}</p>
+                    {s.recommended ? (
+                      <span className="mt-3 inline-flex w-fit items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">
+                        Recommended
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
