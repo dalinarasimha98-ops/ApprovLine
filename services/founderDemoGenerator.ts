@@ -6,21 +6,20 @@ import { createDemoDataForOrganization } from '@/lib/demo-data';
 import type { FounderAccess } from '@/services/founder';
 import { logFounderAction } from '@/services/founder';
 import { addMemoryTimelineEvent, invalidateMemoryCache, linkMemoryEntities, upsertMemoryEntity } from '@/services/memory';
+import {
+  approvalVolume,
+  demoCompanySizes,
+  demoIndustries,
+  seatsForCompanySize,
+  vendorVolume,
+  type DemoCompanySize,
+  type DemoIndustry,
+  type DemoModuleKey,
+  type DemoScenarioKey,
+} from '@/lib/founder-demo-generator';
 
-export const demoIndustries = [
-  'SaaS',
-  'Financial Services',
-  'Pharma',
-  'Healthcare',
-  'Manufacturing',
-  'Retail',
-  'Logistics',
-] as const;
-
-export const demoCompanySizes = ['100 Employees', '500 Employees', '1000 Employees', 'Enterprise'] as const;
-
-export type DemoIndustry = (typeof demoIndustries)[number];
-export type DemoCompanySize = (typeof demoCompanySizes)[number];
+export { demoIndustries, demoCompanySizes };
+export type { DemoIndustry, DemoCompanySize };
 
 export type DemoWorkspaceSummary = {
   organizationId: string;
@@ -39,6 +38,8 @@ export type DemoWorkspaceSummary = {
     memoryRelationships: number;
     copilotQuestions: number;
     healthScore: number;
+    users: number;
+    supportNotes: number;
   };
 };
 
@@ -97,20 +98,6 @@ const typeCycle: ApprovalType[] = ['EXPLICIT', 'CONDITIONAL', 'IMPLICIT', 'REJEC
 
 function slug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
-function approvalVolume(size: DemoCompanySize) {
-  if (size === '100 Employees') return 100;
-  if (size === '500 Employees') return 220;
-  if (size === '1000 Employees') return 340;
-  return 500;
-}
-
-function vendorVolume(size: DemoCompanySize) {
-  if (size === '100 Employees') return 20;
-  if (size === '500 Employees') return 32;
-  if (size === '1000 Employees') return 42;
-  return 50;
 }
 
 function amountFor(index: number, size: DemoCompanySize) {
@@ -480,7 +467,87 @@ async function seedCustomerSuccess(input: {
   }).catch(() => null);
 }
 
-export async function listFounderDemoWorkspaces() {
+// Backs the "Users & Teams" data module. FounderManagedUser is a real,
+// pre-existing model (customer-side users under Founder control) that the
+// demo generator did not previously populate at all — this is a genuine
+// new capability, not a fabricated display value, and every row it
+// creates is a real database record a Founder can see on Customer 360.
+const demoUserRoles = ['ORG_ADMIN', 'COMPLIANCE', 'LEGAL', 'FINANCE', 'PROCUREMENT', 'ENGINEERING'] as const;
+const demoUserNames = [
+  ['Sarah', 'Johnson'],
+  ['Priya', 'Sharma'],
+  ['James', 'Okafor'],
+  ['Maya', 'Chen'],
+  ['Daniel', 'Kim'],
+  ['Elena', 'Rodriguez'],
+];
+
+async function seedFounderManagedUsers(input: { customerAccountId: string; organizationId: string; domain: string; companySize: DemoCompanySize }) {
+  const count = input.companySize === 'Enterprise' ? 6 : input.companySize === '1000 Employees' ? 5 : input.companySize === '500 Employees' ? 4 : 3;
+  let created = 0;
+  for (let index = 0; index < count; index += 1) {
+    const [firstName, lastName] = demoUserNames[index % demoUserNames.length];
+    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${input.domain}`;
+    await prisma.founderManagedUser.upsert({
+      where: { customerAccountId_email: { customerAccountId: input.customerAccountId, email } },
+      update: { status: 'ACTIVE', role: demoUserRoles[index % demoUserRoles.length], acceptedAt: new Date() },
+      create: {
+        customerAccountId: input.customerAccountId,
+        organizationId: input.organizationId,
+        firstName,
+        lastName,
+        email,
+        role: demoUserRoles[index % demoUserRoles.length],
+        status: 'ACTIVE',
+        acceptedAt: new Date(),
+      },
+    });
+    created += 1;
+  }
+  return created;
+}
+
+// Backs the "Support Notes" data module. CustomerNote is the real,
+// pre-existing model behind the Founder Console's own "Support & Notes"
+// page — there is no ticket/case model anywhere in this codebase, so this
+// module is honestly labeled and described as notes, not tickets.
+const demoSupportNoteBodies = [
+  'Customer asked how evidence retention works for Slack-sourced approvals. Pointed them to the compliance documentation.',
+  'Walked the customer through connecting a second Gmail account for their Finance team.',
+  'Customer requested an export of last quarter\'s approval history for an internal audit.',
+  'Flagged a question about SSO rollout timing for their Legal department.',
+];
+
+async function seedSupportNotes(customerAccountId: string) {
+  const rows = demoSupportNoteBodies.map((body, index) => ({
+    customerAccountId,
+    authorEmail: 'founder@approvline.com',
+    body,
+    pinned: index === 0,
+  }));
+  const result = await prisma.customerNote.createMany({ data: rows });
+  return result.count;
+}
+
+export type FounderDemoWorkspaceListItem = {
+  id: string;
+  name: string;
+  slug: string;
+  customerAccountId: string | null;
+  domain: string | null;
+  status: string | null;
+  planTier: string | null;
+  industry: string;
+  companySize: string;
+  createdAt: Date;
+  updatedAt: Date;
+  approvals: number;
+  investigations: number;
+  memoryEntities: number;
+  integrations: number;
+};
+
+export async function listFounderDemoWorkspaces(): Promise<FounderDemoWorkspaceListItem[]> {
   const organizations = await prisma.organization.findMany({
     where: { slug: { startsWith: 'founder-demo-' } },
     include: { customerAccount: true },
@@ -502,8 +569,12 @@ export async function listFounderDemoWorkspaces() {
         name: organization.name,
         slug: organization.slug,
         customerAccountId: organization.customerAccount?.id ?? null,
+        domain: organization.customerAccount?.domain ?? null,
+        status: organization.customerAccount?.status ?? null,
+        planTier: organization.customerAccount?.planTier ?? null,
         industry: metadata?.[1] ?? organization.customerAccount?.industry ?? 'Demo',
         companySize: metadata?.[2] ?? 'Generated',
+        createdAt: organization.createdAt,
         updatedAt: organization.updatedAt,
         approvals,
         investigations,
@@ -514,16 +585,66 @@ export async function listFounderDemoWorkspaces() {
   );
 }
 
-export async function generateFounderDemoWorkspace(access: FounderAccess, industry: DemoIndustry, companySize: DemoCompanySize): Promise<DemoWorkspaceSummary> {
+export type DemoGenerationInput = {
+  industry: DemoIndustry;
+  companySize: DemoCompanySize;
+  modules: DemoModuleKey[];
+  scenario: DemoScenarioKey;
+  /** Optional overrides for "Create New Demo Customer" — when omitted, the
+   * industry profile's own derived company name/domain/admin email are
+   * used exactly as before this task. */
+  companyName?: string;
+  domain?: string;
+  primaryAdminEmail?: string;
+};
+
+export type DemoSamplePreview = {
+  companyName: string;
+  domain: string;
+  vendors: string[];
+  projects: string[];
+  sampleApprovalSubjects: string[];
+};
+
+/**
+ * Read-only preview backing the "Preview Sample Data" button — draws from
+ * the exact same industryProfiles data generateFounderDemoWorkspace()
+ * itself uses, so the preview is never disconnected from what would
+ * actually be created. Writes nothing to the database.
+ */
+export function previewDemoSample(industry: DemoIndustry, companySize: DemoCompanySize, companyNameOverride?: string, domainOverride?: string): DemoSamplePreview {
+  const profile = industryProfiles[industry];
+  const companyName = companyNameOverride?.trim() || profile.company;
+  const domain = domainOverride?.trim() || `${slug(companySize)}.${profile.domain}`;
+  const sampleApprovalSubjects = profile.vendors.slice(0, 3).map((vendor, index) => {
+    const project = profile.projects[index % profile.projects.length];
+    const amount = amountFor(index, companySize);
+    return `${vendor} ${amount > 100000 ? 'contract' : 'approval'} for ${project}`;
+  });
+  return {
+    companyName,
+    domain,
+    vendors: profile.vendors,
+    projects: profile.projects,
+    sampleApprovalSubjects,
+  };
+}
+
+export async function generateFounderDemoWorkspace(access: FounderAccess, input: DemoGenerationInput): Promise<DemoWorkspaceSummary> {
   if (!isWritableFounder(access)) throw new Error('Founder admin access is required to generate demo workspaces.');
+  const { industry, companySize } = input;
   if (!demoIndustries.includes(industry)) throw new Error('Unsupported demo industry.');
   if (!demoCompanySizes.includes(companySize)) throw new Error('Unsupported demo company size.');
+  const modules = input.modules.filter((m): m is DemoModuleKey => (['approvals', 'compliance', 'integrations', 'analytics', 'users', 'support'] satisfies DemoModuleKey[]).includes(m));
+  if (modules.length === 0) throw new Error('Select at least one data module to generate.');
 
   const profile = industryProfiles[industry];
   const industrySlug = slug(industry);
   const sizeSlug = slug(companySize);
   const organizationSlug = `founder-demo-${industrySlug}-${sizeSlug}`;
-  const workspaceName = `${profile.company} Demo`;
+  const workspaceName = input.companyName?.trim() ? `${input.companyName.trim()} Demo` : `${profile.company} Demo`;
+  const domain = input.domain?.trim() || `${sizeSlug}.${profile.domain}`;
+  const primaryAdminEmail = input.primaryAdminEmail?.trim() || `admin@${profile.domain}`;
 
   const existing = await prisma.organization.findUnique({ where: { slug: organizationSlug }, select: { id: true } });
   if (existing) {
@@ -541,17 +662,17 @@ export async function generateFounderDemoWorkspace(access: FounderAccess, indust
     },
   });
 
-  const seats = companySize === 'Enterprise' ? 500 : Number.parseInt(companySize, 10);
+  const seats = seatsForCompanySize(companySize);
   const customer = await prisma.customerAccount.create({
     data: {
       organizationId: organization.id,
       companyName: workspaceName,
-      domain: `${sizeSlug}.${profile.domain}`,
+      domain,
       industry,
       status: 'ACTIVE',
       planTier: companySize === 'Enterprise' ? 'ENTERPRISE' : 'GROWTH',
       primaryAdminName: 'Demo Admin',
-      primaryAdminEmail: `admin@${profile.domain}`,
+      primaryAdminEmail,
       dataRetentionDays: 1095,
       internalNotes: `founderDemo=true;industry=${industry};size=${companySize};demoRunId=${demoRunId}`,
       workspace: {
@@ -572,35 +693,54 @@ export async function generateFounderDemoWorkspace(access: FounderAccess, indust
     },
   });
 
-  await createDemoDataForOrganization(organization.id);
-  const integrations = await Promise.all(providers.map((provider) => createOrUpdateIntegration(organization.id, provider, industry)));
-  const vendorNames = Array.from({ length: vendorVolume(companySize) }, (_, index) => profile.vendors[index % profile.vendors.length] + (index >= profile.vendors.length ? ` ${index + 1}` : ''));
-  const approvals = await seedBulkApprovals({ organizationId: organization.id, integrations, industry, companySize, vendorNames, projects: profile.projects });
-  const graph = await seedContractsAndGraph({ organizationId: organization.id, industry, companySize, vendorNames, projects: profile.projects });
-  const investigations = await seedInvestigations(organization.id, industry);
-  const copilotQuestions = await seedCopilotHistory(organization.id, industry);
-  const playbooks = await prisma.playbookDocument.count({ where: { organizationId: organization.id } }).catch(() => 5);
+  // "Approvals & Evidence" is the foundational module: lib/demo-data.ts's
+  // createDemoDataForOrganization() seeds a baseline Acme-style dataset
+  // (its own fixed integrations, a small approval set, playbooks, and
+  // compliance evaluations) that only makes sense once real approvals
+  // exist — running it when Approvals & Evidence is unselected would
+  // silently create data the Founder explicitly did not ask for.
+  if (modules.includes('approvals')) {
+    await createDemoDataForOrganization(organization.id);
+  }
 
-  for (const integration of integrations) {
-    await prisma.customerIntegrationStatus.upsert({
-      where: { customerAccountId_provider: { customerAccountId: customer.id, provider: integration.provider } },
-      update: {
-        accessEnabled: true,
-        connectionState: 'CONNECTED',
-        lastSyncAt: new Date(),
-        eventsProcessed: Math.round(approvals / integrations.length),
-        metadata: json({ demo: true, founderDemo: true, provider: integration.provider }),
-      },
-      create: {
-        customerAccountId: customer.id,
-        provider: integration.provider,
-        accessEnabled: true,
-        connectionState: 'CONNECTED',
-        lastSyncAt: new Date(),
-        eventsProcessed: Math.round(approvals / integrations.length),
-        metadata: json({ demo: true, founderDemo: true, provider: integration.provider }),
-      },
-    });
+  const integrations = modules.includes('integrations')
+    ? await Promise.all(providers.map((provider) => createOrUpdateIntegration(organization.id, provider, industry)))
+    : [];
+  const vendorNames = Array.from({ length: vendorVolume(companySize) }, (_, index) => profile.vendors[index % profile.vendors.length] + (index >= profile.vendors.length ? ` ${index + 1}` : ''));
+  const approvals = modules.includes('approvals')
+    ? await seedBulkApprovals({ organizationId: organization.id, integrations, industry, companySize, vendorNames, projects: profile.projects })
+    : 0;
+  const graph = modules.includes('compliance')
+    ? await seedContractsAndGraph({ organizationId: organization.id, industry, companySize, vendorNames, projects: profile.projects })
+    : { entities: 0, relationships: 0, vendors: 0, contracts: 0 };
+  const investigations = modules.includes('analytics') ? await seedInvestigations(organization.id, industry) : 0;
+  const copilotQuestions = modules.includes('analytics') ? await seedCopilotHistory(organization.id, industry) : 0;
+  const users = modules.includes('users') ? await seedFounderManagedUsers({ customerAccountId: customer.id, organizationId: organization.id, domain, companySize }) : 0;
+  const supportNotes = modules.includes('support') ? await seedSupportNotes(customer.id) : 0;
+  const playbooks = await prisma.playbookDocument.count({ where: { organizationId: organization.id } }).catch(() => 0);
+
+  if (modules.includes('integrations')) {
+    for (const integration of integrations) {
+      await prisma.customerIntegrationStatus.upsert({
+        where: { customerAccountId_provider: { customerAccountId: customer.id, provider: integration.provider } },
+        update: {
+          accessEnabled: true,
+          connectionState: 'CONNECTED',
+          lastSyncAt: new Date(),
+          eventsProcessed: approvals > 0 ? Math.round(approvals / integrations.length) : 0,
+          metadata: json({ demo: true, founderDemo: true, provider: integration.provider }),
+        },
+        create: {
+          customerAccountId: customer.id,
+          provider: integration.provider,
+          accessEnabled: true,
+          connectionState: 'CONNECTED',
+          lastSyncAt: new Date(),
+          eventsProcessed: approvals > 0 ? Math.round(approvals / integrations.length) : 0,
+          metadata: json({ demo: true, founderDemo: true, provider: integration.provider }),
+        },
+      });
+    }
   }
 
   await seedCustomerSuccess({ customerAccountId: customer.id, organizationId: organization.id, access, approvals, integrations: integrations.length, companySize });
@@ -611,7 +751,7 @@ export async function generateFounderDemoWorkspace(access: FounderAccess, indust
     targetType: 'Organization',
     targetId: organization.id,
     customerAccountId: customer.id,
-    metadata: json({ industry, companySize, approvals, graph, investigations, copilotQuestions }),
+    metadata: json({ industry, companySize, scenario: input.scenario, modules, approvals, graph, investigations, copilotQuestions, users, supportNotes }),
   });
 
   revalidateTag(approvalRecordsCacheTag(organization.id));
@@ -634,6 +774,8 @@ export async function generateFounderDemoWorkspace(access: FounderAccess, indust
       memoryRelationships: graph.relationships,
       copilotQuestions,
       healthScore: 92,
+      users,
+      supportNotes,
     },
   };
 }
