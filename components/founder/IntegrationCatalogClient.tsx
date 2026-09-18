@@ -222,18 +222,18 @@ export function IntegrationCatalogClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="flex flex-wrap gap-2 border-b border-slate-200">
         <button
           type="button"
           onClick={() => setTab('catalog')}
-          className={`border-b-2 px-4 py-2.5 text-sm font-black transition ${tab === 'catalog' ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          className={`whitespace-normal border-b-2 px-4 py-2.5 text-left text-sm font-black transition ${tab === 'catalog' ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
           Provider Catalog
         </button>
         <button
           type="button"
           onClick={() => setTab('requests')}
-          className={`border-b-2 px-4 py-2.5 text-sm font-black transition ${tab === 'requests' ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          className={`whitespace-normal border-b-2 px-4 py-2.5 text-left text-sm font-black transition ${tab === 'requests' ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
         >
           Customer Requests {requests.length > 0 ? <span className="ml-1 text-xs font-bold text-slate-400">({requests.length})</span> : null}
         </button>
@@ -490,13 +490,13 @@ export function IntegrationCatalogClient({
               </button>
             </div>
 
-            <div className="flex gap-1 border-b border-slate-100 px-4 pt-2">
+            <div className="flex flex-wrap gap-1 border-b border-slate-100 px-4 pt-2">
               {(['overview', 'access', 'requests', 'activity'] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setDrawerTab(t)}
-                  className={`rounded-t-lg px-3 py-2 text-xs font-black capitalize transition ${drawerTab === t ? 'bg-blue-50 text-[#2557dc]' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`whitespace-normal rounded-t-lg px-3 py-2 text-left text-xs font-black capitalize transition ${drawerTab === t ? 'bg-blue-50 text-[#2557dc]' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   {t === 'access' ? 'Customer Access' : t}
                 </button>

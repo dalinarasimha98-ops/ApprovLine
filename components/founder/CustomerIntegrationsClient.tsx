@@ -311,13 +311,13 @@ export function CustomerIntegrationsClient({
               </button>
             </div>
 
-            <div className="flex gap-1 border-b border-slate-100 px-4 pt-2">
+            <div className="flex flex-wrap gap-1 border-b border-slate-100 px-4 pt-2">
               {(['overview', 'sync', 'evidence', 'failures', 'activity'] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setDrawerTab(t)}
-                  className={`rounded-t-lg px-3 py-2 text-xs font-black capitalize transition ${drawerTab === t ? 'bg-blue-50 text-[#2557dc]' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`whitespace-normal rounded-t-lg px-3 py-2 text-left text-xs font-black capitalize transition ${drawerTab === t ? 'bg-blue-50 text-[#2557dc]' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   {t === 'sync' ? 'Sync Activity' : t}
                 </button>
