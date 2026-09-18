@@ -120,30 +120,29 @@ function ScenarioIcon({ scenario }: { scenario: DemoScenarioKey }) {
   );
 }
 
-const STEPS = [
-  { label: 'Choose Scenario', hint: 'Select use case' },
-  { label: 'Customer Setup', hint: 'Pick or create' },
-  { label: 'Select Modules', hint: 'Choose data' },
-  { label: 'Preview & Generate', hint: 'Review and create' },
-];
+const STEPS = ['Choose Scenario', 'Customer Setup', 'Select Modules', 'Preview & Generate'];
 
 function StepProgress({ completed, activeIndex }: { completed: boolean[]; activeIndex: number }) {
   return (
     <div className="flex items-start">
-      {STEPS.map((step, index) => {
+      {STEPS.map((label, index) => {
         const isDone = completed[index];
         const isActive = index === activeIndex;
         return (
-          <div key={step.label} className={`flex items-center ${index < STEPS.length - 1 ? 'flex-1' : ''}`}>
-            <div className="flex flex-col items-center gap-1.5 text-center">
+          <div key={label} className={`flex items-center ${index < STEPS.length - 1 ? 'flex-1' : ''}`}>
+            <div className="flex flex-col items-center gap-2 text-center">
               <div
-                className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-black transition ${
-                  isDone || isActive ? 'bg-[#2557dc] text-white' : 'border-2 border-slate-200 bg-white text-slate-400'
+                className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black ${
+                  isDone
+                    ? 'bg-[#2557dc] text-white'
+                    : isActive
+                      ? 'border-2 border-[#2557dc] bg-white text-[#2557dc]'
+                      : 'border-2 border-slate-200 bg-white text-slate-400'
                 }`}
                 aria-current={isActive ? 'step' : undefined}
               >
                 {isDone ? (
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 ) : (
@@ -151,11 +150,11 @@ function StepProgress({ completed, activeIndex }: { completed: boolean[]; active
                 )}
               </div>
               <div className="hidden sm:block">
-                <p className={`text-xs font-black ${isActive ? 'text-[#2557dc]' : isDone ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</p>
-                <p className="text-[11px] font-semibold text-slate-400">{step.hint}</p>
+                <p className={`text-[11px] font-black uppercase tracking-wide ${isActive ? 'text-[#2557dc]' : isDone ? 'text-slate-700' : 'text-slate-400'}`}>{index + 1}</p>
+                <p className={`text-xs font-bold ${isActive || isDone ? 'text-slate-900' : 'text-slate-400'}`}>{label}</p>
               </div>
             </div>
-            {index < STEPS.length - 1 ? <div className={`mx-2 mt-4 h-0.5 flex-1 ${completed[index + 1] || isDone ? 'bg-[#2557dc]' : 'bg-slate-200'}`} aria-hidden="true" /> : null}
+            {index < STEPS.length - 1 ? <div className={`mx-2 mt-[18px] h-0.5 flex-1 ${completed[index + 1] || isDone ? 'bg-[#2557dc]' : 'bg-slate-200'}`} aria-hidden="true" /> : null}
           </div>
         );
       })}
@@ -338,7 +337,7 @@ export function DemoGeneratorClient(props: Props) {
         </section>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_380px]">
         <div className="space-y-4">
           <section className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
             <StepProgress completed={stepsCompleted} activeIndex={activeStepIndex} />
@@ -348,7 +347,7 @@ export function DemoGeneratorClient(props: Props) {
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">1. Choose Demo Scenario</p>
             <p className="mt-1 text-sm font-semibold text-slate-500">Select a pre-configured scenario or customize your own.</p>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {DEMO_SCENARIOS.map((s) => {
                 const active = scenario === s.key;
                 return (

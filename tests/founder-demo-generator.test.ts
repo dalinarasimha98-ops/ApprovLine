@@ -222,9 +222,8 @@ assert.match(client, /disabled=\{pending \|\| modules\.size === 0\}/);
 
 // ─── 16. Responsive structure ───────────────────────────────────────────
 
-assert.match(client, /xl:grid-cols-\[1fr_320px\]/); // main content + persistent right panel, collapses to one column below xl
-assert.match(client, /sm:grid-cols-2/);
-assert.match(client, /lg:grid-cols-4/); // scenario cards: 4-equal-column grid at desktop width
+assert.match(client, /xl:grid-cols-\[1fr_380px\]/); // main content + persistent right panel, collapses to one column below xl
+assert.match(client, /sm:grid-cols-2/); // scenario cards: 2x2 grid at desktop width
 assert.match(client, /overflow-x-auto/);
 assert.match(client, /table-fixed/);
 assert.doesNotMatch(client, /overflow-x-scroll/);
