@@ -356,24 +356,24 @@ export function DemoGeneratorClient(props: Props) {
                     type="button"
                     onClick={() => applyScenario(s.key)}
                     aria-pressed={active}
-                    className={`relative flex h-full w-full flex-col items-center rounded-xl border p-4 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] ${
+                    className={`relative flex h-full w-full min-w-0 flex-col items-center justify-start gap-0 whitespace-normal rounded-xl border border-solid p-4 text-center normal-case transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] ${
                       active ? 'border-[#2557dc] bg-blue-50/60 ring-1 ring-[#2557dc]' : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
                     {active ? (
-                      <span className="absolute right-3 top-3 grid h-5 w-5 place-items-center rounded-full bg-[#2557dc] text-white" aria-hidden="true">
+                      <span className="absolute right-3 top-3 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#2557dc] text-white" aria-hidden="true">
                         <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
                           <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </span>
                     ) : null}
-                    <span className={active ? 'text-[#2557dc]' : 'text-slate-500'}>
+                    <span className={`shrink-0 ${active ? 'text-[#2557dc]' : 'text-slate-500'}`}>
                       <ScenarioIcon scenario={s.key} />
                     </span>
-                    <p className="mt-2 w-full text-sm font-black text-slate-950">{s.title}</p>
-                    <p className="mt-1.5 w-full flex-1 text-xs font-semibold leading-5 text-slate-500">{s.description}</p>
+                    <p className="mt-2 w-full min-w-0 whitespace-normal break-words text-sm font-black text-slate-950">{s.title}</p>
+                    <p className="mt-1.5 w-full min-w-0 flex-1 whitespace-normal break-words text-xs font-semibold leading-5 text-slate-500">{s.description}</p>
                     {s.recommended ? (
-                      <span className="mt-3 inline-flex w-fit items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700">
+                      <span className="mt-3 inline-flex w-fit shrink-0 items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold normal-case text-blue-700">
                         Recommended
                       </span>
                     ) : null}
@@ -386,13 +386,13 @@ export function DemoGeneratorClient(props: Props) {
           {/* Section 2 — Customer Setup */}
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2557dc]">2. Customer Setup</p>
-            <div className="mt-3 flex gap-1 border-b border-slate-200" role="tablist" aria-label="Customer setup mode">
+            <div className="mt-3 flex flex-wrap gap-1 border-b border-slate-200" role="tablist" aria-label="Customer setup mode">
               <button
                 type="button"
                 role="tab"
                 aria-selected={customerMode === 'existing'}
                 onClick={() => setCustomerMode('existing')}
-                className={`border-b-2 px-3 py-2 text-sm font-black transition ${customerMode === 'existing' ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                className={`whitespace-normal border-b-2 px-3 py-2 text-left text-sm font-black transition ${customerMode === 'existing' ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
               >
                 Use Existing Demo Customer
               </button>
@@ -401,7 +401,7 @@ export function DemoGeneratorClient(props: Props) {
                 role="tab"
                 aria-selected={customerMode === 'new'}
                 onClick={() => setCustomerMode('new')}
-                className={`border-b-2 px-3 py-2 text-sm font-black transition ${customerMode === 'new' ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                className={`whitespace-normal border-b-2 px-3 py-2 text-left text-sm font-black transition ${customerMode === 'new' ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
               >
                 Create New Demo Customer
               </button>
@@ -595,14 +595,14 @@ export function DemoGeneratorClient(props: Props) {
                 type="button"
                 onClick={handleGenerate}
                 disabled={pending || modules.size === 0}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#2557dc] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-normal rounded-xl bg-[#2557dc] px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {pending ? 'Generating…' : 'Generate Demo Environment →'}
               </button>
               <button
                 type="button"
                 onClick={openPreview}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc]"
+                className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-normal rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2557dc]"
               >
                 Preview Sample Data
               </button>
@@ -625,7 +625,7 @@ export function DemoGeneratorClient(props: Props) {
                   role="tab"
                   aria-selected={rightTab === tab}
                   onClick={() => setRightTab(tab)}
-                  className={`border-b-2 px-3 py-2 text-xs font-black capitalize transition ${rightTab === tab ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  className={`whitespace-normal border-b-2 px-3 py-2 text-xs font-black capitalize transition ${rightTab === tab ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                 >
                   {tab === 'recent-runs' ? 'Recent Runs' : tab === 'overview' ? 'Overview' : 'Help'}
                 </button>
@@ -642,7 +642,7 @@ export function DemoGeneratorClient(props: Props) {
                         type="button"
                         onClick={handleGenerate}
                         disabled={pending || modules.size === 0}
-                        className="flex w-full items-center justify-between rounded-xl bg-[#2557dc] px-4 py-3 text-left text-sm font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                        className="flex w-full items-center justify-between gap-2 whitespace-normal rounded-xl bg-[#2557dc] px-4 py-3 text-left text-sm font-black text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                       >
                         Generate New Demo <span aria-hidden="true">→</span>
                       </button>
@@ -650,7 +650,7 @@ export function DemoGeneratorClient(props: Props) {
                         type="button"
                         onClick={() => currentWorkspace && openResetConfirm(currentWorkspace)}
                         disabled={!currentWorkspace}
-                        className="flex w-full items-center justify-between rounded-xl border border-rose-200 bg-white px-4 py-3 text-left text-sm font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex w-full items-center justify-between gap-2 whitespace-normal rounded-xl border border-rose-200 bg-white px-4 py-3 text-left text-sm font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Reset Demo Data <span aria-hidden="true">→</span>
                       </button>
@@ -787,14 +787,14 @@ export function DemoGeneratorClient(props: Props) {
             {resetError ? <p className="text-xs font-bold text-rose-700">{resetError}</p> : null}
           </div>
           <div className="flex gap-3 border-t border-slate-100 px-6 py-5">
-            <button type="button" onClick={() => setResetTarget(null)} className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">
+            <button type="button" onClick={() => setResetTarget(null)} className="min-w-0 flex-1 whitespace-normal rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-50">
               Cancel
             </button>
             <button
               type="button"
               onClick={handleReset}
               disabled={pending || resetConfirmText.trim() !== resetTarget.name}
-              className="flex-1 rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="min-w-0 flex-1 whitespace-normal rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               {pending ? 'Resetting…' : 'Reset Demo Data'}
             </button>
