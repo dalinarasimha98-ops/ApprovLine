@@ -147,7 +147,7 @@ export function ObservabilityClient({ generatedAt, platformStatus, kpis, attenti
             <KpiCard kind="errors" tone="red" label="Application Errors" value={kpis.applicationErrors24h ?? 'Not available'} detail="Last 24 hours" />
             <KpiCard kind="attention" tone="amber" label="Operational Attention" value={kpis.operationalAttentionCount} detail="Signals needing review" />
             <KpiCard kind="jobs" tone="purple" label="Failed Jobs" value={kpis.failedJobs} detail="Retained in the queue" />
-            <KpiCard kind="integrations" tone="blue" label="Integration Failures" value={kpis.integrationFailures} detail="Customer integrations" />
+            <KpiCard kind="integrations" tone="blue" label="Integration Failures" value={kpis.integrationFailures ?? 'Not available'} detail="Customer integrations" />
             <KpiCard kind="incidents" tone="red" label="Active Incident Signals" value={kpis.activeIncidentSignals} detail="Critical severity" />
             <KpiCard kind="performance" tone="slate" label="Performance" value="Not instrumented" detail="Request latency" />
           </section>
@@ -213,8 +213,8 @@ export function ObservabilityClient({ generatedAt, platformStatus, kpis, attenti
                   <h3 className="mt-1 text-sm font-black text-slate-950">Recent application errors</h3>
                 </div>
               </div>
-              {!availability.systemHealth ? (
-                <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">System status is temporarily unavailable.</p>
+              {!availability.applicationErrors ? (
+                <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Application error data is temporarily unavailable.</p>
               ) : applicationErrors.length === 0 ? (
                 <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-xs font-bold text-slate-500">No application errors in the last 24 hours.</p>
               ) : (

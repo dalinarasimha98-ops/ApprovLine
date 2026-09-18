@@ -106,10 +106,31 @@ export type ObservabilityKpis = {
   applicationErrors24h: number | null;
   operationalAttentionCount: number;
   failedJobs: number;
-  integrationFailures: number;
+  integrationFailures: number | null;
   activeIncidentSignals: number;
 };
 
+// IMPORTANT — what each flag actually detects (found during a final
+// adversarial audit): buildFounderSystemHealth, buildFounderBackgroundJobs,
+// and buildIntegrationHealthPortfolio are ALL structurally non-throwing —
+// every one of them, and everything they call (buildReadinessReport,
+// buildFounderOperationsCenter, getApprovalQueueCounts), catches its own
+// failures and encodes them as real status *data* (HEALTHY/DEGRADED/
+// FAILED/UNKNOWN, `ok: false`, `queueHealth: 'UNAVAILABLE'`) rather than
+// rejecting. That data already flows into `attention`/`dependencies` via
+// each report's own per-item status, which is the actual, meaningful
+// signal — so `systemHealth`/`backgroundJobs` below are near-unreachable
+// defensive backstops for a genuine unhandled exception in this file's own
+// aggregation code, not a live "is the domain reachable" check (a reachable
+// database that happens to be down already shows up as a FAILED card, not
+// as `systemHealth: false`).
+//
+// buildIntegrationHealthPortfolio is the one exception worth guarding
+// explicitly: its failure path returns `{ safeError, data: emptyPortfolio() }`
+// — indistinguishable from a genuine "no integration data yet" empty state
+// unless `safeError` itself is checked, which is what `integrationHealth`
+// below actually does (not `!== null`, which — like the other two — would
+// always be true here regardless of whether the underlying query failed).
 export type ObservabilityAvailability = {
   systemHealth: boolean;
   integrationHealth: boolean;
@@ -159,15 +180,23 @@ export async function buildFounderObservability(): Promise<ObservabilityReport> 
     ),
   ]);
 
+  // buildIntegrationHealthPortfolio never throws — a genuine query failure
+  // surfaces only as a `safeError` string alongside an all-zero
+  // emptyPortfolio(), which is otherwise indistinguishable from the
+  // legitimate "no integration data recorded yet" state. Checking for that
+  // field specifically (not `integrationPortfolioResult !== null`, which is
+  // always true here) is what actually detects the failure.
+  const integrationHealthFailed = integrationPortfolioResult !== null && 'safeError' in integrationPortfolioResult && Boolean(integrationPortfolioResult.safeError);
+
   const availability: ObservabilityAvailability = {
     systemHealth: systemHealth !== null,
-    integrationHealth: integrationPortfolioResult !== null,
+    integrationHealth: integrationPortfolioResult !== null && !integrationHealthFailed,
     backgroundJobs: backgroundJobs !== null,
     security: security !== null && security.ok,
     applicationErrors: applicationErrors24h !== null,
   };
 
-  const integrationKpis = integrationPortfolioResult?.data.kpis ?? null;
+  const integrationKpis = !integrationHealthFailed ? (integrationPortfolioResult?.data.kpis ?? null) : null;
   // Only used for logic that must branch on a concrete number (severity
   // thresholds, the attention-signal count) — the raw, possibly-null
   // applicationErrors24h is what actually reaches the KPI card, so an
@@ -225,6 +254,19 @@ export async function buildFounderObservability(): Promise<ObservabilityReport> 
         actionHref: '/founder/integration-health',
       });
     }
+  } else if (integrationPortfolioResult === null || integrationHealthFailed) {
+    // A real query failure, not "no data yet" — surfaced explicitly rather
+    // than silently rendering as 0 integration failures.
+    attention.push({
+      id: 'integration-health-unavailable',
+      severity: 'MEDIUM',
+      signal: 'Integration Health data could not be retrieved',
+      area: 'Integrations',
+      lastSeen: generatedAt,
+      count: null,
+      actionLabel: 'View Integration Health',
+      actionHref: '/founder/integration-health',
+    });
   }
 
   // --- From Background Jobs: real failed/dead-lettered counts and worker liveness ---
@@ -291,6 +333,23 @@ export async function buildFounderObservability(): Promise<ObservabilityReport> 
         actionHref: '/founder/security',
       });
     }
+  } else {
+    // security is either null (an unexpected exception) or `{ ok: false,
+    // safeError }` (a real, already-observed failure mode of
+    // buildFounderSecurityPosture in this exact environment) — surfaced
+    // explicitly per Founder Security's own documented contract, rather
+    // than silently omitting the entire Security dimension from Founder
+    // Attention.
+    attention.push({
+      id: 'security-unavailable',
+      severity: 'MEDIUM',
+      signal: 'Security posture data could not be retrieved',
+      area: 'Security',
+      lastSeen: generatedAt,
+      count: null,
+      actionLabel: 'View Security',
+      actionHref: '/founder/security',
+    });
   }
 
   // --- Application errors (computed here — no existing domain owns this) ---
@@ -328,8 +387,20 @@ export async function buildFounderObservability(): Promise<ObservabilityReport> 
   const kpis: ObservabilityKpis = {
     applicationErrors24h: applicationErrors24h,
     operationalAttentionCount: sortedAttention.length,
+    // KNOWN, INHERITED LIMITATION (found during a final adversarial audit,
+    // deliberately not fixed here): failedJobsTotal comes from Background
+    // Jobs' own prisma.backgroundJob.count().catch(() => 0) — a design
+    // decision made and already shipped/tested in that module before this
+    // task existed. A genuine Postgres outage affecting only that specific
+    // count would render as a confident "0" on both this page and
+    // Background Jobs' own page identically. Silently treating it as
+    // null/unavailable *here* while Background Jobs itself still shows a
+    // confident 0 would make the two pages disagree about the same number,
+    // which is worse than the shared limitation — so this reuses that
+    // number as-is, faithfully matching its source of truth, rather than
+    // recomputing a second, diverging judgment about its reliability.
     failedJobs: backgroundJobs?.failedJobsTotal ?? 0,
-    integrationFailures: integrationKpis ? integrationKpis.critical + integrationKpis.attention : 0,
+    integrationFailures: integrationHealthFailed ? null : integrationKpis ? integrationKpis.critical + integrationKpis.attention : 0,
     activeIncidentSignals: sortedAttention.filter((s) => s.severity === 'CRITICAL').length,
   };
 
@@ -343,7 +414,9 @@ export async function buildFounderObservability(): Promise<ObservabilityReport> 
   const operationalSignals: ObservabilityOperationalSignalRow[] = (backgroundJobs?.recentEvents ?? []).map((event) => ({
     id: event.id,
     occurredAt: event.occurredAt,
-    category: event.kind === 'COMPLETED' ? 'Queue' : event.kind === 'DEAD_LETTERED' ? 'Queue' : 'Queue',
+    // Every recentEvents entry is a BullMQ job outcome — there is only one
+    // real category here (unlike Application Errors' varied event.type).
+    category: 'Queue',
     message: event.detail ?? `${event.jobType} ${event.kind.toLowerCase()}`,
   }));
 

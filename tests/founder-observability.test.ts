@@ -151,7 +151,6 @@ for (const file of [service, client, page]) {
 assert.match(service, /async function settleOrNull/);
 assert.equal((serviceCodeOnly.match(/settleOrNull\(/g) ?? []).length, 6); // 4 domain builders + 2 direct Event queries
 assert.match(service, /export type ObservabilityAvailability/);
-assert.match(client, /!availability\.systemHealth/);
 assert.match(client, /!availability\.backgroundJobs/);
 assert.match(client, /temporarily unavailable/);
 
@@ -166,6 +165,51 @@ assert.match(service, /applicationErrors24h: applicationErrors24h,/); // the raw
 assert.doesNotMatch(serviceCodeOnly, /applicationErrors24h: applicationErrorsCount,/);
 assert.match(client, /kpis\.applicationErrors24h \?\? 'Not available'/);
 assert.match(service, /applicationErrors: applicationErrors24h !== null,/);
+
+// 8c. Found during the FINAL adversarial audit: buildIntegrationHealthPortfolio
+//     never throws — its failure path returns `{ safeError, data:
+//     emptyPortfolio() }`, indistinguishable from a genuine "no integration
+//     data yet" empty state unless `safeError` itself is checked. The
+//     original `integrationPortfolioResult !== null` availability check was
+//     always true (dead code for this domain) and a real query failure
+//     rendered as a confident "0 Integration Failures." Fixed: availability
+//     now checks the real `safeError` signal, the KPI is nullable and never
+//     coalesced to 0 on failure, and a real query failure now produces its
+//     own explicit attention signal instead of silent zeros.
+assert.match(serviceCodeOnly, /'safeError' in integrationPortfolioResult && Boolean\(integrationPortfolioResult\.safeError\)/);
+assert.doesNotMatch(serviceCodeOnly, /integrationHealth: integrationPortfolioResult !== null,/); // the old, always-true check is gone
+assert.match(service, /integrationFailures: number \| null;/);
+assert.match(serviceCodeOnly, /integrationFailures: integrationHealthFailed \? null : integrationKpis/);
+assert.match(client, /kpis\.integrationFailures \?\? 'Not available'/);
+assert.match(serviceCodeOnly, /id: 'integration-health-unavailable'/);
+assert.match(serviceCodeOnly, /signal: 'Integration Health data could not be retrieved'/);
+
+// 8d. Found during the FINAL adversarial audit (Phase 19: "If the Security
+//     service reports a sandbox/environment limitation, surface that
+//     appropriately rather than hiding it"): a Security failure (`security
+//     === null` or `{ ok: false }` — independently confirmed to be the
+//     REAL, currently-observed state in this environment via a live
+//     database-backed run) previously produced zero attention signals,
+//     making the entire Security dimension silently vanish from Founder
+//     Attention rather than degrading visibly. Fixed with an explicit
+//     "Security posture data could not be retrieved" signal.
+assert.match(serviceCodeOnly, /id: 'security-unavailable'/);
+assert.match(serviceCodeOnly, /signal: 'Security posture data could not be retrieved'/);
+// The else-branch covers both `security === null` and `{ ok: false }` — not just one.
+assert.match(serviceCodeOnly, /if \(security && security\.ok\) \{/);
+
+// 8e. Found during the FINAL adversarial audit: the "Application Errors"
+//     panel's empty/unavailable branch checked `!availability.systemHealth`
+//     — the wrong flag entirely (Application Errors is sourced from a
+//     completely independent Event.count()/Event.findMany() pair, not
+//     System Health). A failed Event query with a healthy System Health
+//     result would have incorrectly rendered "No application errors in the
+//     last 24 hours" (a confident zero) instead of "unavailable." Fixed to
+//     check `!availability.applicationErrors`, the actual source this
+//     panel depends on.
+assert.match(client, /!availability\.applicationErrors \?/);
+assert.match(client, /Application error data is temporarily unavailable\./);
+assert.doesNotMatch(clientCodeOnly, /!availability\.systemHealth \?[\s\S]{0,80}?System status is temporarily unavailable/);
 
 // ─── Security / authorization ──────────────────────────────────────────
 
