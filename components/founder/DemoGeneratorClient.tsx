@@ -120,16 +120,21 @@ function ScenarioIcon({ scenario }: { scenario: DemoScenarioKey }) {
   );
 }
 
-const STEPS = ['Choose Scenario', 'Customer Setup', 'Select Modules', 'Preview & Generate'];
+const STEPS = [
+  { label: 'Choose Scenario', hint: 'Select use case' },
+  { label: 'Customer Setup', hint: 'Pick or create' },
+  { label: 'Select Modules', hint: 'Choose data' },
+  { label: 'Preview & Generate', hint: 'Review and create' },
+];
 
 function StepProgress({ completed, activeIndex }: { completed: boolean[]; activeIndex: number }) {
   return (
     <div className="flex items-start">
-      {STEPS.map((label, index) => {
+      {STEPS.map((step, index) => {
         const isDone = completed[index];
         const isActive = index === activeIndex;
         return (
-          <div key={label} className={`flex items-center ${index < STEPS.length - 1 ? 'flex-1' : ''}`}>
+          <div key={step.label} className={`flex items-center ${index < STEPS.length - 1 ? 'flex-1' : ''}`}>
             <div className="flex flex-col items-center gap-2 text-center">
               <div
                 className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black ${
@@ -150,8 +155,8 @@ function StepProgress({ completed, activeIndex }: { completed: boolean[]; active
                 )}
               </div>
               <div className="hidden sm:block">
-                <p className={`text-[11px] font-black uppercase tracking-wide ${isActive ? 'text-[#2557dc]' : isDone ? 'text-slate-700' : 'text-slate-400'}`}>{index + 1}</p>
-                <p className={`text-xs font-bold ${isActive || isDone ? 'text-slate-900' : 'text-slate-400'}`}>{label}</p>
+                <p className={`text-xs font-black ${isActive ? 'text-[#2557dc]' : isDone ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</p>
+                <p className="text-[11px] font-semibold text-slate-400">{step.hint}</p>
               </div>
             </div>
             {index < STEPS.length - 1 ? <div className={`mx-2 mt-[18px] h-0.5 flex-1 ${completed[index + 1] || isDone ? 'bg-[#2557dc]' : 'bg-slate-200'}`} aria-hidden="true" /> : null}
