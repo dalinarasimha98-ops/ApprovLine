@@ -1,3 +1,17 @@
+/**
+ * RETIRED — do not use. Every value this module returns is static/
+ * fabricated: every category and check is hardcoded to score 100 / status
+ * Pass regardless of real system state, and the load-test scenarios below
+ * carry invented p95LatencyMs/errorRatePct numbers with no load-testing
+ * harness or historical run anywhere in this codebase to back them.
+ *
+ * The real, live-checked certification engine is
+ * services/founder-certification.ts's buildFounderCertificationCenter(),
+ * used by app/founder/certification/page.tsx. /founder/readiness no longer
+ * imports this module either — see that page's own history. This file is
+ * kept only so its git history is not lost; it has zero remaining
+ * consumers and must not be reintroduced as a data source for any page.
+ */
 export type CertificationStatus = 'Pass' | 'Warning' | 'Fail';
 
 export type CertificationCheck = {
