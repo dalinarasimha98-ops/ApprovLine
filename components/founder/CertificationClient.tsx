@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { FounderDrawer } from './FounderDrawer';
 import {
   CERTIFICATION_STATUS_LABELS,
@@ -46,28 +47,72 @@ function StatusBadge({ status }: { status: CertificationStatus }) {
   return <Badge tone={certificationStatusTone(status)}>{CERTIFICATION_STATUS_LABELS[status]}</Badge>;
 }
 
-const DECISION_COPY: Record<CertificationDecision, { headline: string; detail: string; tone: 'green' | 'amber' | 'red' | 'slate' }> = {
+// Minimal inline stroke icons matching this console's established icon
+// language (Observability's KpiIcon) — no icon library is introduced.
+function KpiIcon({ kind }: { kind: 'total' | 'verified' | 'attention' | 'notVerified' | 'failed' | 'notAssessed' }) {
+  const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
+  if (kind === 'total') return <svg {...common}><rect x="3.5" y="4" width="17" height="16" rx="2" /><path d="M8 9h8M8 13h8M8 17h5" /></svg>;
+  if (kind === 'verified') return <svg {...common}><circle cx="12" cy="12" r="8.5" /><path d="M8.5 12.2l2.3 2.3 4.7-5" /></svg>;
+  if (kind === 'attention') return <svg {...common}><circle cx="12" cy="12" r="8.5" /><path d="M12 8v4.5M12 15.5v.01" /></svg>;
+  if (kind === 'notVerified') return <svg {...common}><circle cx="12" cy="12" r="8.5" /><path d="M9.5 9.3a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 1.7-2.4 3.3M12 16.5v.01" /></svg>;
+  if (kind === 'failed') return <svg {...common}><path d="M12 3l9 16H3l9-16z" /><path d="M12 10v4M12 17.5v.01" /></svg>;
+  return <svg {...common}><path d="M6 3.5h9l3 3V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" /><path d="M9 12h6M9 15.5h6" /></svg>;
+}
+
+function KpiCard({ kind, tone, label, value, detail }: { kind: Parameters<typeof KpiIcon>[0]['kind']; tone: 'green' | 'amber' | 'red' | 'slate' | 'blue'; label: string; value: string | number; detail: string }) {
+  const iconBox = {
+    green: 'bg-emerald-50 text-emerald-600',
+    amber: 'bg-amber-50 text-amber-600',
+    red: 'bg-rose-50 text-rose-600',
+    slate: 'bg-slate-100 text-slate-500',
+    blue: 'bg-blue-50 text-[#2557dc]',
+  }[tone];
+  return (
+    <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2">
+        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${iconBox}`}>
+          <KpiIcon kind={kind} />
+        </span>
+        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">{label}</p>
+      </div>
+      <p className="mt-3 text-2xl font-black text-slate-950">{value}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">{detail}</p>
+    </div>
+  );
+}
+
+const DECISION_COPY: Record<CertificationDecision, { headline: string; detail: string; tone: 'green' | 'amber' | 'red' | 'slate'; panelLabel: string; panelDetail: string }> = {
   ALL_VERIFIED: {
     headline: 'All live-checked controls are currently verified.',
     detail: 'Every control backed by an automated check is passing right now. Documentation-only controls (backup policy, load targets) are shown separately below and are never counted toward this result.',
     tone: 'green',
+    panelLabel: 'Certifiable',
+    panelDetail: 'All live-checked controls are currently passing.',
   },
   NEEDS_ATTENTION: {
     headline: 'One or more live-checked controls need Founder attention.',
     detail: 'At least one automated check is reporting Attention or Not Verified. Review the Attention list below before treating this platform as launch-ready.',
     tone: 'amber',
+    panelLabel: 'Not Certifiable — Needs Attention',
+    panelDetail: 'One or more live-checked controls need Founder review before certification.',
   },
   HAS_FAILURES: {
     headline: 'At least one live-checked control is currently failing.',
     detail: 'A real, currently-broken control was found. This platform should not be certified for launch until every Failed control below is resolved.',
     tone: 'red',
+    panelLabel: 'Not Certifiable',
+    panelDetail: 'Mandatory controls remain Failed. Certification is blocked until they are resolved.',
   },
   INSUFFICIENT_DATA: {
     headline: 'Not enough live-checked data to make a certification decision.',
     detail: 'No automated control could be evaluated on this request.',
     tone: 'slate',
+    panelLabel: 'Status Unknown',
+    panelDetail: 'No live-checked control data was available on this request.',
   },
 };
+
+const CATEGORY_ORDER = Object.keys(CERTIFICATION_CATEGORY_LABELS) as CertificationCategory[];
 
 export function CertificationClient({ generatedAt, decision, kpis, controls, attentionControls }: Props) {
   const router = useRouter();
@@ -75,6 +120,7 @@ export function CertificationClient({ generatedAt, decision, kpis, controls, att
   const [category, setCategory] = useState<CertificationCategory | ''>('');
   const [status, setStatus] = useState<CertificationStatus | ''>('');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [rightTab, setRightTab] = useState<'overview' | 'history' | 'requirements' | 'help'>('overview');
 
   const filteredControls = useMemo(() => {
     const filtered = controls.filter((c) => (!category || c.category === category) && (!status || c.status === status));
@@ -83,6 +129,12 @@ export function CertificationClient({ generatedAt, decision, kpis, controls, att
   const selected = controls.find((c) => c.key === selectedKey) ?? null;
   const documentedPolicies = controls.filter((c) => c.evidenceType === 'DOCUMENTED_POLICY');
 
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<CertificationCategory, number>();
+    for (const c of controls) counts.set(c.category, (counts.get(c.category) ?? 0) + 1);
+    return counts;
+  }, [controls]);
+
   function refresh() {
     if (pending) return;
     startTransition(() => {
@@ -90,27 +142,27 @@ export function CertificationClient({ generatedAt, decision, kpis, controls, att
     });
   }
 
-  const kpiCards = [
-    { label: 'Total Controls', value: String(kpis.totalControls), detail: 'Controls evaluated on this page.' },
-    { label: 'Verified', value: String(kpis.verified), detail: 'Live checks currently passing.' },
-    { label: 'Attention', value: String(kpis.attention), detail: 'Live checks needing review.' },
-    { label: 'Not Verified', value: String(kpis.notVerified), detail: 'No data yet to decide.' },
-    { label: 'Failed', value: String(kpis.failed), detail: 'Concrete broken controls.' },
-    { label: 'Not Assessed', value: String(kpis.notAssessed), detail: 'Documented policy, not live-checked.' },
+  const kpiCards: { kind: Parameters<typeof KpiIcon>[0]['kind']; tone: 'green' | 'amber' | 'red' | 'slate' | 'blue'; label: string; value: string | number; detail: string }[] = [
+    { kind: 'total', tone: 'blue', label: 'Total Controls', value: kpis.totalControls, detail: 'Controls evaluated on this page.' },
+    { kind: 'verified', tone: 'green', label: 'Verified', value: kpis.verified, detail: 'Live checks currently passing.' },
+    { kind: 'attention', tone: 'amber', label: 'Attention', value: kpis.attention, detail: 'Live checks needing review.' },
+    { kind: 'notVerified', tone: 'slate', label: 'Not Verified', value: kpis.notVerified, detail: 'No data yet to decide.' },
+    { kind: 'failed', tone: 'red', label: 'Failed', value: kpis.failed, detail: 'Concrete broken controls.' },
+    { kind: 'notAssessed', tone: 'blue', label: 'Not Assessed', value: kpis.notAssessed, detail: 'Documented policy, not live-checked.' },
   ];
 
   const decisionCopy = DECISION_COPY[decision];
   const hasActiveFilters = Boolean(category || status);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <section className="rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2557dc]">Governance</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#2557dc]">Internal Tools</p>
             <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">Certification</h2>
             <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
-              A go-live checklist assembled from ApprovLine&apos;s existing, already-audited Security, Tenant Isolation, Reliability, System Health, Integration Health, Observability, and AI-configuration checks — never a second, competing scoring system.
+              Evidence-backed production controls and launch certification status.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -132,175 +184,299 @@ export function CertificationClient({ generatedAt, decision, kpis, controls, att
         </div>
       </section>
 
-      <section
-        aria-label="Certification decision"
-        className={`rounded-2xl border p-5 ${
-          decisionCopy.tone === 'green' ? 'border-emerald-200 bg-emerald-50' :
-          decisionCopy.tone === 'amber' ? 'border-amber-200 bg-amber-50' :
-          decisionCopy.tone === 'red' ? 'border-rose-200 bg-rose-50' : 'border-slate-200 bg-slate-50'
-        }`}
-      >
-        <p className={`text-sm font-black ${
-          decisionCopy.tone === 'green' ? 'text-emerald-900' :
-          decisionCopy.tone === 'amber' ? 'text-amber-900' :
-          decisionCopy.tone === 'red' ? 'text-rose-900' : 'text-slate-900'
-        }`}>{decisionCopy.headline}</p>
-        <p className={`mt-1.5 text-xs font-semibold leading-5 ${
-          decisionCopy.tone === 'green' ? 'text-emerald-800' :
-          decisionCopy.tone === 'amber' ? 'text-amber-800' :
-          decisionCopy.tone === 'red' ? 'text-rose-800' : 'text-slate-700'
-        }`}>{decisionCopy.detail}</p>
-      </section>
+      <div className={`grid grid-cols-1 gap-5 xl:grid-cols-[1fr_380px] ${pending ? 'opacity-60' : ''}`}>
+        <div className="min-w-0 space-y-4">
+          <section
+            aria-label="Certification decision"
+            className={`rounded-2xl border p-5 ${
+              decisionCopy.tone === 'green' ? 'border-emerald-200 bg-emerald-50' :
+              decisionCopy.tone === 'amber' ? 'border-amber-200 bg-amber-50' :
+              decisionCopy.tone === 'red' ? 'border-rose-200 bg-rose-50' : 'border-slate-200 bg-slate-50'
+            }`}
+          >
+            <p className={`text-sm font-black ${
+              decisionCopy.tone === 'green' ? 'text-emerald-900' :
+              decisionCopy.tone === 'amber' ? 'text-amber-900' :
+              decisionCopy.tone === 'red' ? 'text-rose-900' : 'text-slate-900'
+            }`}>{decisionCopy.headline}</p>
+            <p className={`mt-1.5 text-xs font-semibold leading-5 ${
+              decisionCopy.tone === 'green' ? 'text-emerald-800' :
+              decisionCopy.tone === 'amber' ? 'text-amber-800' :
+              decisionCopy.tone === 'red' ? 'text-rose-800' : 'text-slate-700'
+            }`}>{decisionCopy.detail}</p>
+          </section>
 
-      <section aria-label="Certification metrics" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        {kpiCards.map((kpi) => (
-          <div key={kpi.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{kpi.label}</p>
-            <p className="mt-1 text-2xl font-black text-slate-950">{kpi.value}</p>
-            <p className="mt-1 text-[11px] font-semibold leading-4 text-slate-500">{kpi.detail}</p>
-          </div>
-        ))}
-      </section>
-
-      {attentionControls.length > 0 ? (
-        <section aria-label="Certification attention" className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-6 py-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Certification Attention</p>
-            <p className="mt-0.5 text-[11px] font-semibold text-slate-400">Real findings requiring Founder review — never manufactured.</p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-2">
-            {attentionControls.map((c) => (
-              <article key={c.key} className={`rounded-xl border p-4 ${c.status === 'FAILED' ? 'border-rose-200 bg-rose-50' : 'border-amber-200 bg-amber-50'}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className={`font-black ${c.status === 'FAILED' ? 'text-rose-900' : 'text-amber-900'}`}>{c.title}</p>
-                  <StatusBadge status={c.status} />
-                </div>
-                <p className={`mt-2 text-xs font-semibold leading-5 ${c.status === 'FAILED' ? 'text-rose-800' : 'text-amber-800'}`}>{c.summary}</p>
-                <button
-                  type="button"
-                  onClick={() => setSelectedKey(c.key)}
-                  className={`mt-3 text-xs font-black hover:underline ${c.status === 'FAILED' ? 'text-rose-700' : 'text-amber-700'}`}
-                >
-                  View control →
-                </button>
-              </article>
+          <section aria-label="Certification metrics" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {kpiCards.map((kpi) => (
+              <KpiCard key={kpi.label} {...kpi} />
             ))}
-          </div>
-        </section>
-      ) : null}
+          </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-100 px-6 py-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="mr-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">Certification Checklist</p>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as CertificationCategory | '')}
-              aria-label="Filter by category"
-              className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
-            >
-              {CERTIFICATION_CATEGORY_FILTER_OPTIONS.map((o) => <option key={o.value || 'all'} value={o.value}>{o.label}</option>)}
-            </select>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as CertificationStatus | '')}
-              aria-label="Filter by status"
-              className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
-            >
-              {CERTIFICATION_STATUS_FILTER_OPTIONS.map((o) => <option key={o.value || 'all'} value={o.value}>{o.label}</option>)}
-            </select>
-            {hasActiveFilters ? (
-              <button type="button" onClick={() => { setCategory(''); setStatus(''); }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50">
-                Clear Filters
-              </button>
-            ) : null}
-          </div>
-        </div>
+          {attentionControls.length > 0 ? (
+            <section aria-label="Certification attention" className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-6 py-4">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Certification Attention</p>
+                <p className="mt-0.5 text-[11px] font-semibold text-slate-400">Real findings requiring Founder review — never manufactured.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-2">
+                {attentionControls.map((c) => (
+                  <article key={c.key} className={`flex h-full flex-col justify-between rounded-xl border p-4 ${c.status === 'FAILED' ? 'border-rose-200 bg-rose-50' : 'border-amber-200 bg-amber-50'}`}>
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`font-black ${c.status === 'FAILED' ? 'text-rose-900' : 'text-amber-900'}`}>{c.title}</p>
+                        <StatusBadge status={c.status} />
+                      </div>
+                      <p className={`mt-2 text-xs font-semibold leading-5 ${c.status === 'FAILED' ? 'text-rose-800' : 'text-amber-800'}`}>{c.summary}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedKey(c.key)}
+                      className={`mt-3 text-left text-xs font-black hover:underline ${c.status === 'FAILED' ? 'text-rose-700' : 'text-amber-700'}`}
+                    >
+                      View control →
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-        {filteredControls.length === 0 ? (
-          <div className="px-6 py-10 text-center">
-            <p className="font-bold text-slate-500">No controls match the current filters.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <ul className="divide-y divide-slate-100 sm:hidden">
-              {filteredControls.map((c) => (
-                <li key={c.key} className="space-y-1.5 px-4 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate font-black text-slate-950">{c.title}</p>
-                    <StatusBadge status={c.status} />
-                  </div>
-                  <p className="text-xs font-semibold text-slate-500">{CERTIFICATION_CATEGORY_LABELS[c.category]}</p>
-                  <p className="text-xs font-semibold text-slate-600">{c.summary}</p>
-                  <button type="button" onClick={() => setSelectedKey(c.key)} className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100">
-                    View details →
+          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-slate-100 px-6 py-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Certification Checklist</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as CertificationCategory | '')}
+                  aria-label="Filter by category"
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
+                >
+                  {CERTIFICATION_CATEGORY_FILTER_OPTIONS.map((o) => <option key={o.value || 'all'} value={o.value}>{o.label}</option>)}
+                </select>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as CertificationStatus | '')}
+                  aria-label="Filter by status"
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-700 outline-none focus:border-[#2557dc] focus:ring-2 focus:ring-blue-100"
+                >
+                  {CERTIFICATION_STATUS_FILTER_OPTIONS.map((o) => <option key={o.value || 'all'} value={o.value}>{o.label}</option>)}
+                </select>
+                {hasActiveFilters ? (
+                  <button type="button" onClick={() => { setCategory(''); setStatus(''); }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 hover:bg-slate-50">
+                    Clear Filters
                   </button>
-                </li>
-              ))}
-            </ul>
+                ) : null}
+              </div>
+            </div>
 
-            <table className="hidden w-full min-w-[920px] table-fixed text-left text-sm sm:table">
-              <thead className="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th scope="col" className="w-[200px] px-5 py-3">Control</th>
-                  <th scope="col" className="hidden w-[160px] whitespace-nowrap px-5 py-3 lg:table-cell">Category</th>
-                  <th scope="col" className="w-[110px] whitespace-nowrap px-5 py-3">Status</th>
-                  <th scope="col" className="hidden w-[120px] whitespace-nowrap px-5 py-3 md:table-cell">Evidence Type</th>
-                  <th scope="col" className="px-5 py-3">Summary</th>
-                  <th scope="col" className="w-28 whitespace-nowrap px-4 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredControls.map((c) => (
-                  <tr key={c.key} className="hover:bg-slate-50">
-                    <td className="truncate px-5 py-4 font-black text-slate-950" title={c.title}>{c.title}</td>
-                    <td className="hidden truncate whitespace-nowrap px-5 py-4 text-xs font-semibold text-slate-500 lg:table-cell">{CERTIFICATION_CATEGORY_LABELS[c.category]}</td>
-                    <td className="px-5 py-4"><StatusBadge status={c.status} /></td>
-                    <td className="hidden truncate whitespace-nowrap px-5 py-4 text-xs font-semibold text-slate-500 md:table-cell">{CERTIFICATION_EVIDENCE_TYPE_LABELS[c.evidenceType]}</td>
-                    <td className="truncate px-5 py-4 text-xs font-semibold text-slate-600" title={c.summary}>{c.summary}</td>
-                    <td className="whitespace-nowrap px-4 py-4 text-right">
-                      <button type="button" onClick={() => setSelectedKey(c.key)} className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100">
+            {filteredControls.length === 0 ? (
+              <div className="px-6 py-10 text-center">
+                <p className="font-bold text-slate-500">No controls match the current filters.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <ul className="divide-y divide-slate-100 sm:hidden">
+                  {filteredControls.map((c) => (
+                    <li key={c.key} className="space-y-1.5 px-4 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="min-w-0 break-words font-black text-slate-950">{c.title}</p>
+                        <StatusBadge status={c.status} />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-500">{CERTIFICATION_CATEGORY_LABELS[c.category]}</p>
+                      <p className="text-xs font-semibold text-slate-600">{c.summary}</p>
+                      <button type="button" onClick={() => setSelectedKey(c.key)} className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100">
                         View details →
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                    </li>
+                  ))}
+                </ul>
 
-      {documentedPolicies.length > 0 ? (
-        <section aria-label="Documented policies" className="rounded-2xl border border-blue-200 bg-blue-50/40 shadow-sm">
-          <div className="border-b border-blue-100 px-6 py-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-800">Documented Policies — Not Independently Verified</p>
-            <p className="mt-0.5 text-[11px] font-semibold text-blue-700">
-              No automated check backs these in this codebase. They describe targets and runbooks, never a measured result.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-2">
-            {documentedPolicies.map((c) => (
-              <article key={c.key} className="rounded-xl border border-blue-200 bg-white p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-black text-slate-950">{c.title}</p>
-                  <Badge tone="blue">{CERTIFICATION_STATUS_LABELS[c.status]}</Badge>
+                <table className="hidden w-full min-w-[990px] table-fixed text-left text-sm sm:table">
+                  <thead className="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th scope="col" className="w-[230px] px-5 py-3">Control</th>
+                      <th scope="col" className="hidden w-[170px] px-5 py-3 lg:table-cell">Category</th>
+                      <th scope="col" className="w-[110px] whitespace-nowrap px-5 py-3">Status</th>
+                      <th scope="col" className="hidden w-[130px] px-5 py-3 md:table-cell">Evidence Type</th>
+                      <th scope="col" className="px-5 py-3">Summary</th>
+                      <th scope="col" className="w-28 whitespace-nowrap px-4 py-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredControls.map((c) => (
+                      <tr key={c.key} className="hover:bg-slate-50">
+                        <td className="min-w-0 break-words px-5 py-4 font-black text-slate-950" title={c.title}>{c.title}</td>
+                        <td className="hidden whitespace-normal break-words px-5 py-4 text-xs font-semibold text-slate-500 lg:table-cell">{CERTIFICATION_CATEGORY_LABELS[c.category]}</td>
+                        <td className="px-5 py-4"><StatusBadge status={c.status} /></td>
+                        <td className="hidden whitespace-normal break-words px-5 py-4 text-xs font-semibold text-slate-500 md:table-cell">{CERTIFICATION_EVIDENCE_TYPE_LABELS[c.evidenceType]}</td>
+                        <td className="truncate px-5 py-4 text-xs font-semibold text-slate-600" title={c.summary}>{c.summary}</td>
+                        <td className="whitespace-nowrap px-4 py-4 text-right">
+                          <button type="button" onClick={() => setSelectedKey(c.key)} className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100">
+                            View details →
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          {documentedPolicies.length > 0 ? (
+            <section aria-label="Documented policies" className="rounded-2xl border border-blue-200 bg-blue-50/40 shadow-sm">
+              <div className="border-b border-blue-100 px-6 py-4">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-800">Documented Policies — Not Independently Verified</p>
+                <p className="mt-0.5 text-[11px] font-semibold text-blue-700">
+                  No automated check backs these in this codebase. They describe targets and runbooks, never a measured result.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-2">
+                {documentedPolicies.map((c) => (
+                  <article key={c.key} className="rounded-xl border border-blue-200 bg-white p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-black text-slate-950">{c.title}</p>
+                      <Badge tone="blue">{CERTIFICATION_STATUS_LABELS[c.status]}</Badge>
+                    </div>
+                    <p className="mt-2 text-xs font-semibold leading-5 text-slate-700">{c.evidence}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </div>
+
+        {/* Right command panel */}
+        <aside className="space-y-0">
+          <div className="sticky top-20 rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-4 py-3.5">
+              <h3 className="text-base font-black text-slate-950">Certification</h3>
+              <p className="mt-0.5 text-xs font-semibold text-slate-500">Evidence-backed production certification.</p>
+            </div>
+            <div className="flex flex-wrap border-b border-slate-100 px-2" role="tablist" aria-label="Certification panel">
+              {(['overview', 'history', 'requirements', 'help'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={rightTab === tab}
+                  onClick={() => setRightTab(tab)}
+                  className={`whitespace-normal border-b-2 px-3 py-2 text-left text-xs font-black transition ${rightTab === tab ? 'border-[#2557dc] text-[#2557dc]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                >
+                  {tab === 'overview' ? 'Overview' : tab === 'history' ? 'History' : tab === 'requirements' ? 'Requirements' : 'Help'}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-4">
+              {rightTab === 'overview' ? (
+                <div className="space-y-5">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Quick Actions</p>
+                    <div className="mt-3 space-y-2">
+                      <Link href="/founder/security" className="flex w-full items-center justify-between gap-2 whitespace-normal rounded-xl bg-[#2557dc] px-4 py-3 text-left text-sm font-black text-white shadow-sm transition hover:bg-blue-700">
+                        View Security <span aria-hidden="true">→</span>
+                      </Link>
+                      <Link href="/founder/system-health" className="flex w-full items-center justify-between gap-2 whitespace-normal rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                        View System Health <span aria-hidden="true">→</span>
+                      </Link>
+                      <Link href="/founder/integration-health" className="flex w-full items-center justify-between gap-2 whitespace-normal rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                        View Integration Health <span aria-hidden="true">→</span>
+                      </Link>
+                      <Link href="/founder/background-jobs" className="flex w-full items-center justify-between gap-2 whitespace-normal rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                        View Background Jobs <span aria-hidden="true">→</span>
+                      </Link>
+                      <Link href="/founder/observability" className="flex w-full items-center justify-between gap-2 whitespace-normal rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                        View Observability <span aria-hidden="true">→</span>
+                      </Link>
+                      <Link href="/founder/audit" className="flex w-full items-center justify-between gap-2 whitespace-normal rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                        View Founder Audit Logs <span aria-hidden="true">→</span>
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Current Status</p>
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                      <p className="font-black text-slate-950">{decisionCopy.panelLabel}</p>
+                      <p className="mt-1.5 text-xs font-semibold leading-5 text-slate-600">{decisionCopy.panelDetail}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Certification Summary</p>
+                    <dl className="mt-3 grid grid-cols-2 gap-2">
+                      {[
+                        { label: 'Verified', value: kpis.verified, tone: 'green' as const },
+                        { label: 'Attention', value: kpis.attention, tone: 'amber' as const },
+                        { label: 'Not Verified', value: kpis.notVerified, tone: 'slate' as const },
+                        { label: 'Failed', value: kpis.failed, tone: 'red' as const },
+                      ].map((row) => (
+                        <div key={row.label} className="rounded-xl border border-slate-200 bg-white p-3">
+                          <dt className="text-[10px] font-black uppercase tracking-wide text-slate-400">{row.label}</dt>
+                          <dd className={`mt-1 text-lg font-black ${row.tone === 'green' ? 'text-emerald-700' : row.tone === 'amber' ? 'text-amber-700' : row.tone === 'red' ? 'text-rose-700' : 'text-slate-700'}`}>{row.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
                 </div>
-                <p className="mt-2 text-xs font-semibold leading-5 text-slate-700">{c.evidence}</p>
-              </article>
-            ))}
+              ) : rightTab === 'history' ? (
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Certification History</p>
+                  <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
+                    <p className="text-xs font-bold text-slate-600">No certification history recorded yet.</p>
+                    <p className="mt-1.5 text-[11px] font-semibold text-slate-500">This page re-evaluates evidence on every load; there is no persisted history of past certification runs in this codebase.</p>
+                  </div>
+                </div>
+              ) : rightTab === 'requirements' ? (
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Certification Domains</p>
+                  <ul className="mt-3 space-y-2">
+                    {CATEGORY_ORDER.map((cat) => (
+                      <li key={cat} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5">
+                        <span className="text-xs font-bold text-slate-800">{CERTIFICATION_CATEGORY_LABELS[cat]}</span>
+                        <span className="shrink-0 text-[11px] font-black text-slate-400">{categoryCounts.get(cat) ?? 0} controls</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="space-y-4 text-xs font-semibold leading-5 text-slate-600">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Verified</p>
+                    <p className="mt-1.5">Current evidence supports the control.</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Attention</p>
+                    <p className="mt-1.5">Evidence exists but requires review.</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Failed</p>
+                    <p className="mt-1.5">An authoritative check failed.</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Not Verified</p>
+                    <p className="mt-1.5">Evidence is insufficient to verify the control.</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Not Assessed</p>
+                    <p className="mt-1.5">No automated evidence exists.</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </section>
-      ) : null}
+        </aside>
+      </div>
 
       {selected ? (
         <FounderDrawer onClose={() => setSelectedKey(null)} titleId="certification-drawer-title" size="md">
           <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-5">
             <div className="min-w-0">
-              <h3 id="certification-drawer-title" className="truncate text-lg font-black text-slate-950">{selected.title}</h3>
+              <h3 id="certification-drawer-title" className="break-words text-lg font-black text-slate-950">{selected.title}</h3>
               <p className="text-xs font-semibold text-slate-400">{CERTIFICATION_CATEGORY_LABELS[selected.category]}</p>
             </div>
-            <button type="button" onClick={() => setSelectedKey(null)} aria-label="Close certification control details" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-500 hover:bg-slate-50">
+            <button type="button" onClick={() => setSelectedKey(null)} aria-label="Close certification control details" className="shrink-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-500 hover:bg-slate-50">
               Close
             </button>
           </div>
@@ -324,7 +500,7 @@ export function CertificationClient({ generatedAt, decision, kpis, controls, att
               <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-400">Source</p>
               <ul className="space-y-1">
                 {selected.sources.map((s) => (
-                  <li key={s} className="truncate rounded-lg bg-slate-50 px-2.5 py-1.5 font-mono text-[11px] font-semibold text-slate-600">{s}</li>
+                  <li key={s} className="break-words rounded-lg bg-slate-50 px-2.5 py-1.5 font-mono text-[11px] font-semibold text-slate-600">{s}</li>
                 ))}
               </ul>
             </div>
