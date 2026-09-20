@@ -10,6 +10,7 @@ import {
   Boxes,
   BrainCircuit,
   Cable,
+  CheckSquare,
   FileCheck2,
   FileSearch,
   GitBranch,
@@ -52,6 +53,7 @@ const sections: NavSection[] = [
     title: 'Core Operations',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/dashboard/pending-actions', label: 'Action Center', icon: CheckSquare },
       { href: '/dashboard/approvals', label: 'Approvals', icon: FileCheck2 },
       { href: '/evidence', label: 'Unified Evidence', icon: Boxes, badge: 'New' },
     ],
