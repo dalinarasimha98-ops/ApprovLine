@@ -31,6 +31,7 @@
     "test:billing": "node --import tsx tests/founder-billing.test.ts",
     "test:founder-drawer": "node --import tsx tests/founder-drawer.test.ts",
     "test:seats": "node --import tsx tests/founder-seats.test.ts",
+    "test:settings": "node --import tsx tests/founder-settings.test.ts",
     "test:revenue": "node --import tsx tests/founder-revenue.test.ts",
     "test:support-notes": "node --import tsx tests/founder-support-notes.test.ts",
     "test:customer-activity": "node --import tsx tests/founder-customer-activity.test.ts",
