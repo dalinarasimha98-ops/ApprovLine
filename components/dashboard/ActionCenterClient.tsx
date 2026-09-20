@@ -113,6 +113,10 @@ export type ActionCenterProps = {
   approvalsHref: string;
 };
 
+function fmtExactTimestamp(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
 function detailField(label: string, value: React.ReactNode) {
   return (
     <div>
@@ -212,10 +216,10 @@ export function ActionCenterClient(props: ActionCenterProps) {
   return (
     <div className="flex min-w-0 flex-col gap-5">
       {/* Header */}
-      <div className="overflow-hidden rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
+      <div className="overflow-hidden rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-5 py-4">
         <p className="text-[10.5px] font-black uppercase tracking-[0.18em] text-violet-400">Action Center</p>
-        <h1 className="mt-2 text-2xl font-black tracking-tight text-[#E8EEFF] sm:text-3xl">Pending Actions</h1>
-        <p className="mt-1.5 max-w-2xl text-sm font-semibold leading-6 text-[#6B7FA8]">
+        <h1 className="mt-1 text-2xl font-black tracking-tight text-[#E8EEFF] sm:text-3xl">Pending Actions</h1>
+        <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-[#6B7FA8]">
           Review approval requests, decisions, and other actions that require your attention.
         </p>
       </div>
@@ -348,21 +352,21 @@ export function ActionCenterClient(props: ActionCenterProps) {
                   {props.rows.map((row) => (
                     <tr key={row.id} className="border-t border-[#1E2D4A] align-top transition hover:bg-[#152040]">
                       <td className="px-4 py-4">
-                        <button type="button" onClick={() => openAction(row.id)} className="block w-full text-left font-bold text-[#E8EEFF] hover:text-violet-300">
+                        <button type="button" onClick={() => openAction(row.id)} title={row.title} className="block w-full text-left font-bold text-[#E8EEFF] hover:text-violet-300">
                           <span className="block truncate">{row.title}</span>
                         </button>
                         <p className="mt-0.5 truncate text-xs font-semibold text-[#6B7FA8]">{ACTION_TYPE_LABELS[row.actionType]}</p>
                       </td>
                       <td className="px-4 py-3 text-[#A8BAD8]">
-                        <span className="block truncate font-semibold">{row.requestedByName ?? 'Unknown'}</span>
-                        {row.requestedByEmail ? <span className="block truncate text-xs text-[#3D5070]">{row.requestedByEmail}</span> : null}
+                        <span title={row.requestedByName ?? 'Unknown'} className="block truncate font-semibold">{row.requestedByName ?? 'Unknown'}</span>
+                        {row.requestedByEmail ? <span title={row.requestedByEmail} className="block truncate text-xs text-[#3D5070]">{row.requestedByEmail}</span> : null}
                       </td>
                       <td className="px-4 py-3">
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-400">
                           <ProviderIcon platform={row.sourcePlatformRaw} />
                           {SOURCE_PLATFORM_LABELS[normalizeSourcePlatform(row.sourcePlatformRaw)]}
                         </span>
-                        {row.sourceChannel ? <p className="mt-1 truncate text-xs text-[#3D5070]">{row.sourceChannel}</p> : null}
+                        {row.sourceChannel ? <p title={row.sourceChannel} className="mt-1 truncate text-xs text-[#3D5070]">{row.sourceChannel}</p> : null}
                       </td>
                       <td className="px-4 py-3"><PriorityBadge priority={row.priority} /></td>
                       <td className="px-4 py-3 text-[#6B7FA8]">
@@ -393,7 +397,7 @@ export function ActionCenterClient(props: ActionCenterProps) {
                 className="flex w-full flex-col items-stretch whitespace-normal rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4 text-left transition hover:border-violet-500/30"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 flex-1 truncate font-bold text-[#E8EEFF]">{row.title}</p>
+                  <p title={row.title} className="min-w-0 flex-1 truncate font-bold text-[#E8EEFF]">{row.title}</p>
                   <StatusBadge status={row.status} />
                 </div>
                 <p className="mt-1 text-xs font-semibold text-[#6B7FA8]">{ACTION_TYPE_LABELS[row.actionType]} &middot; {SOURCE_PLATFORM_LABELS[normalizeSourcePlatform(row.sourcePlatformRaw)]}</p>
@@ -481,7 +485,13 @@ export function ActionCenterClient(props: ActionCenterProps) {
               <section>
                 <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Details</h3>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                  {detailField('Requested', fmtRelativeTime(selected.requestedAt))}
+                  {detailField(
+                    'Requested',
+                    <>
+                      {fmtExactTimestamp(selected.requestedAt)}
+                      <span className="block font-semibold text-slate-500">{fmtRelativeTime(selected.requestedAt)}</span>
+                    </>,
+                  )}
                   {detailField('Due date', fmtDueDate(selected.dueAt))}
                   {detailField('Priority', <PriorityBadge priority={selected.priority} />)}
                   {detailField('Type', ACTION_TYPE_LABELS[selected.actionType])}
