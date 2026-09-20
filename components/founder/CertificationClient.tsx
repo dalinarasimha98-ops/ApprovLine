@@ -291,15 +291,23 @@ export function CertificationClient({ generatedAt, decision, kpis, controls, att
                   ))}
                 </ul>
 
-                <table className="hidden w-full min-w-[990px] table-fixed text-left text-sm sm:table">
+                {/* min-w intentionally modest: this table sits inside the
+                    narrower ~55-72% main column next to the command panel
+                    (measured as low as ~556px at 1280px viewport), so on
+                    narrower desktop sizes it scrolls horizontally within
+                    its own card via the overflow-x-auto wrapper above —
+                    the same discoverable, standard pattern already used by
+                    Founder Security's own controls table — rather than
+                    ever pushing the page itself wide. */}
+                <table className="hidden w-full min-w-[860px] table-fixed text-left text-sm sm:table">
                   <thead className="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th scope="col" className="w-[230px] px-5 py-3">Control</th>
-                      <th scope="col" className="hidden w-[170px] px-5 py-3 lg:table-cell">Category</th>
-                      <th scope="col" className="w-[110px] whitespace-nowrap px-5 py-3">Status</th>
-                      <th scope="col" className="hidden w-[130px] px-5 py-3 md:table-cell">Evidence Type</th>
+                      <th scope="col" className="w-[210px] px-5 py-3">Control</th>
+                      <th scope="col" className="hidden w-[150px] px-5 py-3 lg:table-cell">Category</th>
+                      <th scope="col" className="w-[100px] whitespace-nowrap px-5 py-3">Status</th>
+                      <th scope="col" className="hidden w-[120px] px-5 py-3 md:table-cell">Evidence Type</th>
                       <th scope="col" className="px-5 py-3">Summary</th>
-                      <th scope="col" className="w-28 whitespace-nowrap px-4 py-3 text-right">Action</th>
+                      <th scope="col" className="w-24 whitespace-nowrap px-4 py-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
