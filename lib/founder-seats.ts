@@ -32,6 +32,8 @@ export {
   fmtDate,
 } from '@/lib/founder-billing';
 
+export { fmtDateTime, fmtRelativeTime } from '@/lib/founder-activity';
+
 export type UtilizationBucket = 'UNDER_50' | 'FIFTY_TO_79' | 'EIGHTY_TO_99' | 'AT_CAPACITY' | 'OVER_CAPACITY';
 
 export const UTILIZATION_FILTER_OPTIONS: { value: UtilizationBucket | ''; label: string }[] = [
@@ -42,6 +44,14 @@ export const UTILIZATION_FILTER_OPTIONS: { value: UtilizationBucket | ''; label:
   { value: 'AT_CAPACITY', label: 'At capacity (100%)' },
   { value: 'OVER_CAPACITY', label: 'Over capacity' },
 ];
+
+export const UTILIZATION_BUCKET_LABELS: Record<UtilizationBucket, string> = {
+  UNDER_50: 'Under 50%',
+  FIFTY_TO_79: '50–79%',
+  EIGHTY_TO_99: '80–99%',
+  AT_CAPACITY: 'At capacity (100%)',
+  OVER_CAPACITY: 'Over capacity',
+};
 
 /**
  * Deliberately distinct from lib/founder-billing.ts's seatUtilizationPercent,

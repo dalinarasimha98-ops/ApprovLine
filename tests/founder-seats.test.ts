@@ -165,10 +165,12 @@ assert.match(client, /function clearFilters\(\) \{\s*\n\s*setQ\(''\);\s*\n\s*rou
 
 // 13. Pagination uses the filtered total, and true system-empty is
 //     distinguished from filtered-to-zero (the same class of bug fixed for
-//     Customer Integrations earlier this session).
+//     Customer Integrations earlier this session). Empty-state copy
+//     updated to the exact wording this task's spec requires ("No customer
+//     seat allocations found."), still never fabricating sample rows.
 assert.match(service, /hasAnyCustomers: totalCustomers > 0/);
 assert.match(client, /!hasAnyCustomers \?/);
-assert.match(client, /No customer accounts have been provisioned yet\./);
+assert.match(client, /No customer seat allocations found\./);
 assert.match(client, /No customers match your current filters\./);
 assert.doesNotMatch(client, /\{totalCustomers === 0 \? \(/);
 
@@ -176,9 +178,12 @@ assert.doesNotMatch(client, /\{totalCustomers === 0 \? \(/);
 
 // 14. Every mutation independently resolves Founder identity server-side
 //     and enforces read-only — never trusts a client-supplied actor,
-//     customer, or organization.
+//     customer, or organization. The mutation action itself (not just the
+//     page-level read gate) denies both the unauthenticated and read-only
+//     cases before ever calling updateCustomerSeats.
 assert.match(page, /const access = await getFounderAccess\(\);/);
-assert.match(page, /if \(!access\.ok \|\| access\.readOnly\) return;/);
+assert.match(page, /if \(!access\.ok\) return \{ error: 'Founder access denied\.' \};/);
+assert.match(page, /if \(access\.readOnly\) return \{ error: 'Support admins cannot update seats\.' \};/);
 assert.match(page, /canWrite=\{!readOnly\}/);
 assert.doesNotMatch(page, /actorEmail:\s*formData\.get|organizationId:\s*formData\.get/);
 
@@ -200,42 +205,52 @@ assert.match(service, /await Promise\.all\(\[/);
 // ─── Accessibility ──────────────────────────────────────────────────────────
 
 // 17. Real semantic table headers (scope="col"), no clickable <tr> hack —
-//     the sticky Action column trigger is a real, keyboard-reachable
-//     <button>.
+//     the row-detail trigger is a real, keyboard-reachable <button>.
 assert.match(client, /<th scope="col" className="w-\[180px\] whitespace-nowrap px-5 py-3">Customer<\/th>/);
 assert.doesNotMatch(client, /<tr[^>]*onClick/);
 assert.match(client, /<button\s*\n\s*type="button"\s*\n\s*onClick=\{\(\) => setSelectedId\(customer\.id\)\}/);
 
 // ─── Layout: no page-level horizontal overflow (established pattern) ──────
 
-// 18. Root grid + bounded table + sticky Action column, matching every
-//     other Founder module's proven fix.
-assert.match(page, /grid min-w-0 grid-cols-1 gap-6/);
+// 18. Visual-polish pass: the page's own root is now a plain fragment (no
+//     layout class of its own) — the two-column "main content + command
+//     panel" responsive grid (matching Observability's/Certification's
+//     locked xl:grid-cols-[1fr_380px] convention) now lives in the client,
+//     which still contains the bounded table inside its own scroll card.
+assert.doesNotMatch(page, /<div className="grid min-w-0 grid-cols-1 gap-6">/);
+assert.match(client, /xl:grid-cols-\[1fr_380px\]/);
 assert.match(client, /overflow-x-auto/);
-assert.match(client, /sticky right-0/);
 
-// 18b. Follow-up visual QA fix: explicit column widths sum to exactly
-//      the table's own min-width (1106px, not a mismatched 1230px) — and
-//      that width was chosen so the whole table fits the real Founder
-//      shell's 1440px main-content area (1440 - 260px sidebar - 64px
-//      lg:px-8 padding = 1116px) with zero horizontal scroll, verified
-//      against a harness that reproduces the actual shell chrome.
+// 18b. Second visual-polish pass, adversarially re-verified against the
+//      REAL Founder shell (not the isolated component): the prior pass's
+//      "sticky right-0 Action column" was tuned against a single-column,
+//      full-width 1116px layout. Once the table shares its row with the
+//      new 380px command panel, the real available width drops as low as
+//      ~556px at 1280px viewport — confirmed by rendering the actual
+//      FounderNavClient shell, not by pixel arithmetic alone. At that
+//      width, position: sticky's right-0 offset pinned the Action column
+//      on top of the still-in-flow Used/Available/Utilization/Updated
+//      cells' own screen position, visually clipping them — the exact
+//      "column silently eaten by an opaque neighbor" defect this class of
+//      fix exists to prevent, just relocated by the new narrower column.
+//      Removed sticky entirely: the whole row (Action included) now
+//      scrolls together inside the same overflow-x-auto container,
+//      verified reachable by actually scrolling it in the harness. No
+//      column is ever hidden — it's reachable by a real, standard
+//      horizontal scroll, the same discoverable pattern Founder
+//      Security's and Founder Certification's own tables already use.
+assert.doesNotMatch(client, /sticky right-0/);
+assert.doesNotMatch(client, /shadow-\[-6px_0_8px_-4px_rgba\(15,23,42,0\.18\)\]/);
 assert.match(client, /min-w-\[1106px\]/);
-assert.doesNotMatch(client, /min-w-\[1230px\]/);
 
-// 18c. The sticky Action column's separating shadow is conditional on
-//      the table actually needing to scroll (measured live via
-//      ResizeObserver on the scroll container), not a permanent
-//      decoration. A permanent shadow bled over the Updated column's
-//      text even at widths where nothing was stuck/scrolled — visually
-//      indistinguishable from the clipped-column defect this exists to
-//      fix, just self-inflicted. It must render conditionally instead.
+// 18c. The ResizeObserver-measured `tableScrollable` state is repurposed
+//      (not deleted) as an honest "Scroll horizontally to see all
+//      columns →" hint next to the table's own heading — shown only when
+//      the table actually needs scrolling, never a permanent decoration.
 assert.match(client, /ResizeObserver/);
 assert.match(client, /tableScrollable/);
 assert.match(client, /el\.scrollWidth > el\.clientWidth/);
-assert.match(client, /\$\{tableScrollable \? 'shadow-\[-6px_0_8px_-4px_rgba\(15,23,42,0\.18\)\]' : ''\}/);
-assert.doesNotMatch(client, /className="sticky right-0 w-24 whitespace-nowrap bg-slate-50 px-4 py-3 text-right shadow-/); // not unconditionally applied on the header cell
-assert.doesNotMatch(client, /text-right shadow-\[-6px_0_8px_-4px_rgba\(15,23,42,0\.18\)\] group-hover/); // not unconditionally applied on the body cell
+assert.match(client, /Scroll horizontally to see all columns/);
 
 // 18d. The Updated column is wide enough for fmtDate's actual output
 //      ("Sep 10, 2026"-style strings) and degrades with a visible
@@ -276,6 +291,62 @@ assert.match(billingClient, /seatUtilizationPercent\(customer\.usedSeats, custom
 //     module, as with every other Founder commercial page.
 assert.doesNotMatch(tenantIsolationLib, /CustomerSeatAllocation|utilizationBucket/);
 
+// ─── Second visual-polish pass: command panel, error surfacing, honest
+//     portfolio-wide aggregates (all additive to the same one query batch) ─
+
+// 22. Manage Seats used to fire-and-forget (`.catch(error => console.error)`)
+//     and silently discard the real error from updateCustomerSeats — a
+//     failed save (e.g. "Purchased seats cannot be lower than active users")
+//     looked identical to a successful one. It's now a real useActionState
+//     action that returns the error/success and the client renders it
+//     without closing the drawer.
+assert.doesNotMatch(page, /\.catch\(\(error\) => \{\s*\n\s*console\.error/);
+assert.match(page, /async function updateSeats\(_prevState: SeatsUpdateActionState, formData: FormData\): Promise<SeatsUpdateActionState>/);
+assert.match(page, /return \{ error: error instanceof Error \? error\.message : 'Failed to update seats\.' \};/);
+assert.match(page, /return \{ ok: true, message: 'Seats updated\.' \};/);
+assert.match(client, /useActionState<SeatsUpdateActionState, FormData>\(updateSeatsAction, \{\}\)/);
+assert.match(client, /role="alert"/);
+assert.match(client, /\{actionState\.error\}/);
+// The drawer never auto-closes based on the save result (success or
+// failure) — no effect anywhere ties setSelectedId to actionState.
+assert.doesNotMatch(client, /actionState\.ok[\s\S]{0,80}setSelectedId\(null\)/);
+
+// 23. Portfolio-wide capacity totals are computed per customer and summed —
+//     never netted (one customer's spare seats can never mask another's
+//     over-capacity), matching the same discipline as the per-row
+//     computeAvailableSeats/computeUtilizationPercent already tested above.
+assert.match(service, /usedWithinPurchasedTotal \+= Math\.min\(alloc\.usedSeats, alloc\.purchasedSeats\);/);
+assert.match(service, /availableTotal \+= Math\.max\(alloc\.purchasedSeats - alloc\.usedSeats, 0\);/);
+assert.match(service, /overCapacityTotal \+= Math\.max\(alloc\.usedSeats - alloc\.purchasedSeats, 0\);/);
+assert.match(service, /availableSeatsTotal: purchasedSeatsTotal - usedSeatsTotal,/); // the KPI-strip total, honestly signed, never floored
+
+// 24. Top Capacity Pressure is a real ranking (by utilization percent) over
+//     the same unfiltered scan the KPI buckets use, excludes allocations
+//     with no defensible utilization (purchasedSeats <= 0), and is capped
+//     at a real, bounded top-N rather than an unbounded render.
+assert.match(service, /if \(bucket !== null\) \{\s*\n\s*pressureCandidates\.push/);
+assert.match(service, /\.sort\(\(a, b\) => \(b\.utilizationPercent \?\? 0\) - \(a\.utilizationPercent \?\? 0\)\)/);
+assert.match(service, /\.slice\(0, 5\);/);
+
+// 25. Recent Seat Changes reuses the exact same FounderAuditLog rows
+//     updateCustomerSeats() already writes — one query, no second audit
+//     trail — and only ever reads the fields that action's metadata
+//     actually stores; it never fabricates a "previous seats" value the
+//     audit log was never asked to record.
+assert.match(service, /where: \{ action: 'customer\.seats\.updated' \}/);
+assert.equal((service.match(/prisma\.founderAuditLog\.findMany\(/g) ?? []).length, 1);
+assert.doesNotMatch(service, /previousPurchasedSeats|previousSeats/i);
+assert.match(client, /No seat changes recorded yet\./);
+
+// 26. The right-side command panel matches the locked Observability/
+//     Certification convention (role="tablist", four tabs, sticky at the
+//     same top-20 offset) rather than a new, one-off panel implementation.
+assert.match(client, /role="tablist" aria-label="Seats & Usage panel"/);
+assert.match(client, /'overview', 'history', 'requirements', 'help'/);
+assert.match(client, /sticky top-20/);
+
 console.log('Validated Seats & Usage (/founder/seats): built entirely on the existing CustomerAccount/CustomerSeatAllocation/FounderManagedUser/CustomerHealth models with no new seat/usage/billing model, documents (rather than assumes) the exact write-path trace proving CustomerSeatAllocation.usedSeats is authoritative-by-convention and distinct from CustomerHealth.activeUsers, never clamps utilization or floors available seats to hide over-capacity, filters plan/status via real SQL columns while honestly documenting why utilization must be a JS-side filter (a cross-column ratio Prisma cannot express), distinguishes true system-empty from filtered-to-zero, reuses the shared FounderDrawer and the existing updateCustomerSeats mutation/audit path with no duplication, batches every query with no N+1, uses real semantic table headers and a keyboard-reachable trigger button, and fixes the pre-existing "Seats & Usage" sidebar link that pointed at the unrelated Managed Users page — without adding a second, unlocked "Managed Users" sidebar entry of its own.');
 
-console.log('Validated the follow-up visual QA fix: the Managed Users nav item added in the prior pass was removed since it is not part of the locked Founder sidebar; the table\'s explicit column widths were tightened to sum exactly to its own min-width (1106px) so it fits the real Founder shell\'s 1440px main-content area with zero horizontal scroll (eliminating the sticky-column-overlap that read as a clipped column between Utilization and Action); and the sticky Action column\'s separating shadow — added to make any *remaining* scroll at narrower widths read as an intentional floating action rail — is applied conditionally via a live ResizeObserver measurement rather than permanently, since an always-on shadow bled over the Updated column\'s text even when nothing was actually scrolled, reproducing the same defect for a new reason. Plans & Billing\'s own table/drawer/utilization helper remain untouched.');
+console.log('Validated the first follow-up visual QA fix (single-column era, now superseded by the two-column layout tested above): the Managed Users nav item added in that pass was removed since it is not part of the locked Founder sidebar, and the table\'s explicit column widths were tightened to sum exactly to its own min-width (1106px). The sticky-Action-column technique that pass introduced was itself later removed once the command panel made the real available width far narrower than 1106px in every real layout — see the "second visual-polish pass" validation above for why plain horizontal scroll replaced it. Plans & Billing\'s own table/drawer/utilization helper remain untouched throughout.');
+
+console.log('Validated the second visual-polish pass: Manage Seats now surfaces the real save error (or success message) via useActionState instead of silently discarding it, and the drawer never closes on failure; portfolio-wide Capacity Overview and Top Capacity Pressure are computed per customer from the same one unfiltered seat-allocation scan the KPI buckets already used (never netted across customers, so over-capacity is never hidden by another customer\'s spare seats); Recent Seat Changes reuses the exact FounderAuditLog rows the existing updateCustomerSeats() mutation already writes (one query, no second audit trail, no fabricated "previous seats" field the audit metadata never recorded); and the new right-side command panel matches the same locked Overview/History/Requirements/Help convention already shipped for Observability and Certification.');
