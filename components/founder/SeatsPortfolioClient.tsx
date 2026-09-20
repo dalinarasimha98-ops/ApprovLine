@@ -116,8 +116,12 @@ function KpiCard({ kind, tone, label, value, detail }: { kind: Parameters<typeof
 }
 
 function UtilizationBadge({ bucket, pct }: { bucket: UtilizationBucket | null; pct: number | null }) {
+  // Deliberately always the real, uncapped percentage (e.g. "112%") rather
+  // than a text label — "Over capacity" as a badge string needs far more
+  // horizontal room than this dense table row can spare, and the numeric
+  // percentage is honest and unambiguous on its own once combined with the
+  // red tone: over 100% already means over capacity, nothing is hidden.
   const tone = utilizationTone(bucket);
-  if (bucket === 'OVER_CAPACITY') return <Badge tone="red">Over capacity</Badge>;
   return <Badge tone={tone}>{fmtUtilization(pct)}</Badge>;
 }
 
@@ -138,16 +142,25 @@ export function SeatsPortfolioClient({ generatedAt, kpis, capacityOverview, topP
     startRefresh(() => router.refresh());
   }
 
-  // Same measured-not-decorative sticky shadow this table already relies
-  // on: it only renders while the table actually needs horizontal scroll,
-  // never as a permanent decoration that would bleed over the Updated
-  // column at widths where nothing is scrolled.
+  // Same measured-not-decorative hint this table already relies on: it
+  // only renders while the table actually needs horizontal scroll, never
+  // as a permanent decoration when every column is already visible.
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [tableScrollable, setTableScrollable] = useState(false);
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    const update = () => setTableScrollable(el.scrollWidth > el.clientWidth + 1);
+    // A >1px tolerance would false-positive on this table specifically: its
+    // 9 explicit column widths sum to less than the container at desktop
+    // widths, so the browser proportionally scales them up to fill it
+    // (table-fixed + w-full), which leaves a harmless few-pixel rounding
+    // gap between scrollWidth and clientWidth even though every column is
+    // already fully visible (verified: summed real column
+    // getBoundingClientRect widths equal the container exactly). A wider
+    // tolerance avoids showing "scroll for more" when there's nothing more
+    // to see, while still catching the real, much larger gap that appears
+    // once the table is actually clipped (e.g. ~140px at 1280px viewport).
+    const update = () => setTableScrollable(el.scrollWidth > el.clientWidth + 20);
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
@@ -196,7 +209,7 @@ export function SeatsPortfolioClient({ generatedAt, kpis, capacityOverview, topP
 
   const kpiCards: { kind: Parameters<typeof KpiIcon>[0]['kind']; tone: 'green' | 'amber' | 'red' | 'slate' | 'blue'; label: string; value: string | number; detail: string }[] = [
     { kind: 'purchased', tone: 'blue', label: 'Purchased Seats', value: kpis.purchasedSeatsTotal, detail: 'Total seats purchased' },
-    { kind: 'allocated', tone: 'blue', label: 'Allocated Seats', value: kpis.allocatedSeatsTotal, detail: 'Assigned to customer accounts' },
+    { kind: 'allocated', tone: 'blue', label: 'Allocated Seats', value: kpis.allocatedSeatsTotal, detail: 'Reserved for customer accounts' },
     { kind: 'used', tone: 'slate', label: 'Used Seats', value: kpis.usedSeatsTotal, detail: 'Currently in use' },
     { kind: 'available', tone: kpis.availableSeatsTotal < 0 ? 'red' : 'green', label: 'Available Seats', value: kpis.availableSeatsTotal < 0 ? `Over by ${Math.abs(kpis.availableSeatsTotal)}` : kpis.availableSeatsTotal, detail: 'Ready for allocation' },
     { kind: 'utilization', tone: kpis.overallUtilizationPercent == null ? 'slate' : kpis.overallUtilizationPercent > 100 ? 'red' : kpis.overallUtilizationPercent >= 80 ? 'amber' : 'green', label: 'Utilization', value: fmtUtilization(kpis.overallUtilizationPercent), detail: 'Used ÷ purchased, portfolio-wide' },
@@ -311,55 +324,43 @@ export function SeatsPortfolioClient({ generatedAt, kpis, capacityOverview, topP
               </div>
             ) : (
               <div className="overflow-x-auto" ref={scrollerRef}>
-                <table className="w-full min-w-[1106px] table-fixed text-left text-sm">
-                  <thead className="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
+                <table className="w-full min-w-[711px] table-fixed text-left text-sm">
+                  <thead className="break-words bg-slate-50 text-[10px] font-bold uppercase tracking-normal text-slate-500">
                     <tr>
-                      <th scope="col" className="w-[180px] whitespace-nowrap px-5 py-3">Customer</th>
-                      <th scope="col" className="w-[100px] whitespace-nowrap px-5 py-3">Plan</th>
-                      <th scope="col" className="w-[135px] whitespace-nowrap px-5 py-3">Account Status</th>
-                      <th scope="col" className="w-[90px] whitespace-nowrap px-5 py-3">Purchased</th>
-                      <th scope="col" className="w-[90px] whitespace-nowrap px-5 py-3">Allocated</th>
-                      <th scope="col" className="w-[80px] whitespace-nowrap px-5 py-3">Used</th>
-                      <th scope="col" className="w-[90px] whitespace-nowrap px-5 py-3">Available</th>
-                      <th scope="col" className="w-[130px] whitespace-nowrap px-5 py-3">Utilization</th>
-                      <th scope="col" className="w-[115px] whitespace-nowrap px-5 py-3">Updated</th>
-                      <th scope="col" className="w-24 whitespace-nowrap px-4 py-3 text-right">Action</th>
+                      <th scope="col" className="w-[87px] px-2.5 py-3">Customer</th>
+                      <th scope="col" className="w-[116px] px-2.5 py-3">Plan</th>
+                      <th scope="col" className="w-[115px] px-2.5 py-3">Status</th>
+                      <th scope="col" className="w-[54px] px-1.5 py-3" title="Purchased">Pur.</th>
+                      <th scope="col" className="w-[50px] px-1.5 py-3" title="Allocated">Alc.</th>
+                      <th scope="col" className="w-12 px-1.5 py-3">Used</th>
+                      <th scope="col" className="w-[86px] px-2.5 py-3">Available</th>
+                      <th scope="col" className="w-[76px] px-2.5 py-3" title="Utilization">Util.</th>
+                      <th scope="col" className="w-[79px] px-2.5 py-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {rows.map((customer) => {
                       const rowPct = computeUtilizationPercent(customer.usedSeats, customer.purchasedSeats);
                       const bucket = utilizationBucketFor(customer.usedSeats, customer.purchasedSeats);
-                      const tone = utilizationTone(bucket);
                       const available = computeAvailableSeats(customer.usedSeats, customer.purchasedSeats);
-                      const barWidth = rowPct == null ? 0 : Math.min(100, rowPct);
-                      const barColor = tone === 'red' ? 'bg-rose-500' : tone === 'amber' ? 'bg-amber-400' : tone === 'green' ? 'bg-emerald-500' : 'bg-slate-300';
                       return (
                         <tr key={customer.id} className="group transition hover:bg-slate-50">
-                          <td className="px-5 py-4">
-                            <p className="truncate font-black text-slate-950">{customer.companyName}</p>
+                          <td className="px-3 py-4">
+                            <p className="truncate font-black text-slate-950" title={customer.companyName}>{customer.companyName}</p>
                             <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{customer.domain}</p>
                           </td>
-                          <td className="whitespace-nowrap px-5 py-4"><Badge tone={planTone(customer.planTier)}>{planDisplayName(customer.planTier)}</Badge></td>
-                          <td className="whitespace-nowrap px-5 py-4"><Badge tone={accountStatusTone(customer.status)}>{customer.status}</Badge></td>
-                          <td className="whitespace-nowrap px-5 py-4 font-black text-slate-950 tabular-nums">{customer.purchasedSeats}</td>
-                          <td className="whitespace-nowrap px-5 py-4 font-bold text-slate-700 tabular-nums">{customer.allocatedSeats}</td>
-                          <td className="whitespace-nowrap px-5 py-4 font-bold text-slate-700 tabular-nums">{customer.usedSeats}</td>
-                          <td className={`whitespace-nowrap px-5 py-4 font-bold tabular-nums ${available < 0 ? 'text-rose-600' : 'text-slate-700'}`}>{fmtAvailableSeats(available)}</td>
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-2">
-                              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
-                                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${barWidth}%` }} />
-                              </div>
-                              <UtilizationBadge bucket={bucket} pct={rowPct} />
-                            </div>
-                          </td>
-                          <td className="truncate px-5 py-4 text-xs font-semibold text-slate-500" title={fmtDate(customer.updatedAt)}>{fmtDate(customer.updatedAt)}</td>
-                          <td className="whitespace-nowrap px-4 py-4 text-right">
+                          <td className="whitespace-nowrap px-2.5 py-4"><Badge tone={planTone(customer.planTier)}>{planDisplayName(customer.planTier)}</Badge></td>
+                          <td className="whitespace-nowrap px-2.5 py-4"><Badge tone={accountStatusTone(customer.status)}>{customer.status}</Badge></td>
+                          <td className="whitespace-nowrap px-2.5 py-4 font-black text-slate-950 tabular-nums">{customer.purchasedSeats}</td>
+                          <td className="whitespace-nowrap px-2.5 py-4 font-bold text-slate-700 tabular-nums">{customer.allocatedSeats}</td>
+                          <td className="whitespace-nowrap px-2.5 py-4 font-bold text-slate-700 tabular-nums">{customer.usedSeats}</td>
+                          <td className={`whitespace-nowrap px-2.5 py-4 font-bold tabular-nums ${available < 0 ? 'text-rose-600' : 'text-slate-700'}`}>{fmtAvailableSeats(available)}</td>
+                          <td className="whitespace-nowrap px-2.5 py-4"><UtilizationBadge bucket={bucket} pct={rowPct} /></td>
+                          <td className="whitespace-nowrap px-2.5 py-4 text-right">
                             <button
                               type="button"
                               onClick={() => setSelectedId(customer.id)}
-                              className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100"
+                              className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-100"
                             >
                               View →
                             </button>
@@ -427,7 +428,10 @@ export function SeatsPortfolioClient({ generatedAt, kpis, capacityOverview, topP
                   <Link href="/founder/customers" className="shrink-0 text-xs font-black text-[#2557dc] hover:underline">View all →</Link>
                 </div>
                 {topPressure.length === 0 ? (
-                  <p className="mt-4 text-xs font-bold text-slate-500">No customer has purchased seats yet.</p>
+                  <div className="mt-4 rounded-xl border border-dashed border-emerald-200 bg-emerald-50 p-4 text-center">
+                    <p className="text-xs font-bold text-emerald-800">No customers are currently near their seat limit.</p>
+                    <p className="mt-1 text-[11px] font-semibold text-emerald-700">All customer accounts are operating below the configured capacity-pressure threshold.</p>
+                  </div>
                 ) : (
                   <ol className="mt-4 space-y-2.5">
                     {topPressure.map((row, i) => {
@@ -562,8 +566,16 @@ export function SeatsPortfolioClient({ generatedAt, kpis, capacityOverview, topP
               ) : (
                 <div className="space-y-4 text-xs font-semibold leading-5 text-slate-600">
                   <div>
-                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Purchased / Allocated / Used</p>
-                    <p className="mt-1.5">Purchased and Allocated seats come from the customer&apos;s seat allocation record and are set together whenever a Founder updates seats. Used seats is a live count of that customer&apos;s active users.</p>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Purchased Seats</p>
+                    <p className="mt-1.5">The customer&apos;s seat capacity, from their seat allocation record.</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Allocated Seats</p>
+                    <p className="mt-1.5">The seat capacity reserved for this customer account — an account-level figure, not a count of individual users assigned a seat. Set together with Purchased Seats whenever a Founder updates seats.</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Used Seats</p>
+                    <p className="mt-1.5">A live count of that customer&apos;s active users — the only figure here counted per user.</p>
                   </div>
                   <div>
                     <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Available</p>

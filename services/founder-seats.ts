@@ -146,10 +146,13 @@ export type SeatsPortfolio = {
   rows: SeatsRow[];
   kpis: SeatsKpis;
   capacityOverview: CapacityOverviewTotals;
-  // Top 5 real allocations by utilization percent, portfolio-wide
-  // (independent of the table's active filters/pagination, same convention
-  // as the KPI strip) — excludes allocations with purchasedSeats <= 0
-  // (utilizationPercent is null/undefined for those, not a real ranking).
+  // Top 5 real allocations that are genuinely in a capacity-pressure
+  // bucket (>= 80% utilization or over capacity — the same
+  // utilizationBucketFor thresholds the table's own filter uses, no
+  // second cutoff), portfolio-wide (independent of the table's active
+  // filters/pagination, same convention as the KPI strip). A customer at
+  // low/no utilization is never included just to fill out a top-5 list —
+  // this can legitimately be empty when no account is near capacity.
   topPressure: TopPressureRow[];
   recentSeatChanges: SeatChangeAuditRow[];
   page: number;
@@ -317,7 +320,13 @@ export async function buildSeatsPortfolio(filters: SeatsFilters): Promise<SafeRe
       availableTotal += Math.max(alloc.purchasedSeats - alloc.usedSeats, 0);
       overCapacityTotal += Math.max(alloc.usedSeats - alloc.purchasedSeats, 0);
 
-      if (bucket !== null) {
+      // Top Capacity Pressure only ever includes allocations already in a
+      // real capacity-pressure bucket (>= 80% utilization or over capacity)
+      // — the exact same thresholds utilizationBucketFor already defines,
+      // no second, arbitrary cutoff. A customer at 3% utilization is real
+      // low usage, not "pressure," and is never ranked here just to fill a
+      // top-5 list.
+      if (bucket === 'EIGHTY_TO_99' || bucket === 'AT_CAPACITY' || bucket === 'OVER_CAPACITY') {
         pressureCandidates.push({
           id: alloc.customerAccountId,
           companyName: alloc.customerAccount.companyName,
