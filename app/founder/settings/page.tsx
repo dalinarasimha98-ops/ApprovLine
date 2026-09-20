@@ -24,6 +24,14 @@ export default async function FounderSettingsPage() {
   // rediscovered/reinvented inside the client component.
   const isolationReportHref = '/founder/security/isolation';
 
+  // /founder/reliability (the Universal Gateway reliability/background-job
+  // hardening report) is the same situation: a real, pre-existing page
+  // with no sidebar entry of its own, previously only reachable from the
+  // Founder Overview page and this page's old "Quick links" section.
+  // tests/founder-background-jobs.test.ts already asserts this exact
+  // link stays intact.
+  const reliabilityReport = { href: '/founder/reliability', label: 'Reliability report' };
+
   return (
     <FounderSettingsClient
       email={email}
@@ -35,6 +43,7 @@ export default async function FounderSettingsPage() {
       securityItems={overview.securityItems}
       operationalItems={overview.operationalItems}
       isolationReportHref={isolationReportHref}
+      reliabilityReportHref={reliabilityReport.href}
     />
   );
 }

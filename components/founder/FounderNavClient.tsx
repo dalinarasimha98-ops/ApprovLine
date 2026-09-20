@@ -166,8 +166,26 @@ function SidebarContent({
   // could leave its own active item scrolled out of view. `block: 'nearest'`
   // moves it into view only when actually needed, without disturbing scroll
   // position when it's already visible.
+  //
+  // That auto-reveal must never fire on this component's OWN first mount,
+  // though — every /founder/* full-page load (including a direct visit to
+  // a page whose nav item sits near the bottom of this list, e.g. Founder
+  // Settings, Certification, or Security) mounts this component fresh, and
+  // scrolling immediately on mount made the sidebar open already-scrolled
+  // past Command Center/Customers/Onboarding/Product Control — visually
+  // indistinguishable from those sections being missing, even though they
+  // were always present in the DOM. A fresh page load should always show
+  // the sidebar starting at its natural top; only a later, client-side
+  // navigation to a new active item (this effect re-running because
+  // `activeKey` changed on an already-mounted instance) should auto-scroll
+  // to keep it in view.
   const activeItemRef = useRef<HTMLAnchorElement | null>(null);
+  const hasMountedRef = useRef(false);
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
     activeItemRef.current?.scrollIntoView({ block: 'nearest' });
   }, [activeKey]);
 

@@ -84,6 +84,7 @@ export type FounderSettingsProps = {
   securityItems: FounderSettingsControlView[];
   operationalItems: FounderSettingsControlView[];
   isolationReportHref: string;
+  reliabilityReportHref: string;
 };
 
 export function FounderSettingsClient(props: FounderSettingsProps) {
@@ -259,9 +260,17 @@ export function FounderSettingsClient(props: FounderSettingsProps) {
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {props.operationalItems.map((item) => <StatusRow key={item.key} item={item} />)}
         </div>
-        <Link href="/founder/system-health" className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-black text-slate-700 transition hover:border-[#2557dc] hover:text-[#2557dc]">
-          Open System Health <span aria-hidden="true">→</span>
-        </Link>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/founder/system-health" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-black text-slate-700 transition hover:border-[#2557dc] hover:text-[#2557dc]">
+            Open System Health <span aria-hidden="true">→</span>
+          </Link>
+          {/* A real, already-shipped page not listed in the main sidebar —
+              reachable only from here and the Overview page, so this link
+              must not be dropped. */}
+          <Link href={props.reliabilityReportHref} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-black text-slate-700 transition hover:border-[#2557dc] hover:text-[#2557dc]">
+            Reliability Report <span aria-hidden="true">→</span>
+          </Link>
+        </div>
       </section>
 
       {/* Session + Audit */}
