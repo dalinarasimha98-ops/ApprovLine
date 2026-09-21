@@ -117,10 +117,19 @@ function fetchCoreFresh(organizationId: string, approvalId: string) {
   );
 }
 
-function getCachedCoreFetcher(approvalId: string) {
+// unstable_cache's key array is its entire cache identity - arguments to
+// the wrapped function are NOT automatically part of the cache key. Every
+// fetcher below is invoked with a real, security-relevant organizationId
+// (and, for the related-records fetcher, a subject string used in its own
+// query) that must vary the cached entry; omitting it here would let a
+// cache entry populated for one organization be served back to a request
+// for the same approvalId under a *different* organizationId. The
+// organizationId (and subject, where applicable) is threaded into the key
+// itself, not just passed as a runtime argument, precisely to prevent that.
+function getCachedCoreFetcher(approvalId: string, organizationId: string) {
   return unstable_cache(
-    (organizationId: string) => fetchCoreFresh(organizationId, approvalId),
-    ['approval-detail-core', approvalId],
+    () => fetchCoreFresh(organizationId, approvalId),
+    ['approval-detail-core', approvalId, organizationId],
     { revalidate: REVALIDATE_SECONDS, tags: [approvalDetailCacheTag(approvalId)] },
   );
 }
@@ -128,7 +137,7 @@ function getCachedCoreFetcher(approvalId: string) {
 /** The one query the page awaits before rendering anything. Everything else
  *  in this file is fetched in parallel, independent Suspense boundaries. */
 export const getApprovalCore = cache(async (organizationId: string, approvalId: string) => {
-  const record = await getCachedCoreFetcher(approvalId)(organizationId);
+  const record = await getCachedCoreFetcher(approvalId, organizationId)();
   if (record) return deserializeCore(record);
 
   // unstable_cache can serve a stale null if a previous request hit a
@@ -166,16 +175,16 @@ function fetchAuditTrailFresh(organizationId: string, approvalId: string) {
   );
 }
 
-function getCachedAuditTrailFetcher(approvalId: string) {
+function getCachedAuditTrailFetcher(approvalId: string, organizationId: string) {
   return unstable_cache(
-    (organizationId: string) => fetchAuditTrailFresh(organizationId, approvalId),
-    ['approval-detail-audit-trail', approvalId],
+    () => fetchAuditTrailFresh(organizationId, approvalId),
+    ['approval-detail-audit-trail', approvalId, organizationId],
     { revalidate: REVALIDATE_SECONDS, tags: [approvalDetailCacheTag(approvalId)] },
   );
 }
 
 export const getApprovalAuditTrail = cache(async (organizationId: string, approvalId: string) => {
-  const logs = await getCachedAuditTrailFetcher(approvalId)(organizationId);
+  const logs = await getCachedAuditTrailFetcher(approvalId, organizationId)();
   return logs.map((log) => ({ ...log, createdAt: toDate(log.createdAt) }));
 });
 
@@ -214,16 +223,16 @@ function fetchComplianceFresh(organizationId: string, approvalId: string) {
   );
 }
 
-function getCachedComplianceFetcher(approvalId: string) {
+function getCachedComplianceFetcher(approvalId: string, organizationId: string) {
   return unstable_cache(
-    (organizationId: string) => fetchComplianceFresh(organizationId, approvalId),
-    ['approval-detail-compliance', approvalId],
+    () => fetchComplianceFresh(organizationId, approvalId),
+    ['approval-detail-compliance', approvalId, organizationId],
     { revalidate: REVALIDATE_SECONDS, tags: [approvalDetailCacheTag(approvalId)] },
   );
 }
 
 export const getApprovalComplianceEvaluations = cache(async (organizationId: string, approvalId: string) => {
-  const evaluations = await getCachedComplianceFetcher(approvalId)(organizationId);
+  const evaluations = await getCachedComplianceFetcher(approvalId, organizationId)();
   return evaluations.map((evaluation) => ({ ...evaluation, createdAt: toDate(evaluation.createdAt) }));
 });
 
@@ -254,16 +263,16 @@ function fetchClassifierResultsFresh(organizationId: string, approvalId: string)
   );
 }
 
-function getCachedClassifierResultsFetcher(approvalId: string) {
+function getCachedClassifierResultsFetcher(approvalId: string, organizationId: string) {
   return unstable_cache(
-    (organizationId: string) => fetchClassifierResultsFresh(organizationId, approvalId),
-    ['approval-detail-classifier', approvalId],
+    () => fetchClassifierResultsFresh(organizationId, approvalId),
+    ['approval-detail-classifier', approvalId, organizationId],
     { revalidate: REVALIDATE_SECONDS, tags: [approvalDetailCacheTag(approvalId)] },
   );
 }
 
 export const getApprovalClassifierResults = cache(async (organizationId: string, approvalId: string) => {
-  const results = await getCachedClassifierResultsFetcher(approvalId)(organizationId);
+  const results = await getCachedClassifierResultsFetcher(approvalId, organizationId)();
   return results.map((result) => ({ ...result, createdAt: toDate(result.createdAt) }));
 });
 
@@ -294,16 +303,16 @@ async function fetchRelatedRecordsFresh(organizationId: string, approvalId: stri
   );
 }
 
-function getCachedRelatedRecordsFetcher(approvalId: string) {
+function getCachedRelatedRecordsFetcher(approvalId: string, organizationId: string, subject: string) {
   return unstable_cache(
-    (organizationId: string, subject: string) => fetchRelatedRecordsFresh(organizationId, approvalId, subject),
-    ['approval-detail-related', approvalId],
+    () => fetchRelatedRecordsFresh(organizationId, approvalId, subject),
+    ['approval-detail-related', approvalId, organizationId, subject],
     { revalidate: REVALIDATE_SECONDS, tags: [approvalDetailCacheTag(approvalId)] },
   );
 }
 
 export const getApprovalRelatedRecords = cache(async (organizationId: string, approvalId: string, subject: string) => {
-  const [investigations, memoryEntity] = await getCachedRelatedRecordsFetcher(approvalId)(organizationId, subject);
+  const [investigations, memoryEntity] = await getCachedRelatedRecordsFetcher(approvalId, organizationId, subject)();
   return { investigations: investigations.map((item) => item.investigation), memoryEntity };
 });
 
@@ -372,16 +381,16 @@ function fetchManualBundleFresh(organizationId: string, approvalId: string) {
   );
 }
 
-function getCachedManualBundleFetcher(approvalId: string) {
+function getCachedManualBundleFetcher(approvalId: string, organizationId: string) {
   return unstable_cache(
-    (organizationId: string) => fetchManualBundleFresh(organizationId, approvalId),
-    ['approval-detail-manual-bundle', approvalId],
+    () => fetchManualBundleFresh(organizationId, approvalId),
+    ['approval-detail-manual-bundle', approvalId, organizationId],
     { revalidate: REVALIDATE_SECONDS, tags: [approvalDetailCacheTag(approvalId)] },
   );
 }
 
 export const getApprovalManualBundle = cache(async (organizationId: string, approvalId: string) => {
-  const [evidence, versions, confirmations] = await getCachedManualBundleFetcher(approvalId)(organizationId);
+  const [evidence, versions, confirmations] = await getCachedManualBundleFetcher(approvalId, organizationId)();
   return {
     evidence: evidence.map((item) => ({
       ...item,
@@ -427,15 +436,15 @@ function fetchContextApprovalsFresh(organizationId: string, excludeId: string) {
   );
 }
 
-function getCachedContextApprovalsFetcher(excludeId: string) {
+function getCachedContextApprovalsFetcher(excludeId: string, organizationId: string) {
   return unstable_cache(
-    (organizationId: string) => fetchContextApprovalsFresh(organizationId, excludeId),
-    ['approval-context-list', excludeId],
+    () => fetchContextApprovalsFresh(organizationId, excludeId),
+    ['approval-context-list', excludeId, organizationId],
     { revalidate: REVALIDATE_SECONDS, tags: [approvalDetailCacheTag(excludeId)] },
   );
 }
 
 export const getContextApprovals = cache(async (organizationId: string, approvalId: string) => {
-  const records = await getCachedContextApprovalsFetcher(approvalId)(organizationId);
+  const records = await getCachedContextApprovalsFetcher(approvalId, organizationId)();
   return records.map((r) => ({ ...r, createdAt: toDate(r.createdAt) }));
 });
