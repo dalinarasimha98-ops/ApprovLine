@@ -95,6 +95,10 @@ jobs:
         run: npm run test:rbac
       - name: Test — certification
         run: npm run test:certification
+      - name: Test — approval detail (View Full Approval)
+        run: npm run test:approval-detail
+      - name: Test — approval detail render (defensive null-relation regression)
+        run: npm run test:approval-detail-render
       - name: Build
         run: npm run build
       - name: Dependency audit gate
