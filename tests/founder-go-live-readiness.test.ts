@@ -202,7 +202,13 @@ assert.doesNotMatch(service, /for \(const customer of customers\) \{\s*\n\s*awai
 assert.match(navClient, /\{ label: 'Go-Live Readiness', href: '\/founder\/go-live-readiness' \}/);
 assert.doesNotMatch(navClient, /label: 'Go-Live Readiness', href: '\/founder\/readiness'/);
 assert.match(oldReadinessPage, /Founder Control Center v2/);
-assert.match(oldReadinessPage, /Week 4 Launch Certification/);
+// The literal "Week 4" label was itself part of the old fully-static,
+// hardcoded-to-Pass certification engine (see b0b2146, "Rebuild Founder
+// Certification Center on real, live-checked evidence") and was correctly
+// dropped when that page was rebuilt on real evidence. This assertion's
+// job is only to confirm the certification section still exists on this
+// page at all, not to pin an outdated exact label.
+assert.match(oldReadinessPage, /Launch Certification/);
 
 // 26. The Founder home page's own quick action that used to be labeled
 //     "Go-live readiness" while linking to the platform certification
