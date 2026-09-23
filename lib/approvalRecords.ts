@@ -41,9 +41,15 @@ export type ApprovalListFilters = {
   category?: string;
   riskLevel?: string;
   approvalType?: string;
+  /** 'all' (or omitted) means no status filter; otherwise an ApprovalStatus value. */
+  status?: string;
   from?: string;
   to?: string;
   limit?: number;
+  /** 1-based page number for the approvals table. Defaults to 1. */
+  page?: number;
+  /** Rows per page. Defaults to 10 (matches the dashboard table's default). */
+  pageSize?: number;
 };
 
 type ApprovalRecordsCacheParams = {
@@ -55,12 +61,19 @@ type ApprovalRecordsCacheParams = {
   category: string;
   riskLevel: string;
   approvalType: string;
+  status: string;
   from: string;
   to: string;
-  limit: number;
+  page: number;
+  pageSize: number;
 };
 
+const DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 100;
+
 function normalizeFiltersForCache(filters: ApprovalListFilters): ApprovalRecordsCacheParams {
+  const pageSize = Math.min(Math.max(1, filters.pageSize ?? filters.limit ?? DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
+  const page = Math.max(1, Math.trunc(filters.page ?? 1));
   return {
     organizationId: filters.organizationId,
     q: filters.q?.trim().toLowerCase() ?? '',
@@ -70,18 +83,25 @@ function normalizeFiltersForCache(filters: ApprovalListFilters): ApprovalRecords
     category: filters.category?.trim().toLowerCase() ?? '',
     riskLevel: filters.riskLevel?.trim().toLowerCase() ?? '',
     approvalType: filters.approvalType?.trim().toUpperCase() ?? '',
+    status: filters.status && filters.status.toLowerCase() !== 'all' ? filters.status.trim().toUpperCase() : '',
     from: filters.from ?? '',
     to: filters.to ?? '',
-    limit: Math.min(filters.limit ?? 50, 100),
+    page,
+    pageSize,
   };
 }
 
-export function buildApprovalRecordsWhere(filters: ApprovalListFilters): Prisma.ApprovalRecordWhereInput {
+export function buildApprovalRecordsWhere(
+  filters: ApprovalListFilters | ApprovalRecordsCacheParams,
+): Prisma.ApprovalRecordWhereInput {
   const occurredAt: Prisma.DateTimeFilter = {};
   if (filters.from) occurredAt.gte = new Date(filters.from);
   if (filters.to) occurredAt.lte = new Date(filters.to);
 
   const q = filters.q?.trim();
+  const status = 'status' in filters && filters.status && filters.status.toLowerCase() !== 'all'
+    ? filters.status.trim().toUpperCase()
+    : '';
 
   return {
     organizationId: filters.organizationId,
@@ -91,6 +111,7 @@ export function buildApprovalRecordsWhere(filters: ApprovalListFilters): Prisma.
     ...(filters.category ? { category: { contains: filters.category, mode: 'insensitive' } } : {}),
     ...(filters.riskLevel ? { riskLevel: filters.riskLevel.toLowerCase() } : {}),
     ...(filters.approvalType ? { approvalType: filters.approvalType.toUpperCase() as Prisma.EnumApprovalTypeFilter['equals'] } : {}),
+    ...(status ? { status: status as Prisma.EnumApprovalStatusFilter['equals'] } : {}),
     ...(filters.from || filters.to ? { occurredAt } : {}),
     ...(q
       ? {
@@ -100,6 +121,9 @@ export function buildApprovalRecordsWhere(filters: ApprovalListFilters): Prisma.
             { approverEmail: { contains: q, mode: 'insensitive' } },
             { department: { contains: q, mode: 'insensitive' } },
             { sourcePlatform: { contains: q, mode: 'insensitive' } },
+            { category: { contains: q, mode: 'insensitive' } },
+            { sourceRecordId: { contains: q, mode: 'insensitive' } },
+            { id: q },
           ],
         }
       : {}),
@@ -170,20 +194,27 @@ class ApprovalQueryCircuitOpenError extends Error {
 const APPROVAL_RECORDS_QUERY_TIMEOUT_MS = 5000;
 const APPROVAL_RECORDS_REVALIDATE_SECONDS = 60;
 
-async function fetchApprovalRecordsFresh(cacheParams: ApprovalRecordsCacheParams): Promise<ApprovalListRecord[]> {
+type ApprovalRecordsPage = { records: ApprovalListRecord[]; total: number };
+
+async function fetchApprovalRecordsFresh(cacheParams: ApprovalRecordsCacheParams): Promise<ApprovalRecordsPage> {
   if (isApprovalQueryBreakerOpen()) {
     throw new ApprovalQueryCircuitOpenError();
   }
 
+  const where = buildApprovalRecordsWhere(cacheParams);
   const attempt = () =>
     withTimeout(
       'dashboard approvals query',
-      prisma.approvalRecord.findMany({
-        select: approvalRecordListSelect,
-        where: buildApprovalRecordsWhere(cacheParams),
-        orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
-        take: cacheParams.limit,
-      }),
+      Promise.all([
+        prisma.approvalRecord.findMany({
+          select: approvalRecordListSelect,
+          where,
+          orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
+          skip: (cacheParams.page - 1) * cacheParams.pageSize,
+          take: cacheParams.pageSize,
+        }),
+        prisma.approvalRecord.count({ where }),
+      ]),
       APPROVAL_RECORDS_QUERY_TIMEOUT_MS,
     );
 
@@ -191,14 +222,14 @@ async function fetchApprovalRecordsFresh(cacheParams: ApprovalRecordsCacheParams
     // One quick retry on a connection-pool-shaped error — this is what
     // makes a single transient blip self-heal within the same request
     // instead of ever reaching the stale-cache/empty fallback below.
-    const records = await attempt().catch(async (error) => {
+    const [records, total] = await attempt().catch(async (error) => {
       const message = error instanceof Error ? error.message : String(error);
       if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
       await new Promise((resolve) => setTimeout(resolve, 300));
       return attempt();
     });
     recordApprovalQuerySuccess();
-    return records;
+    return { records, total };
   } catch (error) {
     recordApprovalQueryFailure();
     throw error;
@@ -244,8 +275,8 @@ function deserializeApprovalRecord(record: ApprovalListRecord): ApprovalListReco
 // within one request resolve to a single in-flight lookup.
 const getApprovalRecordsForRequest = cache(async (organizationId: string, cacheParamsKey: string) => {
   const cacheParams = JSON.parse(cacheParamsKey) as ApprovalRecordsCacheParams;
-  const records = await getCachedApprovalRecordsFetcher(organizationId)(cacheParams);
-  return records.map(deserializeApprovalRecord);
+  const page = await getCachedApprovalRecordsFetcher(organizationId)(cacheParams);
+  return { records: page.records.map(deserializeApprovalRecord), total: page.total };
 });
 
 // --- Tier-2 "last known good" store --------------------------------------
@@ -254,7 +285,7 @@ const getApprovalRecordsForRequest = cache(async (organizationId: string, cacheP
 // successful returns of its own wrapped function. This is a small,
 // explicitly-imperative store purely for that stale-on-error fallback; the
 // cross-request performance win above comes from unstable_cache, not this.
-type LastGoodEntry = { records: ApprovalListRecord[]; cachedAt: number };
+type LastGoodEntry = { records: ApprovalListRecord[]; total: number; cachedAt: number };
 const STALE_CACHE_TTL_MS = 10 * 60 * 1000;
 
 const globalForApprovalRecords = globalThis as unknown as {
@@ -268,6 +299,9 @@ function lastGoodStore() {
 
 export async function loadDashboardApprovalRecords(filters: ApprovalListFilters): Promise<{
   records: ApprovalListRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
   source: 'database' | 'cache' | 'empty';
   degraded: boolean;
   alert: boolean;
@@ -280,9 +314,9 @@ export async function loadDashboardApprovalRecords(filters: ApprovalListFilters)
   const lastGoodKey = `${filters.organizationId}::${cacheKey}`;
 
   try {
-    const records = await getApprovalRecordsForRequest(filters.organizationId, cacheKey);
-    lastGoodStore().set(lastGoodKey, { records, cachedAt: Date.now() });
-    return { records, source: 'database', degraded: false, alert: false };
+    const { records, total } = await getApprovalRecordsForRequest(filters.organizationId, cacheKey);
+    lastGoodStore().set(lastGoodKey, { records, total, cachedAt: Date.now() });
+    return { records, total, page: cacheParams.page, pageSize: cacheParams.pageSize, source: 'database', degraded: false, alert: false };
   } catch (error) {
     const reference = reportApprovalFailure(error, {
       action: 'approval_history_query',
@@ -300,6 +334,9 @@ export async function loadDashboardApprovalRecords(filters: ApprovalListFilters)
     if (lastGood && Date.now() - lastGood.cachedAt < STALE_CACHE_TTL_MS) {
       return {
         records: lastGood.records,
+        total: lastGood.total,
+        page: cacheParams.page,
+        pageSize: cacheParams.pageSize,
         source: 'cache',
         degraded: alert,
         alert,
@@ -313,6 +350,9 @@ export async function loadDashboardApprovalRecords(filters: ApprovalListFilters)
 
     return {
       records: [],
+      total: 0,
+      page: cacheParams.page,
+      pageSize: cacheParams.pageSize,
       source: 'empty',
       degraded: true,
       alert,
@@ -323,3 +363,93 @@ export async function loadDashboardApprovalRecords(filters: ApprovalListFilters)
     };
   }
 }
+
+// --- Status counts (KPI strip + status tabs) --------------------------------
+// Deliberately org-wide (tenant-scoped only, no search/filter applied) so the
+// KPI cards and status-tab counts read as stable totals - exactly like every
+// other enterprise approvals inbox - rather than jumping around as someone
+// types into the search box. Always respects tenant scoping; there is no
+// per-row visibility restriction on approvals beyond organizationId (see
+// lib/rbac.ts's ROUTE_PERMISSIONS, which does not gate '/dashboard/approvals'
+// or '/approvals' by role - every authenticated org member can view them).
+export type ApprovalStatusCounts = { total: number; approved: number; pending: number; rejected: number; highRisk: number };
+
+async function fetchApprovalStatusCountsFresh(organizationId: string): Promise<ApprovalStatusCounts> {
+  const [rows, highRisk] = await withTimeout(
+    'dashboard approval status counts',
+    Promise.all([
+      prisma.approvalRecord.groupBy({
+        by: ['status'],
+        where: { organizationId },
+        _count: { _all: true },
+      }),
+      prisma.approvalRecord.count({ where: { organizationId, riskLevel: { in: ['high', 'critical'] } } }),
+    ]),
+    APPROVAL_RECORDS_QUERY_TIMEOUT_MS,
+  );
+
+  const counts: ApprovalStatusCounts = { total: 0, approved: 0, pending: 0, rejected: 0, highRisk };
+  for (const row of rows) {
+    counts.total += row._count._all;
+    if (row.status === 'APPROVED') counts.approved = row._count._all;
+    else if (row.status === 'PENDING_REVIEW') counts.pending = row._count._all;
+    else if (row.status === 'REJECTED') counts.rejected = row._count._all;
+  }
+  return counts;
+}
+
+function getCachedApprovalStatusCountsFetcher(organizationId: string) {
+  return unstable_cache(
+    () => fetchApprovalStatusCountsFresh(organizationId),
+    ['approval-status-counts', organizationId],
+    { revalidate: APPROVAL_RECORDS_REVALIDATE_SECONDS, tags: [approvalRecordsCacheTag(organizationId)] },
+  );
+}
+
+/** Returns zeroed counts on failure rather than throwing - the KPI strip and
+ *  status tabs degrade to "0" instead of taking down the whole approvals page. */
+export const getApprovalStatusCounts = cache(async (organizationId: string): Promise<ApprovalStatusCounts> => {
+  try {
+    return await getCachedApprovalStatusCountsFetcher(organizationId)();
+  } catch (error) {
+    reportApprovalFailure(error, { action: 'approval_status_counts_query', organizationId });
+    return { total: 0, approved: 0, pending: 0, rejected: 0, highRisk: 0 };
+  }
+});
+
+// --- Department breakdown (right-rail widget) -------------------------------
+// Org-wide (not limited to the current page's 10 rows) so the breakdown stays
+// accurate regardless of pagination - one groupBy query, same caching
+// pattern as getApprovalStatusCounts above.
+async function fetchApprovalDepartmentBreakdownFresh(organizationId: string): Promise<Array<[string, number]>> {
+  const rows = await withTimeout(
+    'dashboard approval department breakdown',
+    prisma.approvalRecord.groupBy({
+      by: ['department'],
+      where: { organizationId },
+      _count: { _all: true },
+    }),
+    APPROVAL_RECORDS_QUERY_TIMEOUT_MS,
+  );
+  return rows
+    .map((row): [string, number] => [row.department ?? 'Unassigned', row._count._all])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+}
+
+function getCachedApprovalDepartmentBreakdownFetcher(organizationId: string) {
+  return unstable_cache(
+    () => fetchApprovalDepartmentBreakdownFresh(organizationId),
+    ['approval-department-breakdown', organizationId],
+    { revalidate: APPROVAL_RECORDS_REVALIDATE_SECONDS, tags: [approvalRecordsCacheTag(organizationId)] },
+  );
+}
+
+export const getApprovalDepartmentBreakdown = cache(async (organizationId: string): Promise<Array<[string, number]>> => {
+  try {
+    return await getCachedApprovalDepartmentBreakdownFetcher(organizationId)();
+  } catch (error) {
+    reportApprovalFailure(error, { action: 'approval_department_breakdown_query', organizationId });
+    return [];
+  }
+});

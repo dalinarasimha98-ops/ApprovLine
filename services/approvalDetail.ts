@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
 import { isConnectionPoolError } from '@/lib/prisma-errors';
 import { toDate } from '@/lib/types/dates';
+import { getUnifiedEvidenceIdForApproval } from '@/services/evidence/records';
 
 // --- Cache tag / invalidation ------------------------------------------
 // One tag per approval (not per organization, unlike approvalRecordsCacheTag)
@@ -448,3 +449,48 @@ export const getContextApprovals = cache(async (organizationId: string, approval
   const records = await getCachedContextApprovalsFetcher(approvalId, organizationId)();
   return records.map((r) => ({ ...r, createdAt: toDate(r.createdAt) }));
 });
+
+// --- Canonical viewer-facing detail composition -----------------------------
+// The single entry point every consumer of "one approval's full detail" is
+// meant to call - the full-page route (app/approvals/[id]/page.tsx) reads
+// getApprovalCore()/getApprovalManualBundle()/etc. directly for its own
+// independently-streamed Suspense boundaries (each tab renders and fails on
+// its own), but this composition uses those exact same cached fetchers, not
+// a second/parallel Prisma query. That is what keeps the approval-detail
+// drawer (components/approvals/ApprovalDetailDrawer.tsx, served by
+// app/api/approvals/[id]/detail/route.ts) and the full page from ever being
+// able to disagree about what a given approval ID resolves to - there is
+// only one tenant-scoped lookup (fetchCoreFresh's
+// `findFirst({ where: { id, organizationId } })`) backing both surfaces.
+//
+// Returns null when the approval does not exist OR does not belong to
+// organizationId - fetchCoreFresh's findFirst already folds "wrong tenant"
+// and "does not exist" into the same null result, so a cross-tenant lookup
+// is indistinguishable from a nonexistent one to every caller, exactly like
+// the full page's existing notFound() behavior.
+export type ApprovalDetailForViewer = {
+  core: ApprovalCore;
+  manualBundle: Awaited<ReturnType<typeof getApprovalManualBundle>> | null;
+  unifiedEvidenceId: string | null;
+  auditTrail: ApprovalAuditLog[];
+  related: Awaited<ReturnType<typeof getApprovalRelatedRecords>>;
+  complianceEvaluations: ApprovalComplianceEvaluationSummary[];
+};
+
+export async function getApprovalDetailForViewer(params: {
+  approvalId: string;
+  organizationId: string;
+}): Promise<ApprovalDetailForViewer | null> {
+  const core = await getApprovalCore(params.organizationId, params.approvalId);
+  if (!core) return null;
+
+  const [manualBundle, unifiedEvidenceId, auditTrail, related, complianceEvaluations] = await Promise.all([
+    core.manualDetail ? getApprovalManualBundle(params.organizationId, params.approvalId) : Promise.resolve(null),
+    getUnifiedEvidenceIdForApproval(params.organizationId, params.approvalId).catch(() => null),
+    getApprovalAuditTrail(params.organizationId, params.approvalId).catch(() => []),
+    getApprovalRelatedRecords(params.organizationId, params.approvalId, core.subject).catch(() => ({ investigations: [], memoryEntity: null })),
+    getApprovalComplianceEvaluations(params.organizationId, params.approvalId).catch(() => []),
+  ]);
+
+  return { core, manualBundle, unifiedEvidenceId, auditTrail, related, complianceEvaluations };
+}

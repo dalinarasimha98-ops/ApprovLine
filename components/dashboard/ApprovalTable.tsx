@@ -1,4 +1,8 @@
-import { PendingLink } from '@/components/system/PendingLink';
+'use client';
+
+import { useState, type MouseEvent } from 'react';
+import Link from 'next/link';
+import { ApprovalDetailDrawer } from '@/components/approvals/ApprovalDetailDrawer';
 
 export type ApprovalTableRecord = {
   id: string;
@@ -23,8 +27,18 @@ export type ApprovalTableRecord = {
   evidenceRecordId: string | null;
 };
 
-function riskClass(risk?: string | null) {
-  if (risk === 'high') return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+// riskLevel is the only priority-shaped signal ApprovalRecord actually
+// stores (see prisma/schema.prisma - there is no separate `priority` field).
+// The Priority column below is real data, just labeled to match the
+// reference design's terminology rather than fabricating a second concept.
+function priorityLabel(risk?: string | null) {
+  if (risk === 'critical' || risk === 'high') return 'High';
+  if (risk === 'medium') return 'Medium';
+  return 'Low';
+}
+
+function priorityClass(risk?: string | null) {
+  if (risk === 'critical' || risk === 'high') return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
   if (risk === 'medium') return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
   return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
 }
@@ -35,7 +49,17 @@ function statusClass(status: string) {
   return 'bg-emerald-500/10 text-emerald-400';
 }
 
+/** Opens the detail drawer on a plain click, but lets a modifier-click,
+ *  middle-click, or right-click fall through to the browser's normal link
+ *  behavior (new tab / new window) so keyboard and power-user navigation to
+ *  the full detail route (/approvals/[id]) keeps working untouched. */
+function isPlainLeftClick(event: MouseEvent) {
+  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+}
+
 export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] }) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   if (approvals.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-[#1E2D4A] bg-[#0E1830] p-10 text-center">
@@ -54,96 +78,98 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#1E2D4A] bg-[#0E1830]">
-      <div className="overflow-x-auto">
-        <table className="min-w-[1040px] w-full border-collapse text-left text-sm">
-          <thead className="bg-[#0a1524] text-xs uppercase tracking-wide text-[#6B7FA8]">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Decision</th>
-              <th className="px-4 py-3 font-semibold">Approver</th>
-              <th className="px-4 py-3 font-semibold">Department</th>
-              <th className="px-4 py-3 font-semibold">Category</th>
-              <th className="px-4 py-3 font-semibold">Risk</th>
-              <th className="px-4 py-3 font-semibold">Source</th>
-              <th className="px-4 py-3 font-semibold">Confidence</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 font-semibold">Date</th>
-              <th className="px-4 py-3 font-semibold">Evidence</th>
-              <th className="px-4 py-3 font-semibold">Details</th>
-              <th className="px-4 py-3 font-semibold">Unified Evidence</th>
-            </tr>
-          </thead>
-          <tbody>
-            {approvals.map((approval) => (
-              <tr key={approval.id} className="border-t border-[#1E2D4A] align-top transition hover:bg-[#152040]">
-                <td className="max-w-[300px] px-4 py-4">
-                  <details>
-                    <summary className="cursor-pointer list-none font-bold text-[#E8EEFF]">
-                      {approval.subject}
-                      {approval.sourceLink?.includes('demo') || approval.sourceLink?.includes('TDEMO') ? (
-                        <span className="ml-2 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-400">Demo</span>
-                      ) : null}
-                      <span className="ml-2 text-xs font-semibold text-violet-400">Details</span>
-                    </summary>
-                    <div className="mt-3 rounded-xl border border-[#1E2D4A] bg-[#0a1524] p-3 text-xs leading-5 text-[#6B7FA8]">
-                      <p><b className="text-[#E8EEFF]">Reasoning:</b> {approval.reasoning}</p>
-                      {approval.conditions ? <p className="mt-2"><b className="text-[#E8EEFF]">Conditions:</b> {approval.conditions}</p> : null}
-                      {approval.businessImpact ? <p className="mt-2"><b className="text-[#E8EEFF]">Business impact:</b> {approval.businessImpact}</p> : null}
-                      {approval.evidenceSnippet ? <p className="mt-2"><b className="text-[#E8EEFF]">Evidence:</b> &ldquo;{approval.evidenceSnippet}&rdquo;</p> : null}
-                    </div>
-                  </details>
-                </td>
-                <td className="px-4 py-3 text-[#A8BAD8]">
-                  {approval.approverName ?? 'Unknown'}
-                  {approval.approverEmail ? <div className="text-xs text-[#3D5070]">{approval.approverEmail}</div> : null}
-                </td>
-                <td className="px-4 py-3 text-[#A8BAD8]">{approval.department ?? 'Unassigned'}</td>
-                <td className="px-4 py-3 text-[#A8BAD8]">{approval.category ?? 'Unassigned'}</td>
-                <td className="px-4 py-3">
-                  <span className={`rounded-full border px-2.5 py-1 text-xs font-bold capitalize ${riskClass(approval.riskLevel)}`}>
-                    {approval.riskLevel ?? 'low'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-bold capitalize text-blue-400">
-                    {approval.sourcePlatform ?? 'unknown'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-1 font-mono text-xs font-bold text-violet-400 tabular-nums">
-                    {approval.confidence}%
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`rounded-full px-2 py-1 text-xs font-bold ${statusClass(approval.status)}`}>
-                    {approval.status.replaceAll('_', ' ')}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-[#3D5070] tabular-nums">{approval.createdAt.toLocaleDateString()}</td>
-                <td className="px-4 py-3">
-                  <PendingLink href={`/approvals/${approval.id}/source`} pendingText="Opening..." className="text-xs font-bold text-violet-400 hover:text-violet-300 hover:underline">
-                    Open source
-                  </PendingLink>
-                </td>
-                <td className="px-4 py-3">
-                  <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening..." className="text-xs font-bold text-violet-400 hover:text-violet-300 hover:underline">
-                    View Full Approval
-                  </PendingLink>
-                </td>
-                <td className="px-4 py-3">
-                  {approval.evidenceRecordId ? (
-                    <PendingLink href={`/evidence/${approval.evidenceRecordId}`} pendingText="Opening..." className="text-xs font-bold text-violet-400 hover:text-violet-300 hover:underline">
-                      View Evidence →
-                    </PendingLink>
-                  ) : (
-                    <span className="text-xs font-semibold text-[#3D5070]">Not correlated</span>
-                  )}
-                </td>
+    <>
+      <div className="overflow-hidden rounded-2xl border border-[#1E2D4A] bg-[#0E1830]">
+        <div className="overflow-x-auto">
+          <table className="min-w-[860px] w-full border-collapse text-left text-sm">
+            <thead className="bg-[#0a1524] text-xs uppercase tracking-wide text-[#6B7FA8]">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Approval</th>
+                <th className="px-4 py-3 font-semibold">Source</th>
+                <th className="px-4 py-3 font-semibold">Requested By</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Priority</th>
+                <th className="px-4 py-3 font-semibold">Date</th>
+                <th className="px-4 py-3 font-semibold">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {approvals.map((approval) => {
+                const subtitle = [approval.category, approval.department].filter(Boolean).join(' · ');
+                const isSelected = selectedId === approval.id;
+
+                const openDrawer = () => setSelectedId(approval.id);
+
+                return (
+                  <tr
+                    key={approval.id}
+                    onClick={(event) => {
+                      // Never treat a click on a nested interactive element (the
+                      // View link, or a future action) as a second, duplicate
+                      // "open drawer" trigger - the row click is a convenience
+                      // layered on top of that always-present accessible
+                      // control, never a replacement for it.
+                      if (event.target instanceof HTMLElement && event.target.closest('a, button')) return;
+                      if (isPlainLeftClick(event)) openDrawer();
+                    }}
+                    className={`cursor-pointer border-t border-[#1E2D4A] align-top transition hover:bg-[#152040] ${
+                      isSelected ? 'bg-[#152040] ring-1 ring-inset ring-violet-500/40' : ''
+                    }`}
+                  >
+                    <td className="max-w-[280px] px-4 py-4">
+                      <p className="font-bold text-[#E8EEFF]">
+                        {approval.subject}
+                        {approval.sourceLink?.includes('demo') || approval.sourceLink?.includes('TDEMO') ? (
+                          <span className="ml-2 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-400">Demo</span>
+                        ) : null}
+                      </p>
+                      {subtitle ? <p className="mt-0.5 truncate text-xs font-semibold text-[#6B7FA8]">{subtitle}</p> : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-bold capitalize text-blue-400">
+                        {approval.sourcePlatform ?? 'unknown'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-[#A8BAD8]">
+                      {approval.approverName ?? 'Unknown'}
+                      {approval.approverEmail ? <div className="text-xs text-[#3D5070]">{approval.approverEmail}</div> : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2 py-1 text-xs font-bold ${statusClass(approval.status)}`}>
+                        {approval.status.replaceAll('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${priorityClass(approval.riskLevel)}`}>
+                        {priorityLabel(approval.riskLevel)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-[#3D5070] tabular-nums">{approval.createdAt.toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/approvals/${approval.id}`}
+                        onClick={(event) => {
+                          if (isPlainLeftClick(event)) {
+                            event.preventDefault();
+                            openDrawer();
+                          }
+                          // Cmd/Ctrl/Shift/middle-click falls through and opens
+                          // the full approval detail route normally.
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-violet-400 hover:text-violet-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                      >
+                        View →
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      <ApprovalDetailDrawer approvalId={selectedId} onClose={() => setSelectedId(null)} />
+    </>
   );
 }

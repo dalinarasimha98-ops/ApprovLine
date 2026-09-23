@@ -4,7 +4,11 @@ import type { ApprovalTableRecord } from '@/components/dashboard/ApprovalTable';
 import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
-import { loadDashboardApprovalRecords } from '@/lib/approvalRecords';
+import {
+  loadDashboardApprovalRecords,
+  getApprovalStatusCounts,
+  getApprovalDepartmentBreakdown,
+} from '@/lib/approvalRecords';
 import { getUnifiedEvidenceIdsForApprovals } from '@/services/evidence/records';
 import { redirect } from 'next/navigation';
 
@@ -17,56 +21,120 @@ function minutesAgo(ms: number) {
 
 export const dynamic = 'force-dynamic';
 
-// ── Right-rail derivations ─────────────────────────────────────────────────────
-
-function deriveStats(approvals: ApprovalTableRecord[]) {
-  const total = approvals.length;
-  const approved = approvals.filter((a) => a.status === 'APPROVED').length;
-  const pending  = approvals.filter((a) => a.status === 'PENDING_REVIEW').length;
-  const rejected = approvals.filter((a) => a.status === 'REJECTED').length;
-  const highRisk = approvals.filter((a) =>
-    a.riskLevel === 'high' || a.riskLevel === 'critical',
-  ).length;
-  return { total, approved, pending, rejected, highRisk };
-}
-
-function deriveDepartments(approvals: ApprovalTableRecord[]) {
-  const map = new Map<string, number>();
-  for (const a of approvals) {
-    const dept = a.department ?? 'Unassigned';
-    map.set(dept, (map.get(dept) ?? 0) + 1);
-  }
-  return [...map.entries()].sort((x, y) => y[1] - x[1]).slice(0, 6);
-}
-
 // ── Dept bar colours cycling ───────────────────────────────────────────────────
 const DEPT_COLORS = [
   'bg-emerald-500', 'bg-violet-500', 'bg-blue-500',
   'bg-amber-500',   'bg-rose-500',   'bg-teal-500',
 ];
 
+const STATUS_TABS = [
+  { key: 'all', label: 'All' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'rejected', label: 'Rejected' },
+] as const;
+
+type StatusTabKey = (typeof STATUS_TABS)[number]['key'];
+
+function normalizeStatusTab(value: string | undefined): StatusTabKey {
+  if (value === 'pending' || value === 'approved' || value === 'rejected') return value;
+  return 'all';
+}
+
+// PENDING_REVIEW/APPROVED/REJECTED are the ApprovalStatus enum values the
+// query layer expects; the URL/tab vocabulary stays lowercase and readable.
+function statusTabToFilterValue(tab: StatusTabKey): string | undefined {
+  if (tab === 'pending') return 'PENDING_REVIEW';
+  if (tab === 'approved') return 'APPROVED';
+  if (tab === 'rejected') return 'REJECTED';
+  return undefined;
+}
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
+type RawSearchParams = Record<string, string | string[] | undefined>;
+
+function str(params: RawSearchParams, key: string): string | undefined {
+  const value = params[key];
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+/** Builds a query string for /dashboard/approvals that preserves every
+ *  existing filter/search/pageSize param, applying only the given overrides -
+ *  this is what keeps "change status tab", "change page", and "change page
+ *  size" all composable without losing whatever else the viewer has set. */
+function buildApprovalsHref(base: RawSearchParams, overrides: Record<string, string | number | undefined>) {
+  const merged: Record<string, string | undefined> = {
+    q: str(base, 'q'),
+    employee: str(base, 'employee'),
+    department: str(base, 'department'),
+    sourcePlatform: str(base, 'sourcePlatform'),
+    category: str(base, 'category'),
+    riskLevel: str(base, 'riskLevel'),
+    approvalType: str(base, 'approvalType'),
+    from: str(base, 'from'),
+    to: str(base, 'to'),
+    status: str(base, 'status'),
+    pageSize: str(base, 'pageSize'),
+    page: str(base, 'page'),
+  };
+  for (const [key, value] of Object.entries(overrides)) {
+    merged[key] = value === undefined ? undefined : String(value);
+  }
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(merged)) {
+    if (value) sp.set(key, value);
+  }
+  const qs = sp.toString();
+  return qs ? `/dashboard/approvals?${qs}` : '/dashboard/approvals';
+}
+
+/** A small, capped window of page numbers around the current page, always
+ *  including page 1 and the last page, with `null` marking an ellipsis gap -
+ *  avoids ever rendering hundreds of page links for a large approvals table. */
+function pageWindow(current: number, totalPages: number): Array<number | null> {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+  const pages = new Set<number>([1, totalPages, current, current - 1, current + 1, current - 2, current + 2]);
+  const sorted = [...pages].filter((p) => p >= 1 && p <= totalPages).sort((a, b) => a - b);
+  const result: Array<number | null> = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) result.push(null);
+    result.push(sorted[i]);
+  }
+  return result;
+}
+
 export default async function ApprovalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    q?: string;
-    employee?: string;
-    department?: string;
-    sourcePlatform?: string;
-    category?: string;
-    riskLevel?: string;
-    approvalType?: string;
-    from?: string;
-    to?: string;
-  }>;
+  searchParams: Promise<RawSearchParams>;
 }) {
   const startedAt = Date.now();
   console.info('[dashboard] approvals page start load');
   const tenant = await getDashboardTenant();
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
-  const filters = await searchParams;
+  const rawParams = await searchParams;
+
+  const statusTab = normalizeStatusTab(str(rawParams, 'status'));
+  const requestedPage = Math.max(1, Math.trunc(Number(str(rawParams, 'page')) || 1));
+  const requestedPageSize = Number(str(rawParams, 'pageSize'));
+  const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(requestedPageSize) ? requestedPageSize : 10;
+
+  const filters = {
+    q: str(rawParams, 'q'),
+    employee: str(rawParams, 'employee'),
+    department: str(rawParams, 'department'),
+    sourcePlatform: str(rawParams, 'sourcePlatform'),
+    category: str(rawParams, 'category'),
+    riskLevel: str(rawParams, 'riskLevel'),
+    approvalType: str(rawParams, 'approvalType'),
+    from: str(rawParams, 'from'),
+    to: str(rawParams, 'to'),
+  };
+
   let approvals: ApprovalTableRecord[] = [];
+  let total = 0;
   let loadError: string | null = null;
   let loadErrorReference: string | null = null;
   let cacheNotice: string | null = null;
@@ -79,11 +147,15 @@ export default async function ApprovalsPage({
     const result = await loadDashboardApprovalRecords({
       organizationId: tenant.organization.id,
       userId: tenant.session.userId,
+      status: statusTabToFilterValue(statusTab),
+      page: requestedPage,
+      pageSize,
       ...filters,
     });
 
     const evidenceIds = await getUnifiedEvidenceIdsForApprovals(tenant.organization.id, result.records.map((r) => r.id));
     approvals = result.records.map((r) => ({ ...r, evidenceRecordId: evidenceIds.get(r.id) ?? null }));
+    total = result.total;
     isAlert = result.alert;
     if (result.degraded && result.source === 'cache' && !result.alert && result.staleAsOfMs) {
       staleNotice = `Last updated ${minutesAgo(result.staleAsOfMs)}.`;
@@ -100,18 +172,28 @@ export default async function ApprovalsPage({
     console.error(`[dashboard] approvals query failed after ${Date.now() - startedAt}ms`, error);
   }
 
+  // Org-wide (never limited to the current page/filter) so the KPI strip and
+  // status-tab counts read as stable, trustworthy totals - see
+  // lib/approvalRecords.ts's getApprovalStatusCounts doc comment. Both
+  // degrade to zeroed/empty results rather than throwing.
+  const statusCounts = tenant.organization
+    ? await getApprovalStatusCounts(tenant.organization.id)
+    : { total: 0, approved: 0, pending: 0, rejected: 0, highRisk: 0 };
+  const departments = tenant.organization ? await getApprovalDepartmentBreakdown(tenant.organization.id) : [];
+
   const unlinkedOnPage = approvals.filter((a) => !a.evidenceRecordId).length;
-  const stats = deriveStats(approvals);
-  const departments = deriveDepartments(approvals);
   const maxDept = departments[0]?.[1] ?? 1;
-  const totalOnPage = approvals.length || 1;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const rangeStart = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(currentPage * pageSize, total);
 
   const kpis = [
-    { label: 'Total Approvals', value: stats.total,    icon: '◫',  color: 'violet' },
-    { label: 'Approved',        value: stats.approved, icon: '✓',  color: 'emerald' },
-    { label: 'Pending',         value: stats.pending,  icon: '◷',  color: 'amber' },
-    { label: 'Rejected',        value: stats.rejected, icon: '✕',  color: 'rose' },
-    { label: 'High Risk',       value: stats.highRisk, icon: '!',  color: 'blue' },
+    { label: 'Total Approvals', value: statusCounts.total,    icon: '◫',  color: 'violet' },
+    { label: 'Pending Review',  value: statusCounts.pending,  icon: '◷',  color: 'amber' },
+    { label: 'Approved',        value: statusCounts.approved, icon: '✓',  color: 'emerald' },
+    { label: 'Rejected',        value: statusCounts.rejected, icon: '✕',  color: 'rose' },
+    { label: 'High Risk',       value: statusCounts.highRisk, icon: '!',  color: 'blue' },
   ] as const;
 
   const iconBg: Record<string, string> = {
@@ -120,6 +202,13 @@ export default async function ApprovalsPage({
     amber:   'bg-amber-500/10 text-amber-400',
     rose:    'bg-rose-500/10 text-rose-400',
     blue:    'bg-blue-500/10 text-blue-400',
+  };
+
+  const tabCount: Record<StatusTabKey, number> = {
+    all: statusCounts.total,
+    pending: statusCounts.pending,
+    approved: statusCounts.approved,
+    rejected: statusCounts.rejected,
   };
 
   return (
@@ -136,7 +225,7 @@ export default async function ApprovalsPage({
               Approvals
             </h1>
             <p className="mt-1.5 max-w-2xl text-sm font-semibold leading-6 text-[#6B7FA8]">
-              Monitor, track, and manage all approvals across your organization.
+              All approval records, decisions, and related information.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -210,59 +299,113 @@ export default async function ApprovalsPage({
         </div>
       ) : null}
 
-      {/* ── Filter bar ───────────────────────────────────── */}
-      <form
-        id="filters"
-        className="scroll-mt-32 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4"
-      >
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-          {(
-            [
-              ['q',             'Search approvals'],
-              ['employee',      'Approver'],
-              ['department',    'Department'],
-              ['sourcePlatform','Source platform'],
-              ['category',      'Category'],
-              ['riskLevel',     'Risk level'],
-              ['approvalType',  'Approval type'],
-            ] as [string, string][]
-          ).map(([name, placeholder]) => (
-            <label key={name} className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
-                {placeholder}
-              </span>
-              <input
-                name={name}
-                placeholder={placeholder}
-                className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] placeholder:text-[#3D5070] outline-none focus:border-violet-500/60"
-              />
-            </label>
-          ))}
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">From</span>
-            <input
-              name="from"
-              type="date"
-              className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">To</span>
-            <input
-              name="to"
-              type="date"
-              className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
-            />
-          </label>
-          <div className="flex items-end">
-            <FormSubmitButton
+      {/* ── Status tabs ──────────────────────────────────── */}
+      <div className="flex flex-wrap gap-1.5 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-1.5">
+        {STATUS_TABS.map(({ key, label }) => {
+          const isActive = statusTab === key;
+          return (
+            <PendingLink
+              key={key}
+              href={buildApprovalsHref(rawParams, { status: key === 'all' ? undefined : key, page: 1 })}
               pendingText="Filtering…"
-              className="min-h-0 h-9 w-full rounded-lg bg-violet-600 px-4 text-sm font-bold text-white hover:bg-violet-500"
+              className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-bold transition ${
+                isActive
+                  ? 'bg-violet-600 text-white'
+                  : 'text-[#A8BAD8] hover:bg-[#152040]'
+              }`}
             >
-              Apply filters
+              {label}
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-black tabular-nums ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-[#152040] text-[#6B7FA8]'
+                }`}
+              >
+                {tabCount[key].toLocaleString()}
+              </span>
+            </PendingLink>
+          );
+        })}
+      </div>
+
+      {/* ── Search + filters ─────────────────────────────── */}
+      <form id="filters" className="scroll-mt-32 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+        <input type="hidden" name="status" value={statusTab === 'all' ? '' : statusTab} />
+        <input type="hidden" name="pageSize" value={pageSize} />
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
+            Search approvals, people, sources, or keywords
+          </span>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              name="q"
+              defaultValue={filters.q ?? ''}
+              placeholder="Search approvals, people, sources, or keywords…"
+              className="h-10 flex-1 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] placeholder:text-[#3D5070] outline-none focus:border-violet-500/60"
+            />
+            <FormSubmitButton
+              pendingText="Searching…"
+              className="min-h-0 h-10 rounded-lg bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500"
+            >
+              Search
             </FormSubmitButton>
           </div>
         </div>
+
+        <details className="mt-3 group">
+          <summary className="cursor-pointer list-none text-xs font-bold text-violet-400 hover:text-violet-300">
+            Filters ▾
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+            {(
+              [
+                ['employee',      'Approver'],
+                ['department',    'Department'],
+                ['sourcePlatform','Source platform'],
+                ['category',      'Category'],
+                ['riskLevel',     'Risk level'],
+                ['approvalType',  'Approval type'],
+              ] as [string, string][]
+            ).map(([name, placeholder]) => (
+              <label key={name} className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
+                  {placeholder}
+                </span>
+                <input
+                  name={name}
+                  defaultValue={filters[name as keyof typeof filters] ?? ''}
+                  placeholder={placeholder}
+                  className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] placeholder:text-[#3D5070] outline-none focus:border-violet-500/60"
+                />
+              </label>
+            ))}
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">From</span>
+              <input
+                name="from"
+                type="date"
+                defaultValue={filters.from ?? ''}
+                className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">To</span>
+              <input
+                name="to"
+                type="date"
+                defaultValue={filters.to ?? ''}
+                className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+              />
+            </label>
+            <div className="flex items-end">
+              <FormSubmitButton
+                pendingText="Filtering…"
+                className="min-h-0 h-9 w-full rounded-lg bg-violet-600 px-4 text-sm font-bold text-white hover:bg-violet-500"
+              >
+                Apply filters
+              </FormSubmitButton>
+            </div>
+          </div>
+        </details>
       </form>
 
       {/* ── Status / stale / error banners ───────────────── */}
@@ -300,11 +443,10 @@ export default async function ApprovalsPage({
       ) : null}
       {loadError ? (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5 text-amber-200">
-          <h3 className="font-bold">Unable to load approvals</h3>
+          <h3 className="font-bold">Approvals couldn&apos;t be loaded</h3>
           <p className="mt-1 text-sm">
-            The approval records query returned an error. Your dashboard shell is still available.
+            Try again or return to your dashboard. Your workspace shell is still available.
           </p>
-          <p className="mt-2 rounded-lg bg-black/20 p-2 text-xs font-semibold">{loadError}</p>
           {loadErrorReference ? (
             <p className="mt-2 text-xs font-bold opacity-60">Reference: {loadErrorReference}</p>
           ) : null}
@@ -322,13 +464,24 @@ export default async function ApprovalsPage({
       {!loadError && approvals.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#1E2D4A] bg-[#0E1830]/50 p-12 text-center">
           <p className="text-xs font-black uppercase tracking-widest text-violet-400">
-            No approval records
+            No approvals yet
           </p>
-          <h3 className="mt-3 text-xl font-black text-[#E8EEFF]">No approval records yet</h3>
+          <h3 className="mt-3 text-xl font-black text-[#E8EEFF]">
+            {statusTab === 'all' && !filters.q ? 'No approvals yet' : 'No approvals match these filters'}
+          </h3>
           <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-[#6B7FA8]">
-            Connect Slack or Gmail to start capturing approvals, or generate sample records for a quick demo.
+            {statusTab === 'all' && !filters.q
+              ? 'Approvals from your connected systems will appear here.'
+              : 'Try clearing filters or choosing a different status tab.'}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <PendingLink
+              href="/dashboard/settings/integrations"
+              pendingText="Opening…"
+              className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-bold text-white hover:bg-violet-500"
+            >
+              Connect a Source →
+            </PendingLink>
             <PendingLink
               href="/approvals/manual"
               pendingText="Opening recorder…"
@@ -336,14 +489,16 @@ export default async function ApprovalsPage({
             >
               Record manual approval
             </PendingLink>
-            <form action="/api/demo/seed" method="post">
-              <FormSubmitButton
-                pendingText="Generating…"
-                className="min-h-0 rounded-lg bg-violet-600 px-5 py-2 text-sm font-bold text-white hover:bg-violet-500"
-              >
-                Generate demo data
-              </FormSubmitButton>
-            </form>
+            {statusTab === 'all' && !filters.q ? (
+              <form action="/api/demo/seed" method="post">
+                <FormSubmitButton
+                  pendingText="Generating…"
+                  className="min-h-0 rounded-lg border border-[#1E2D4A] bg-[#152040] px-5 py-2 text-sm font-bold text-[#E8EEFF] hover:border-violet-500/40"
+                >
+                  Generate demo data
+                </FormSubmitButton>
+              </form>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -351,65 +506,129 @@ export default async function ApprovalsPage({
       {/* ── Main content: table + right rail ─────────────── */}
       {approvals.length > 0 ? (
         <div className="grid gap-3 xl:grid-cols-[1fr_260px]">
-          <ApprovalTable approvals={approvals} />
+          <div className="flex flex-col gap-3">
+            <ApprovalTable approvals={approvals} />
+
+            {/* Pagination */}
+            <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-4 py-3 sm:flex-row">
+              <p className="text-xs font-semibold text-[#6B7FA8]">
+                Showing {rangeStart.toLocaleString()}–{rangeEnd.toLocaleString()} of {total.toLocaleString()} approvals
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <PendingLink
+                  href={buildApprovalsHref(rawParams, { page: Math.max(1, currentPage - 1) })}
+                  pendingText="…"
+                  aria-disabled={currentPage <= 1}
+                  className={`inline-flex h-8 items-center rounded-lg border border-[#1E2D4A] px-3 text-xs font-bold ${
+                    currentPage <= 1 ? 'pointer-events-none opacity-40' : 'text-[#A8BAD8] hover:border-violet-500/40'
+                  }`}
+                >
+                  Previous
+                </PendingLink>
+                {pageWindow(currentPage, totalPages).map((p, idx) =>
+                  p === null ? (
+                    <span key={`gap-${idx}`} className="px-1 text-xs text-[#3D5070]">…</span>
+                  ) : (
+                    <PendingLink
+                      key={p}
+                      href={buildApprovalsHref(rawParams, { page: p })}
+                      pendingText="…"
+                      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-bold tabular-nums ${
+                        p === currentPage ? 'bg-violet-600 text-white' : 'text-[#A8BAD8] hover:bg-[#152040]'
+                      }`}
+                    >
+                      {p}
+                    </PendingLink>
+                  ),
+                )}
+                <PendingLink
+                  href={buildApprovalsHref(rawParams, { page: Math.min(totalPages, currentPage + 1) })}
+                  pendingText="…"
+                  aria-disabled={currentPage >= totalPages}
+                  className={`inline-flex h-8 items-center rounded-lg border border-[#1E2D4A] px-3 text-xs font-bold ${
+                    currentPage >= totalPages ? 'pointer-events-none opacity-40' : 'text-[#A8BAD8] hover:border-violet-500/40'
+                  }`}
+                >
+                  Next
+                </PendingLink>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#6B7FA8]">
+                <span>Per page:</span>
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <PendingLink
+                    key={size}
+                    href={buildApprovalsHref(rawParams, { pageSize: size, page: 1 })}
+                    pendingText="…"
+                    className={`inline-flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 font-bold tabular-nums ${
+                      size === pageSize ? 'bg-violet-600 text-white' : 'text-[#A8BAD8] hover:bg-[#152040]'
+                    }`}
+                  >
+                    {size}
+                  </PendingLink>
+                ))}
+              </div>
+            </div>
+          </div>
 
           {/* Right rail */}
           <div className="flex flex-col gap-3">
-            {/* Status donut */}
+            {/* Status donut (org-wide, matches KPI strip) */}
             <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
               <h3 className="mb-3 font-bold text-[#E8EEFF]">Approvals by Status</h3>
               <div className="flex items-center gap-4">
                 <div className="relative h-[80px] w-[80px] flex-shrink-0">
                   <svg width="80" height="80" viewBox="0 0 80 80">
                     <circle cx="40" cy="40" r="30" fill="none" stroke="#152040" strokeWidth="10" />
-                    {stats.approved > 0 ? (
+                    {statusCounts.approved > 0 ? (
                       <circle
                         cx="40" cy="40" r="30" fill="none" stroke="#22C55E" strokeWidth="10"
-                        strokeDasharray={`${(stats.approved / totalOnPage) * 188.4} 188.4`}
+                        strokeDasharray={`${(statusCounts.approved / (statusCounts.total || 1)) * 188.4} 188.4`}
                         strokeLinecap="round"
                         transform="rotate(-90 40 40)"
                       />
                     ) : null}
-                    {stats.pending > 0 ? (
+                    {statusCounts.pending > 0 ? (
                       <circle
                         cx="40" cy="40" r="30" fill="none" stroke="#F59E0B" strokeWidth="10"
-                        strokeDasharray={`${(stats.pending / totalOnPage) * 188.4} 188.4`}
+                        strokeDasharray={`${(statusCounts.pending / (statusCounts.total || 1)) * 188.4} 188.4`}
                         strokeLinecap="round"
-                        transform={`rotate(${-90 + (stats.approved / totalOnPage) * 360} 40 40)`}
+                        transform={`rotate(${-90 + (statusCounts.approved / (statusCounts.total || 1)) * 360} 40 40)`}
                       />
                     ) : null}
-                    {stats.rejected > 0 ? (
+                    {statusCounts.rejected > 0 ? (
                       <circle
                         cx="40" cy="40" r="30" fill="none" stroke="#EF4444" strokeWidth="10"
-                        strokeDasharray={`${(stats.rejected / totalOnPage) * 188.4} 188.4`}
+                        strokeDasharray={`${(statusCounts.rejected / (statusCounts.total || 1)) * 188.4} 188.4`}
                         strokeLinecap="round"
-                        transform={`rotate(${-90 + ((stats.approved + stats.pending) / totalOnPage) * 360} 40 40)`}
+                        transform={`rotate(${-90 + ((statusCounts.approved + statusCounts.pending) / (statusCounts.total || 1)) * 360} 40 40)`}
                       />
                     ) : null}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="font-mono text-lg font-black text-[#E8EEFF]">{stats.total}</span>
+                    <span className="font-mono text-lg font-black text-[#E8EEFF]">{statusCounts.total}</span>
                     <span className="text-[9px] text-[#6B7FA8]">Total</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
                   {[
-                    { label: 'Approved', count: stats.approved, pct: Math.round((stats.approved / totalOnPage) * 100), color: 'bg-emerald-400' },
-                    { label: 'Pending',  count: stats.pending,  pct: Math.round((stats.pending  / totalOnPage) * 100), color: 'bg-amber-400' },
-                    { label: 'Rejected', count: stats.rejected, pct: Math.round((stats.rejected / totalOnPage) * 100), color: 'bg-rose-400' },
-                  ].map(({ label, count, pct, color }) => (
+                    { label: 'Approved', count: statusCounts.approved, color: 'bg-emerald-400' },
+                    { label: 'Pending',  count: statusCounts.pending,  color: 'bg-amber-400' },
+                    { label: 'Rejected', count: statusCounts.rejected, color: 'bg-rose-400' },
+                  ].map(({ label, count, color }) => (
                     <div key={label} className="flex items-center gap-2">
                       <span className={`h-2 w-2 flex-shrink-0 rounded-full ${color}`} />
                       <span className="text-[11px] text-[#6B7FA8]">{label}</span>
                       <span className="ml-auto font-mono text-[11px] font-bold text-[#E8EEFF]">{count}</span>
-                      <span className="w-8 text-right text-[10px] text-[#3D5070]">({pct}%)</span>
+                      <span className="w-8 text-right text-[10px] text-[#3D5070]">
+                        ({Math.round((count / (statusCounts.total || 1)) * 100)}%)
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Department breakdown */}
+            {/* Department breakdown (org-wide) */}
             {departments.length > 0 ? (
               <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
                 <div className="mb-3 flex items-center justify-between">
@@ -431,7 +650,7 @@ export default async function ApprovalsPage({
                           <span className="flex-1 truncate text-[11px] font-medium text-[#E8EEFF]">{dept}</span>
                           <span className="font-mono text-[11px] text-[#6B7FA8]">{count}</span>
                           <span className="w-10 text-right text-[10px] text-[#3D5070]">
-                            ({Math.round((count / totalOnPage) * 100)}%)
+                            ({Math.round((count / (statusCounts.total || 1)) * 100)}%)
                           </span>
                         </div>
                         <div className="h-1 overflow-hidden rounded-full bg-[#152040]">

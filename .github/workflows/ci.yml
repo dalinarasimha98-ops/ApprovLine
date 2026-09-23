@@ -99,6 +99,18 @@ jobs:
         run: npm run test:approval-detail
       - name: Test — approval detail render (defensive null-relation regression)
         run: npm run test:approval-detail-render
+      - name: Test — approval detail drawer render (defensive optional-data regression)
+        run: npm run test:approval-detail-drawer
+      - name: Test — approvals redesign (canonical service, tenant isolation, no fake data)
+        run: npm run test:approvals-redesign
+      - name: Test — manual approvals
+        run: npm run test:manual-approvals
+      - name: Test — evidence platform
+        run: npm run test:evidence
+      - name: Test — approval records dashboard
+        run: npm run test:approval-records
+      - name: Test — Action Center
+        run: npm run test:action-center
       - name: Build
         run: npm run build
       - name: Dependency audit gate

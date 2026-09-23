@@ -18,8 +18,18 @@ assert.doesNotMatch(approvalsPage, /Approval records are taking longer than expe
 const approvalRecords = read('lib/approvalRecords.ts');
 assert.match(approvalRecords, /approvalRecordListSelect/);
 assert.match(approvalRecords, /satisfies Prisma\.ApprovalRecordSelect/);
-assert.match(approvalRecords, /take:\s*cacheParams\.limit/);
-assert.match(approvalRecords, /limit:\s*Math\.min\(filters\.limit \?\? 50, 100\)/);
+// Real pagination (not just a capped `take`): skip/take are derived from the
+// requested page/pageSize, and a matching count() always accompanies the
+// findMany so the UI can render an accurate "Showing X-Y of Z" and page list.
+assert.match(approvalRecords, /skip:\s*\(cacheParams\.page - 1\) \* cacheParams\.pageSize/);
+assert.match(approvalRecords, /take:\s*cacheParams\.pageSize/);
+assert.match(approvalRecords, /prisma\.approvalRecord\.count\(\{ where \}\)/);
+assert.match(approvalRecords, /const pageSize = Math\.min\(Math\.max\(1, filters\.pageSize \?\? filters\.limit \?\? DEFAULT_PAGE_SIZE\), MAX_PAGE_SIZE\)/);
+// Status filtering (the "All / Pending / Approved / Rejected" tabs) is a real,
+// server-side where() clause, not a client-side filter over a fixed page.
+assert.match(approvalRecords, /status:\s*status as Prisma\.EnumApprovalStatusFilter\['equals'\]/);
+assert.match(approvalRecords, /export const getApprovalStatusCounts/);
+assert.match(approvalRecords, /export const getApprovalDepartmentBreakdown/);
 assert.match(approvalRecords, /unstable_cache/);
 assert.match(approvalRecords, /from 'react'/);
 assert.match(approvalRecords, /APPROVAL_RECORDS_REVALIDATE_SECONDS = 60/);
