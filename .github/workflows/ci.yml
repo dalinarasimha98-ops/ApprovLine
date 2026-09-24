@@ -99,8 +99,10 @@ jobs:
         run: npm run test:approval-detail
       - name: Test — approval detail render (defensive null-relation regression)
         run: npm run test:approval-detail-render
-      - name: Test — approval detail drawer render (defensive optional-data regression)
-        run: npm run test:approval-detail-drawer
+      - name: Test — approval preview panel render (no-fetch, defensive optional-data regression)
+        run: npm run test:approval-preview-panel
+      - name: Test — approvals list corrections (risk ramp, amount extraction)
+        run: npm run test:approvals-list-corrections
       - name: Test — approvals redesign (canonical service, tenant isolation, no fake data)
         run: npm run test:approvals-redesign
       - name: Test — manual approvals

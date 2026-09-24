@@ -8,15 +8,24 @@ const pkg = JSON.parse(read('package.json'));
 assert.equal(pkg.scripts['test:approval-detail'], 'node --import tsx tests/approval-detail.test.ts');
 
 // ── "View Full Approval" link generation ────────────────────────────────────
-// Root-cause audit: the table row's link, the canonical route, and the
-// tenant-scoped data loader were all traced end-to-end. The link itself was
-// already correct (real ApprovalRecord.id, canonical /approvals/[id] route);
-// the real defect found was in the data loader's caching layer (below).
+// Root-cause audit: the row's route to the full record, the canonical route,
+// and the tenant-scoped data loader were all traced end-to-end. The link
+// itself was already correct (real ApprovalRecord.id, canonical
+// /approvals/[id] route); the real defect found was in the data loader's
+// caching layer (below).
+//
+// This navigation now lives on the instant preview panel opened from the
+// row (components/approvals/ApprovalPreviewPanel.tsx), not on the row
+// itself - the row opens the panel; the panel's "Open full record"/"View
+// this approval record on its own" links carry the real approval.id through
+// to the canonical /approvals/[id] route, exactly like the old direct row
+// link did.
+
+const approvalPreviewPanel = read('components/approvals/ApprovalPreviewPanel.tsx');
+assert.match(approvalPreviewPanel, /`\/approvals\/\$\{approval\.id\}`/);
+assert.doesNotMatch(approvalPreviewPanel, /`\/approvals\/\$\{approval\.(sourceLink|sourcePlatform)/);
 
 const approvalTable = read('components/dashboard/ApprovalTable.tsx');
-assert.match(approvalTable, /href=\{`\/approvals\/\$\{approval\.id\}`\}/);
-assert.doesNotMatch(approvalTable, /href=\{`\/approvals\/\$\{approval\.(sourceLink|evidenceRecordId|sourcePlatform)/);
-
 const approvalTableRecordIdField = approvalTable.match(/export type ApprovalTableRecord = \{[\s\S]*?\n\};/)?.[0] ?? '';
 assert.match(approvalTableRecordIdField, /id: string;/);
 

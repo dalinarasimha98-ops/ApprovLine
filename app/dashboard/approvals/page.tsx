@@ -2,6 +2,7 @@ import { getDashboardTenant } from '@/lib/auth';
 import { ApprovalTable } from '@/components/dashboard/ApprovalTable';
 import type { ApprovalTableRecord } from '@/components/dashboard/ApprovalTable';
 import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
+import { LiveCaptureBadge } from '@/components/dashboard/DashboardNavigation';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import {
@@ -9,7 +10,8 @@ import {
   getApprovalStatusCounts,
   getApprovalDepartmentBreakdown,
 } from '@/lib/approvalRecords';
-import { getUnifiedEvidenceIdsForApprovals } from '@/services/evidence/records';
+import { getCaptureStatus } from '@/lib/capture-status';
+import { getUnifiedSourceSummariesForApprovals } from '@/services/evidence/records';
 import { redirect } from 'next/navigation';
 
 function minutesAgo(ms: number) {
@@ -27,27 +29,40 @@ const DEPT_COLORS = [
   'bg-amber-500',   'bg-rose-500',   'bg-teal-500',
 ];
 
-const STATUS_TABS = [
+// The five quick filter chips above the table. Each writes straight to the
+// URL (riskLevel/status/multiSource - the same params the advanced filter
+// panel already uses), so the server component re-runs the real query -
+// there is no client-side filtering of an already-loaded page anywhere in
+// this file. "Approved"/"Rejected" stay reachable through the advanced
+// filter panel's Status field below rather than as a top-level chip, since
+// the chip row's job is the risk/multi-source taxonomy this redesign asked
+// for, not a second copy of every status value.
+const FILTER_CHIPS = [
   { key: 'all', label: 'All' },
+  { key: 'critical', label: 'Critical' },
+  { key: 'high', label: 'High' },
   { key: 'pending', label: 'Pending' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'rejected', label: 'Rejected' },
+  { key: 'multi-source', label: 'Multi-source' },
 ] as const;
 
-type StatusTabKey = (typeof STATUS_TABS)[number]['key'];
+type FilterChipKey = (typeof FILTER_CHIPS)[number]['key'];
 
-function normalizeStatusTab(value: string | undefined): StatusTabKey {
-  if (value === 'pending' || value === 'approved' || value === 'rejected') return value;
+function normalizeFilterChip(params: RawSearchParams): FilterChipKey {
+  if (str(params, 'multiSource') === 'true') return 'multi-source';
+  const riskLevel = str(params, 'riskLevel')?.toLowerCase();
+  if (riskLevel === 'critical') return 'critical';
+  if (riskLevel === 'high') return 'high';
+  if (str(params, 'status')?.toUpperCase() === 'PENDING_REVIEW') return 'pending';
   return 'all';
 }
 
-// PENDING_REVIEW/APPROVED/REJECTED are the ApprovalStatus enum values the
-// query layer expects; the URL/tab vocabulary stays lowercase and readable.
-function statusTabToFilterValue(tab: StatusTabKey): string | undefined {
-  if (tab === 'pending') return 'PENDING_REVIEW';
-  if (tab === 'approved') return 'APPROVED';
-  if (tab === 'rejected') return 'REJECTED';
-  return undefined;
+function filterChipOverrides(chip: FilterChipKey): Record<string, string | number | undefined> {
+  const cleared = { riskLevel: undefined, status: undefined, multiSource: undefined, page: 1 };
+  if (chip === 'critical') return { ...cleared, riskLevel: 'critical' };
+  if (chip === 'high') return { ...cleared, riskLevel: 'high' };
+  if (chip === 'pending') return { ...cleared, status: 'PENDING_REVIEW' };
+  if (chip === 'multi-source') return { ...cleared, multiSource: 'true' };
+  return cleared;
 }
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
@@ -75,6 +90,7 @@ function buildApprovalsHref(base: RawSearchParams, overrides: Record<string, str
     from: str(base, 'from'),
     to: str(base, 'to'),
     status: str(base, 'status'),
+    multiSource: str(base, 'multiSource'),
     pageSize: str(base, 'pageSize'),
     page: str(base, 'page'),
   };
@@ -116,7 +132,7 @@ export default async function ApprovalsPage({
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   const rawParams = await searchParams;
 
-  const statusTab = normalizeStatusTab(str(rawParams, 'status'));
+  const activeChip = normalizeFilterChip(rawParams);
   const requestedPage = Math.max(1, Math.trunc(Number(str(rawParams, 'page')) || 1));
   const requestedPageSize = Number(str(rawParams, 'pageSize'));
   const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(requestedPageSize) ? requestedPageSize : 10;
@@ -129,6 +145,8 @@ export default async function ApprovalsPage({
     category: str(rawParams, 'category'),
     riskLevel: str(rawParams, 'riskLevel'),
     approvalType: str(rawParams, 'approvalType'),
+    status: str(rawParams, 'status'),
+    multiSource: str(rawParams, 'multiSource') === 'true',
     from: str(rawParams, 'from'),
     to: str(rawParams, 'to'),
   };
@@ -147,14 +165,18 @@ export default async function ApprovalsPage({
     const result = await loadDashboardApprovalRecords({
       organizationId: tenant.organization.id,
       userId: tenant.session.userId,
-      status: statusTabToFilterValue(statusTab),
       page: requestedPage,
       pageSize,
       ...filters,
     });
 
-    const evidenceIds = await getUnifiedEvidenceIdsForApprovals(tenant.organization.id, result.records.map((r) => r.id));
-    approvals = result.records.map((r) => ({ ...r, evidenceRecordId: evidenceIds.get(r.id) ?? null }));
+    // The one query that feeds both this row's stacked source badges and its
+    // preview panel's source list (services/evidence/records.ts) - so the
+    // two can never again disagree about how many tools contributed to a
+    // decision the way ApprovalRecord.sourcePlatform (a single string) used
+    // to force them to.
+    const sourceSummaries = await getUnifiedSourceSummariesForApprovals(tenant.organization.id, result.records.map((r) => r.id));
+    approvals = result.records.map((r) => ({ ...r, sources: sourceSummaries.get(r.id) ?? null }));
     total = result.total;
     isAlert = result.alert;
     if (result.degraded && result.source === 'cache' && !result.alert && result.staleAsOfMs) {
@@ -173,42 +195,38 @@ export default async function ApprovalsPage({
   }
 
   // Org-wide (never limited to the current page/filter) so the KPI strip and
-  // status-tab counts read as stable, trustworthy totals - see
+  // filter-chip counts read as stable, trustworthy totals - see
   // lib/approvalRecords.ts's getApprovalStatusCounts doc comment. Both
   // degrade to zeroed/empty results rather than throwing.
   const statusCounts = tenant.organization
     ? await getApprovalStatusCounts(tenant.organization.id)
-    : { total: 0, approved: 0, pending: 0, rejected: 0, highRisk: 0 };
+    : { total: 0, approved: 0, pending: 0, rejected: 0, highRisk: 0, critical: 0, high: 0, multiSource: 0 };
   const departments = tenant.organization ? await getApprovalDepartmentBreakdown(tenant.organization.id) : [];
+  const captureStatus = tenant.organization ? await getCaptureStatus(tenant.organization.id) : { state: 'none' as const, label: 'No sources connected' };
 
-  const unlinkedOnPage = approvals.filter((a) => !a.evidenceRecordId).length;
+  const unlinkedOnPage = approvals.filter((a) => !a.sources).length;
   const maxDept = departments[0]?.[1] ?? 1;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(requestedPage, totalPages);
   const rangeStart = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const rangeEnd = Math.min(currentPage * pageSize, total);
 
-  const kpis = [
-    { label: 'Total Approvals', value: statusCounts.total,    icon: '◫',  color: 'violet' },
-    { label: 'Pending Review',  value: statusCounts.pending,  icon: '◷',  color: 'amber' },
-    { label: 'Approved',        value: statusCounts.approved, icon: '✓',  color: 'emerald' },
-    { label: 'Rejected',        value: statusCounts.rejected, icon: '✕',  color: 'rose' },
-    { label: 'High Risk',       value: statusCounts.highRisk, icon: '!',  color: 'blue' },
+  // Plain tiles - no card shadow, no icons. Only Pending and High-or-critical
+  // take ink from the risk ramp (lib/risk-ramp.ts); Total and Approved stay
+  // neutral, since they aren't risk signals.
+  const tiles = [
+    { label: 'Total',            value: statusCounts.total,    ink: 'text-[#E8EEFF]' },
+    { label: 'Approved',         value: statusCounts.approved, ink: 'text-[#E8EEFF]' },
+    { label: 'Pending review',   value: statusCounts.pending,  ink: 'text-amber-400' },
+    { label: 'High or critical', value: statusCounts.highRisk, ink: 'text-red-400' },
   ] as const;
 
-  const iconBg: Record<string, string> = {
-    violet:  'bg-violet-500/10 text-violet-400',
-    emerald: 'bg-emerald-500/10 text-emerald-400',
-    amber:   'bg-amber-500/10 text-amber-400',
-    rose:    'bg-rose-500/10 text-rose-400',
-    blue:    'bg-blue-500/10 text-blue-400',
-  };
-
-  const tabCount: Record<StatusTabKey, number> = {
+  const chipCount: Record<FilterChipKey, number> = {
     all: statusCounts.total,
+    critical: statusCounts.critical,
+    high: statusCounts.high,
     pending: statusCounts.pending,
-    approved: statusCounts.approved,
-    rejected: statusCounts.rejected,
+    'multi-source': statusCounts.multiSource,
   };
 
   return (
@@ -221,11 +239,14 @@ export default async function ApprovalsPage({
         </p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-[#E8EEFF] sm:text-3xl">
-              Approvals
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-black tracking-tight text-[#E8EEFF] sm:text-3xl">
+                Approval History
+              </h1>
+              <LiveCaptureBadge status={captureStatus} />
+            </div>
             <p className="mt-1.5 max-w-2xl text-sm font-semibold leading-6 text-[#6B7FA8]">
-              All approval records, decisions, and related information.
+              Every approval decision, with the sources that captured it.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -254,24 +275,14 @@ export default async function ApprovalsPage({
         </div>
       </div>
 
-      {/* ── KPI strip ────────────────────────────────────── */}
-      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
-        {kpis.map((kpi) => (
-          <div
-            key={kpi.label}
-            className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4 transition hover:border-violet-500/30"
-          >
-            <div className="flex items-start gap-3">
-              <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold ${iconBg[kpi.color]}`}>
-                {kpi.icon}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-[#6B7FA8]">{kpi.label}</p>
-                <p className="mt-0.5 font-mono text-2xl font-black tracking-tight text-[#E8EEFF]">
-                  {kpi.value.toLocaleString()}
-                </p>
-              </div>
-            </div>
+      {/* ── Stat tiles ───────────────────────────────────── */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {tiles.map((tile) => (
+          <div key={tile.label} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+            <p className="text-[11px] font-semibold text-[#6B7FA8]">{tile.label}</p>
+            <p className={`mt-0.5 font-mono text-2xl font-black tracking-tight ${tile.ink}`}>
+              {tile.value.toLocaleString()}
+            </p>
           </div>
         ))}
       </div>
@@ -299,14 +310,14 @@ export default async function ApprovalsPage({
         </div>
       ) : null}
 
-      {/* ── Status tabs ──────────────────────────────────── */}
+      {/* ── Filter chips ─────────────────────────────────── */}
       <div className="flex flex-wrap gap-1.5 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-1.5">
-        {STATUS_TABS.map(({ key, label }) => {
-          const isActive = statusTab === key;
+        {FILTER_CHIPS.map(({ key, label }) => {
+          const isActive = activeChip === key;
           return (
             <PendingLink
               key={key}
-              href={buildApprovalsHref(rawParams, { status: key === 'all' ? undefined : key, page: 1 })}
+              href={buildApprovalsHref(rawParams, filterChipOverrides(key))}
               pendingText="Filtering…"
               className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-bold transition ${
                 isActive
@@ -320,7 +331,7 @@ export default async function ApprovalsPage({
                   isActive ? 'bg-white/20 text-white' : 'bg-[#152040] text-[#6B7FA8]'
                 }`}
               >
-                {tabCount[key].toLocaleString()}
+                {chipCount[key].toLocaleString()}
               </span>
             </PendingLink>
           );
@@ -329,7 +340,7 @@ export default async function ApprovalsPage({
 
       {/* ── Search + filters ─────────────────────────────── */}
       <form id="filters" className="scroll-mt-32 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
-        <input type="hidden" name="status" value={statusTab === 'all' ? '' : statusTab} />
+        <input type="hidden" name="multiSource" value={filters.multiSource ? 'true' : ''} />
         <input type="hidden" name="pageSize" value={pageSize} />
         <div className="flex flex-col gap-2">
           <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
@@ -364,7 +375,7 @@ export default async function ApprovalsPage({
                 ['category',      'Category'],
                 ['riskLevel',     'Risk level'],
                 ['approvalType',  'Approval type'],
-              ] as [string, string][]
+              ] as ['employee' | 'department' | 'sourcePlatform' | 'category' | 'riskLevel' | 'approvalType', string][]
             ).map(([name, placeholder]) => (
               <label key={name} className="flex flex-col gap-1.5">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
@@ -372,12 +383,25 @@ export default async function ApprovalsPage({
                 </span>
                 <input
                   name={name}
-                  defaultValue={filters[name as keyof typeof filters] ?? ''}
+                  defaultValue={filters[name] ?? ''}
                   placeholder={placeholder}
                   className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] placeholder:text-[#3D5070] outline-none focus:border-violet-500/60"
                 />
               </label>
             ))}
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">Status</span>
+              <select
+                name="status"
+                defaultValue={filters.status ?? ''}
+                className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+              >
+                <option value="">All statuses</option>
+                <option value="PENDING_REVIEW">Pending review</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">From</span>
               <input
@@ -467,12 +491,12 @@ export default async function ApprovalsPage({
             No approvals yet
           </p>
           <h3 className="mt-3 text-xl font-black text-[#E8EEFF]">
-            {statusTab === 'all' && !filters.q ? 'No approvals yet' : 'No approvals match these filters'}
+            {activeChip === 'all' && !filters.q ? 'No approvals yet' : 'No approvals match these filters'}
           </h3>
           <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-[#6B7FA8]">
-            {statusTab === 'all' && !filters.q
+            {activeChip === 'all' && !filters.q
               ? 'Approvals from your connected systems will appear here.'
-              : 'Try clearing filters or choosing a different status tab.'}
+              : 'Try clearing filters or choosing a different filter chip.'}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <PendingLink
@@ -489,7 +513,7 @@ export default async function ApprovalsPage({
             >
               Record manual approval
             </PendingLink>
-            {statusTab === 'all' && !filters.q ? (
+            {activeChip === 'all' && !filters.q ? (
               <form action="/api/demo/seed" method="post">
                 <FormSubmitButton
                   pendingText="Generating…"

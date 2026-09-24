@@ -14,6 +14,7 @@ import {
 import { getDashboardTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { planDisplayName } from '@/lib/plans';
+import { getCaptureStatus } from '@/lib/capture-status';
 
 async function getWorkspacePlan(organizationId: string) {
   try {
@@ -55,6 +56,9 @@ export async function DashboardShell({
   const plan = tenant?.organization?.id
     ? await getWorkspacePlan(tenant.organization.id).catch(() => null)
     : null;
+  const captureStatus = tenant?.organization?.id
+    ? await getCaptureStatus(tenant.organization.id)
+    : ({ state: 'none', label: 'No sources connected' } as const);
   return (
     <div className="min-h-screen bg-[#030b18] text-slate-100">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-white/[0.08] bg-[#020916] p-3 text-white lg:flex">
@@ -98,7 +102,7 @@ export async function DashboardShell({
             </div>
             <DashboardSearch />
             <div className="flex items-center gap-2">
-              <LiveCaptureBadge />
+              <LiveCaptureBadge status={captureStatus} />
               <DashboardUtilityLinks />
               {hasClerk ? <UserButton /> : <div className="text-sm font-semibold text-slate-500">Local build</div>}
             </div>

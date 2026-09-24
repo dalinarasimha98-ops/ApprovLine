@@ -431,6 +431,101 @@ export async function getUnifiedEvidenceIdsForApprovals(organizationId: string, 
   }
 }
 
+export type ApprovalSourceSummary = {
+  unifiedEvidenceId: string;
+  sourceCount: number;
+  /** Real per-provider entry counts, sorted by count desc, from a sample of
+   *  up to 50 correlated events - see the function doc comment below for
+   *  why this is a disclosed sample rather than an exhaustive count. */
+  providers: Array<{ key: string; count: number }>;
+  amount: number | null;
+  currency: string | null;
+};
+
+/**
+ * The single source of truth for "how many tools contributed to this
+ * decision" - feeds both the approvals list row (stacked source initials)
+ * and its instant preview panel, from the exact same query, so the two can
+ * never disagree about a source count again (they previously could: the row
+ * read ApprovalRecord.sourcePlatform, one string, while anything showing a
+ * correlated count read UnifiedEvidenceRecord separately).
+ *
+ * `providers` carries real per-provider entry counts (not just which
+ * providers contributed), computed from a sample of up to 50 of the
+ * correlated UnifiedEvidenceRecord's events - large enough that no real
+ * decision in this product today has more correlated events than that, so
+ * in practice these counts are exact, not estimated; the cap exists so a
+ * pathological future record can't turn this into an unbounded fetch.
+ * `sourceCount` is the separate, stored, always-authoritative total on
+ * UnifiedEvidenceRecord itself, independent of this sample.
+ *
+ * `amount`/`currency` are real, stored fields on UnifiedEvidenceRecord
+ * (never present on ApprovalRecord itself) - callers fall back to parsing a
+ * dollar amount out of the approval's own subject text
+ * (lib/amount-extraction.ts) only when no entry exists here.
+ *
+ * Approvals with no correlated UnifiedEvidenceRecord are simply absent from
+ * the returned map - same "missing means none, not an error" contract as
+ * getUnifiedEvidenceIdsForApprovals above. Degrades to an empty map on any
+ * failure rather than breaking the list page.
+ */
+export async function getUnifiedSourceSummariesForApprovals(
+  organizationId: string,
+  approvalIds: string[],
+): Promise<Map<string, ApprovalSourceSummary>> {
+  if (approvalIds.length === 0 || isEvidenceListBreakerOpen()) return new Map();
+
+  const attempt = () =>
+    withTimeout(
+      'evidence:sourceSummariesForApprovals',
+      prisma.unifiedEvidenceRecord.findMany({
+        where: { organizationId, primaryApprovalId: { in: approvalIds } },
+        select: {
+          id: true,
+          primaryApprovalId: true,
+          sourceCount: true,
+          amount: true,
+          currency: true,
+          events: { select: { providerKey: true }, take: 50 },
+        },
+      }),
+      EVIDENCE_LIST_QUERY_TIMEOUT_MS,
+    );
+
+  try {
+    const records = await attempt().catch(async (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isConnectionPoolError(message) && !message.includes('timed out')) throw error;
+      await sleep(300);
+      return attempt();
+    });
+    recordEvidenceListSuccess();
+    const map = new Map<string, ApprovalSourceSummary>();
+    for (const record of records) {
+      if (!record.primaryApprovalId) continue;
+      const counts = new Map<string, number>();
+      for (const event of record.events) counts.set(event.providerKey, (counts.get(event.providerKey) ?? 0) + 1);
+      const providers = [...counts.entries()]
+        .map(([key, count]) => ({ key, count }))
+        .sort((a, b) => b.count - a.count);
+      map.set(record.primaryApprovalId, {
+        unifiedEvidenceId: record.id,
+        sourceCount: record.sourceCount,
+        providers,
+        amount: record.amount ? Number(record.amount) : null,
+        currency: record.currency,
+      });
+    }
+    return map;
+  } catch (error) {
+    if (!isMigrationError(error instanceof Error ? error.message : String(error))) {
+      recordEvidenceListFailure();
+    }
+    console.error('[evidence] source-summaries-for-approvals lookup failed, falling back to single-source display', error);
+    return new Map();
+  }
+}
+
 // --- Detail-page stale fallback (Tier-2 "last known good") -----------------
 // unstable_cache only memoizes successful returns of its own wrapped
 // function - it has no "serve the last successful value even though this

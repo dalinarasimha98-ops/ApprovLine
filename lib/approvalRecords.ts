@@ -7,14 +7,19 @@ import { withTimeout } from '@/lib/performance';
 import { prisma } from '@/lib/prisma';
 import { toDate } from '@/lib/types/dates';
 
+// Deliberately narrow: this is the query that made /dashboard/approvals
+// time out. reasoning, conditions, businessImpact, and evidenceSnippet are
+// each free-text fields that only the opened record (the full-page detail
+// view) ever renders - selecting them for every row on every page load,
+// whether or not that row is ever clicked, is real over-fetching, not a
+// hypothetical one. sourceLink is kept only because it drives the existing
+// "Demo" badge check; nothing here duplicates what
+// services/approvalDetail.ts's approvalCoreSelect fetches for the opened
+// record.
 export const approvalRecordListSelect = {
   id: true,
   subject: true,
   sourceLink: true,
-  reasoning: true,
-  conditions: true,
-  businessImpact: true,
-  evidenceSnippet: true,
   approverName: true,
   approverEmail: true,
   department: true,
@@ -43,6 +48,9 @@ export type ApprovalListFilters = {
   approvalType?: string;
   /** 'all' (or omitted) means no status filter; otherwise an ApprovalStatus value. */
   status?: string;
+  /** True restricts to approvals whose correlated UnifiedEvidenceRecord has
+   *  more than one contributing source - the "Multi-source" filter chip. */
+  multiSource?: boolean;
   from?: string;
   to?: string;
   limit?: number;
@@ -62,6 +70,7 @@ type ApprovalRecordsCacheParams = {
   riskLevel: string;
   approvalType: string;
   status: string;
+  multiSource: boolean;
   from: string;
   to: string;
   page: number;
@@ -84,6 +93,7 @@ function normalizeFiltersForCache(filters: ApprovalListFilters): ApprovalRecords
     riskLevel: filters.riskLevel?.trim().toLowerCase() ?? '',
     approvalType: filters.approvalType?.trim().toUpperCase() ?? '',
     status: filters.status && filters.status.toLowerCase() !== 'all' ? filters.status.trim().toUpperCase() : '',
+    multiSource: Boolean(filters.multiSource),
     from: filters.from ?? '',
     to: filters.to ?? '',
     page,
@@ -112,6 +122,9 @@ export function buildApprovalRecordsWhere(
     ...(filters.riskLevel ? { riskLevel: filters.riskLevel.toLowerCase() } : {}),
     ...(filters.approvalType ? { approvalType: filters.approvalType.toUpperCase() as Prisma.EnumApprovalTypeFilter['equals'] } : {}),
     ...(status ? { status: status as Prisma.EnumApprovalStatusFilter['equals'] } : {}),
+    ...('multiSource' in filters && filters.multiSource
+      ? { unifiedEvidenceRecords: { some: { sourceCount: { gt: 1 } } } }
+      : {}),
     ...(filters.from || filters.to ? { occurredAt } : {}),
     ...(q
       ? {
@@ -372,10 +385,23 @@ export async function loadDashboardApprovalRecords(filters: ApprovalListFilters)
 // per-row visibility restriction on approvals beyond organizationId (see
 // lib/rbac.ts's ROUTE_PERMISSIONS, which does not gate '/dashboard/approvals'
 // or '/approvals' by role - every authenticated org member can view them).
-export type ApprovalStatusCounts = { total: number; approved: number; pending: number; rejected: number; highRisk: number };
+export type ApprovalStatusCounts = {
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  /** riskLevel in (high, critical) combined - the "High or critical" KPI tile. */
+  highRisk: number;
+  /** riskLevel = critical only - the "Critical" filter chip. */
+  critical: number;
+  /** riskLevel = high only - the "High" filter chip. */
+  high: number;
+  /** Has a correlated UnifiedEvidenceRecord with more than one source - the "Multi-source" filter chip. */
+  multiSource: number;
+};
 
 async function fetchApprovalStatusCountsFresh(organizationId: string): Promise<ApprovalStatusCounts> {
-  const [rows, highRisk] = await withTimeout(
+  const [statusRows, riskRows, multiSource] = await withTimeout(
     'dashboard approval status counts',
     Promise.all([
       prisma.approvalRecord.groupBy({
@@ -383,18 +409,33 @@ async function fetchApprovalStatusCountsFresh(organizationId: string): Promise<A
         where: { organizationId },
         _count: { _all: true },
       }),
-      prisma.approvalRecord.count({ where: { organizationId, riskLevel: { in: ['high', 'critical'] } } }),
+      prisma.approvalRecord.groupBy({
+        by: ['riskLevel'],
+        where: { organizationId },
+        _count: { _all: true },
+      }),
+      prisma.approvalRecord.count({
+        where: { organizationId, unifiedEvidenceRecords: { some: { sourceCount: { gt: 1 } } } },
+      }),
     ]),
     APPROVAL_RECORDS_QUERY_TIMEOUT_MS,
   );
 
-  const counts: ApprovalStatusCounts = { total: 0, approved: 0, pending: 0, rejected: 0, highRisk };
-  for (const row of rows) {
+  const counts: ApprovalStatusCounts = {
+    total: 0, approved: 0, pending: 0, rejected: 0, highRisk: 0, critical: 0, high: 0, multiSource,
+  };
+  for (const row of statusRows) {
     counts.total += row._count._all;
     if (row.status === 'APPROVED') counts.approved = row._count._all;
     else if (row.status === 'PENDING_REVIEW') counts.pending = row._count._all;
     else if (row.status === 'REJECTED') counts.rejected = row._count._all;
   }
+  for (const row of riskRows) {
+    const level = row.riskLevel?.toLowerCase();
+    if (level === 'critical') counts.critical = row._count._all;
+    else if (level === 'high') counts.high = row._count._all;
+  }
+  counts.highRisk = counts.critical + counts.high;
   return counts;
 }
 
@@ -413,7 +454,7 @@ export const getApprovalStatusCounts = cache(async (organizationId: string): Pro
     return await getCachedApprovalStatusCountsFetcher(organizationId)();
   } catch (error) {
     reportApprovalFailure(error, { action: 'approval_status_counts_query', organizationId });
-    return { total: 0, approved: 0, pending: 0, rejected: 0, highRisk: 0 };
+    return { total: 0, approved: 0, pending: 0, rejected: 0, highRisk: 0, critical: 0, high: 0, multiSource: 0 };
   }
 });
 

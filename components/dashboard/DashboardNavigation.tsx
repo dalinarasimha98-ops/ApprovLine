@@ -254,14 +254,33 @@ export function DashboardNavigation({ mobile = false, role = null }: { mobile?: 
   );
 }
 
-export function LiveCaptureBadge() {
+/**
+ * Renders whatever real state DashboardShell resolved via
+ * lib/capture-status.ts's getCaptureStatus() - never an unconditional
+ * "Live Capture," since no connector has been certified against a real
+ * provider account (see docs/qa/PRODUCTION_CERTIFICATION_EVIDENCE.md). Only
+ * the "live" state pulses; every other state is a steady dot, so the
+ * animation itself never implies activity that didn't happen.
+ */
+export function LiveCaptureBadge({ status }: { status: { state: 'live' | 'connected-stale' | 'connected-none' | 'none'; label: string } }) {
+  const tone =
+    status.state === 'live'
+      ? 'border-emerald-500/20 bg-emerald-500/[0.07] text-emerald-200'
+      : status.state === 'connected-stale' || status.state === 'connected-none'
+        ? 'border-amber-500/20 bg-amber-500/[0.07] text-amber-200'
+        : 'border-white/10 bg-white/[0.04] text-slate-400';
+  const dotColor =
+    status.state === 'live' ? 'bg-emerald-400' : status.state === 'none' ? 'bg-slate-500' : 'bg-amber-400';
+
   return (
-    <div className="inline-flex h-8 items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.07] px-3 text-[11px] font-semibold text-emerald-200">
+    <div className={`inline-flex h-8 items-center gap-2 rounded-full border px-3 text-[11px] font-semibold ${tone}`}>
       <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+        {status.state === 'live' ? (
+          <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${dotColor} opacity-50`} />
+        ) : null}
+        <span className={`relative inline-flex h-2 w-2 rounded-full ${dotColor}`} />
       </span>
-      Live Capture
+      {status.label}
     </div>
   );
 }

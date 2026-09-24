@@ -8,13 +8,18 @@ import { getApprovalDetailForViewer } from '@/services/approvalDetail';
 export const dynamic = 'force-dynamic';
 
 /**
- * Serves the Approval Detail Drawer (components/approvals/ApprovalDetailDrawer.tsx).
- * This is a thin, read-only view over the exact same canonical, tenant-scoped
- * data getApprovalDetailForViewer() composes from - the same cached fetchers
- * app/approvals/[id]/page.tsx (the full detail page) already uses. There is
- * no separate/duplicate Prisma query for approval detail anywhere in this
- * route: the table, the drawer, and the full page can never disagree about
- * what a given approval ID resolves to.
+ * A thin, read-only view over the exact same canonical, tenant-scoped data
+ * getApprovalDetailForViewer() composes from - the same cached fetchers
+ * app/approvals/[id]/page.tsx (the full detail page) already uses.
+ *
+ * Not currently called by any UI path: the approvals list's preview panel
+ * (components/approvals/ApprovalPreviewPanel.tsx) was deliberately rebuilt
+ * to render only from data the list query already has, with no fetch on
+ * open - the fix for the "Approval unavailable" failure mode, which this
+ * route's own fetch used to be a possible cause of. Left in place as a
+ * legitimate, tested, tenant-scoped read endpoint that may still serve a
+ * future caller (an API consumer, a refresh action), not dead code left by
+ * accident.
  *
  * Tenant isolation: organizationId always comes from getDashboardTenant()'s
  * server-resolved session, never from the client, the URL, or a query

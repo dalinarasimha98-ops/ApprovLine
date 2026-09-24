@@ -456,12 +456,12 @@ export const getContextApprovals = cache(async (organizationId: string, approval
 // getApprovalCore()/getApprovalManualBundle()/etc. directly for its own
 // independently-streamed Suspense boundaries (each tab renders and fails on
 // its own), but this composition uses those exact same cached fetchers, not
-// a second/parallel Prisma query. That is what keeps the approval-detail
-// drawer (components/approvals/ApprovalDetailDrawer.tsx, served by
-// app/api/approvals/[id]/detail/route.ts) and the full page from ever being
-// able to disagree about what a given approval ID resolves to - there is
-// only one tenant-scoped lookup (fetchCoreFresh's
-// `findFirst({ where: { id, organizationId } })`) backing both surfaces.
+// a second/parallel Prisma query - the full page and this composition's own
+// route (app/api/approvals/[id]/detail/route.ts, currently unused by any UI
+// path - see that route's doc comment) can never disagree about what a
+// given approval ID resolves to, since there is only one tenant-scoped
+// lookup (fetchCoreFresh's `findFirst({ where: { id, organizationId } })`)
+// backing both.
 //
 // Returns null when the approval does not exist OR does not belong to
 // organizationId - fetchCoreFresh's findFirst already folds "wrong tenant"
