@@ -106,4 +106,25 @@ for (const service of scopedServices) {
   assert.match(source, /organizationId/, `${service} should preserve organization-scoped access`);
 }
 
-console.log('Validated Tenant A/B isolation helpers, Memory Graph IDOR rejection, founder verification page, and tenant-scoped service coverage.');
+// EvidenceThread/EvidenceEntry (the Approvals History thread-capture layer -
+// see prisma/migrations/20260924091653_evidence_thread_capture) covered
+// here BEFORE any capture service exists to write to them, per the
+// explicit rule that these tables must never go a single day without
+// tenant-isolation coverage. Schema-level only (organizationId present on
+// both, no unscoped-by-design unique constraint) since there is no service
+// code yet to exercise with a live query - that lands in Stage 2, at which
+// point its service file joins scopedServices above like every other one.
+const schema = read('prisma/schema.prisma');
+const evidenceThreadBlock = schema.slice(schema.indexOf('model EvidenceThread {'), schema.indexOf('model EvidenceEntry {'));
+const evidenceEntryBlock = schema.slice(schema.indexOf('model EvidenceEntry {'), schema.indexOf('model EvidenceProviderConnection {'));
+assert.match(evidenceThreadBlock, /organizationId\s+String/, 'EvidenceThread must carry organizationId');
+assert.match(evidenceEntryBlock, /organizationId\s+String/, 'EvidenceEntry must carry organizationId (a join is a query too)');
+// The idempotent-recapture unique constraint must include organizationId -
+// without it, two tenants racing to capture the same externalThreadId on
+// the same provider (a real possibility: two orgs on the same Slack
+// Enterprise Grid org, or a Jira Cloud instance shared across tenants)
+// would collide with each other's rows instead of their own.
+assert.match(evidenceThreadBlock, /@@unique\(\[organizationId, provider, externalThreadId, version\]\)/);
+assert.match(evidenceEntryBlock, /organization\s+Organization\s+@relation\(fields: \[organizationId\], references: \[id\], onDelete: Cascade\)/);
+
+console.log('Validated Tenant A/B isolation helpers, Memory Graph IDOR rejection, founder verification page, tenant-scoped service coverage, and EvidenceThread/EvidenceEntry schema-level tenant scoping ahead of any capture service.');

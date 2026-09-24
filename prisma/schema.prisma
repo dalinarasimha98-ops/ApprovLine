@@ -153,6 +153,21 @@ enum UnifiedEvidenceMemberStatus {
   REJECTED
 }
 
+// One entry's role inside a captured EvidenceThread. Kept distinct rather
+// than collapsed into one value - the classifier's decision-point logic and
+// any future risk scoring both need to tell a human argument (message,
+// comment) apart from a machine-recorded fact (status_change) and from the
+// approval action itself.
+enum EvidenceEntryKind {
+  MESSAGE
+  COMMENT
+  REVIEW
+  STATUS_CHANGE
+  APPROVAL
+  ATTACHMENT
+  TRANSCRIPT_SEGMENT
+}
+
 enum EvidenceProviderConnectionStatus {
   CONNECTED
   SYNCING
@@ -333,6 +348,8 @@ model Organization {
   complianceIssues         ComplianceIssue[]
   complianceAttestations   ComplianceAttestation[]
   complianceDeadlines      ComplianceDeadline[]
+  evidenceThreads          EvidenceThread[]
+  evidenceEntries          EvidenceEntry[]
 
   @@index([onboardedAt])
   @@index([onboardingStep])
@@ -365,6 +382,7 @@ model User {
   verifiedEvidenceAssociations   ApprovalEvidenceAssociation[] @relation("EvidenceAssociationVerifier")
   rejectedEvidenceAssociations   ApprovalEvidenceAssociation[] @relation("EvidenceAssociationRejecter")
   requestedApprovalConfirmations ApprovalConfirmationRequest[] @relation("ApprovalConfirmationRequester")
+  authoredEvidenceEntries        EvidenceEntry[]
 
   @@index([organizationId, role])
   @@index([email])
@@ -503,6 +521,108 @@ model ApprovalRecord {
   @@index([organizationId, contentHash])
   @@index([organizationId, status, occurredAt])
   @@index([organizationId, createdAt])
+}
+
+// --- Thread-level evidence capture --------------------------------------
+// EvidenceThread/EvidenceEntry is the real capture layer going forward,
+// replacing what MessageSource has always tried (and, by design, failed)
+// to be: MessageSource holds exactly one event, so the objection that was
+// raised and answered, the condition attached to an approval, the review
+// that blocked a merge - all of it lived in the same conversation as the
+// one message MessageSource kept, and none of the rest was ever captured.
+//
+// Deliberately NOT linked to ApprovalRecord. MessageSource/ApprovalRecord
+// keep running exactly as they are, untouched - this is an additive capture
+// layer beside the old path, not a cutover. A captured thread instead feeds
+// the already-live canonical pipeline (CanonicalEvidenceEvent ->
+// UnifiedEvidenceRecord via services/evidence/pipeline.ts's
+// scoreEvidenceCandidate()/correlateEvent()) exactly the way single events
+// do today; CanonicalEvidenceEvent already carries its own threadId string
+// for that purpose. How a thread's entries map into CanonicalEvidenceEvent
+// rows is capture-logic (connector work), not schema, and is intentionally
+// left to a later stage rather than decided here.
+//
+// Re-capture is never an edit: a re-fetched thread (e.g. new replies a week
+// after the decision was hashed) writes a brand-new row with `version`
+// incremented, matching the immutable-version-per-change convention
+// ManualApprovalVersion already establishes elsewhere in this schema. A
+// prior version's rows are never mutated once written.
+model EvidenceThread {
+  id               String    @id @default(cuid())
+  organizationId   String
+  // Free-form (not the IntegrationProvider enum) to match
+  // CanonicalEvidenceEvent.providerKey/the Evidence Provider SDK's catalog -
+  // the system this table feeds - rather than the older OAuth-connector
+  // enum MessageSource uses, so a future provider never needs a schema
+  // migration just to be nameable here.
+  provider         String
+  externalThreadId String
+  externalUrl      String?
+  title            String?
+  entryCount       Int       @default(0)
+  participantCount Int       @default(0)
+  firstEntryAt     DateTime?
+  lastEntryAt      DateTime?
+  // Computed over the full ordered thread (sequence, timestamp, author,
+  // kind, body, canonicalised providerMeta - never rendered HTML, never
+  // ApprovLine's own annotations), not the excerpt anyone is shown.
+  contentHash      String?
+  hashAlgorithm    String?
+  hashedAt         DateTime?
+  // False until every paginated cursor has run to the end and been
+  // written; a thread must never look complete at 40 of 60 entries with
+  // nothing downstream able to tell.
+  complete         Boolean   @default(false)
+  capturedAt       DateTime  @default(now())
+  version          Int       @default(1)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entries          EvidenceEntry[]
+
+  // Makes re-capture idempotent: writing the same external thread again at
+  // the same version is a no-op collision, and a genuine re-capture always
+  // supplies the next version rather than colliding.
+  @@unique([organizationId, provider, externalThreadId, version])
+  @@index([organizationId, capturedAt])
+  // Finds threads a resumed/retried capture still needs to finish.
+  @@index([organizationId, complete])
+}
+
+model EvidenceEntry {
+  id             String            @id @default(cuid())
+  organizationId String
+  threadId       String
+  // 0-based (or 1-based, capture-logic's choice) position in the thread's
+  // true chronological order - interleaved across every paginated source
+  // the connector reads (e.g. GitHub's four endpoints, ServiceNow's
+  // approver/journal tables), not per-source order.
+  sequence       Int
+  authorHandle   String?
+  // Resolved by email, then provider handle, then display name - and
+  // nothing fuzzier than that (capture-logic concern; schema just holds
+  // the nullable result of that match).
+  authorUserId   String?
+  at             DateTime
+  kind           EvidenceEntryKind
+  body           String?
+  bodyRaw        String?
+  // Per-provider shape, validated in code (services/evidence/*), not typed
+  // columns - see docs/universal-evidence-platform.md's provider table for
+  // what each provider's keys are. A new connector is a code change here,
+  // never a migration.
+  providerMeta   Json?
+  createdAt      DateTime          @default(now())
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  thread         EvidenceThread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorUser     User?             @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  // Also serves as the ordered-read index for a full thread (threadId,
+  // sequence) - a unique B-tree index satisfies both idempotent per-page
+  // upsert-by-sequence writes and the "read a full record in order" query.
+  @@unique([threadId, sequence])
+  @@index([organizationId, at])
+  @@index([organizationId, authorUserId])
 }
 
 model EvidenceProviderConnection {
