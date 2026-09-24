@@ -111,6 +111,8 @@ jobs:
         run: npm run test:approval-records
       - name: Test — Action Center
         run: npm run test:action-center
+      - name: Test — deployment version endpoint
+        run: npm run test:deployment-version
       - name: Build
         run: npm run build
       - name: Dependency audit gate

@@ -8,6 +8,15 @@ const styles = {
   error: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
+// Same Vercel System Environment Variables app/api/health/route.ts reads -
+// see that file's comment for why this is safe to show unauthenticated.
+const commitSha = process.env.VERCEL_GIT_COMMIT_SHA ?? null;
+const deployment = {
+  commitShaShort: commitSha ? commitSha.slice(0, 7) : 'Unknown (not running on Vercel, or not yet deployed)',
+  commitRef: process.env.VERCEL_GIT_COMMIT_REF ?? 'Unknown',
+  environment: process.env.VERCEL_ENV ?? 'Unknown',
+};
+
 export default async function HealthPage() {
   const report = await buildHealthPageReport();
   const rows = [
@@ -45,6 +54,23 @@ export default async function HealthPage() {
         </div>
         <div className={`rounded-lg border p-4 font-bold ${report.ready ? styles.ok : styles.missing}`}>
           {report.ready ? 'Ready for Slack beta testing' : 'Needs configuration before live beta'}
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <p className="text-xs font-bold uppercase text-slate-500">Deployment</p>
+          <dl className="mt-2 grid gap-2 sm:grid-cols-3">
+            <div>
+              <dt className="text-xs text-slate-500">Commit</dt>
+              <dd className="font-mono font-semibold text-slate-900">{deployment.commitShaShort}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Branch</dt>
+              <dd className="font-semibold text-slate-900">{deployment.commitRef}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Environment</dt>
+              <dd className="font-semibold text-slate-900">{deployment.environment}</dd>
+            </div>
+          </dl>
         </div>
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
           <table className="w-full text-left text-sm">

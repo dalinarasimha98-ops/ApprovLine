@@ -56,6 +56,7 @@
     "test:approval-detail-render": "TSX_TSCONFIG_PATH=tsconfig.test-render.json node --import tsx tests/approval-detail-render.test.ts",
     "test:approval-detail-drawer": "TSX_TSCONFIG_PATH=tsconfig.test-render.json node --import tsx tests/approval-detail-drawer-render.test.ts",
     "test:approvals-redesign": "node --import tsx tests/approvals-redesign.test.ts",
+    "test:deployment-version": "node --import tsx tests/deployment-version.test.ts",
     "test:alerts": "node --import tsx tests/alerts.test.ts",
     "test:action-center": "node --import tsx tests/action-center.test.ts",
     "test:copilot": "node --import tsx tests/ai-copilot.test.ts",
