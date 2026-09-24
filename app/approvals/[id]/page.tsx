@@ -4,7 +4,7 @@ import { ChevronRight, ExternalLink } from 'lucide-react';
 import { ApprovalActions } from '@/components/approvals/ApprovalActions';
 import { CopyEvidenceLinkButton } from '@/components/approvals/CopyEvidenceLinkButton';
 import { EvidenceMessageCard } from '@/components/approvals/EvidenceMessageCard';
-import { EvidenceThread, parseThreadPayload, type EvidenceThreadPayload } from '@/components/approvals/EvidenceThread';
+import { ApprovalEvidencePanel, parseThreadPayload, type ApprovalEvidencePanelPayload } from '@/components/approvals/ApprovalEvidencePanel';
 import { ManualApprovalPanel } from '@/components/approvals/ManualApprovalPanel';
 import { ApprovalDetailWorkspace, isTabKey, type TabKey } from '@/components/approvals/ApprovalDetailWorkspace';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
@@ -461,7 +461,7 @@ async function EvidenceTab({
   organizationId,
 }: {
   core: ApprovalCore;
-  threadPayload: EvidenceThreadPayload | null;
+  threadPayload: ApprovalEvidencePanelPayload | null;
   externalUrl: string | null | undefined;
   organizationId: string;
 }) {
@@ -514,7 +514,7 @@ async function EvidenceTab({
             <span className="h-px flex-1 bg-[#1E2D4A]" />
           </div>
           {threadPayload ? (
-            <EvidenceThread
+            <ApprovalEvidencePanel
               payload={threadPayload}
               platform={core.sourcePlatform ?? core.messageSource?.provider}
               participantCount={new Set(threadPayload.threadMessages.map((m) => m.senderName)).size}

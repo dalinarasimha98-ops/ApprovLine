@@ -87,8 +87,8 @@ type ApprovalSeed = {
   occurredAt: Date;
   providerKey: string;
   providerEventType: string;
-  /** Optional full captured thread, matching EvidenceThread's expected
-   *  rawPayload shape (components/approvals/EvidenceThread.tsx). When
+  /** Optional full captured thread, matching ApprovalEvidencePanel's expected
+   *  rawPayload shape (components/approvals/ApprovalEvidencePanel.tsx). When
    *  present, a MessageSource row is created carrying this in rawPayload
    *  and linked via ApprovalRecord.messageSourceId, so the approval and
    *  source pages render the full-thread view instead of the single-

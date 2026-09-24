@@ -10,7 +10,7 @@ export type ThreadMessage = {
   reactions?: Array<{ emoji: string; count: number }>;
 };
 
-export type EvidenceThreadPayload = {
+export type ApprovalEvidencePanelPayload = {
   channelName?: string;
   threadMessages: ThreadMessage[];
 };
@@ -19,7 +19,7 @@ export type EvidenceThreadPayload = {
  *  to a well-formed thread payload, or null if the shape isn't present /
  *  doesn't match - callers fall back to the single-message card in that
  *  case rather than rendering something malformed. */
-export function parseThreadPayload(rawPayload: unknown): EvidenceThreadPayload | null {
+export function parseThreadPayload(rawPayload: unknown): ApprovalEvidencePanelPayload | null {
   if (!rawPayload || typeof rawPayload !== 'object') return null;
   const value = rawPayload as Record<string, unknown>;
   const messages = value.threadMessages;
@@ -83,14 +83,14 @@ function timeLabel(iso: string) {
  * webhook to fetch full thread context (Slack conversations.replies,
  * Gmail thread API, etc.), which is separate work not done yet.
  */
-export function EvidenceThread({
+export function ApprovalEvidencePanel({
   payload,
   platform,
   participantCount,
   sourceUrl,
   evidenceLinkPath,
 }: {
-  payload: EvidenceThreadPayload;
+  payload: ApprovalEvidencePanelPayload;
   platform?: string | null;
   participantCount: number;
   sourceUrl?: string | null;
