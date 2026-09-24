@@ -5,6 +5,7 @@ import { ApprovalPreviewPanel } from '@/components/approvals/ApprovalPreviewPane
 import { riskBadgeClass, riskLabel } from '@/lib/risk-ramp';
 import { extractAmountFromSubject, formatAmount } from '@/lib/amount-extraction';
 import { sourceMeta } from '@/lib/source-badges';
+import { isDemoApprovalRecord } from '@/lib/demo-detection';
 
 export type ApprovalTableSources = {
   unifiedEvidenceId: string | null;
@@ -18,6 +19,7 @@ export type ApprovalTableRecord = {
   id: string;
   subject: string;
   sourceLink: string | null;
+  correlationId: string | null;
   approverName: string | null;
   approverEmail: string | null;
   department: string | null;
@@ -136,7 +138,7 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
                         className="block w-full truncate text-left font-bold text-[#E8EEFF] hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                       >
                         {title}
-                        {approval.sourceLink?.includes('demo') || approval.sourceLink?.includes('TDEMO') ? (
+                        {isDemoApprovalRecord(approval) ? (
                           <span className="ml-2 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-400">Demo</span>
                         ) : null}
                       </button>

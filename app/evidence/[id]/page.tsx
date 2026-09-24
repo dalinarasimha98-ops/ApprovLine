@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic';
 
 type EvidenceDetailPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 function serialize<T>(value: T): T {
@@ -39,7 +40,7 @@ function EvidenceDetailSkeleton() {
  * fetch - one slow/failed lookup now shows a skeleton, then an inline error
  * card in place of the content, never a blank/frozen page.
  */
-async function EvidenceDetailContent({ id }: { id: string }) {
+async function EvidenceDetailContent({ id, initialProviderFilter }: { id: string; initialProviderFilter: string | null }) {
   const tenant = await getDashboardTenant(6000);
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') {
@@ -68,16 +69,23 @@ async function EvidenceDetailContent({ id }: { id: string }) {
     notFound();
   }
 
-  return <UnifiedEvidenceExperience initialData={serialize(record) as unknown as UnifiedEvidenceData} />;
+  return (
+    <UnifiedEvidenceExperience
+      initialData={serialize(record) as unknown as UnifiedEvidenceData}
+      initialProviderFilter={initialProviderFilter}
+    />
+  );
 }
 
-export default async function EvidenceDetailPage({ params }: EvidenceDetailPageProps) {
+export default async function EvidenceDetailPage({ params, searchParams }: EvidenceDetailPageProps) {
   const { id } = await params;
+  const sp = await searchParams;
+  const providerParam = typeof sp.provider === 'string' ? sp.provider : null;
 
   return (
     <DashboardShell immersive>
       <Suspense fallback={<EvidenceDetailSkeleton />}>
-        <EvidenceDetailContent id={id} />
+        <EvidenceDetailContent id={id} initialProviderFilter={providerParam} />
       </Suspense>
     </DashboardShell>
   );

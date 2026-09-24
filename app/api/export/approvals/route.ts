@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { csvCell } from '@/lib/csv';
 import { reportApprovalFailure } from '@/lib/approval-observability';
 import { withTimeout } from '@/lib/performance';
+import { isDemoApprovalRecord } from '@/lib/demo-detection';
 import { hasAnyRole } from '@/lib/rbac';
 import { createSimplePdf } from '@/lib/simple-pdf';
 import { writeAuditLog } from '@/services/audit';
@@ -140,7 +141,7 @@ export async function GET(request: NextRequest) {
     'Human Verified Evidence',
   ];
   const rows = approvals.map((item) => [
-    item.messageSource?.externalId?.startsWith('demo-') || item.sourceLink?.includes('TDEMO') || item.sourceLink?.includes('demo-') ? 'Yes' : 'No',
+    item.messageSource?.externalId?.startsWith('demo-') || isDemoApprovalRecord(item) ? 'Yes' : 'No',
     item.subject,
     item.approverName ?? '',
     item.approverEmail ?? '',
@@ -178,7 +179,7 @@ export async function GET(request: NextRequest) {
         `   Status: ${item.status} | Type: ${item.approvalType} | Confidence: ${item.confidence}% | Risk: ${item.riskLevel ?? 'low'}`,
         `   Approver: ${item.approverName ?? 'Unknown'} <${item.approverEmail ?? 'unknown'}>`,
         `   Source: ${item.sourcePlatform ?? 'unknown'} | ${item.messageSource?.channel ?? 'no channel'} | Demo: ${
-          item.messageSource?.externalId?.startsWith('demo-') || item.sourceLink?.includes('TDEMO') || item.sourceLink?.includes('demo-') ? 'Yes' : 'No'
+          item.messageSource?.externalId?.startsWith('demo-') || isDemoApprovalRecord(item) ? 'Yes' : 'No'
         }`,
         `   Evidence: ${item.evidenceSnippet ?? 'No evidence snippet'}`,
         `   Origin: ${item.manualDetail?.kind === 'VERBAL' ? 'Verbal approval' : item.manualDetail ? 'Manual entry' : 'Automatic capture'} | Verification: ${item.manualDetail?.verificationStatus ?? 'Automatically captured'}`,

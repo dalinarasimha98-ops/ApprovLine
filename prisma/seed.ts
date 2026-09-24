@@ -45,6 +45,12 @@ async function main() {
         reasoning: `${approverName} made a clear ${approvalType.toLowerCase()} decision for ${department}.`,
         conditions: approvalType === ApprovalType.CONDITIONAL ? 'Requires stated control or contract condition before execution.' : null,
         evidenceSnippet: `${approverName}: ${subject}.`,
+        // Sets neither sourceLink nor a 'demo'/'TDEMO'-tagged field, unlike
+        // lib/demo-data.ts - without this, lib/demo-detection.ts's
+        // isDemoApprovalRecord() (and every dashboard "Demo" badge that
+        // calls it) has no way to tell this seeded record apart from a
+        // genuinely captured one.
+        correlationId: `prisma-seed-v1:${subject}`,
         approvalTimestamp: new Date(),
         occurredAt: new Date(),
       },

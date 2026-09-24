@@ -20,6 +20,7 @@ export const approvalRecordListSelect = {
   id: true,
   subject: true,
   sourceLink: true,
+  correlationId: true,
   approverName: true,
   approverEmail: true,
   department: true,

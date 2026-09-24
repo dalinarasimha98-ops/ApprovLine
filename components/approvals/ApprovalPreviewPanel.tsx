@@ -7,6 +7,7 @@ import type { ApprovalTableRecord } from '@/components/dashboard/ApprovalTable';
 import { riskBadgeClass, riskLabel } from '@/lib/risk-ramp';
 import { extractAmountFromSubject, formatAmount } from '@/lib/amount-extraction';
 import { sourceMeta } from '@/lib/source-badges';
+import { isDemoApprovalRecord } from '@/lib/demo-detection';
 
 function statusClass(status: string) {
   if (status === 'APPROVED') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400';
@@ -65,6 +66,20 @@ export function ApprovalPreviewPanel({ approval, onClose }: ApprovalPreviewPanel
   // door leads somewhere else.
   const primaryHref = unifiedEvidenceId ? `/evidence/${unifiedEvidenceId}` : `/approvals/${approval.id}`;
   const showLegacyLink = Boolean(unifiedEvidenceId);
+  const isDemo = isDemoApprovalRecord(approval);
+
+  // Each source pill routes to the exact same full record "Open full record"
+  // goes to, scoped to that one provider - a correlated record's evidence
+  // timeline supports filtering to a single provider via ?provider=, and the
+  // legacy per-approval page supports jumping straight to its Evidence tab
+  // via ?tab=evidence (both are existing, already-supported deep links, not
+  // new routes). Never non-interactive: every pill goes somewhere real.
+  const approvalId = approval.id;
+  function sourcePillHref(providerKey: string) {
+    return unifiedEvidenceId
+      ? `/evidence/${unifiedEvidenceId}?provider=${encodeURIComponent(providerKey)}`
+      : `/approvals/${approvalId}?tab=evidence`;
+  }
 
   return (
     <DetailDrawer open onClose={onClose} titleId={titleId} size="md" className="bg-[#030b18]">
@@ -86,6 +101,11 @@ export function ApprovalPreviewPanel({ approval, onClose }: ApprovalPreviewPanel
             <span className="rounded-full border border-[#1E2D4A] bg-[#152040] px-2.5 py-1 text-[11px] font-bold text-[#A8BAD8]">
               #{approval.id.slice(-8)}
             </span>
+            {isDemo ? (
+              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-violet-400">
+                Demo
+              </span>
+            ) : null}
           </div>
         </div>
         <button
@@ -120,7 +140,12 @@ export function ApprovalPreviewPanel({ approval, onClose }: ApprovalPreviewPanel
               {providers.map(({ key, count }) => {
                 const meta = sourceMeta(key);
                 return (
-                  <div key={key} className="flex items-center gap-3 rounded-lg border border-[#1E2D4A] bg-[#0a1524] px-3 py-2.5">
+                  <PendingLink
+                    key={key}
+                    href={sourcePillHref(key)}
+                    pendingText="Opening…"
+                    className="flex items-center gap-3 rounded-lg border border-[#1E2D4A] bg-[#0a1524] px-3 py-2.5 text-left transition hover:border-violet-500/40 hover:bg-[#0E1830]"
+                  >
                     <span
                       style={{ backgroundColor: meta.color }}
                       className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-black text-white"
@@ -129,7 +154,8 @@ export function ApprovalPreviewPanel({ approval, onClose }: ApprovalPreviewPanel
                     </span>
                     <span className="flex-1 text-sm font-semibold text-[#E8EEFF]">{meta.label}</span>
                     <span className="text-xs font-bold text-[#6B7FA8]">{count} entr{count === 1 ? 'y' : 'ies'}</span>
-                  </div>
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[#6B7FA8]" aria-hidden="true" />
+                  </PendingLink>
                 );
               })}
             </div>

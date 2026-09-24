@@ -65,6 +65,7 @@ const approvalCoreSelect = {
   conditions: true,
   sourcePlatform: true,
   sourceLink: true,
+  correlationId: true,
   evidenceSnippet: true,
   approverName: true,
   approverEmail: true,

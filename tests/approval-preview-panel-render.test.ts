@@ -47,6 +47,7 @@ const baseApproval: ApprovalTableRecord = {
   id: 'test-approval-id',
   subject: 'Q4 infrastructure budget $850K',
   sourceLink: null,
+  correlationId: null,
   approverName: 'Jordan Approver',
   approverEmail: 'jordan@example.com',
   department: 'Engineering',
@@ -145,4 +146,24 @@ const panelSourceCount = Number(panelSourceMatch![1]);
 assert.equal(rowSourceCount, multiSourceSources.providers.length, 'the row must show one badge per distinct contributing source');
 assert.equal(rowSourceCount, panelSourceCount, 'the row\'s source count and the panel\'s source count must never disagree - they must come from the same query');
 
-console.log('Validated the Approval Preview Panel (real executed render, no fetch, no loading state) for multi-source and single-source approvals, real amount extraction/formatting, the full approver name -> email -> "Unknown approver" fallback chain, and that the table row\'s source count always equals the preview panel\'s source count.');
+// 7. Source pills must be real, interactive links - not the static,
+// unclickable <div> they used to be. Each pill routes to the full record,
+// scoped to that one provider: ?provider= on the correlated evidence
+// timeline, or ?tab=evidence on the legacy per-approval page (both
+// pre-existing, already-supported deep links - see
+// ApprovalPreviewPanel.tsx's sourcePillHref doc comment).
+assert.match(multiSourceHtml, /href="\/evidence\/unified-1\?provider=slack"/, 'the Slack source pill must link to the evidence record scoped to Slack');
+assert.match(multiSourceHtml, /href="\/evidence\/unified-1\?provider=servicenow"/, 'the ServiceNow source pill must link to the evidence record scoped to ServiceNow');
+assert.match(singleSourceHtml, /href="\/approvals\/test-approval-id\?tab=evidence"/, 'the fallback source pill must jump straight to the legacy page\'s Evidence tab');
+
+// 8. Demo badge: correlationId alone (scripts/seed-demo-approvals.ts's
+// pattern - a realistic sourceLink with no 'demo'/'TDEMO' substring by
+// design) must still surface the badge, closing the exact gap that made
+// seed-demo-approvals.ts rows render with no Demo badge next to
+// lib/demo-data.ts rows that had one.
+const demoByCorrelationHtml = renderPanel({ ...baseApproval, sourceLink: 'https://acme.slack.com/archives/C02SECAPPR/p1755900000000300', correlationId: 'seed-demo-approvals-v1:group-5-security:slack' });
+assert.match(demoByCorrelationHtml, /Demo/, 'a realistic-looking seed-demo-approvals.ts sourceLink must still be flagged as demo data via correlationId');
+const notDemoHtml = renderPanel({ ...baseApproval, sourceLink: 'https://acme.slack.com/archives/C02REAL/p1755900000000300', correlationId: 'real-integration-correlation-id' });
+assert.doesNotMatch(notDemoHtml, /\bDemo\b/, 'a genuinely captured approval must never be mislabeled as demo data');
+
+console.log('Validated the Approval Preview Panel (real executed render, no fetch, no loading state) for multi-source and single-source approvals, real amount extraction/formatting, the full approver name -> email -> "Unknown approver" fallback chain, that the table row\'s source count always equals the preview panel\'s source count, that every source pill is a real link scoped to its provider/evidence tab, and that demo detection also catches a realistic-looking sourceLink via correlationId.');

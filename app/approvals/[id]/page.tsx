@@ -11,6 +11,7 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { PendingLink } from '@/components/system/PendingLink';
 import { getDashboardTenant } from '@/lib/auth';
 import { getSafeEvidenceUrl } from '@/lib/evidence-links';
+import { isDemoApprovalRecord } from '@/lib/demo-detection';
 import { reportApprovalFailure } from '@/lib/approval-observability';
 import { canManageManualApprovals } from '@/services/manual-approvals';
 import {
@@ -216,7 +217,7 @@ async function ApprovalHeader({ core }: { core: ApprovalCore }) {
                 <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-400">
                   {core.confidence}% confidence
                 </span>
-                {core.sourceLink?.includes('demo') || core.sourceLink?.includes('TDEMO') ? (
+                {isDemoApprovalRecord(core) ? (
                   <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-3 py-1 text-xs font-bold text-[#6B7FA8]">
                     Demo data
                   </span>

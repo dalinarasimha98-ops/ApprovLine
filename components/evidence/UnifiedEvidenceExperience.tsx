@@ -271,14 +271,25 @@ function dateOnly(value: string) {
   );
 }
 
-export function UnifiedEvidenceExperience({ initialData }: { initialData: UnifiedEvidenceData }) {
+export function UnifiedEvidenceExperience({
+  initialData,
+  initialProviderFilter = null,
+}: {
+  initialData: UnifiedEvidenceData;
+  /** Pre-selects the timeline's provider filter, e.g. when arriving from a
+   *  specific source pill (components/approvals/ApprovalPreviewPanel.tsx's
+   *  ?provider= deep link) rather than the generic "Open full record" entry
+   *  point. Falls back to 'all' when absent or unrecognized - never throws
+   *  on an unknown provider key, since that just means no rows match yet. */
+  initialProviderFilter?: string | null;
+}) {
   const [events, setEvents] = useState<EvidenceEvent[]>(initialData.events);
   const [page, setPage] = useState(initialData.eventPage);
   const [liveCursor, setLiveCursor] = useState(initialData.liveCursor);
   const [activeTab, setActiveTab] = useState<TimelineTab>('timeline');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [providerFilter, setProviderFilter] = useState('all');
+  const [providerFilter, setProviderFilter] = useState(initialProviderFilter ?? 'all');
   const [groupBy, setGroupBy] = useState<'none' | 'source' | 'day'>('none');
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
