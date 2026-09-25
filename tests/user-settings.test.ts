@@ -21,9 +21,10 @@
  *    ApprovalConfirmationRequest record/audit trail, only the optional
  *    convenience email, and only for approvers who are registered users in
  *    the SAME organization (tenant-isolated), failing open on any error;
- *  - In-App/Mobile Notifications, Theme, and Language are rendered as
- *    honest non-interactive states, never a fake control that looks
- *    functional but doesn't persist;
+ *  - In-App/Mobile Notifications and Language are rendered as honest
+ *    non-interactive states, never a fake control that looks functional
+ *    but doesn't persist (Theme is now a real, working control - see
+ *    tests/theme.test.ts);
  *  - API Access explains the real security model with no fabricated
  *    button/link to a nonexistent personal-key feature;
  *  - every settings section degrades independently on failure.
@@ -174,11 +175,11 @@ assert.match(confirmationsRoute, /copy_secure_link/, 'withholding the optional e
 
 // --- No fake settings: honest states for what genuinely isn't supported -----
 
-// Theme/Language are shown as real read-only facts (the app is dark-only and
-// English-only today), never an interactive control that silently does nothing.
-assert.doesNotMatch(shell, /<select[^>]*name=["']theme["']/i, 'must not offer a theme control - this app only supports dark mode');
+// Theme is now a REAL, working control (see tests/theme.test.ts for full
+// coverage) - only Language remains a genuine read-only fact (no other
+// language is actually supported), never an interactive control that
+// silently does nothing.
 assert.doesNotMatch(shell, /<select[^>]*name=["']language["']/i, 'must not offer a language control - no other language is supported');
-assert.doesNotMatch(shell, /Light[\s\S]{0,40}Dark.*(toggle|switch|select)/i, 'must not fabricate a light/dark theme toggle');
 
 // API Access explains the real security model - no fake "Generate key"/"Create token" interaction.
 assert.match(shell, /API Access/, 'API Access must remain visible in the nav with an honest destination/state');
@@ -215,4 +216,4 @@ assert.match(shell, /formatRelative\(event\.createdAt\)/, 'security activity tim
 const nav = read('components/dashboard/DashboardNavigation.tsx');
 assert.match(nav, /href: '\/settings\/profile', label: 'User Settings'/, 'the nav must link to the real route, not a placeholder');
 
-console.log('Validated User Settings: tenant/user-scoped mutations, verified session-ownership check before revoke, no secrets selected or rendered, real Clerk security/session fields (no fabricated status), real+validated profile fields (department against the org\'s own list, time zone against Intl.supportedValuesOf, manager as a real never-fuzzy-matched relation), a real compliance-safe Notifications preference that never gates the confirmation record/audit trail, honest non-interactive states for In-App/Mobile/Theme/Language, an honest API Access explanation with no fake interaction, and independent per-section error degradation.');
+console.log('Validated User Settings: tenant/user-scoped mutations, verified session-ownership check before revoke, no secrets selected or rendered, real Clerk security/session fields (no fabricated status), real+validated profile fields (department against the org\'s own list, time zone against Intl.supportedValuesOf, manager as a real never-fuzzy-matched relation), a real compliance-safe Notifications preference that never gates the confirmation record/audit trail, honest non-interactive states for In-App/Mobile/Language, an honest API Access explanation with no fake interaction, and independent per-section error degradation.');
