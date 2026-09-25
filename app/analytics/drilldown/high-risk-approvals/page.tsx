@@ -528,7 +528,7 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
     console.error('[high-risk-approvals] page load error', err);
     return (
       <DashboardShell>
-        <div className="min-h-screen" style={{ background: '#0A0E1A' }}>
+        <div className="min-h-screen" style={{ background: 'rgb(var(--al-bg-rgb))' }}>
           <section className="grid gap-5 px-1 pb-10">
             <div className="rounded-2xl border border-al-danger/20 bg-al-danger/10 p-6">
               <p className="text-sm font-bold text-red-300">Unable to load high-risk approval data. Please try again.</p>
@@ -567,7 +567,7 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
 
   return (
     <DashboardShell>
-      <div className="min-h-screen" style={{ background: '#0A0E1A' }}>
+      <div className="min-h-screen" style={{ background: 'rgb(var(--al-bg-rgb))' }}>
         <section className="grid gap-5 px-1 pb-10">
 
           {/* Page header */}

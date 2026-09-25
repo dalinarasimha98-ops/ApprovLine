@@ -98,7 +98,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
                   placeholder="Search reports..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-al-border bg-al-surface-sunken pl-9 pr-3 text-sm text-al-text placeholder-slate-400 focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-[#2155d9]/20"
+                  className="h-10 w-full rounded-lg border border-al-border bg-al-surface-sunken pl-9 pr-3 text-sm text-al-text placeholder-slate-400 focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-focus/20"
                 />
               </div>
               <div className="flex shrink-0 gap-1">
@@ -147,7 +147,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
                   tabIndex={0}
                   aria-pressed={selectedId === report.id}
                   onKeyDown={(e) => e.key === 'Enter' && setSelectedId(selectedId === report.id ? null : report.id)}
-                  className={`grid cursor-pointer items-center gap-4 border-b border-al-border px-5 py-4 transition last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2155d9]/30 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] ${
+                  className={`grid cursor-pointer items-center gap-4 border-b border-al-border px-5 py-4 transition last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-al-focus/30 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] ${
                     selectedId === report.id ? 'bg-al-info/10' : 'hover:bg-al-surface-sunken'
                   }`}
                 >

@@ -602,7 +602,7 @@ export default async function ApprovalsPage({
               <div className="flex items-center gap-4">
                 <div className="relative h-[80px] w-[80px] flex-shrink-0">
                   <svg width="80" height="80" viewBox="0 0 80 80">
-                    <circle cx="40" cy="40" r="30" fill="none" stroke="#152040" strokeWidth="10" />
+                    <circle cx="40" cy="40" r="30" fill="none" stroke="rgb(var(--al-surface-elevated-rgb))" strokeWidth="10" />
                     {statusCounts.approved > 0 ? (
                       <circle
                         cx="40" cy="40" r="30" fill="none" stroke="#22C55E" strokeWidth="10"

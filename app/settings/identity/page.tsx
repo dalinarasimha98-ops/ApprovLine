@@ -51,7 +51,7 @@ export default async function IdentitySettingsPage() {
     data = await getIdentityCenterData(tenant);
   } catch (error) {
     return (
-      <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
+      <main className="min-h-screen bg-al-bg px-4 py-8 text-al-text sm:px-6">
         <section className="mx-auto grid max-w-5xl gap-4 rounded-[28px] border border-al-warning/30 bg-al-surface p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-al-warning">Enterprise Identity Center</p>
           <h1 className="text-2xl font-black text-al-text">We could not load identity settings this time</h1>
@@ -66,7 +66,7 @@ export default async function IdentitySettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
+    <main className="min-h-screen bg-al-bg px-4 py-8 text-al-text sm:px-6">
       <section className="mx-auto grid max-w-7xl gap-6">
         <div className="overflow-hidden rounded-[32px] border border-al-border bg-al-surface shadow-sm">
           <div className="grid gap-8 bg-al-bg p-6 text-white lg:grid-cols-[1.1fr_0.9fr] lg:p-8">

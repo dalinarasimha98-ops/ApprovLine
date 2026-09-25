@@ -221,13 +221,13 @@ function OverviewTab({ data, users, onStatusChanged }: { data: DetailData; users
       {/* Description */}
       <div>
         <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider mb-1">Description</p>
-        <p className="text-sm text-[#C4CEDF] leading-relaxed">{investigation.summary ?? aiSummary.whatHappened}</p>
+        <p className="text-sm text-al-text-secondary leading-relaxed">{investigation.summary ?? aiSummary.whatHappened}</p>
       </div>
 
       {/* Key Details */}
       <div>
         <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider mb-2">Key Details</p>
-        <div className="rounded-lg border border-al-border bg-[#0A1628] divide-y divide-[#1E2D4A]">
+        <div className="rounded-lg border border-al-border bg-al-surface-sunken divide-y divide-al-border">
           {[
             ['Investigation ID', `#${investigation.id.slice(-8).toUpperCase()}`],
             ['Risk Score', `${riskScore}/100`],
@@ -252,7 +252,7 @@ function OverviewTab({ data, users, onStatusChanged }: { data: DetailData; users
           <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider mb-2">Risk Indicators</p>
           <div className="grid gap-1.5">
             {riskIndicators.map((indicator, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs text-[#C4CEDF]">
+              <div key={i} className="flex items-start gap-2 text-xs text-al-text-secondary">
                 {indicator.icon === 'shield' ? <ShieldAlert className="w-3.5 h-3.5 text-al-danger shrink-0 mt-0.5" /> :
                   indicator.icon === 'clock' ? <Clock className="w-3.5 h-3.5 text-al-warning shrink-0 mt-0.5" /> :
                   <AlertTriangle className="w-3.5 h-3.5 text-al-warning shrink-0 mt-0.5" />}
@@ -267,7 +267,7 @@ function OverviewTab({ data, users, onStatusChanged }: { data: DetailData; users
       {linkedApprovals.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider mb-2">Linked Approvals ({linkedApprovals.length})</p>
-          <div className="rounded-lg border border-al-border overflow-hidden divide-y divide-[#1E2D4A]">
+          <div className="rounded-lg border border-al-border overflow-hidden divide-y divide-al-border">
             {linkedApprovals.slice(0, 3).map((approval) => (
               <div key={approval.id} className="flex items-center justify-between px-3 py-2 gap-3">
                 <div className="min-w-0">
@@ -370,7 +370,7 @@ function OverviewTab({ data, users, onStatusChanged }: { data: DetailData; users
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
             placeholder="Add a note…"
-            className="flex-1 h-9 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text placeholder-[#6B7FA8] outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition"
+            className="flex-1 h-9 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text placeholder-al-text-muted outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition"
           />
           <button type="submit" disabled={isPending || !noteText.trim()} className="h-9 px-3 rounded-lg bg-al-accent hover:bg-al-accent-hover text-xs font-bold text-white transition disabled:opacity-40">
             Add
@@ -381,8 +381,8 @@ function OverviewTab({ data, users, onStatusChanged }: { data: DetailData; users
         ) : (
           <div className="grid gap-2 max-h-48 overflow-y-auto">
             {notes.map((note) => (
-              <div key={note.id} className="rounded-lg bg-[#0A1628] border border-al-border p-3">
-                <p className="text-xs text-[#C4CEDF] leading-relaxed">{note.body}</p>
+              <div key={note.id} className="rounded-lg bg-al-surface-sunken border border-al-border p-3">
+                <p className="text-xs text-al-text-secondary leading-relaxed">{note.body}</p>
                 <p className="mt-1.5 text-xs text-al-text-muted">
                   {note.authorUser?.name ?? note.authorUser?.email ?? 'Reviewer'} · {formatDateTime(note.createdAt)}
                 </p>
@@ -407,7 +407,7 @@ function EvidenceTab({ data }: { data: DetailData }) {
   return (
     <div className="grid gap-4 p-4">
       {approvals.map((approval) => (
-        <div key={approval.id} className="rounded-lg border border-al-border bg-[#0A1628] overflow-hidden">
+        <div key={approval.id} className="rounded-lg border border-al-border bg-al-surface-sunken overflow-hidden">
           <div className="px-4 py-3 border-b border-al-border flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-al-accent">{approval.sourcePlatform ?? 'Unknown Source'}</p>
@@ -476,10 +476,10 @@ function TimelineTab({ data }: { data: DetailData }) {
         <div className="grid gap-3">
           {timeline.map((event, i) => (
             <div key={i} className="flex gap-3 relative">
-              <div className="w-9 h-9 rounded-full border border-al-border bg-[#0A1628] flex items-center justify-center text-al-text-muted shrink-0 z-10">
+              <div className="w-9 h-9 rounded-full border border-al-border bg-al-surface-sunken flex items-center justify-center text-al-text-muted shrink-0 z-10">
                 {typeIcon(event.type)}
               </div>
-              <div className="rounded-lg border border-al-border bg-[#0A1628] p-3 flex-1 min-w-0">
+              <div className="rounded-lg border border-al-border bg-al-surface-sunken p-3 flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-xs font-semibold text-al-accent">{event.type}</p>
                   <p className="text-xs text-al-text-muted whitespace-nowrap shrink-0">{formatDateTime(event.at)}</p>
@@ -508,7 +508,7 @@ function AIAnalysisTab({ data }: { data: DetailData }) {
 
   return (
     <div className="grid gap-4 p-4">
-      <div className="rounded-lg border border-al-border bg-[#0A1628] p-4">
+      <div className="rounded-lg border border-al-border bg-al-surface-sunken p-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider">AI Risk Assessment</p>
           <span className={`text-sm font-black ${riskScore >= 65 ? 'text-al-danger' : riskScore >= 40 ? 'text-al-warning' : 'text-al-success'}`}>{riskScore}/100</span>
@@ -524,7 +524,7 @@ function AIAnalysisTab({ data }: { data: DetailData }) {
 
       <div>
         <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider mb-2">Summary</p>
-        <div className="grid gap-2 text-sm text-[#C4CEDF] leading-relaxed">
+        <div className="grid gap-2 text-sm text-al-text-secondary leading-relaxed">
           <p><span className="font-bold text-al-text">What happened:</span> {aiSummary.whatHappened}</p>
           <p><span className="font-bold text-al-text">Who approved:</span> {aiSummary.whoApproved}</p>
           <p><span className="font-bold text-al-text">Why risky:</span> {aiSummary.whyRisky}</p>
@@ -552,7 +552,7 @@ function AIAnalysisTab({ data }: { data: DetailData }) {
                   <p className="text-sm font-bold text-al-text">{ev.triggeredRule ?? ev.rule?.title ?? 'Playbook rule'}</p>
                   <span className={`text-xs font-bold ${policyStatusClass(ev.status)}`}>{ev.status} · {ev.score}</span>
                 </div>
-                <p className="text-xs text-[#C4CEDF] mt-1">{ev.explanation}</p>
+                <p className="text-xs text-al-text-secondary mt-1">{ev.explanation}</p>
                 {ev.missingEvidence.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {ev.missingEvidence.map((item) => <span key={item} className="rounded px-1.5 py-0.5 text-xs bg-al-warning/10 text-al-warning border border-al-warning/20">Need {item}</span>)}
@@ -572,7 +572,7 @@ function AIAnalysisTab({ data }: { data: DetailData }) {
                   <p className="text-sm font-bold text-al-text">{check.policy}</p>
                   <span className={`text-xs font-bold ${policyStatusClass(check.status)}`}>{check.status}</span>
                 </div>
-                <p className="text-xs text-[#C4CEDF] mt-1">{check.finding}</p>
+                <p className="text-xs text-al-text-secondary mt-1">{check.finding}</p>
               </div>
             ))}
           </div>
@@ -615,7 +615,7 @@ function ActivityTab({ data }: { data: DetailData }) {
   return (
     <div className="p-4 grid gap-2">
       {auditLogs.map((log) => (
-        <div key={log.id} className="flex items-start gap-3 rounded-lg border border-al-border bg-[#0A1628] px-3 py-2">
+        <div key={log.id} className="flex items-start gap-3 rounded-lg border border-al-border bg-al-surface-sunken px-3 py-2">
           <div className="w-6 h-6 rounded-full bg-al-accent-hover/15 text-al-accent flex items-center justify-center shrink-0 mt-0.5">
             <FileText className="w-3 h-3" />
           </div>

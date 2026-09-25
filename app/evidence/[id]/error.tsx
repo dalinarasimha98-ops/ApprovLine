@@ -9,8 +9,8 @@ export default function UnifiedEvidenceError({
   reset: () => void;
 }) {
   return (
-    <div className="grid min-h-[70vh] place-items-center bg-[#020a15] p-6 text-al-text">
-      <div className="w-full max-w-xl rounded-2xl border border-rose-400/20 bg-[#071426] p-6 shadow-2xl">
+    <div className="grid min-h-[70vh] place-items-center bg-al-bg p-6 text-al-text">
+      <div className="w-full max-w-xl rounded-2xl border border-rose-400/20 bg-al-surface-elevated p-6 shadow-2xl">
         <AlertTriangle className="h-8 w-8 text-al-danger" />
         <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-al-danger">
           Evidence temporarily unavailable

@@ -150,7 +150,7 @@ type GatewayData = Awaited<ReturnType<typeof fetchGatewayData>>;
 // UI primitives
 // ---------------------------------------------------------------------------
 function DarkCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-al-border bg-[#0D1526] p-5 ${className}`}>{children}</div>;
+  return <div className={`rounded-2xl border border-al-border bg-al-surface p-5 ${className}`}>{children}</div>;
 }
 function CardTitle({ children }: { children: React.ReactNode }) {
   return <h3 className="text-sm font-bold text-white">{children}</h3>;
@@ -244,7 +244,7 @@ function OverviewTab({ d, gatewayEmail }: { d: GatewayData; gatewayEmail: string
       </DarkCard>
 
       {/* Security bar */}
-      <div className="rounded-xl border border-al-border bg-[#0A0E1A] p-3 flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5">
+      <div className="rounded-xl border border-al-border bg-al-surface-sunken p-3 flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5">
         {['🔒 Secure by Design', '🛡 End-to-End Encryption', '🏢 Tenant Isolated', '📋 Full Audit Trail'].map(item => (
           <span key={item} className="text-[11px] font-semibold text-al-text-muted">{item}</span>
         ))}
@@ -280,7 +280,7 @@ function OverviewTab({ d, gatewayEmail }: { d: GatewayData; gatewayEmail: string
             {d.integrations.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {d.integrations.slice(0, 8).map(int => (
-                  <div key={int.id} className="rounded-xl border border-al-border bg-[#0A0E1A] p-3">
+                  <div key={int.id} className="rounded-xl border border-al-border bg-al-surface-sunken p-3">
                     <div className="flex items-center justify-between gap-1.5 mb-1">
                       <p className="text-[11px] font-bold text-white truncate">{INTEGRATION_LABELS[int.provider] ?? int.provider}</p>
                       <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: STATUS_COLORS[int.status] ?? '#64748B' }} />
@@ -295,7 +295,7 @@ function OverviewTab({ d, gatewayEmail }: { d: GatewayData; gatewayEmail: string
           </DarkCard>
 
           {/* Gateway email */}
-          <div className="rounded-xl border border-dashed border-al-border bg-[#0A0E1A] p-4">
+          <div className="rounded-xl border border-dashed border-al-border bg-al-surface-sunken p-4">
             <p className="text-xs font-bold text-white">Tenant email capture</p>
             <p className="mt-1 font-mono text-sm font-bold text-al-accent">{gatewayEmail}</p>
             <p className="mt-1.5 text-[11px] text-al-text-muted">Forward approval emails here to ingest decisions without a native connector.</p>
@@ -359,7 +359,7 @@ function OverviewTab({ d, gatewayEmail }: { d: GatewayData; gatewayEmail: string
                 { label: 'Audit Log', href: '/dashboard/gateway?tab=audit' },
                 { label: 'Reliability Monitor', href: '/dashboard/gateway/reliability' },
               ].map(({ label, href }) => (
-                <Link key={href} href={href} className="flex items-center justify-between rounded-lg border border-al-border bg-[#0A0E1A] px-3 py-2 text-[11px] font-semibold text-al-text-secondary hover:border-al-accent/30 hover:text-white transition-colors">
+                <Link key={href} href={href} className="flex items-center justify-between rounded-lg border border-al-border bg-al-surface-sunken px-3 py-2 text-[11px] font-semibold text-al-text-secondary hover:border-al-accent/30 hover:text-white transition-colors">
                   {label} <span className="text-al-text-secondary">→</span>
                 </Link>
               ))}
@@ -391,7 +391,7 @@ function ConnectorsTab({ integrations }: { integrations: GatewayData['integratio
                 <th className="pb-2">Last Updated</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1E2D4A]">
+            <tbody className="divide-y divide-al-border">
               {integrations.map(int => (
                 <tr key={int.id}>
                   <td className="py-2.5 pr-4 font-bold text-white">{INTEGRATION_LABELS[int.provider] ?? int.provider}</td>
@@ -498,7 +498,7 @@ function EvidenceTab({ events }: { events: GatewayData['recentEvents'] }) {
                 <th className="pb-2">Received</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1E2D4A]">
+            <tbody className="divide-y divide-al-border">
               {events.map(evt => (
                 <tr key={evt.id}>
                   <td className="py-2.5 pr-4"><span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${providerColor(evt.providerKey)}18`, color: providerColor(evt.providerKey) }}>{providerLabel(evt.providerKey)}</span></td>
@@ -536,7 +536,7 @@ function AuditTab({ logs }: { logs: GatewayData['auditLog'] }) {
                 <th className="pb-2">Timestamp</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1E2D4A]">
+            <tbody className="divide-y divide-al-border">
               {logs.map(log => (
                 <tr key={log.id}>
                   <td className="py-2.5 pr-4 font-mono text-[10px] text-al-accent">{log.action}</td>
@@ -573,7 +573,7 @@ function MappingsTab() {
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-xs">
           <thead><tr className="border-b border-al-border text-left text-[10px] font-bold uppercase tracking-wider text-al-text-muted"><th className="pb-2 pr-6">Gateway Field</th><th className="pb-2">ApprovLine Field</th></tr></thead>
-          <tbody className="divide-y divide-[#1E2D4A]">
+          <tbody className="divide-y divide-al-border">
             {mappings.map(([src, dst]) => (
               <tr key={src}><td className="py-2.5 pr-6 font-mono text-al-accent">{src}</td><td className="py-2.5 font-mono text-al-text-secondary">{dst}</td></tr>
             ))}
@@ -598,7 +598,7 @@ function SettingsTab() {
       <p className="mt-1 text-[11px] text-al-text-muted">Configure individual integrations. Admin role required.</p>
       <div className="mt-4 grid gap-2">
         {links.map(l => (
-          <div key={l.href} className="flex items-center justify-between rounded-xl border border-al-border bg-[#0A0E1A] px-4 py-3">
+          <div key={l.href} className="flex items-center justify-between rounded-xl border border-al-border bg-al-surface-sunken px-4 py-3">
             <div><p className="text-xs font-bold text-white">{l.label}</p><p className="text-[10px] text-al-text-muted">{l.desc}</p></div>
             <Link href={l.href} className="text-[11px] font-semibold text-al-accent hover:text-al-accent flex-shrink-0 ml-4">Configure →</Link>
           </div>
@@ -660,11 +660,11 @@ export default async function UniversalGatewayPage({
         </div>
       )}
       {gatewayMetrics?.message && (
-        <div className={`rounded-2xl border p-4 ${gatewayMetrics.alert ? 'border-amber-700/40 bg-amber-900/20 text-al-warning' : 'border-al-border bg-[#0D1526] text-al-text-muted'}`}>
+        <div className={`rounded-2xl border p-4 ${gatewayMetrics.alert ? 'border-amber-700/40 bg-amber-900/20 text-al-warning' : 'border-al-border bg-al-surface text-al-text-muted'}`}>
           {gatewayMetrics.alert && <AutoRetryOnDegraded />}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-bold">{gatewayMetrics.message}</p>
-            <RefreshButton className="inline-flex h-8 items-center gap-2 rounded-lg border border-al-border bg-[#0A0E1A] px-3 text-xs font-bold text-al-text-secondary disabled:opacity-60" />
+            <RefreshButton className="inline-flex h-8 items-center gap-2 rounded-lg border border-al-border bg-al-surface-sunken px-3 text-xs font-bold text-al-text-secondary disabled:opacity-60" />
           </div>
         </div>
       )}

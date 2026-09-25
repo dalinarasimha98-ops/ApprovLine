@@ -13,7 +13,7 @@ export default function ExportPage() {
           <h3 className="text-lg font-black text-al-text">Approval records CSV</h3>
           <p className="mt-1 text-sm text-al-text-muted">Includes approval type, confidence, approver, source platform, category, and timestamps.</p>
         </div>
-        <PendingLink className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-al-accent px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]" href="/api/export/approvals" pendingText="Preparing CSV...">
+        <PendingLink className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-al-accent px-5 text-sm font-bold text-white shadow-sm shadow-al-accent/20 hover:bg-al-accent-hover" href="/api/export/approvals" pendingText="Preparing CSV...">
           Download CSV
         </PendingLink>
       </div>

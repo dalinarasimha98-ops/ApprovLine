@@ -196,7 +196,7 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
             <input name="to" defaultValue={filters.to ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-al-info/20" />
           </label>
           <div className="flex items-end gap-2">
-            <FormSubmitButton pendingText="Filtering..." className="min-h-0 h-11 rounded-lg bg-al-accent px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+            <FormSubmitButton pendingText="Filtering..." className="min-h-0 h-11 rounded-lg bg-al-accent px-4 text-sm font-bold text-white shadow-sm shadow-al-accent/20 hover:bg-al-accent-hover">
               Apply filters
             </FormSubmitButton>
             <PendingLink href={`/analytics/drilldown/${metric}`} pendingText="Clearing..." className="inline-flex min-h-0 h-11 items-center rounded-lg border border-al-border px-4 text-sm font-bold text-al-text-secondary">

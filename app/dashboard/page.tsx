@@ -21,7 +21,7 @@ import { withTimeout } from '@/lib/performance';
 
 export const dynamic = 'force-dynamic';
 
-const panelClass = 'rounded-lg border border-white/[0.09] bg-[#071525] shadow-[0_12px_36px_rgba(0,0,0,.16)]';
+const panelClass = 'rounded-lg border border-white/[0.09] bg-al-surface-sunken shadow-[0_12px_36px_rgba(0,0,0,.16)]';
 const palette = ['#2f7cff', '#49c78e', '#7c6cf2', '#f58b3d', '#46b6df', '#aeb9c8'];
 
 /**
@@ -120,7 +120,7 @@ function Donut({ values, total, centerLabel }: { values: number[]; total: number
   return (
     <div className="relative grid h-40 w-40 shrink-0 place-items-center">
       <svg viewBox="0 0 42 42" className="-rotate-90">
-        <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#17273a" strokeWidth="6" />
+        <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="rgb(var(--al-border-rgb))" strokeWidth="6" />
         {values.map((value, index) => {
           const percent = total > 0 ? (value / total) * 100 : 0;
           const dash = `${percent} ${100 - percent}`;
@@ -352,7 +352,7 @@ export default async function DashboardPage() {
             <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="none" aria-label="Approvals trend">
               {[25, 50, 75].map((y) => <line key={y} x1="5" x2="98" y1={y} y2={y} stroke="rgba(148,163,184,.09)" strokeDasharray="2 3" />)}
               <polyline points={chartPoints} fill="none" stroke="#347dff" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-              {dayCounts.map((count, index) => <circle key={index} cx={8 + index * 15.3} cy={88 - (count / chartMax) * 62} r="1.6" fill="#071525" stroke="#347dff" strokeWidth="1.2" />)}
+              {dayCounts.map((count, index) => <circle key={index} cx={8 + index * 15.3} cy={88 - (count / chartMax) * 62} r="1.6" fill="rgb(var(--al-surface-sunken-rgb))" stroke="#347dff" strokeWidth="1.2" />)}
             </svg>
           </div>
           <div className="grid grid-cols-7 text-center text-[9px] text-al-text-secondary">
@@ -381,8 +381,8 @@ export default async function DashboardPage() {
                 </div>
               ))}
             </div>
-            <div className="relative grid h-32 w-32 place-items-center rounded-full" style={{ background: `conic-gradient(#45cf78 ${complianceScore}%, #17273a 0)` }}>
-              <div className="grid h-24 w-24 place-items-center rounded-full bg-[#071525] text-center">
+            <div className="relative grid h-32 w-32 place-items-center rounded-full" style={{ background: `conic-gradient(#45cf78 ${complianceScore}%, rgb(var(--al-border-rgb)) 0)` }}>
+              <div className="grid h-24 w-24 place-items-center rounded-full bg-al-surface-sunken text-center">
                 <div><p className="text-2xl font-bold text-white">{complianceScore}%</p><p className="text-[9px] text-al-text-muted">Compliance</p></div>
               </div>
             </div>

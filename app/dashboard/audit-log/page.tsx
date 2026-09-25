@@ -45,7 +45,7 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
           <h2 className="mt-2 text-2xl font-black tracking-tight text-al-text">Audit Logs</h2>
           <p className="mt-2 text-sm leading-6 text-al-text-secondary">Chronological, immutable activity stream for compliance review and operational debugging.</p>
         </div>
-        <PendingLink href="/api/export/approvals?format=csv" pendingText="Preparing export..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-al-accent px-5 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+        <PendingLink href="/api/export/approvals?format=csv" pendingText="Preparing export..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-lg bg-al-accent px-5 text-sm font-bold text-white shadow-sm shadow-al-accent/20 hover:bg-al-accent-hover">
           Export evidence
         </PendingLink>
       </div>
@@ -87,7 +87,7 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
             <h3 className="text-lg font-black text-al-text">No audit logs yet</h3>
             <p className="mt-2 text-sm text-al-text-muted">Events will appear here as onboarding, integrations, and approval ingestion run.</p>
             <form action="/api/demo/seed" method="post" className="mt-5">
-              <button className="rounded-lg bg-al-accent px-4 py-2 text-sm font-black text-white shadow-sm shadow-blue-200">Generate demo data</button>
+              <button className="rounded-lg bg-al-accent px-4 py-2 text-sm font-black text-white shadow-sm shadow-al-accent/20">Generate demo data</button>
             </form>
           </div>
         ) : null}

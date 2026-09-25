@@ -37,7 +37,7 @@ export default async function OnboardingSettingsPage() {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
+      <main className="min-h-screen bg-al-bg px-4 py-8 text-al-text sm:px-6">
         <section className="mx-auto grid max-w-5xl gap-5 rounded-[28px] border border-al-warning/30 bg-al-surface p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-al-warning">Onboarding Management</p>
           <h1 className="text-2xl font-black text-al-text">
@@ -67,7 +67,7 @@ export default async function OnboardingSettingsPage() {
   const readiness = state.readiness;
 
   return (
-    <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
+    <main className="min-h-screen bg-al-bg px-4 py-8 text-al-text sm:px-6">
       <section className="mx-auto grid max-w-5xl gap-6">
         <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-al-accent">Onboarding Management</p>

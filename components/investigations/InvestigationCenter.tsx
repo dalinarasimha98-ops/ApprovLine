@@ -216,7 +216,7 @@ function InsightsPanel({ orgId }: { orgId?: string }) {
         <div className="flex items-center gap-3">
           <svg viewBox="0 0 112 112" className="w-20 h-20 shrink-0" style={{ transform: 'rotate(-90deg)' }}>
             {total === 1 && data.riskDistribution.high + data.riskDistribution.medium + data.riskDistribution.low === 0 ? (
-              <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1E2D4A" strokeWidth="16" />
+              <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgb(var(--al-border-rgb))" strokeWidth="16" />
             ) : donutSegments.map((seg) => (
               <circle
                 key={seg.label}
@@ -228,7 +228,7 @@ function InsightsPanel({ orgId }: { orgId?: string }) {
                 strokeDashoffset={seg.offset}
               />
             ))}
-            <text x={cx} y={cy + 5} textAnchor="middle" fill="#E8EEFF" fontSize="14" fontWeight="700" style={{ transform: 'rotate(90deg)', transformOrigin: `${cx}px ${cy}px` }}>
+            <text x={cx} y={cy + 5} textAnchor="middle" fill="rgb(var(--al-text-primary-rgb))" fontSize="14" fontWeight="700" style={{ transform: 'rotate(90deg)', transformOrigin: `${cx}px ${cy}px` }}>
               {total - 1}
             </text>
           </svg>
@@ -276,7 +276,7 @@ function InsightsPanel({ orgId }: { orgId?: string }) {
             const resolvedY = 55 - (v.resolved / maxTrend) * 50;
             return (
               <g key={label}>
-                <line x1={x} y1={55} x2={x} y2={5} stroke="#1E2D4A" strokeWidth="0.5" strokeDasharray="2,3" />
+                <line x1={x} y1={55} x2={x} y2={5} stroke="rgb(var(--al-border-rgb))" strokeWidth="0.5" strokeDasharray="2,3" />
                 <circle cx={x} cy={createdY} r="3" fill="#7C3AED" />
                 <circle cx={x} cy={resolvedY} r="3" fill="#10B981" />
                 {i > 0 && (() => {
@@ -374,7 +374,7 @@ function NewInvestigationModal({ onClose, onCreated, riskyApprovals, users }: Ne
           {error && <p className="rounded-lg bg-al-danger/10 border border-al-danger/20 px-3 py-2 text-sm text-al-danger">{error}</p>}
           <div className="grid gap-1.5">
             <label className="text-xs font-semibold text-al-text-muted uppercase tracking-wider">Title *</label>
-            <input name="title" placeholder="Vendor payment evidence review" className="h-10 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text placeholder-[#6B7FA8] outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition" />
+            <input name="title" placeholder="Vendor payment evidence review" className="h-10 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text placeholder-al-text-muted outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
@@ -386,7 +386,7 @@ function NewInvestigationModal({ onClose, onCreated, riskyApprovals, users }: Ne
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs font-semibold text-al-text-muted uppercase tracking-wider">Department</label>
-              <input name="department" placeholder="Finance" className="h-10 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text placeholder-[#6B7FA8] outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition" />
+              <input name="department" placeholder="Finance" className="h-10 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text placeholder-al-text-muted outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition" />
             </div>
           </div>
           {users.length > 0 && (
@@ -415,7 +415,7 @@ function NewInvestigationModal({ onClose, onCreated, riskyApprovals, users }: Ne
             </div>
           )}
           <div className="flex gap-3 mt-2">
-            <button type="button" onClick={onClose} className="flex-1 h-10 rounded-lg border border-al-border text-sm font-semibold text-al-text-muted hover:text-al-text hover:border-[#2D4F7F] transition">Cancel</button>
+            <button type="button" onClick={onClose} className="flex-1 h-10 rounded-lg border border-al-border text-sm font-semibold text-al-text-muted hover:text-al-text hover:border-al-accent/40 transition">Cancel</button>
             <button type="submit" disabled={isPending} className="flex-1 h-10 rounded-lg bg-al-accent hover:bg-al-accent-hover text-sm font-bold text-white shadow-lg shadow-violet-900/30 transition disabled:opacity-60">
               {isPending ? 'Creating…' : 'Create Investigation'}
             </button>
@@ -521,7 +521,7 @@ export function InvestigationCenter({
         <div className="flex gap-2 shrink-0">
           <a
             href="/api/export/investigations/bulk-report"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-muted hover:text-al-text hover:border-[#2D4F7F] transition"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-muted hover:text-al-text hover:border-al-accent/40 transition"
           >
             <Download className="w-4 h-4" /> Export
           </a>
@@ -562,7 +562,7 @@ export function InvestigationCenter({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search investigations…"
-            className="h-9 w-full rounded-lg border border-al-border bg-al-surface pl-9 pr-3 text-sm text-al-text placeholder-[#6B7FA8] outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition"
+            className="h-9 w-full rounded-lg border border-al-border bg-al-surface pl-9 pr-3 text-sm text-al-text placeholder-al-text-muted outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition"
           />
         </div>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); applyFilters(); }} className="h-9 rounded-lg border border-al-border bg-al-surface px-2 text-sm text-al-text outline-none focus:border-al-accent transition">
@@ -603,7 +603,7 @@ export function InvestigationCenter({
         <button
           type="button"
           onClick={() => { setPage(1); fetchCases({ pg: 1 }); }}
-          className="h-9 w-9 rounded-lg border border-al-border text-al-text-muted hover:text-al-text hover:border-[#2D4F7F] transition flex items-center justify-center"
+          className="h-9 w-9 rounded-lg border border-al-border text-al-text-muted hover:text-al-text hover:border-al-accent/40 transition flex items-center justify-center"
           title="Refresh"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />

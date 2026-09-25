@@ -55,7 +55,7 @@ function Avatar({ name, email, size = 'sm' }: { name: string | null; email: stri
     : email.slice(0, 2).toUpperCase();
   const sz = size === 'sm' ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-sm';
   return (
-    <div className={`${sz} flex flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2155d9] to-purple-600 font-black text-white`}>
+    <div className={`${sz} flex flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-al-accent to-al-accent-hover font-black text-white`}>
       {initials}
     </div>
   );

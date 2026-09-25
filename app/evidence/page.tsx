@@ -107,7 +107,7 @@ function TableSkeleton() {
       <div className="border-b border-al-border px-5 py-3.5">
         <div className="h-4 w-40 animate-pulse rounded bg-al-surface-elevated" />
       </div>
-      <div className="divide-y divide-[#1E2D4A]/60">
+      <div className="divide-y divide-al-border/60">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="h-14 animate-pulse bg-al-surface-sunken" />
         ))}
@@ -368,7 +368,7 @@ async function EvidenceResultsSection({
             </div>
 
             {/* Rows */}
-            <div className="divide-y divide-[#1E2D4A]/40">
+            <div className="divide-y divide-al-border/40">
               {records.map((record) => (
                 <PendingLink
                   key={record.id}
@@ -471,7 +471,7 @@ async function EvidenceResultsSection({
                 {/* SVG donut */}
                 <div className="relative h-[80px] w-[80px] flex-shrink-0">
                   <svg width="80" height="80" viewBox="0 0 80 80">
-                    <circle cx="40" cy="40" r="30" fill="none" stroke="#152040" strokeWidth="10" />
+                    <circle cx="40" cy="40" r="30" fill="none" stroke="rgb(var(--al-surface-elevated-rgb))" strokeWidth="10" />
                     {verifiedCount > 0 ? (
                       <circle
                         cx="40" cy="40" r="30" fill="none" stroke="#22C55E" strokeWidth="10"

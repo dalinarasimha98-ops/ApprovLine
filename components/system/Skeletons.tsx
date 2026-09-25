@@ -21,7 +21,7 @@ export function DashboardSkeleton() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="h-[134px] animate-pulse rounded-lg border border-white/[0.08] bg-[#071525] p-4">
+          <div key={index} className="h-[134px] animate-pulse rounded-lg border border-white/[0.08] bg-al-surface-sunken p-4">
             <div className="h-3 w-24 rounded bg-slate-800" />
             <div className="mt-3 h-7 w-16 rounded bg-slate-700" />
             <div className="mt-8 h-6 rounded bg-slate-900" />
@@ -30,7 +30,7 @@ export function DashboardSkeleton() {
       </div>
       <div className="grid gap-3 xl:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="min-h-72 animate-pulse rounded-lg border border-white/[0.08] bg-[#071525] p-4">
+          <div key={index} className="min-h-72 animate-pulse rounded-lg border border-white/[0.08] bg-al-surface-sunken p-4">
             <div className="h-4 w-40 rounded bg-slate-800" />
             <div className="mt-5 grid gap-3">
               {Array.from({ length: 5 }).map((__, row) => <div key={row} className="h-9 rounded bg-slate-900" />)}
@@ -39,9 +39,9 @@ export function DashboardSkeleton() {
         ))}
       </div>
       <div className="grid gap-3 xl:grid-cols-12">
-        <div className="h-64 animate-pulse rounded-lg border border-white/[0.08] bg-[#071525] xl:col-span-3" />
-        <div className="h-64 animate-pulse rounded-lg border border-white/[0.08] bg-[#071525] xl:col-span-5" />
-        <div className="h-64 animate-pulse rounded-lg border border-white/[0.08] bg-[#071525] xl:col-span-4" />
+        <div className="h-64 animate-pulse rounded-lg border border-white/[0.08] bg-al-surface-sunken xl:col-span-3" />
+        <div className="h-64 animate-pulse rounded-lg border border-white/[0.08] bg-al-surface-sunken xl:col-span-5" />
+        <div className="h-64 animate-pulse rounded-lg border border-white/[0.08] bg-al-surface-sunken xl:col-span-4" />
       </div>
     </section>
   );

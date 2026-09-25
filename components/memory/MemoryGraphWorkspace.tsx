@@ -215,6 +215,29 @@ function tickSim(nodes: SimNode[], edges: SimEdge[], alpha: number, w: number, h
 
 // ── Canvas Render ─────────────────────────────────────────────────────────────
 
+/**
+ * Canvas 2D fillStyle/strokeStyle can't resolve CSS custom properties the
+ * way a DOM element's style can - "rgb(var(--al-bg-rgb))" is simply
+ * ignored by the canvas color parser. This reads the CURRENT theme's
+ * actual resolved channel values from :root (which already reflect
+ * whichever of dark/light/system is active - see app/globals.css) once
+ * per render() call, so the graph canvas repaints correctly on every
+ * theme change instead of staying a permanently-dark island regardless
+ * of the app's theme.
+ */
+function readThemeChannels() {
+  const style = getComputedStyle(document.documentElement);
+  const read = (token: string, fallback: string) => style.getPropertyValue(`--al-${token}-rgb`).trim() || fallback;
+  return {
+    bg: read('bg', '3 11 24'),
+    border: read('border', '30 45 74'),
+    textMuted: read('text-muted', '107 127 168'),
+    textPrimary: read('text-primary', '232 238 255'),
+    accent: read('accent', '124 58 237'),
+    danger: read('danger', '239 68 68'),
+  };
+}
+
 function render(
   ctx: CanvasRenderingContext2D,
   nodes: SimNode[],
@@ -225,12 +248,14 @@ function render(
   w: number,
   h: number,
 ) {
+  const theme = readThemeChannels();
+
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#030b18';
+  ctx.fillStyle = `rgb(${theme.bg})`;
   ctx.fillRect(0, 0, w, h);
 
   // Subtle dot grid
-  ctx.fillStyle = 'rgba(30,45,74,0.45)';
+  ctx.fillStyle = `rgba(${theme.border},0.45)`;
   const gs = 44 * tr.scale, ox = tr.tx % gs, oy = tr.ty % gs;
   for (let x = ox; x < w; x += gs) for (let y = oy; y < h; y += gs) { ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill(); }
 
@@ -249,13 +274,13 @@ function render(
     ctx.beginPath();
     ctx.moveTo(s.x, s.y);
     ctx.lineTo(t.x, t.y);
-    ctx.strokeStyle = isSel ? 'rgba(139,92,246,0.65)' : isHov ? 'rgba(107,127,168,0.45)' : 'rgba(30,45,74,0.8)';
+    ctx.strokeStyle = isSel ? `rgba(${theme.accent},0.65)` : isHov ? `rgba(${theme.textMuted},0.45)` : `rgba(${theme.border},0.8)`;
     ctx.lineWidth = isSel ? 2 : isHov ? 1.5 : 1;
     ctx.stroke();
     if (isSel && e.type) {
       const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
       ctx.font = '9px system-ui,sans-serif';
-      ctx.fillStyle = 'rgba(107,127,168,0.9)';
+      ctx.fillStyle = `rgba(${theme.textMuted},0.9)`;
       ctx.textAlign = 'center';
       ctx.fillText(relLabel(e.type).slice(0, 22), mx, my - 5);
     }
@@ -276,13 +301,13 @@ function render(
     ctx.beginPath(); ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
     ctx.fillStyle = c + (isSel ? 'ff' : isHov ? 'dd' : 'aa');
     ctx.fill();
-    ctx.strokeStyle = isSel ? '#ffffff' : isHov ? c + 'cc' : c + '55';
+    ctx.strokeStyle = isSel ? `rgb(${theme.textPrimary})` : isHov ? c + 'cc' : c + '55';
     ctx.lineWidth = isSel ? 2.5 : isHov ? 2 : 1.5;
     ctx.stroke();
 
     if (n.riskScore >= 70) {
       ctx.beginPath(); ctx.arc(n.x, n.y, n.radius + 3.5, 0, Math.PI * 2);
-      ctx.strokeStyle = '#EF4444' + (isSel ? 'ff' : '88');
+      ctx.strokeStyle = `rgba(${theme.danger},${isSel ? 1 : 0.53})`;
       ctx.lineWidth = 1.5; ctx.stroke();
     }
 
@@ -290,7 +315,7 @@ function render(
     const label = n.title.length > maxC ? n.title.slice(0, maxC - 1) + '…' : n.title;
     const fs = Math.max(9, Math.min(12, n.radius * 0.72));
     ctx.font = `${isSel || isHov ? '600 ' : ''}${fs}px system-ui,sans-serif`;
-    ctx.fillStyle = isSel ? '#ffffff' : '#CBD5E1';
+    ctx.fillStyle = isSel ? `rgb(${theme.textPrimary})` : `rgba(${theme.textMuted},0.85)`;
     ctx.textAlign = 'center';
     ctx.fillText(label, n.x, n.y + n.radius + 12);
   }
@@ -399,7 +424,7 @@ function NodeDetailPanel({
             )}
 
             {/* Key fields */}
-            <div className="rounded-lg bg-al-surface border border-al-border divide-y divide-[#1E2D4A]">
+            <div className="rounded-lg bg-al-surface border border-al-border divide-y divide-al-border">
               {[
                 { label: 'First Seen', value: fmtDate(detail.firstSeenAt) },
                 { label: 'Last Seen', value: fmtDate(detail.lastSeenAt) },
@@ -497,7 +522,7 @@ function ListView({ entities, onSelect }: { entities: GraphEntity[]; onSelect: (
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#1E2D4A]">
+        <tbody className="divide-y divide-al-border">
           {entities.map((e) => {
             const { label: rl, color: rc } = riskLabel(e.riskScore);
             return (

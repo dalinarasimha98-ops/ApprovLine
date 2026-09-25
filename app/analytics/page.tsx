@@ -374,7 +374,7 @@ async function ExecutiveDashboardSection({
             <h3 className="font-black text-white">Demo analytics preview — synthetic numbers only</h3>
             <p className="mt-1 text-sm font-semibold text-al-text-secondary">Use this for sales conversations. Every figure is scaled/fabricated.</p>
           </div>
-          <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex h-9 items-center justify-center rounded-lg border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary hover:bg-[#1a2a45]">
+          <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex h-9 items-center justify-center rounded-lg border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary hover:bg-al-surface-elevated">
             View live data
           </PendingLink>
         </div>
@@ -834,7 +834,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
 
   return (
     <DashboardShell>
-      <div className="min-h-screen" style={{ background: '#0A0E1A' }}>
+      <div className="min-h-screen" style={{ background: 'rgb(var(--al-bg-rgb))' }}>
         <section className="grid gap-5 px-1 pb-10">
           {/* Header */}
           <div className="flex flex-col gap-4 pt-1">

@@ -608,7 +608,7 @@ async function TimelineTab({ organizationId, approvalId }: { organizationId: str
               {sorted.map((event) => (
                 <div key={event.id} className="relative pl-7">
                   <div
-                    className="absolute -left-[4.5px] top-[6px] h-2.5 w-2.5 rounded-full border-2 border-al-accent/40 bg-al-bg ring-2 ring-[#030b18]"
+                    className="absolute -left-[4.5px] top-[6px] h-2.5 w-2.5 rounded-full border-2 border-al-accent/40 bg-al-bg ring-2 ring-al-bg"
                     aria-hidden="true"
                   />
                   <div className="rounded-xl border border-al-border bg-al-surface p-4">

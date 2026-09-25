@@ -116,7 +116,7 @@ function KpiCard({ metric, active }: { metric: KpiMetric; active: boolean }) {
   return (
     <Link
       href={metric.href}
-      className={`group rounded-xl border bg-al-surface p-4 shadow-sm transition hover:shadow-md ${active ? 'ring-2 ring-[#2155d9]/30 border-al-accent/30' : 'border-al-border'}`}
+      className={`group rounded-xl border bg-al-surface p-4 shadow-sm transition hover:shadow-md ${active ? 'ring-2 ring-al-accent/30 border-al-accent/30' : 'border-al-border'}`}
     >
       <div className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${metric.colorClass}`}>
         <span className={`h-1.5 w-1.5 rounded-full ${metric.dotClass}`} />
@@ -397,7 +397,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
                 type="search"
                 defaultValue={filters.q ?? ''}
                 placeholder="Alert title, approver, department…"
-                className="h-10 w-full rounded-lg border border-white/10 bg-al-surface/[0.07] pl-9 pr-3 text-sm font-semibold text-al-text placeholder-slate-500 outline-none focus:border-al-accent/60 focus:ring-2 focus:ring-[#2155d9]/25"
+                className="h-10 w-full rounded-lg border border-white/10 bg-al-surface/[0.07] pl-9 pr-3 text-sm font-semibold text-al-text placeholder-slate-500 outline-none focus:border-al-accent/60 focus:ring-2 focus:ring-al-focus/25"
               />
             </div>
           </label>

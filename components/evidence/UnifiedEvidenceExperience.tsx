@@ -518,7 +518,7 @@ export function UnifiedEvidenceExperience({
     typeof metadata.classificationVersion === 'string' ? metadata.classificationVersion : 'Current classifier';
 
   return (
-    <div className="min-h-screen bg-[#030813] px-3 py-3 text-al-text sm:px-4 lg:px-5">
+    <div className="min-h-screen bg-al-bg px-3 py-3 text-al-text sm:px-4 lg:px-5">
       <div className="mx-auto max-w-[1720px]">
         <div className="mb-3 flex min-h-12 flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-xs font-medium text-al-text-muted">
@@ -627,7 +627,7 @@ export function UnifiedEvidenceExperience({
                 </div>
               </div>
 
-              <div className="grid border-t border-white/[0.08] bg-[#061323]/70 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+              <div className="grid border-t border-white/[0.08] bg-al-surface-sunken/70 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 {[
                   ['Status', titleCase(status), 'text-al-success'],
                   ['Amount', amountText(initialData.amount, initialData.currency), 'text-white'],
@@ -645,7 +645,7 @@ export function UnifiedEvidenceExperience({
               </div>
             </section>
 
-            <section className="overflow-hidden rounded-2xl border border-al-info/15 bg-[#071321]/95 shadow-[0_18px_80px_rgba(0,0,0,0.26)]">
+            <section className="overflow-hidden rounded-2xl border border-al-info/15 bg-al-surface/95 shadow-[0_18px_80px_rgba(0,0,0,0.26)]">
               <div className="flex items-center gap-1 overflow-x-auto border-b border-white/[0.08] px-3">
                 {tabs.map((tab) => (
                   <button
@@ -676,7 +676,7 @@ export function UnifiedEvidenceExperience({
                       <select
                         value={providerFilter}
                         onChange={(event) => setProviderFilter(event.target.value)}
-                        className="h-10 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-semibold text-al-text-secondary outline-none"
+                        className="h-10 rounded-lg border border-white/10 bg-al-surface-elevated px-3 text-xs font-semibold text-al-text-secondary outline-none"
                         aria-label="Filter by source"
                       >
                         <option value="all">All sources</option>
@@ -687,7 +687,7 @@ export function UnifiedEvidenceExperience({
                       <select
                         value={groupBy}
                         onChange={(event) => setGroupBy(event.target.value as 'none' | 'source' | 'day')}
-                        className="h-10 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-semibold text-al-text-secondary outline-none"
+                        className="h-10 rounded-lg border border-white/10 bg-al-surface-elevated px-3 text-xs font-semibold text-al-text-secondary outline-none"
                         aria-label="Group evidence"
                       >
                         <option value="none">Group by: None</option>
@@ -698,7 +698,7 @@ export function UnifiedEvidenceExperience({
                         type="button"
                         onClick={() => void refreshTimeline()}
                         disabled={refreshing}
-                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary transition hover:bg-al-surface/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-al-surface-elevated px-3 text-xs font-bold text-al-text-secondary transition hover:bg-al-surface/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                         Refresh
@@ -720,7 +720,7 @@ export function UnifiedEvidenceExperience({
                     </div>
                   ) : null}
 
-                  <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#03101e]">
+                  <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-al-surface">
                     {filteredEvents.length === 0 ? (
                       <EmptyPanel
                         title="No evidence matched"
@@ -784,7 +784,7 @@ export function UnifiedEvidenceExperience({
                                 </button>
 
                                 {expanded ? (
-                                  <div className="grid gap-3 border-t border-white/[0.07] bg-[#020a15] px-4 py-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)]">
+                                  <div className="grid gap-3 border-t border-white/[0.07] bg-al-bg px-4 py-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)]">
                                     <div className="rounded-xl border border-white/[0.08] bg-al-surface/[0.025] p-4">
                                       <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">Original evidence</p>
                                       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-al-text-secondary">{event.content ?? 'No body text was stored for this source event.'}</p>
@@ -868,7 +868,7 @@ export function UnifiedEvidenceExperience({
               )}
             </section>
 
-            <footer className="grid overflow-hidden rounded-2xl border border-al-info/15 bg-[#071321]/95 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            <footer className="grid overflow-hidden rounded-2xl border border-al-info/15 bg-al-surface/95 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
               {[
                 { icon: AlertTriangle, label: 'Decision Impact', value: initialData.primaryApproval?.businessImpact ?? 'Not assessed', helper: initialData.riskLevel === 'high' ? 'Review required' : 'Financial impact', color: 'text-al-danger' },
                 { icon: ShieldCheck, label: 'Policy Check', value: policyStatus, helper: 'Policy analysis attached', color: 'text-al-success' },
@@ -939,7 +939,7 @@ export function UnifiedEvidenceExperience({
                     >
                       <span className="relative inline-flex">
                         <ProviderMark providerKey={provider.providerKey} />
-                        <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full border border-[#071321] bg-slate-700 px-1 text-[9px] font-black text-al-text">
+                        <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full border border-al-surface bg-slate-700 px-1 text-[9px] font-black text-al-text">
                           {provider.eventCount}
                         </span>
                       </span>
@@ -949,7 +949,7 @@ export function UnifiedEvidenceExperience({
                       type="button"
                       onClick={(event) => { event.stopPropagation(); setProviderDrawer(provider); }}
                       title="View connection health"
-                      className="absolute -left-1.5 -top-1.5 hidden h-4 w-4 place-items-center rounded-full border border-white/20 bg-[#0a1728] text-[9px] font-black text-al-text-muted group-hover:grid hover:text-al-info"
+                      className="absolute -left-1.5 -top-1.5 hidden h-4 w-4 place-items-center rounded-full border border-white/20 bg-al-surface-elevated text-[9px] font-black text-al-text-muted group-hover:grid hover:text-al-info"
                     >
                       i
                     </button>
@@ -990,13 +990,13 @@ export function UnifiedEvidenceExperience({
         </div>
 
         <div className="fixed right-4 top-16 z-40 flex flex-wrap justify-end gap-2">
-          <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-al-surface/[0.08]">
+          <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-al-surface-elevated px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-al-surface/[0.08]">
             <ArrowDownToLine className="h-4 w-4" /> Export
           </button>
-          <button type="button" onClick={() => void copyText(window.location.href, 'Share link')} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-al-surface/[0.08]">
+          <button type="button" onClick={() => void copyText(window.location.href, 'Share link')} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-al-surface-elevated px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-al-surface/[0.08]">
             <Share2 className="h-4 w-4" /> Share
           </button>
-          <Link href={`/audit-logs?evidence=${encodeURIComponent(initialData.id)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-al-surface/[0.08]">
+          <Link href={`/audit-logs?evidence=${encodeURIComponent(initialData.id)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-al-surface-elevated px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-al-surface/[0.08]">
             <History className="h-4 w-4" /> Audit Log
           </Link>
           <div className="relative">
@@ -1004,7 +1004,7 @@ export function UnifiedEvidenceExperience({
               Actions <ChevronDown className="h-4 w-4" />
             </button>
             {actionsOpen ? (
-              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-[#081525] p-2 shadow-2xl">
+              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-al-surface-elevated p-2 shadow-2xl">
                 <button type="button" onClick={() => void copyText(initialData.id, 'Decision ID')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-al-surface/[0.06]">Copy decision ID</button>
                 <button type="button" onClick={() => void copyText(evidenceHash, 'Evidence hash')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-al-surface/[0.06]">Copy evidence hash</button>
                 <button type="button" onClick={() => void refreshTimeline()} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-al-surface/[0.06]">Refresh timeline</button>
@@ -1014,7 +1014,7 @@ export function UnifiedEvidenceExperience({
         </div>
 
         {toast ? (
-          <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-[#081525] px-4 py-2 text-xs font-bold text-al-text shadow-2xl">
+          <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-al-surface-elevated px-4 py-2 text-xs font-bold text-al-text shadow-2xl">
             {toast}
           </div>
         ) : null}
@@ -1048,7 +1048,7 @@ function FlagshipSideCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-al-info/15 bg-[#071321]/95 p-4 shadow-[0_18px_80px_rgba(0,0,0,0.26)]">
+    <section className="rounded-2xl border border-al-info/15 bg-al-surface/95 p-4 shadow-[0_18px_80px_rgba(0,0,0,0.26)]">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-sm font-black text-white">{title}</h2>
         {action ? (
@@ -1109,7 +1109,7 @@ function FlagshipTabPanel({
     const riskRadarNode = renderRiskRadar(initialData.complianceEvaluation);
     return (
       <div className="grid gap-4 p-4 lg:grid-cols-2">
-        <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4 lg:col-span-2">
+        <section className="rounded-xl border border-white/[0.08] bg-al-surface p-4 lg:col-span-2">
           <h2 className="text-lg font-black text-white">Risk Radar</h2>
           <p className="mt-1 text-xs text-al-text-muted">
             {initialData.complianceEvaluation
@@ -1120,7 +1120,7 @@ function FlagshipTabPanel({
             {riskRadarNode ?? <RiskRadarEmptyState />}
           </div>
         </section>
-        <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+        <section className="rounded-xl border border-white/[0.08] bg-al-surface p-4">
           <h2 className="text-lg font-black text-white">AI Correlation Reasoning</h2>
           <p className="mt-2 text-sm leading-6 text-al-text-muted">
             ApprovLine clustered this decision from source evidence, matching actor, subject, department, references, and time proximity. Reasoning is derived from captured evidence only.
@@ -1134,7 +1134,7 @@ function FlagshipTabPanel({
             ))}
           </div>
         </section>
-        <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+        <section className="rounded-xl border border-white/[0.08] bg-al-surface p-4">
           <h2 className="text-lg font-black text-white">Confidence Breakdown</h2>
           {[
             ['Overall confidence', `${initialData.confidence}%`],
@@ -1177,7 +1177,7 @@ function FlagshipTabPanel({
     return (
       <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
         {participants.length > 0 ? participants.map((person) => (
-          <div key={`${person.name}-${person.email ?? person.role}`} className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+          <div key={`${person.name}-${person.email ?? person.role}`} className="rounded-xl border border-white/[0.08] bg-al-surface p-4">
             <div className="flex items-center gap-3">
               <div className="grid h-10 w-10 place-items-center rounded-full bg-al-info/100/15 text-sm font-black text-blue-200">
                 {person.name.slice(0, 1).toUpperCase()}
@@ -1208,7 +1208,7 @@ function FlagshipTabPanel({
     return (
       <div className="grid gap-3 p-4 md:grid-cols-2">
         {related.length > 0 ? related.map((item) => (
-          <div key={item.id} className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+          <div key={item.id} className="rounded-xl border border-white/[0.08] bg-al-surface p-4">
             <div className="flex items-center gap-3">
               <ProviderMark providerKey={item.providerKey} />
               <div className="min-w-0">
@@ -1225,7 +1225,7 @@ function FlagshipTabPanel({
   if (tab === 'audit') {
     return (
       <div className="p-4">
-        <div className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
+        <div className="rounded-xl border border-white/[0.08] bg-al-surface p-4">
           <h2 className="text-lg font-black text-white">Immutable Audit Trail</h2>
           <div className="mt-4 space-y-3">
             {[
@@ -1252,7 +1252,7 @@ function FlagshipTabPanel({
     <div className="p-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {providers.map((provider) => (
-          <button key={provider.providerKey} type="button" onClick={() => onProviderOpen(provider)} className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4 text-left transition hover:border-blue-300/30">
+          <button key={provider.providerKey} type="button" onClick={() => onProviderOpen(provider)} className="rounded-xl border border-white/[0.08] bg-al-surface p-4 text-left transition hover:border-blue-300/30">
             <div className="flex items-center gap-3">
               <ProviderMark providerKey={provider.providerKey} />
               <div className="min-w-0">
@@ -1271,7 +1271,7 @@ function FlagshipTabPanel({
 function FlagshipProviderDrawer({ provider, onClose }: { provider: EvidenceProvider; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onMouseDown={onClose}>
-      <aside className="absolute inset-y-0 right-0 w-full max-w-md overflow-y-auto border-l border-white/10 bg-[#06101f] p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+      <aside className="absolute inset-y-0 right-0 w-full max-w-md overflow-y-auto border-l border-white/10 bg-al-surface p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <ProviderMark providerKey={provider.providerKey} size="lg" />
@@ -1306,7 +1306,7 @@ function FlagshipProviderDrawer({ provider, onClose }: { provider: EvidenceProvi
             <p className="mt-2 text-xs leading-5 text-al-danger/70">{provider.connection.health.lastErrorMessage}</p>
           </div>
         ) : null}
-        <div className="mt-6 rounded-lg border border-white/[0.07] bg-[#020a15] p-4">
+        <div className="mt-6 rounded-lg border border-white/[0.07] bg-al-bg p-4">
           <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">Security boundary</p>
           <p className="mt-2 text-xs leading-6 text-al-text-muted">
             Connector diagnostics expose health and mapping metadata only. Encrypted credentials and raw source payloads are never returned to this client.
@@ -1613,7 +1613,7 @@ function RiskRadarChart({ dimensions }: { dimensions: RiskDimension[] }) {
               y={labelPoint.y}
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="#94a3b8"
+              fill="rgb(var(--al-text-muted-rgb))"
               style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}
             >
               {dimension.label.replace(' Risk', '')}
@@ -1649,7 +1649,7 @@ function RiskRadarEmptyState() {
   return (
     <div className="flex flex-col items-center gap-3 py-6 text-center">
       <svg viewBox={`0 0 ${size} ${size}`} className="h-40 w-40 opacity-40" aria-hidden="true">
-        <polygon points={points} fill="none" stroke="#475569" strokeWidth={1.5} strokeDasharray="4 4" />
+        <polygon points={points} fill="none" stroke="rgb(var(--al-border-strong-rgb))" strokeWidth={1.5} strokeDasharray="4 4" />
       </svg>
       <div>
         <h3 className="text-sm font-bold text-al-text-secondary">Risk analysis not yet available for this record</h3>
@@ -1915,7 +1915,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             <select
               value={providerFilter}
               onChange={(event) => setProviderFilter(event.target.value)}
-              className="h-9 appearance-none rounded-lg border border-white/10 bg-[#071426] pl-9 pr-8 text-xs font-semibold text-al-text-secondary outline-none focus:border-blue-500/60"
+              className="h-9 appearance-none rounded-lg border border-white/10 bg-al-surface-elevated pl-9 pr-8 text-xs font-semibold text-al-text-secondary outline-none focus:border-blue-500/60"
             >
               <option value="all">All sources</option>
               {initialData.providers.map((provider) => (
@@ -1930,7 +1930,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             <select
               value={groupBy}
               onChange={(event) => setGroupBy(event.target.value as typeof groupBy)}
-              className="h-9 appearance-none rounded-lg border border-white/10 bg-[#071426] pl-3 pr-8 text-xs font-semibold text-al-text-secondary outline-none focus:border-blue-500/60"
+              className="h-9 appearance-none rounded-lg border border-white/10 bg-al-surface-elevated pl-3 pr-8 text-xs font-semibold text-al-text-secondary outline-none focus:border-blue-500/60"
             >
               <option value="none">Group: None</option>
               <option value="source">Group: Source</option>
@@ -1960,7 +1960,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
           {groupedEvents.map((group) => (
             <div key={group.label || 'all'}>
               {group.label ? (
-                <div className="sticky top-0 z-[2] border-b border-white/[0.07] bg-[#06101f]/95 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-al-text-muted backdrop-blur">
+                <div className="sticky top-0 z-[2] border-b border-white/[0.07] bg-al-surface/95 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-al-text-muted backdrop-blur">
                   {group.label}
                 </div>
               ) : null}
@@ -1984,7 +1984,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                     >
                       <span className="relative pl-4">
                         <span
-                          className="absolute left-0 top-1 h-2 w-2 rounded-full ring-4 ring-[#06101f]"
+                          className="absolute left-0 top-1 h-2 w-2 rounded-full ring-4 ring-al-bg"
                           style={{ backgroundColor: provider.color }}
                         />
                         <span className="block text-[11px] font-semibold text-al-info">
@@ -2055,7 +2055,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-al-text-muted">
                             Original captured content
                           </p>
-                          <div className="mt-2 rounded-lg border border-white/[0.07] bg-[#020a15] p-3 text-xs leading-6 text-al-text-secondary">
+                          <div className="mt-2 rounded-lg border border-white/[0.07] bg-al-bg p-3 text-xs leading-6 text-al-text-secondary">
                             {event.content || 'The source supplied metadata without a text body.'}
                           </div>
                           {membership?.matchingReasons.length ? (
@@ -2105,7 +2105,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                             </button>
                           </div>
                         </div>
-                        <dl className="grid content-start gap-2 rounded-lg border border-white/[0.07] bg-[#020a15] p-3 text-[10px]">
+                        <dl className="grid content-start gap-2 rounded-lg border border-white/[0.07] bg-al-bg p-3 text-[10px]">
                           {[
                             ['Confidence', `${membership?.matchConfidence ?? event.confidence}%`],
                             ['Correlation ID', event.correlationId],
@@ -2243,12 +2243,12 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             ['Verification', titleCase(initialData.verificationStatus)],
             ['Risk level', initialData.riskLevel ?? 'Not assessed'],
           ].map(([label, value]) => (
-            <div key={label} className="bg-[#06101f] p-4">
+            <div key={label} className="bg-al-surface p-4">
               <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-al-text-secondary">{label}</dt>
               <dd className="mt-2 break-words text-sm font-semibold text-al-text-secondary">{value}</dd>
             </div>
           ))}
-          <div className="bg-[#06101f] p-4">
+          <div className="bg-al-surface p-4">
             <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-al-text-secondary">Primary approval</dt>
             <dd className="mt-2 break-words text-sm font-semibold">
               {initialData.primaryApproval ? (
@@ -2338,9 +2338,9 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
   };
 
   return (
-    <div className="-m-3 min-h-[calc(100vh-76px)] bg-[#020a15] text-al-text sm:-m-4 xl:-m-5">
+    <div className="-m-3 min-h-[calc(100vh-76px)] bg-al-bg text-al-text sm:-m-4 xl:-m-5">
       {toast ? (
-        <div className="fixed right-5 top-20 z-50 flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-[#071426] px-4 py-3 text-xs font-bold text-al-success shadow-2xl">
+        <div className="fixed right-5 top-20 z-50 flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-al-surface-elevated px-4 py-3 text-xs font-bold text-al-success shadow-2xl">
           <Check className="h-4 w-4" /> {toast}
         </div>
       ) : null}
@@ -2367,7 +2367,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                 <MoreHorizontal className="h-3.5 w-3.5" /> Actions <ChevronDown className="h-3 w-3" />
               </button>
               {actionsOpen ? (
-                <div className="absolute right-0 top-11 z-30 w-52 rounded-xl border border-white/10 bg-[#071426] p-1.5 shadow-2xl">
+                <div className="absolute right-0 top-11 z-30 w-52 rounded-xl border border-white/10 bg-al-surface-elevated p-1.5 shadow-2xl">
                   {initialData.primaryApproval ? (
                     <PendingLink href={`/approvals/${initialData.primaryApproval.id}`} pendingText="Opening approval..." className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface/[0.05]"><ClipboardCheck className="h-3.5 w-3.5" /> View full approval</PendingLink>
                   ) : null}
@@ -2381,7 +2381,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
       </div>
 
       <div className="p-3 xl:p-4">
-        <section className="overflow-hidden rounded-xl border border-white/[0.09] bg-gradient-to-br from-[#07192c] to-[#06101f] shadow-2xl shadow-black/20">
+        <section className="overflow-hidden rounded-xl border border-white/[0.09] bg-gradient-to-br from-al-surface-elevated to-al-surface shadow-2xl shadow-black/20">
           <div className="grid gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="flex min-w-0 items-start gap-4">
               <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-emerald-400/30 bg-al-success/[0.08] text-al-success">
@@ -2412,7 +2412,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               <Metric label="Mentions" value={initialData.evidenceCount} />
               <Metric label="Confidence" value={`${initialData.confidence}%`} accent />
               <div className="ml-3 grid h-12 w-12 place-items-center rounded-full" style={{ background: `conic-gradient(#34d399 ${initialData.confidence}%, rgba(255,255,255,.08) 0)` }}>
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-[#071426] text-[10px] font-bold text-al-success">{initialData.confidence}%</span>
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-al-surface-elevated text-[10px] font-bold text-al-success">{initialData.confidence}%</span>
               </div>
             </div>
           </div>
@@ -2435,7 +2435,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
         </section>
 
         <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_330px]">
-          <main className="min-w-0 overflow-hidden rounded-xl border border-white/[0.09] bg-[#06101f] shadow-xl shadow-black/10">
+          <main className="min-w-0 overflow-hidden rounded-xl border border-white/[0.09] bg-al-surface shadow-xl shadow-black/10">
             <nav className="flex overflow-x-auto border-b border-white/[0.08] px-2 [scrollbar-width:none]">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -2465,7 +2465,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
           </main>
 
           <aside className="grid content-start gap-3">
-            <section className="rounded-xl border border-white/[0.09] bg-[#06101f] p-4">
+            <section className="rounded-xl border border-white/[0.09] bg-al-surface p-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-bold text-white">AI Summary</h2>
                 <span className="text-[9px] text-al-text-secondary">Live evidence</span>
@@ -2491,7 +2491,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               </button>
             </section>
 
-            <section className="rounded-xl border border-white/[0.09] bg-[#06101f] p-4">
+            <section className="rounded-xl border border-white/[0.09] bg-al-surface p-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-white">Source Platforms ({initialData.providers.length})</h2>
                 <Activity className="h-3.5 w-3.5 text-al-success" />
@@ -2513,7 +2513,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               </div>
             </section>
 
-            <section className="rounded-xl border border-white/[0.09] bg-[#06101f] p-4">
+            <section className="rounded-xl border border-white/[0.09] bg-al-surface p-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-white">Supporting Evidence ({attachments.length})</h2>
                 <button type="button" onClick={() => setActiveTab('supporting')} className="text-[9px] font-bold text-al-info">View all</button>
@@ -2534,7 +2534,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               </div>
             </section>
 
-            <section className="rounded-xl border border-white/[0.09] bg-[#06101f] p-4">
+            <section className="rounded-xl border border-white/[0.09] bg-al-surface p-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-white">Related Records ({related.length})</h2>
                 <button type="button" onClick={() => setActiveTab('related')} className="text-[9px] font-bold text-al-info">View all</button>
@@ -2556,7 +2556,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
           </aside>
         </div>
 
-        <footer className="mt-3 grid overflow-hidden rounded-xl border border-white/[0.09] bg-[#06101f] sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+        <footer className="mt-3 grid overflow-hidden rounded-xl border border-white/[0.09] bg-al-surface sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
           {[
             { icon: AlertTriangle, label: 'Decision impact', value: initialData.primaryApproval?.businessImpact ?? 'Not assessed', color: 'text-al-warning' },
             { icon: ShieldCheck, label: 'Compliance', value: initialData.metadata && typeof recordValue(initialData.metadata).complianceStatus === 'string' ? String(recordValue(initialData.metadata).complianceStatus) : 'Not assessed', color: 'text-al-success' },
@@ -2582,7 +2582,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
 
       {providerDrawer ? (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onMouseDown={() => setProviderDrawer(null)}>
-          <aside className="absolute inset-y-0 right-0 w-full max-w-md overflow-y-auto border-l border-white/10 bg-[#06101f] p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+          <aside className="absolute inset-y-0 right-0 w-full max-w-md overflow-y-auto border-l border-white/10 bg-al-surface p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <ProviderMark providerKey={providerDrawer.providerKey} size="lg" />
@@ -2615,7 +2615,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                 <p className="mt-2 text-xs leading-5 text-al-danger/70">{providerDrawer.connection.health.lastErrorMessage}</p>
               </div>
             ) : null}
-            <div className="mt-6 rounded-lg border border-white/[0.07] bg-[#020a15] p-4">
+            <div className="mt-6 rounded-lg border border-white/[0.07] bg-al-bg p-4">
               <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">Security boundary</p>
               <p className="mt-2 text-xs leading-6 text-al-text-muted">
                 Connector diagnostics expose health and mapping metadata only. Encrypted credentials and raw source payloads are never returned to this client.

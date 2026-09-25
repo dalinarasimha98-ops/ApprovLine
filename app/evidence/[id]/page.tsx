@@ -23,9 +23,9 @@ function serialize<T>(value: T): T {
 function EvidenceDetailSkeleton() {
   return (
     <div className="grid gap-4">
-      <div className="h-40 animate-pulse rounded-2xl border border-al-info/15 bg-[#071321]/95" />
-      <div className="h-12 animate-pulse rounded-2xl border border-al-info/15 bg-[#071321]/95" />
-      <div className="grid gap-2 rounded-2xl border border-al-info/15 bg-[#071321]/95 p-4">
+      <div className="h-40 animate-pulse rounded-2xl border border-al-info/15 bg-al-surface/95" />
+      <div className="h-12 animate-pulse rounded-2xl border border-al-info/15 bg-al-surface/95" />
+      <div className="grid gap-2 rounded-2xl border border-al-info/15 bg-al-surface/95 p-4">
         {Array.from({ length: 5 }).map((_, index) => (
           <div key={index} className="h-14 animate-pulse rounded-xl bg-al-surface/[0.04]" />
         ))}

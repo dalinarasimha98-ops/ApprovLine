@@ -14,7 +14,7 @@ function Bar({ className = '' }: { className?: string }) {
 }
 
 function Card({ className = '', children }: { className?: string; children?: React.ReactNode }) {
-  return <div className={`rounded-2xl border border-white/[0.08] bg-[#071321]/95 ${className}`}>{children}</div>;
+  return <div className={`rounded-2xl border border-white/[0.08] bg-al-surface/95 ${className}`}>{children}</div>;
 }
 
 export default function EvidenceDetailLoading() {

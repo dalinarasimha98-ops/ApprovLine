@@ -4,7 +4,7 @@ import { PendingLink } from '@/components/system/PendingLink';
 
 export default function AnalyticsError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <main className="min-h-screen bg-[#f5f7fb] p-4 text-[#090b12] sm:p-8">
+    <main className="min-h-screen bg-al-bg p-4 text-al-text sm:p-8">
       <section className="rounded-3xl border border-al-warning/30 bg-al-warning/10 p-6 text-al-warning shadow-sm">
         <p className="text-xs font-black uppercase tracking-wide">Analytics unavailable</p>
         <h2 className="mt-2 text-2xl font-black text-al-text">We could not load the Executive ROI Dashboard</h2>
