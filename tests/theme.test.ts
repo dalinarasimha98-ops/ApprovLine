@@ -23,6 +23,7 @@
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { contrastRatio } from '@/lib/color-contrast';
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(`${root}/${path}`, 'utf8');
@@ -123,22 +124,12 @@ assert.ok(darkTextSum > lightTextSum, `dark theme's text must be lighter than it
 // --- Real WCAG contrast ratios, not eyeballed ------------------------------
 // Every text-role token (used at normal, non-"large text" sizes throughout
 // the app - field labels, nav links, status pills) must clear the 4.5:1 AA
-// threshold against the surface it renders on, in BOTH themes. This is the
-// actual W3C relative-luminance formula, not an approximation - a real,
-// machine-checked accessibility guarantee that survives any future token
-// value change, not just a one-time manual calculation.
-function relativeLuminance([r, g, b]: [number, number, number]): number {
-  const [rs, gs, bs] = [r, g, b].map((c) => {
-    const channel = c / 255;
-    return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-}
-function contrastRatio(a: [number, number, number], b: [number, number, number]): number {
-  const [la, lb] = [relativeLuminance(a), relativeLuminance(b)];
-  const [lighter, darker] = la > lb ? [la, lb] : [lb, la];
-  return (lighter + 0.05) / (darker + 0.05);
-}
+// threshold against the surface it renders on, in BOTH themes. contrastRatio
+// (lib/color-contrast.ts) implements the actual W3C relative-luminance
+// formula, not an approximation - a real, machine-checked accessibility
+// guarantee that survives any future token value change, not just a
+// one-time manual calculation. Also reused server-side to validate a
+// customer-supplied Organization brand color.
 const AA_NORMAL_TEXT = 4.5;
 for (const [themeName, marker] of [['dark', ':root {'], ['light', ":root[data-theme='light']"]] as const) {
   const surface = firstTripletAfter(globals, marker, 'surface');

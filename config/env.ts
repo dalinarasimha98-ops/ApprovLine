@@ -13,6 +13,10 @@ const envSchema = z.object({
   VOYAGE_API_KEY: optionalEnvString,
   VOYAGE_EMBEDDING_MODEL: optionalEnvString,
   REDIS_URL: optionalEnvString,
+  /** Vercel Blob storage token for Organization Settings logo uploads
+   *  (app/api/settings/organization/logo/route.ts). Optional - that route
+   *  returns a clear 503 rather than throwing when it is unset. */
+  BLOB_READ_WRITE_TOKEN: optionalEnvString,
   CLERK_SECRET_KEY: optionalEnvString,
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: optionalEnvString,
   ENCRYPTION_KEY: optionalEnvString,

@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { getCurrentTenant, isTenantDatabaseError } from '@/lib/auth';
+import { isWorkspaceViewValue } from '@/lib/workspaceViews';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,5 +40,12 @@ export default async function GetStartedPage() {
     throw error;
   }
   const { organization } = tenant;
-  redirect(organization.onboardedAt ? '/dashboard' : '/onboarding');
+  if (!organization.onboardedAt) redirect('/onboarding');
+
+  // Organization Settings > Default Settings > Default Workspace View
+  // (organization.defaultWorkspaceView) - a real, observable effect: an
+  // org that sets this to Approvals sends every freshly signed-in member
+  // straight there instead of the generic Dashboard.
+  const target = isWorkspaceViewValue(organization.defaultWorkspaceView) ? organization.defaultWorkspaceView : '/dashboard';
+  redirect(target);
 }

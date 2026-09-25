@@ -86,6 +86,27 @@ export async function persistClassificationResult(input: {
   const organizationId = await resolveStorageOrganization(input.organizationId);
   if (!organizationId) return null;
 
+  // Organization Settings > Approval Settings policy - a real gate on what
+  // gets PERSISTED for new records, never on whether classification/
+  // evidence capture runs at all (the classifier call and MessageSource/
+  // CanonicalEvidenceEvent capture happen upstream in
+  // services/ingestion/processIncomingMessage.ts and are never skipped -
+  // disabling a policy here only means the derived field is withheld from
+  // the record, not that the message goes uncaptured or unaudited).
+  // Existing records are never touched.
+  const policy = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { autoCategorizationEnabled: true, riskDetectionEnabled: true, defaultDueDateDays: true, defaultRiskLevel: true },
+  }).catch(() => null);
+  const autoCategorizationEnabled = policy?.autoCategorizationEnabled ?? true;
+  const riskDetectionEnabled = policy?.riskDetectionEnabled ?? true;
+  const defaultDueDateDays = policy?.defaultDueDateDays ?? null;
+  // When risk detection is off, Default Risk Level is what's actually
+  // stored instead - not always null - so an org can say "skip AI risk
+  // scoring, but still flag everything as at least Medium" rather than
+  // losing risk triage entirely.
+  const defaultRiskLevel = policy?.defaultRiskLevel ?? null;
+
   const sourcePlatform = input.result.source_platform ?? input.request.source;
   const provider = toIntegrationProvider(sourcePlatform);
   const inputHash = hashClassifierInput(input.request);
@@ -185,13 +206,13 @@ export async function persistClassificationResult(input: {
         messageSourceId,
         subject: input.result.subject,
         department: input.result.department,
-        category: input.result.category,
+        category: autoCategorizationEnabled ? input.result.category : null,
         approverName: input.result.approver_name,
         approverEmail: input.result.approver_email,
         approvalType,
         status: toApprovalStatus(input.result.approval_type),
         confidence: input.result.confidence,
-        riskLevel: input.result.risk_level,
+        riskLevel: riskDetectionEnabled ? input.result.risk_level : defaultRiskLevel,
         businessImpact: input.result.business_impact,
         reasoning: input.result.reasoning,
         conditions: input.result.conditions,
@@ -206,6 +227,10 @@ export async function persistClassificationResult(input: {
         idempotencyKey: input.idempotencyKey,
         approvalTimestamp: input.result.approval_timestamp ? new Date(input.result.approval_timestamp) : undefined,
         occurredAt: input.result.approval_timestamp ? new Date(input.result.approval_timestamp) : undefined,
+        // The classifier never produces its own due date - this is the only
+        // source for ApprovalRecord.dueDate today. Organization Settings >
+        // Approval Settings > Default Due Date.
+        dueDate: defaultDueDateDays ? new Date(Date.now() + defaultDueDateDays * 24 * 60 * 60 * 1000) : undefined,
       },
     });
 
@@ -236,8 +261,12 @@ export async function persistClassificationResult(input: {
       metadata: {
         classifierResultId: classifier.id,
         approvalType: input.result.approval_type,
-        riskLevel: input.result.risk_level,
-        category: input.result.category,
+        // What was actually PERSISTED (post-policy), not the raw
+        // classifier output - if auto-categorization/risk detection was
+        // disabled for this org, the audit trail must say so honestly
+        // rather than implying a value was recorded that wasn't.
+        riskLevel: approval.riskLevel,
+        category: approval.category,
         sourcePlatform,
       },
     });

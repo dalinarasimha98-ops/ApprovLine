@@ -170,12 +170,13 @@ export async function getUserSettingsData(input: {
   };
   let notifications: UserSettingsData['notifications'];
   try {
-    const [dbUser, notificationPreference] = await Promise.all([
+    const [dbUser, notificationPreference, org] = await Promise.all([
       prisma.user.findUnique({
         where: { id: input.userId, organizationId: input.organizationId },
         select: { jobTitle: true, department: true, phone: true, location: true, timezone: true, theme: true, manager: { select: { name: true, email: true } } },
       }),
       prisma.userNotificationPreference.findUnique({ where: { userId: input.userId }, select: { emailEnabled: true } }),
+      prisma.organization.findUnique({ where: { id: input.organizationId }, select: { defaultTimeZone: true } }),
     ]);
     if (dbUser) {
       profileFields = {
@@ -183,7 +184,12 @@ export async function getUserSettingsData(input: {
         department: dbUser.department,
         phone: dbUser.phone,
         location: dbUser.location,
-        timezone: dbUser.timezone,
+        // Falls back to the organization's default time zone (Organization
+        // Settings > Default Settings) only for display - the user's own
+        // User.timezone column stays null until they explicitly set one, so
+        // "never chosen" and "explicitly chose the org default" are never
+        // conflated in the stored data.
+        timezone: dbUser.timezone ?? org?.defaultTimeZone ?? null,
         managerName: dbUser.manager?.name ?? dbUser.manager?.email ?? null,
         theme: isThemePreference(dbUser.theme) ? dbUser.theme : 'dark',
       };

@@ -8,20 +8,9 @@ import { IntegrationsClientShell } from '@/components/integrations/IntegrationsC
 import type { ShellProvider, ShellRequest } from '@/components/integrations/IntegrationsClientShell';
 import { RequestIntegrationButton } from '@/components/integrations/RequestIntegrationButton';
 import { type Prisma, IntegrationProvider } from '@prisma/client';
+import { PROVIDER_TO_SLUG, getIntegrationSummary } from '@/services/integrations/summary';
 
 export const dynamic = 'force-dynamic';
-
-// ── Provider → Integration enum mapping ───────────────────────────────────────
-
-const PROVIDER_TO_SLUG: Record<string, string> = {
-  SLACK: 'slack',
-  GMAIL: 'gmail',
-  OUTLOOK: 'outlook',
-  MICROSOFT_TEAMS: 'microsoft_teams',
-  JIRA: 'jira',
-  SERVICENOW: 'servicenow',
-  ZOOM: 'zoom',
-};
 
 const SLUG_TO_CONNECT_HREF: Record<string, string> = {
   slack: '/api/integrations/slack/install',
@@ -397,9 +386,11 @@ export default async function IntegrationsPage({
 
   // ── Sidebar stats ─────────────────────────────────────────────────────────
 
-  const connectedCount = integrations.filter(
-    (i) => i.status === 'CONNECTED' || i.status === 'SYNCING',
-  ).length;
+  // Same shared computation Organization Settings Overview's KPI strip
+  // calls, so the two surfaces can never disagree about "connected".
+  const { connectedCount } = tenant.organization
+    ? await getIntegrationSummary(tenant.organization.id)
+    : { connectedCount: 0 };
   const availableCount = shellProviders.filter(
     (p) => !p.isConnected && p.status === 'AVAILABLE' && p.isNative,
   ).length;

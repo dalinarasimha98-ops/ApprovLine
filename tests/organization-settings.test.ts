@@ -112,7 +112,6 @@ assert.doesNotMatch(shell, /bg-blue-600|text-blue-600|divide-slate-\d|hover:bg-a
 assert.match(service, /export async function fetchSettingsOverview/, 'the uncached overview fetcher must be exported so it can be exercised directly by tests/scripts without Next.js unstable_cache');
 
 for (const query of [
-  /prisma\.marketplaceProvider\.count\(\{ where: \{ isNative: true, status: 'AVAILABLE' \} \}\)/,
   /prisma\.evidenceProviderConnection\.count\(\{ where: tenantScopedWhere\(scope\) \}\)/,
   /prisma\.evidenceProviderConnection\.count\(\{ where: tenantScopedWhere\(scope, \{ status: \{ in: \['CONNECTED', 'SYNCING'\] \} \}\) \}\)/,
   /prisma\.approvalRecord\.count\(\{ where: tenantScopedWhere\(scope, \{ createdAt: \{ gte: startOfMonth \} \}\) \}\)/,
@@ -122,10 +121,21 @@ for (const query of [
   assert.match(service, query, `expected a real tenant-scoped query matching ${query}`);
 }
 
+// --- Integration counts: one shared service, not two competing computations --
+
+const integrationSummaryService = read('services/integrations/summary.ts');
+const integrationsPage = read('app/dashboard/settings/integrations/page.tsx');
+
+assert.match(integrationSummaryService, /export async function getIntegrationSummary/, 'expected a single exported integration-summary function');
+assert.match(integrationSummaryService, /prisma\.marketplaceProvider\.count\(\{ where: \{ isNative: true, status: 'AVAILABLE' \} \}\)/, 'catalog size must come from a real MarketplaceProvider count');
+assert.match(integrationSummaryService, /i\.status === 'CONNECTED' \|\| i\.status === 'SYNCING'/, 'connected count must match the Integrations page\'s own definition (CONNECTED or SYNCING)');
+assert.match(service, /import \{ getIntegrationSummary \} from '@\/services\/integrations\/summary'/, 'Organization Settings Overview must call the shared integration summary, not compute its own count');
+assert.match(integrationsPage, /import \{ PROVIDER_TO_SLUG, getIntegrationSummary \} from '@\/services\/integrations\/summary'/, 'the real Integrations page must import the same shared PROVIDER_TO_SLUG/getIntegrationSummary, not keep a second local copy');
+assert.doesNotMatch(integrationsPage, /^const PROVIDER_TO_SLUG/m, 'the Integrations page must not redefine its own PROVIDER_TO_SLUG after the shared extraction');
 // MarketplaceProvider is a shared, non-tenant catalog table (no organizationId
 // column) - it must never be filtered by tenantScopedWhere, which would be a
 // type/architecture error, not a safety improvement.
-assert.doesNotMatch(service, /marketplaceProvider\.count\(\{ where: tenantScopedWhere/, 'MarketplaceProvider has no organizationId column - it must be queried as a global catalog, not tenant-scoped');
+assert.doesNotMatch(integrationSummaryService, /marketplaceProvider\.count\(\{ where: tenantScopedWhere/, 'MarketplaceProvider has no organizationId column - it must be queried as a global catalog, not tenant-scoped');
 
 // jsonArray must be reused from services/users.ts, never re-implemented.
 assert.match(service, /import \{ jsonArray, type PendingInvite \} from '@\/services\/users'/, 'pending-invite parsing must reuse services/users.ts\'s jsonArray(), not a second implementation');
@@ -142,10 +152,37 @@ assert.match(shell, /data\.complianceFrameworks\.map/, 'Security & Compliance mu
 assert.match(shell, /not a claim of third-party certification/, 'enabling a framework in-app must be clearly labeled as configuration, never as an actual certification claim');
 assert.doesNotMatch(service, /prisma\.complianceFramework\.findMany\(\{\s*where: \{[^t]/, 'the compliance framework query must be tenant-scoped via tenantScopedWhere, never a bare organizationId filter that could be bypassed');
 
-// --- Branding: honest "not yet available" states, no dead interactive controls
+// --- Branding: real, persisted logo/color/domain, not decorative placeholders
 
-assert.match(shell, /Not yet available/, 'Logo upload / Brand color / Custom domain must be represented as honestly unavailable, not fake interactive controls');
-assert.doesNotMatch(shell, /Upload Logo|Brand Color picker|<input[^>]*type="color"/, 'there is no file-upload or color-picker infrastructure in this codebase - the UI must not offer controls that cannot persist anything');
+const logoRoute = read('app/api/settings/organization/logo/route.ts');
+const domainRoute = read('app/api/settings/organization/domain/route.ts');
+const colorContrastLib = read('lib/color-contrast.ts');
+
+// Logo upload: real content validation via sharp (never trusts declared
+// MIME type alone), tenant-scoped storage path, RBAC-gated, audited.
+assert.match(logoRoute, /hasAnyRole\(tenant\.user\.role, \['ADMIN', 'OWNER'\]\)/, 'logo upload must be RBAC-gated the same as other organization mutations');
+assert.match(logoRoute, /sharp\(inputBuffer/, 'logo upload must decode/re-encode through sharp to prove real image content, not trust the declared Content-Type');
+assert.match(logoRoute, /org-logos\/\$\{organizationId\}\//, 'logo storage path must be tenant-scoped by the server-resolved organizationId');
+assert.doesNotMatch(logoRoute, /\.svg|image\/svg/, 'SVG must never be an accepted logo format - it can carry embedded scripts/XXE');
+assert.match(logoRoute, /await writeAuditLog/, 'logo changes must be audited');
+
+// Brand color: real WCAG contrast validation server-side, shared math with
+// the theme system's own token tests (no separate approximation).
+assert.match(colorContrastLib, /export function contrastRatio/, 'expected the shared contrast-ratio implementation');
+const orgRouteForColor = read('app/api/settings/organization/route.ts');
+assert.match(orgRouteForColor, /contrastRatio\(rgb, \[255, 255, 255\]\)/, 'brand color must be validated against real contrast math before being persisted, not just a hex-format regex');
+assert.match(orgRouteForColor, /AA_NORMAL_TEXT_CONTRAST/, 'brand color contrast check must use the same AA threshold as the theme token tests');
+
+// Custom domain: real DNS TXT verification (Node's dns module), never a
+// fake "verified" state.
+assert.match(domainRoute, /import \{ .*resolveTxt.* \} from 'node:dns\/promises'/, 'domain verification must perform a real DNS lookup');
+assert.match(domainRoute, /records\.some\(\(chunks\) => chunks\.join\(''\)\.trim\(\) === expected\)/, 'a domain is only marked VERIFIED after the DNS TXT record is actually found to match the generated token');
+assert.doesNotMatch(domainRoute, /customDomainStatus: 'VERIFIED'[\s\S]{0,200}randomBytes/, 'must never mark a domain VERIFIED without a real DNS check in between');
+
+// The Overview card wires all three to their real endpoints, not static text.
+assert.match(shell, /fetch\('\/api\/settings\/organization\/logo'/, 'Branding UI must call the real logo upload endpoint');
+assert.match(shell, /fetch\('\/api\/settings\/organization\/domain'/, 'Branding UI must call the real domain endpoint');
+assert.match(shell, /input type="color"/, 'brand color must be a real color input, not a decorative swatch');
 
 // --- Edit Organization Information drawer: real accessible dialog ------------
 
@@ -171,4 +208,34 @@ assert.ok(usageTabMatch, 'expected to find UsageLimitsTab');
 assert.match(usageTabMatch![0], /billing\.purchasedSeats/, 'Usage & Limits must read the same billing.purchasedSeats field Billing & Plan uses');
 assert.doesNotMatch(usageTabMatch![0], /prisma\./, 'Usage & Limits must not run its own Prisma queries - it is a client component reading the already-fetched SettingsOverview, same as every other tab');
 
-console.log('Validated Organization Settings: tenant/RBAC-scoped organization update route with a real audit trail, tenant-scoped and honestly-nullable Billing & Plan / Seats & Usage data (CustomerAccount + CustomerSeatAllocation, never CustomerHealth.activeUsers, never the founder-internal estimatedArrUsd), the rebuilt Overview KPI strip and Compliance Frameworks section backed by real tenant-scoped aggregates with no invented denominators, an accessible Edit Organization Information drawer reusing DetailDrawer, honest "not yet available" Branding states instead of dead controls, no secrets rendered, every "Manage X" link resolving to a real existing route, and canonical design-token usage.');
+// --- Data consistency: every tab reads the same single-fetch SettingsOverview
+// -- object - none may run its own Prisma query for a number another tab ----
+// -- already shows, which is structurally what prevents "Overview says 12,
+// -- Integrations says 11" style disagreements. ------------------------------
+
+for (const tabName of ['OverviewTab', 'ApprovalSettingsTab', 'SecurityTab', 'IntegrationsTab', 'UsersTab', 'BillingTab', 'UsageLimitsTab', 'AuditTab']) {
+  const tabMatch = shell.match(new RegExp(`function ${tabName}\\([\\s\\S]{0,10000}?\\n}\\n`));
+  assert.ok(tabMatch, `expected to find ${tabName}`);
+  assert.doesNotMatch(tabMatch![0], /await prisma\.|from '@\/lib\/prisma'/, `${tabName} must render only from its SettingsOverview prop, never run its own database query (that would let it drift from the other tabs)`);
+}
+
+// Approval Settings' workflow count must be the exact same field Overview's
+// KPI strip and quick-link card use - not a re-derived value.
+const approvalTabMatch = shell.match(/function ApprovalSettingsTab\([\s\S]{0,10000}?\n}\n/);
+assert.ok(approvalTabMatch, 'expected to find ApprovalSettingsTab');
+assert.match(approvalTabMatch![0], /data\.kpis\.workflowsTotal/, 'Approval Settings must display the same kpis.workflowsTotal Overview shows, not a separately computed workflow count');
+
+// Security & Compliance's enabled-framework count must be derived from the
+// same data.complianceFrameworks array Overview's quick-link card filters,
+// not a second query.
+const securityTabMatch = shell.match(/function SecurityTab\([\s\S]{0,10000}?\n}\n/);
+assert.ok(securityTabMatch, 'expected to find SecurityTab');
+assert.match(securityTabMatch![0], /data\.complianceFrameworks\.map/, 'Security & Compliance must render the same data.complianceFrameworks array Overview summarizes');
+
+// Billing's "Not provisioned" state and Usage & Limits' honest empty state
+// must both key off the exact same nullable data.billing - one can never
+// show a real plan while the other claims unprovisioned.
+assert.match(shell, /No active plan\/seat allocation has been configured for this workspace\./, 'Billing must state the real reason it is unprovisioned, not a bare label');
+assert.match(usageTabMatch![0], /has not yet been provisioned with a plan/, 'Usage & Limits must show the same honest unprovisioned state as Billing when data.billing is null');
+
+console.log('Validated Organization Settings: tenant/RBAC-scoped organization update route with a real audit trail, tenant-scoped and honestly-nullable Billing & Plan / Seats & Usage data (CustomerAccount + CustomerSeatAllocation, never CustomerHealth.activeUsers, never the founder-internal estimatedArrUsd), the rebuilt Overview KPI strip and Compliance Frameworks section backed by real tenant-scoped aggregates with no invented denominators, an accessible Edit Organization Information drawer reusing DetailDrawer, real persisted Branding (sharp-validated logo upload, WCAG-contrast-checked brand color, DNS-verified custom domain) and a single shared Integration summary service eliminating the Overview/Integrations count disagreement, no secrets rendered, every "Manage X" link resolving to a real existing route, and canonical design-token usage.');

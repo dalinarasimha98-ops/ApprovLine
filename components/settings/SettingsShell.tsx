@@ -19,6 +19,8 @@ import {
   Shield,
   Sliders,
   Tag,
+  Trash2,
+  Upload,
   Users,
   UserPlus,
   X,
@@ -26,6 +28,9 @@ import {
 } from 'lucide-react';
 import type { SettingsOverview } from '@/services/settings';
 import { DetailDrawer } from '@/components/dashboard/DetailDrawer';
+import { isValidHexColor, hexToRgb, contrastRatio, AA_NORMAL_TEXT_CONTRAST } from '@/lib/color-contrast';
+import { DATE_FORMAT_OPTIONS } from '@/lib/dateFormat';
+import { WORKSPACE_VIEW_OPTIONS } from '@/lib/workspaceViews';
 
 type Tab =
   | 'overview'
@@ -383,6 +388,358 @@ function EditOrganizationDrawer({
   );
 }
 
+// ─── Branding: brand color, logo, custom domain (real, persisted) ─────────────
+
+const DOMAIN_STATUS_LABEL: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral' }> = {
+  NOT_CONFIGURED: { label: 'Not configured', tone: 'neutral' },
+  PENDING_VERIFICATION: { label: 'Pending verification', tone: 'warning' },
+  VERIFIED: { label: 'Verified', tone: 'success' },
+  ACTIVE: { label: 'Active', tone: 'success' },
+  FAILED: { label: 'Verification failed', tone: 'danger' },
+};
+
+function BrandColorEditor({ org, onSaved }: { org: SettingsOverview['organization']; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [hex, setHex] = useState(org.brandColor ?? '#7C3AED');
+  const [saving, startSaving] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const rgb = isValidHexColor(hex) ? hexToRgb(hex) : null;
+  const ratio = rgb ? contrastRatio(rgb, [255, 255, 255]) : null;
+  const contrastOk = ratio !== null && ratio >= AA_NORMAL_TEXT_CONTRAST;
+
+  function save() {
+    setError(null);
+    if (!isValidHexColor(hex)) { setError('Enter a valid 6-digit hex color.'); return; }
+    if (!contrastOk) { setError(`Too light for white text (${ratio?.toFixed(2)}:1). Choose a darker shade.`); return; }
+    startSaving(async () => {
+      const res = await fetch('/api/settings/organization', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandColor: hex }),
+      });
+      if (res.ok) { onSaved(); setEditing(false); }
+      else { const body = await res.json().catch(() => ({})) as { error?: string }; setError(body.error ?? 'Could not save brand color.'); }
+    });
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-between py-3">
+        <span className="text-sm text-al-text-muted">Brand color</span>
+        <div className="flex items-center gap-2">
+          <span className="h-4 w-4 rounded-full border border-al-border" style={{ backgroundColor: org.brandColor ?? undefined }} />
+          <span className="text-xs font-semibold text-al-text">{org.brandColor ?? 'Not set'}</span>
+          <button onClick={() => setEditing(true)} className="text-xs font-semibold text-al-accent hover:text-al-info">Edit</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-al-text-muted">Brand color</span>
+        <div className="flex items-center gap-2">
+          <input type="color" value={isValidHexColor(hex) ? hex : '#7C3AED'} onChange={(e) => setHex(e.target.value)} className="h-7 w-9 cursor-pointer rounded border border-al-border bg-transparent" aria-label="Brand color picker" />
+          <input
+            type="text"
+            value={hex}
+            onChange={(e) => setHex(e.target.value)}
+            maxLength={7}
+            className="w-24 rounded-lg border border-al-border bg-al-surface px-2 py-1 text-xs font-mono text-al-text focus:border-al-accent focus:outline-none"
+          />
+        </div>
+      </div>
+      {rgb && (
+        <p className={`mt-1.5 text-right text-[11px] font-semibold ${contrastOk ? 'text-al-success' : 'text-al-danger'}`}>
+          {contrastOk ? `Passes contrast (${ratio?.toFixed(2)}:1 with white text)` : `Fails contrast (${ratio?.toFixed(2)}:1 with white text)`}
+        </p>
+      )}
+      {error && <p className="mt-1 text-right text-[11px] font-semibold text-al-danger">{error}</p>}
+      <div className="mt-2 flex justify-end gap-2">
+        <button onClick={() => { setEditing(false); setHex(org.brandColor ?? '#7C3AED'); setError(null); }} disabled={saving} className="rounded-lg border border-al-border px-3 py-1 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">Cancel</button>
+        <button onClick={save} disabled={saving} className="rounded-lg bg-al-accent px-3 py-1 text-xs font-semibold text-white hover:bg-al-accent-hover disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+      </div>
+    </div>
+  );
+}
+
+function LogoEditor({ org, onSaved }: { org: SettingsOverview['organization']; onSaved: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, startUploading] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleFile(file: File) {
+    setError(null);
+    startUploading(async () => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/settings/organization/logo', { method: 'POST', body: formData });
+      if (res.ok) { onSaved(); }
+      else { const body = await res.json().catch(() => ({})) as { error?: string }; setError(body.error ?? 'Could not upload logo.'); }
+      if (inputRef.current) inputRef.current.value = '';
+    });
+  }
+
+  function remove() {
+    setError(null);
+    startUploading(async () => {
+      const res = await fetch('/api/settings/organization/logo', { method: 'DELETE' });
+      if (res.ok) onSaved();
+      else setError('Could not remove logo.');
+    });
+  }
+
+  return (
+    <div className="py-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-al-text-muted">Logo</span>
+        <div className="flex items-center gap-2">
+          {org.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- external Vercel Blob URL, not a static local asset
+            <img src={org.logoUrl} alt="Organization logo" className="h-8 w-8 rounded-lg border border-al-border object-cover" />
+          ) : (
+            <span className="grid h-8 w-8 place-items-center rounded-lg border border-dashed border-al-border-strong text-al-text-muted"><Upload className="h-3.5 w-3.5" /></span>
+          )}
+          <button onClick={() => inputRef.current?.click()} disabled={uploading} className="rounded-lg border border-al-border px-3 py-1.5 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">
+            {uploading ? 'Uploading…' : org.logoUrl ? 'Replace' : 'Upload'}
+          </button>
+          {org.logoUrl && (
+            <button onClick={remove} disabled={uploading} aria-label="Remove logo" className="rounded-lg border border-al-border p-1.5 text-al-text-muted hover:bg-al-danger/10 hover:text-al-danger disabled:opacity-50">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+      />
+      {error && <p className="mt-1 text-right text-[11px] font-semibold text-al-danger">{error}</p>}
+    </div>
+  );
+}
+
+function CustomDomainEditor({ org, onSaved }: { org: SettingsOverview['organization']; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [domain, setDomain] = useState(org.customDomain ?? '');
+  const [dnsRecord, setDnsRecord] = useState<{ name: string; value: string } | null>(null);
+  const [busy, startBusy] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [checkResult, setCheckResult] = useState<string | null>(null);
+
+  const statusInfo = DOMAIN_STATUS_LABEL[org.customDomainStatus] ?? DOMAIN_STATUS_LABEL.NOT_CONFIGURED;
+  const toneText: Record<string, string> = { success: 'text-al-success', warning: 'text-al-warning', danger: 'text-al-danger', neutral: 'text-al-text-muted' };
+
+  function startVerification() {
+    setError(null);
+    startBusy(async () => {
+      const res = await fetch('/api/settings/organization/domain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain }),
+      });
+      const body = await res.json().catch(() => ({})) as { error?: string; dnsRecord?: { name: string; value: string } };
+      if (res.ok) { setDnsRecord(body.dnsRecord ?? null); onSaved(); }
+      else setError(body.error ?? 'Could not start domain verification.');
+    });
+  }
+
+  function checkVerification() {
+    setCheckResult(null);
+    startBusy(async () => {
+      const res = await fetch('/api/settings/organization/domain', { method: 'PATCH' });
+      const body = await res.json().catch(() => ({})) as { status?: string; verified?: boolean };
+      if (res.ok && body.status === 'VERIFIED') { setCheckResult('Verified!'); onSaved(); }
+      else setCheckResult('DNS record not found yet - this can take a few minutes to propagate.');
+    });
+  }
+
+  function removeDomain() {
+    startBusy(async () => {
+      const res = await fetch('/api/settings/organization/domain', { method: 'DELETE' });
+      if (res.ok) { setEditing(false); setDomain(''); setDnsRecord(null); onSaved(); }
+    });
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-between py-3">
+        <span className="text-sm text-al-text-muted">Custom domain</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-al-text">{org.customDomain ?? 'Not set'}</span>
+          <span className={`text-[11px] font-bold ${toneText[statusInfo.tone]}`}>{statusInfo.label}</span>
+          <button onClick={() => setEditing(true)} className="text-xs font-semibold text-al-accent hover:text-al-info">Configure</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-al-text-muted">Custom domain</span>
+        <input
+          type="text"
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          placeholder="app.yourcompany.com"
+          className="w-48 rounded-lg border border-al-border bg-al-surface px-2 py-1 text-xs text-al-text placeholder:text-al-text-muted focus:border-al-accent focus:outline-none"
+        />
+      </div>
+      {error && <p className="mt-1 text-right text-[11px] font-semibold text-al-danger">{error}</p>}
+      {dnsRecord && (
+        <div className="mt-2 rounded-lg border border-al-border bg-al-surface-sunken p-2.5 text-[11px]">
+          <p className="font-bold text-al-text">Add this TXT record to verify ownership:</p>
+          <p className="mt-1 break-all font-mono text-al-text-secondary">{dnsRecord.name}</p>
+          <p className="break-all font-mono text-al-text-secondary">{dnsRecord.value}</p>
+        </div>
+      )}
+      {checkResult && <p className="mt-1.5 text-right text-[11px] font-semibold text-al-text-secondary">{checkResult}</p>}
+      <div className="mt-2 flex flex-wrap justify-end gap-2">
+        <button onClick={() => setEditing(false)} disabled={busy} className="rounded-lg border border-al-border px-3 py-1 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">Close</button>
+        {org.customDomainStatus !== 'NOT_CONFIGURED' && (
+          <button onClick={removeDomain} disabled={busy} className="rounded-lg border border-al-danger/30 px-3 py-1 text-xs font-semibold text-al-danger hover:bg-al-danger/10 disabled:opacity-50">Remove</button>
+        )}
+        {org.customDomainStatus === 'PENDING_VERIFICATION' && (
+          <button onClick={checkVerification} disabled={busy} className="rounded-lg border border-al-border px-3 py-1 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">Check verification</button>
+        )}
+        <button onClick={startVerification} disabled={busy || !domain.trim()} className="rounded-lg bg-al-accent px-3 py-1 text-xs font-semibold text-white hover:bg-al-accent-hover disabled:opacity-50">
+          {busy ? 'Working…' : 'Start verification'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BrandingCard({ org, onSaved }: { org: SettingsOverview['organization']; onSaved: () => void }) {
+  return (
+    <SectionCard>
+      <SectionHeader title="Organization Branding" subtitle="Customize how your organization appears" />
+      <div className="divide-y divide-al-border px-6">
+        <ConfigRow label="Display name" value={org.name} />
+        <LogoEditor org={org} onSaved={onSaved} />
+        <BrandColorEditor org={org} onSaved={onSaved} />
+        <CustomDomainEditor org={org} onSaved={onSaved} />
+      </div>
+      <div className="px-6 pb-4 pt-2 text-[11px] text-al-text-muted">
+        Display name reuses your organization name (edit via Organization Information above). Custom domain verification uses a
+        real DNS TXT lookup - it only shows Verified once that record is actually found.
+      </div>
+    </SectionCard>
+  );
+}
+
+// ─── Default Settings: real, persisted, org-level preferences ─────────────────
+
+const RISK_LEVEL_OPTIONS = ['low', 'medium', 'high', 'critical'] as const;
+
+function timezoneOptions(): string[] {
+  try {
+    return Intl.supportedValuesOf('timeZone');
+  } catch {
+    return ['UTC'];
+  }
+}
+
+function DefaultSettingsCard({ org, onSaved }: { org: SettingsOverview['organization']; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    defaultTimeZone: org.defaultTimeZone ?? '',
+    defaultDateFormat: org.defaultDateFormat ?? '',
+    defaultWorkspaceView: org.defaultWorkspaceView ?? '',
+    defaultRiskLevel: org.defaultRiskLevel ?? '',
+  });
+  const [saving, startSaving] = useTransition();
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const zones = useState(() => timezoneOptions())[0];
+
+  const initial = { defaultTimeZone: org.defaultTimeZone ?? '', defaultDateFormat: org.defaultDateFormat ?? '', defaultWorkspaceView: org.defaultWorkspaceView ?? '', defaultRiskLevel: org.defaultRiskLevel ?? '' };
+  const dirty = (Object.keys(form) as (keyof typeof form)[]).some((k) => form[k] !== initial[k]);
+
+  function update(key: keyof typeof form, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
+    setResult(null);
+  }
+
+  function save() {
+    startSaving(async () => {
+      const res = await fetch('/api/settings/organization', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          defaultTimeZone: form.defaultTimeZone || null,
+          defaultDateFormat: form.defaultDateFormat || null,
+          defaultWorkspaceView: form.defaultWorkspaceView || null,
+          defaultRiskLevel: form.defaultRiskLevel || null,
+        }),
+      });
+      if (res.ok) { setResult({ ok: true, msg: 'Default settings saved.' }); onSaved(); }
+      else { const body = await res.json().catch(() => ({})) as { error?: string }; setResult({ ok: false, msg: body.error ?? 'Save failed.' }); }
+    });
+  }
+
+  const selectClass = 'mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20';
+
+  return (
+    <SectionCard>
+      <SectionHeader title="Default Settings" subtitle="Organization-wide defaults - each has a real effect described below" />
+      <div className="grid gap-4 p-6 sm:grid-cols-2">
+        <div>
+          <label className="block text-xs font-semibold text-al-text-secondary">Default time zone</label>
+          <select value={form.defaultTimeZone} onChange={(e) => update('defaultTimeZone', e.target.value)} className={selectClass}>
+            <option value="">Not set</option>
+            {zones.map((z) => <option key={z} value={z}>{z}</option>)}
+          </select>
+          <p className="mt-1 text-[11px] text-al-text-muted">Fallback shown in User Settings when a member hasn&apos;t set their own time zone.</p>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-al-text-secondary">Date format</label>
+          <select value={form.defaultDateFormat} onChange={(e) => update('defaultDateFormat', e.target.value)} className={selectClass}>
+            <option value="">Not set (MM/DD/YYYY)</option>
+            {DATE_FORMAT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+          </select>
+          <p className="mt-1 text-[11px] text-al-text-muted">Applied to dates shown in Organization Settings.</p>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-al-text-secondary">Default workspace view</label>
+          <select value={form.defaultWorkspaceView} onChange={(e) => update('defaultWorkspaceView', e.target.value)} className={selectClass}>
+            <option value="">Not set (Dashboard)</option>
+            {WORKSPACE_VIEW_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <p className="mt-1 text-[11px] text-al-text-muted">Where members land after signing in.</p>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-al-text-secondary">Default risk level</label>
+          <select value={form.defaultRiskLevel} onChange={(e) => update('defaultRiskLevel', e.target.value)} className={selectClass}>
+            <option value="">Not set</option>
+            {RISK_LEVEL_OPTIONS.map((r) => <option key={r} value={r}>{r[0].toUpperCase() + r.slice(1)}</option>)}
+          </select>
+          <p className="mt-1 text-[11px] text-al-text-muted">Used when Risk Detection (Approval Settings) is turned off.</p>
+        </div>
+      </div>
+      <div className="border-t border-al-border px-6 py-3 text-[11px] text-al-text-muted">
+        Language: English (US) — the only language ApprovLine supports today.
+      </div>
+      {result && (
+        <div className={`mx-6 mb-3 flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold ${result.ok ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-al-danger/30 bg-al-danger/10 text-al-danger'}`}>
+          {result.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+          {result.msg}
+        </div>
+      )}
+      <div className="flex justify-end border-t border-al-border px-6 py-4">
+        <button onClick={save} disabled={saving || !dirty} className="flex items-center gap-1.5 rounded-lg bg-al-accent px-4 py-2 text-xs font-semibold text-white hover:bg-al-accent-hover disabled:opacity-50">
+          {saving && <RefreshCw className="h-3 w-3 animate-spin" />}
+          {saving ? 'Saving…' : 'Save defaults'}
+        </button>
+      </div>
+    </SectionCard>
+  );
+}
+
 // ─── Tab: Overview ────────────────────────────────────────────────────────────
 
 function OverviewTab({ data, setTab, onOrgSaved }: { data: SettingsOverview; setTab: (t: Tab) => void; onOrgSaved: () => void }) {
@@ -459,30 +816,10 @@ function OverviewTab({ data, setTab, onOrgSaved }: { data: SettingsOverview; set
           </div>
         </SectionCard>
 
-        {/* Organization Branding */}
-        <SectionCard>
-          <SectionHeader title="Organization Branding" subtitle="Customize how your organization appears" />
-          <div className="divide-y divide-al-border px-6">
-            <ConfigRow label="Display name" value={org.name} />
-            <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-al-text-muted">Logo upload</span>
-              <StatusBadge ok={false} falseLabel="Not yet available" />
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-al-text-muted">Brand color</span>
-              <StatusBadge ok={false} falseLabel="Not yet available" />
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-al-text-muted">Custom domain</span>
-              <StatusBadge ok={false} falseLabel="Not yet available" />
-            </div>
-          </div>
-          <div className="px-6 pb-4 pt-2 text-[11px] text-al-text-muted">
-            Logo upload, brand color, and custom domains are not yet part of the ApprovLine architecture — this section will
-            become editable once that infrastructure exists rather than showing controls that don&apos;t persist.
-          </div>
-        </SectionCard>
+        <BrandingCard org={org} onSaved={onOrgSaved} />
       </div>
+
+      <DefaultSettingsCard org={org} onSaved={onOrgSaved} />
 
       {/* Quick-link summary cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -596,6 +933,7 @@ function UsersTab({ data }: { data: SettingsOverview }) {
         <SectionHeader title="Users & Teams" subtitle="Manage workspace members, teams, roles, and permissions" />
         <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Total users" value={`${data.stats.totalUsers}`} />
+          <ConfigRow label="Administrators" value={`${data.stats.adminUsers}`} />
           <ConfigRow label="Total teams" value={`${data.stats.totalTeams}`} />
           <ConfigRow label="Pending invites" value={`${data.kpis.pendingInvites}`} />
         </div>
@@ -707,7 +1045,116 @@ function IntegrationsTab({ data }: { data: SettingsOverview }) {
 
 // ─── Tab: Approval Settings (Workflow + Evidence retention + Notifications) ────
 
-function ApprovalSettingsTab({ data }: { data: SettingsOverview }) {
+function Toggle({ checked, onChange, disabled, label }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-al-accent' : 'bg-al-border-strong'}`}
+    >
+      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+    </button>
+  );
+}
+
+function ApprovalPolicyCard({ org, onSaved }: { org: SettingsOverview['organization']; onSaved: () => void }) {
+  const [autoCategorization, setAutoCategorization] = useState(org.autoCategorizationEnabled);
+  const [riskDetection, setRiskDetection] = useState(org.riskDetectionEnabled);
+  const [dueDateDays, setDueDateDays] = useState(org.defaultDueDateDays !== null ? String(org.defaultDueDateDays) : '');
+  const [busy, startBusy] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function patch(body: Record<string, unknown>, revert: () => void) {
+    setError(null);
+    startBusy(async () => {
+      const res = await fetch('/api/settings/organization', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) onSaved();
+      else {
+        revert();
+        const errBody = await res.json().catch(() => ({})) as { error?: string };
+        setError(errBody.error ?? 'Could not save.');
+      }
+    });
+  }
+
+  function toggleAutoCategorization(next: boolean) {
+    const prev = autoCategorization;
+    setAutoCategorization(next);
+    patch({ autoCategorizationEnabled: next }, () => setAutoCategorization(prev));
+  }
+  function toggleRiskDetection(next: boolean) {
+    const prev = riskDetection;
+    setRiskDetection(next);
+    patch({ riskDetectionEnabled: next }, () => setRiskDetection(prev));
+  }
+  function saveDueDate() {
+    const days = dueDateDays.trim() === '' ? null : parseInt(dueDateDays, 10);
+    if (days !== null && (!Number.isFinite(days) || days < 1 || days > 90)) {
+      setError('Enter a number of days between 1 and 90.');
+      return;
+    }
+    patch({ defaultDueDateDays: days }, () => {});
+  }
+
+  return (
+    <SectionCard>
+      <SectionHeader title="Approval Policy" subtitle="Real organization-level policy - toggling these changes what new approvals persist" />
+      <div className="divide-y divide-al-border px-6">
+        <ConfigRow label="Primary classifier" value="Anthropic Claude" />
+        <ConfigRow label="Fallback classifier" value="OpenAI GPT" />
+        <div className="flex items-center justify-between py-3">
+          <div>
+            <p className="text-sm text-al-text-muted">Auto-categorization</p>
+            <p className="text-[11px] text-al-text-muted">When off, new approvals are stored without a category.</p>
+          </div>
+          <Toggle checked={autoCategorization} onChange={toggleAutoCategorization} disabled={busy} label="Auto-categorization" />
+        </div>
+        <div className="flex items-center justify-between py-3">
+          <div>
+            <p className="text-sm text-al-text-muted">Risk detection</p>
+            <p className="text-[11px] text-al-text-muted">When off, new approvals use Default Risk Level instead of AI scoring.</p>
+          </div>
+          <Toggle checked={riskDetection} onChange={toggleRiskDetection} disabled={busy} label="Risk detection" />
+        </div>
+        <div className="flex items-center justify-between py-3">
+          <div>
+            <p className="text-sm text-al-text-muted">Default due date</p>
+            <p className="text-[11px] text-al-text-muted">Applied to new approvals with no explicit due date.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={90}
+              value={dueDateDays}
+              onChange={(e) => setDueDateDays(e.target.value)}
+              placeholder="—"
+              className="w-16 rounded-lg border border-al-border bg-al-surface px-2 py-1 text-xs text-al-text focus:border-al-accent focus:outline-none"
+            />
+            <span className="text-xs text-al-text-muted">days</span>
+            <button onClick={saveDueDate} disabled={busy} className="rounded-lg border border-al-border px-2.5 py-1 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">Save</button>
+          </div>
+        </div>
+        <ConfigRow label="Queue" value="BullMQ + Redis (concurrency 10)" />
+      </div>
+      {error && <p className="px-6 pb-3 text-[11px] font-semibold text-al-danger">{error}</p>}
+      <div className="border-t border-al-border px-6 py-4 text-[11px] text-al-text-muted">
+        These policies apply only to newly created approvals - existing records are never modified. Message capture and
+        evidence collection are never skipped, regardless of policy.
+      </div>
+    </SectionCard>
+  );
+}
+
+function ApprovalSettingsTab({ data, onOrgSaved }: { data: SettingsOverview; onOrgSaved: () => void }) {
   const channels = [
     { label: 'Email notifications', status: 'Via alert configuration' },
     { label: 'In-app alerts', status: 'Enabled' },
@@ -717,20 +1164,7 @@ function ApprovalSettingsTab({ data }: { data: SettingsOverview }) {
 
   return (
     <div className="grid gap-4">
-      <SectionCard>
-        <SectionHeader title="Classification Pipeline" subtitle="AI-powered approval detection and classification" />
-        <div className="divide-y divide-al-border px-6">
-          <ConfigRow label="Primary classifier" value="Anthropic Claude" />
-          <ConfigRow label="Fallback classifier" value="OpenAI GPT" />
-          <ConfigRow label="Auto-categorization" value="Always on — runs on every ingested message" />
-          <ConfigRow label="Risk detection" value="Always on — every approval is compliance-evaluated" />
-          <ConfigRow label="Queue" value="BullMQ + Redis (concurrency 10)" />
-        </div>
-        <div className="border-t border-al-border px-6 py-4 text-[11px] text-al-text-muted">
-          Auto-categorization and risk detection run for every organization today — there is no per-org opt-out in the
-          current classification architecture, so this is shown as status rather than a toggle with no effect.
-        </div>
-      </SectionCard>
+      <ApprovalPolicyCard org={data.organization} onSaved={onOrgSaved} />
 
       <SectionCard>
         <SectionHeader title="Playbook AI — Approval Workflows" subtitle="Compliance playbooks that define approval evaluation rules" action={<ManageLink href="/playbooks" label="Manage playbooks" />} />
@@ -944,14 +1378,27 @@ function BillingTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab)
               <ConfigRow label="Plan" value={billing.planLabel} />
               <ConfigRow label="Price" value={billing.planPrice} />
             </>
-          ) : null}
+          ) : (
+            <ConfigRow label="Plan status" value="Not provisioned" valueClass="text-al-warning" />
+          )}
           <ConfigRow label="Members" value={`${data.stats.totalUsers}`} />
         </div>
-        <div className="border-t border-al-border px-6 py-4">
-          <button onClick={() => setTab('usage')} className="inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
-            View seats & usage <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        {billing ? (
+          <div className="border-t border-al-border px-6 py-4">
+            <button onClick={() => setTab('usage')} className="inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
+              View seats & usage <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="border-t border-al-warning/20 bg-al-warning/10 px-6 py-4">
+            <p className="text-xs font-semibold text-al-warning">No active plan/seat allocation has been configured for this workspace.</p>
+            <p className="mt-2 text-xs text-al-text-secondary">
+              Contact your account administrator, or reach{' '}
+              <a href="mailto:support@approvline.ai" className="font-semibold text-al-info underline">ApprovLine support</a>{' '}
+              to provision a plan.
+            </p>
+          </div>
+        )}
       </SectionCard>
 
       <div className="rounded-xl border border-al-info/20 bg-al-info/10 p-5">
@@ -1089,14 +1536,51 @@ function AuditTab({ data }: { data: SettingsOverview }) {
 
 // ─── Tab: System ──────────────────────────────────────────────────────────────
 
+/**
+ * System is an operational diagnostic area for customer admins, not a
+ * founder/SRE debugging console - so unlike /founder/system-health (the
+ * real venue for raw internal error strings, gated by the separate
+ * founder-role system), this view never renders a readiness check's raw
+ * message (e.g. "readiness:postgres timed out after 3000ms"). It also
+ * never marks the fallback AI classifier "unavailable"/red when the
+ * primary is healthy - an unconfigured optional fallback is not a system
+ * degradation.
+ */
+function humanSystemStatus(status: string, isOptionalFallback: boolean): { text: string; tone: 'success' | 'warning' | 'danger' | 'neutral' } {
+  if (status === 'ok') return { text: 'Healthy', tone: 'success' };
+  if (isOptionalFallback) return { text: 'Not configured (optional - primary is healthy)', tone: 'neutral' };
+  if (status === 'error') return { text: 'Unavailable', tone: 'danger' };
+  return { text: 'Degraded', tone: 'warning' };
+}
+
+const SYSTEM_STATUS_DESCRIPTION: Record<'success' | 'warning' | 'danger' | 'neutral', string> = {
+  success: 'Operating normally.',
+  warning: 'Experiencing a temporary issue. No action needed from you.',
+  danger: 'Currently unavailable. Some features may be affected.',
+  neutral: 'Optional fallback provider - not required while the primary service is healthy.',
+};
+
 function SystemTab({ data }: { data: SettingsOverview }) {
   const { systemStatus } = data;
-  const checks: { label: string; status: string; message?: string | null }[] = [
-    { label: 'PostgreSQL database', status: systemStatus.postgresql.status, message: systemStatus.postgresql.message },
-    { label: 'Redis / BullMQ queue', status: systemStatus.redis.status, message: systemStatus.redis.message },
-    { label: 'Anthropic AI classifier', status: systemStatus.anthropic.status, message: systemStatus.anthropic.message },
-    { label: 'OpenAI fallback classifier', status: systemStatus.openai.status, message: systemStatus.openai.message },
+  const anthropicOk = systemStatus.anthropic.status === 'ok';
+  const checks: { label: string; status: string; isOptionalFallback?: boolean }[] = [
+    { label: 'Database', status: systemStatus.postgresql.status },
+    { label: 'Background job queue', status: systemStatus.redis.status },
+    { label: 'AI classifier (primary)', status: systemStatus.anthropic.status },
+    { label: 'AI classifier (fallback)', status: systemStatus.openai.status, isOptionalFallback: anthropicOk },
   ];
+  const toneClasses: Record<string, string> = {
+    success: 'bg-al-success',
+    warning: 'bg-al-warning',
+    danger: 'bg-al-danger',
+    neutral: 'bg-al-text-muted',
+  };
+  const toneText: Record<string, string> = {
+    success: 'text-al-success',
+    warning: 'text-al-warning',
+    danger: 'text-al-danger',
+    neutral: 'text-al-text-muted',
+  };
 
   return (
     <div className="grid gap-4">
@@ -1110,20 +1594,21 @@ function SystemTab({ data }: { data: SettingsOverview }) {
           }
         />
         <ul className="divide-y divide-al-border">
-          {checks.map(({ label, status, message }) => (
-            <li key={label} className="flex items-center justify-between px-6 py-3">
-              <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${status === 'ok' ? 'bg-al-success' : status === 'error' ? 'bg-al-danger' : 'bg-al-warning'}`} />
-                <span className="text-sm text-al-text-secondary">{label}</span>
-              </div>
-              <div className="text-right">
-                <span className={`text-xs font-bold ${status === 'ok' ? 'text-al-success' : status === 'error' ? 'text-al-danger' : 'text-al-warning'}`}>
-                  {status}
-                </span>
-                {message && status !== 'ok' && <p className="text-[11px] text-al-text-muted">{message}</p>}
-              </div>
-            </li>
-          ))}
+          {checks.map(({ label, status, isOptionalFallback }) => {
+            const human = humanSystemStatus(status, isOptionalFallback ?? false);
+            return (
+              <li key={label} className="flex items-center justify-between px-6 py-3">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${toneClasses[human.tone]}`} />
+                  <span className="text-sm text-al-text-secondary">{label}</span>
+                </div>
+                <div className="text-right">
+                  <span className={`text-xs font-bold ${toneText[human.tone]}`}>{human.text}</span>
+                  {human.tone !== 'success' && <p className="text-[11px] text-al-text-muted">{SYSTEM_STATUS_DESCRIPTION[human.tone]}</p>}
+                </div>
+              </li>
+            );
+          })}
         </ul>
         <div className="border-t border-al-border px-6 py-4">
           <Link href="/health" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
@@ -1188,7 +1673,7 @@ export function SettingsShell({ data }: { data: SettingsOverview }) {
         {activeTab === 'overview' && <OverviewTab data={data} setTab={setActiveTab} onOrgSaved={onOrgSaved} />}
         {activeTab === 'users' && <UsersTab data={data} />}
         {activeTab === 'integrations' && <IntegrationsTab data={data} />}
-        {activeTab === 'approvals' && <ApprovalSettingsTab data={data} />}
+        {activeTab === 'approvals' && <ApprovalSettingsTab data={data} onOrgSaved={onOrgSaved} />}
         {activeTab === 'security' && <SecurityTab data={data} />}
         {activeTab === 'billing' && <BillingTab data={data} setTab={setActiveTab} />}
         {activeTab === 'usage' && <UsageLimitsTab data={data} />}

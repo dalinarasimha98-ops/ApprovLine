@@ -177,6 +177,14 @@ enum EvidenceProviderConnectionStatus {
   DISCONNECTED
 }
 
+enum CustomDomainStatus {
+  NOT_CONFIGURED
+  PENDING_VERIFICATION
+  VERIFIED
+  ACTIVE
+  FAILED
+}
+
 enum ApprovalConfirmationDecision {
   PENDING
   CONFIRMED
@@ -279,6 +287,44 @@ model Organization {
   name                     String
   slug                     String                         @unique
   companyDomain            String?
+  // --- Organization Settings: Branding ---------------------------------
+  /// Validated 6-digit hex (e.g. "#7C3AED"). Rejected server-side if it
+  /// would fail WCAG AA contrast against the app's surface tokens.
+  brandColor               String?
+  /// Vercel Blob URL for the uploaded org logo. Never a client-supplied
+  /// arbitrary URL - only ever set by the logo upload route after content
+  /// validation.
+  logoUrl                  String?
+  logoUpdatedAt            DateTime?
+  // --- Organization Settings: Custom domain (real state machine, no fake
+  // --- DNS verification - customDomainStatus only moves to VERIFIED after
+  // --- a genuine DNS TXT lookup finds the expected token) ----------------
+  customDomain             String?
+  customDomainStatus       CustomDomainStatus             @default(NOT_CONFIGURED)
+  customDomainVerifyToken  String?
+  customDomainVerifiedAt   DateTime?
+  // --- Organization Settings: Default preferences ------------------------
+  /// IANA timezone. Falls back to for org-scoped date/time display when a
+  /// user has no personal User.timezone set (see services/userSettings.ts).
+  defaultTimeZone          String?
+  /// One of DATE_FORMAT_OPTIONS in lib/dateFormat.ts.
+  defaultDateFormat        String?
+  /// One of WORKSPACE_VIEW_OPTIONS in lib/workspaceViews.ts - consumed by
+  /// app/get-started/page.tsx's post-sign-in redirect.
+  defaultWorkspaceView     String?
+  /// One of the real classifier RiskLevel values ('low'|'medium'|'high'|
+  /// 'critical') - used as the fallback shown when no other default exists.
+  defaultRiskLevel         String?
+  // --- Organization Settings: Approval policy -----------------------------
+  /// When false, newly persisted ApprovalRecords have category nulled out
+  /// regardless of what the classifier returned (services/classifier/
+  /// persistence.ts). Never affects existing records or skips capture.
+  autoCategorizationEnabled Boolean                       @default(true)
+  /// When false, newly persisted ApprovalRecords have riskLevel nulled out.
+  riskDetectionEnabled     Boolean                        @default(true)
+  /// Applied as ApprovalRecord.dueDate when the classifier did not supply
+  /// one. Null means no organization default is configured.
+  defaultDueDateDays       Int?
   industry                 String?
   companySize              String?
   country                  String?
@@ -550,6 +596,11 @@ model ApprovalRecord {
   correlationId           String?
   idempotencyKey          String?
   approvalTimestamp       DateTime?
+  /// Set from Organization.defaultDueDateDays at creation time
+  /// (services/classifier/persistence.ts) when the org has configured a
+  /// default. Null when no organization default exists - the classifier
+  /// itself never produces a due date.
+  dueDate                 DateTime?
   occurredAt              DateTime                       @default(now())
   createdAt               DateTime                       @default(now())
   updatedAt               DateTime                       @updatedAt

@@ -5,6 +5,7 @@ import { tenantScopedWhere } from '@/lib/tenant-isolation';
 import { buildHealthPageReport, type ReadinessCheck } from '@/services/readiness';
 import { commercialPlans, planDisplayName, formatPlanPrice } from '@/lib/plans';
 import { jsonArray, type PendingInvite } from '@/services/users';
+import { getIntegrationSummary } from '@/services/integrations/summary';
 
 export type SettingsOverview = {
   organization: {
@@ -20,9 +21,22 @@ export type SettingsOverview = {
     onboardedAt: string | null;
     primaryAdminName: string | null;
     primaryAdminEmail: string | null;
+    brandColor: string | null;
+    logoUrl: string | null;
+    customDomain: string | null;
+    customDomainStatus: string;
+    defaultTimeZone: string | null;
+    defaultDateFormat: string | null;
+    defaultWorkspaceView: string | null;
+    defaultRiskLevel: string | null;
+    autoCategorizationEnabled: boolean;
+    riskDetectionEnabled: boolean;
+    defaultDueDateDays: number | null;
   };
   stats: {
     totalUsers: number;
+    /** Tenant-scoped count of OWNER + ADMIN role members. */
+    adminUsers: number;
     activeIntegrations: number;
     totalTeams: number;
     totalPlaybooks: number;
@@ -77,12 +91,16 @@ export type SettingsOverview = {
    *  - connectedIntegrations matches the definition the real Integrations
    *    page (app/dashboard/settings/integrations/page.tsx) uses for its
    *    own "Connected" stat pill (CONNECTED or SYNCING), not just CONNECTED.
-   *  - integrationsInCatalog is the count of native, publicly-available
-   *    MarketplaceProvider rows. It intentionally does NOT attempt to
-   *    subtract already-connected ones (that requires the Integrations
-   *    page's internal enum-to-slug bridge, which is page-local code, not
-   *    a shared service) - so it is labeled "in catalog", not "available
-   *    to connect", to stay honest about exactly what it counts.
+   *  - both connectedIntegrations and integrationsInCatalog come from
+   *    services/integrations/summary.ts's getIntegrationSummary(), the
+   *    single shared computation also used by the real Integrations
+   *    management page (app/dashboard/settings/integrations/page.tsx) for
+   *    its own "Connected" stat pill - the two surfaces can no longer
+   *    report different numbers, because they now call the same function.
+   *    integrationsInCatalog is catalog size (native, publicly-available
+   *    MarketplaceProvider rows), not "available to connect" - it is not
+   *    reduced by already-connected providers, so it is labeled "in
+   *    catalog" everywhere it is shown.
    *  - workflows* reuses PlaybookDocument, the actual configured-workflow
    *    concept in this codebase (there is no separate Workflow model).
    *  - dataSources* reuses EvidenceProviderConnection, the modeled
@@ -126,8 +144,8 @@ export async function fetchSettingsOverview(organizationId: string): Promise<Set
   const startOfMonth = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
 
   const [
-    org, userCount, integrations, teamCount, playbookCount, playbookActiveCount,
-    recentLogs, healthReport, customerAccount, integrationsInCatalog,
+    org, userCount, adminCount, integrationSummary, teamCount, playbookCount, playbookActiveCount,
+    recentLogs, healthReport, customerAccount,
     dataSourcesTotal, dataSourcesCapturing, approvalsThisMonth, complianceFrameworkRows,
   ] = await Promise.all([
     prisma.organization.findUnique({
@@ -137,13 +155,15 @@ export async function fetchSettingsOverview(organizationId: string): Promise<Set
         companySize: true, country: true, departments: true, approvalCategories: true,
         onboardedAt: true, primaryAdminName: true, primaryAdminEmail: true,
         invitedTeamMembers: true,
+        brandColor: true, logoUrl: true, customDomain: true, customDomainStatus: true,
+        defaultTimeZone: true, defaultDateFormat: true, defaultWorkspaceView: true,
+        defaultRiskLevel: true, autoCategorizationEnabled: true, riskDetectionEnabled: true,
+        defaultDueDateDays: true,
       },
     }),
     prisma.user.count({ where: tenantScopedWhere(scope) }),
-    prisma.integration.findMany({
-      where: tenantScopedWhere(scope),
-      select: { id: true, status: true, provider: true },
-    }),
+    prisma.user.count({ where: tenantScopedWhere(scope, { role: { in: ['OWNER', 'ADMIN'] } }) }),
+    getIntegrationSummary(organizationId),
     prisma.team.count({ where: tenantScopedWhere(scope) }),
     prisma.playbookDocument.count({ where: tenantScopedWhere(scope) }),
     prisma.playbookDocument.count({ where: tenantScopedWhere(scope, { status: 'READY' }) }),
@@ -156,6 +176,7 @@ export async function fetchSettingsOverview(organizationId: string): Promise<Set
             'user.invited', 'security_request_submitted',
             'onboarding.organization_updated', 'onboarding.completed',
             'settings.organization_updated', 'settings.preferences_updated',
+            'BRANDING_UPDATED', 'DEFAULT_SETTINGS_UPDATED', 'APPROVAL_POLICY_UPDATED', 'DOMAIN_UPDATED',
           ],
         },
       },
@@ -168,7 +189,6 @@ export async function fetchSettingsOverview(organizationId: string): Promise<Set
       where: { organizationId },
       select: { status: true, planTier: true, dataRetentionDays: true, seatAllocation: { select: { purchasedSeats: true, allocatedSeats: true, usedSeats: true } } },
     }).catch(() => null),
-    prisma.marketplaceProvider.count({ where: { isNative: true, status: 'AVAILABLE' } }).catch(() => 0),
     prisma.evidenceProviderConnection.count({ where: tenantScopedWhere(scope) }),
     prisma.evidenceProviderConnection.count({ where: tenantScopedWhere(scope, { status: { in: ['CONNECTED', 'SYNCING'] } }) }),
     prisma.approvalRecord.count({ where: tenantScopedWhere(scope, { createdAt: { gte: startOfMonth } }) }),
@@ -179,10 +199,12 @@ export async function fetchSettingsOverview(organizationId: string): Promise<Set
     }),
   ]);
 
-  // Matches the "Connected" stat pill on the real Integrations page
-  // (app/dashboard/settings/integrations/page.tsx) exactly, so this KPI and
-  // that page never disagree about what "connected" means.
-  const activeIntegrations = integrations.filter((i) => i.status === 'CONNECTED' || i.status === 'SYNCING').length;
+  // getIntegrationSummary() (services/integrations/summary.ts) is the single
+  // shared computation the Integrations management page itself now also
+  // calls for its "Connected" stat pill, so this KPI and that page can
+  // never disagree about what "connected" means.
+  const activeIntegrations = integrationSummary.connectedCount;
+  const integrationsInCatalog = integrationSummary.nativeCatalogSize;
   const pendingInvites = jsonArray<PendingInvite>(org?.invitedTeamMembers).length;
 
   return {
@@ -199,9 +221,21 @@ export async function fetchSettingsOverview(organizationId: string): Promise<Set
       onboardedAt: org?.onboardedAt?.toISOString() ?? null,
       primaryAdminName: org?.primaryAdminName ?? null,
       primaryAdminEmail: org?.primaryAdminEmail ?? null,
+      brandColor: org?.brandColor ?? null,
+      logoUrl: org?.logoUrl ?? null,
+      customDomain: org?.customDomain ?? null,
+      customDomainStatus: org?.customDomainStatus ?? 'NOT_CONFIGURED',
+      defaultTimeZone: org?.defaultTimeZone ?? null,
+      defaultDateFormat: org?.defaultDateFormat ?? null,
+      defaultWorkspaceView: org?.defaultWorkspaceView ?? null,
+      defaultRiskLevel: org?.defaultRiskLevel ?? null,
+      autoCategorizationEnabled: org?.autoCategorizationEnabled ?? true,
+      riskDetectionEnabled: org?.riskDetectionEnabled ?? true,
+      defaultDueDateDays: org?.defaultDueDateDays ?? null,
     },
     stats: {
       totalUsers: userCount,
+      adminUsers: adminCount,
       activeIntegrations,
       totalTeams: teamCount,
       totalPlaybooks: playbookCount,
