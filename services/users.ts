@@ -53,7 +53,10 @@ export type UsersTeamsData = {
   summary: UsersTeamsSummary;
 };
 
-function jsonArray<T>(val: unknown): T[] {
+/** Exported so other services reading Organization.invitedTeamMembers (e.g.
+ *  services/settings.ts's pending-invite KPI) parse it identically instead
+ *  of re-implementing this JSON-or-array coercion. */
+export function jsonArray<T>(val: unknown): T[] {
   if (!val) return [];
   try {
     const parsed = typeof val === 'string' ? JSON.parse(val) : val;

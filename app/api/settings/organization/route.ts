@@ -13,6 +13,8 @@ const patchSchema = z.object({
   industry: z.string().max(100).optional().nullable(),
   companySize: z.string().max(50).optional().nullable(),
   country: z.string().max(100).optional().nullable(),
+  primaryAdminName: z.string().max(200).optional().nullable(),
+  primaryAdminEmail: z.string().max(320).email().optional().nullable().or(z.literal('').transform(() => null)),
   departments: z.array(z.string()).optional(),
   approvalCategories: z.array(z.string()).optional(),
 });
@@ -42,6 +44,8 @@ export async function PATCH(req: NextRequest) {
       ...(updates.industry !== undefined ? { industry: updates.industry } : {}),
       ...(updates.companySize !== undefined ? { companySize: updates.companySize } : {}),
       ...(updates.country !== undefined ? { country: updates.country } : {}),
+      ...(updates.primaryAdminName !== undefined ? { primaryAdminName: updates.primaryAdminName } : {}),
+      ...(updates.primaryAdminEmail !== undefined ? { primaryAdminEmail: updates.primaryAdminEmail } : {}),
       ...(updates.departments !== undefined ? { departments: updates.departments } : {}),
       ...(updates.approvalCategories !== undefined ? { approvalCategories: updates.approvalCategories } : {}),
     },

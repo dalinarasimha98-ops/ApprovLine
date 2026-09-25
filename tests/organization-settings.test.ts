@@ -106,4 +106,69 @@ for (const [route, file] of Object.entries(routeToFile)) {
 
 assert.doesNotMatch(shell, /bg-blue-600|text-blue-600|divide-slate-\d|hover:bg-al-info\/100/, 'SettingsShell must use the canonical al-* token system, not hardcoded blue/slate values or the malformed hover:bg-al-info/100 pairing');
 
-console.log('Validated Organization Settings: tenant/RBAC-scoped organization update route with a real audit trail, tenant-scoped and honestly-nullable Billing & Plan / Seats & Usage data (CustomerAccount + CustomerSeatAllocation, never CustomerHealth.activeUsers, never the founder-internal estimatedArrUsd), no secrets rendered, every "Manage X" link resolving to a real existing route, and canonical design-token usage.');
+// --- KPI strip: every count is a real tenant-scoped aggregate, no invented ---
+// -- denominators (Overview screenshot rebuild) -------------------------------
+
+assert.match(service, /export async function fetchSettingsOverview/, 'the uncached overview fetcher must be exported so it can be exercised directly by tests/scripts without Next.js unstable_cache');
+
+for (const query of [
+  /prisma\.marketplaceProvider\.count\(\{ where: \{ isNative: true, status: 'AVAILABLE' \} \}\)/,
+  /prisma\.evidenceProviderConnection\.count\(\{ where: tenantScopedWhere\(scope\) \}\)/,
+  /prisma\.evidenceProviderConnection\.count\(\{ where: tenantScopedWhere\(scope, \{ status: \{ in: \['CONNECTED', 'SYNCING'\] \} \}\) \}\)/,
+  /prisma\.approvalRecord\.count\(\{ where: tenantScopedWhere\(scope, \{ createdAt: \{ gte: startOfMonth \} \}\) \}\)/,
+  /prisma\.complianceFramework\.findMany\(\{\s*where: tenantScopedWhere\(scope\)/,
+  /prisma\.playbookDocument\.count\(\{ where: tenantScopedWhere\(scope, \{ status: 'READY' \}\)/,
+]) {
+  assert.match(service, query, `expected a real tenant-scoped query matching ${query}`);
+}
+
+// MarketplaceProvider is a shared, non-tenant catalog table (no organizationId
+// column) - it must never be filtered by tenantScopedWhere, which would be a
+// type/architecture error, not a safety improvement.
+assert.doesNotMatch(service, /marketplaceProvider\.count\(\{ where: tenantScopedWhere/, 'MarketplaceProvider has no organizationId column - it must be queried as a global catalog, not tenant-scoped');
+
+// jsonArray must be reused from services/users.ts, never re-implemented.
+assert.match(service, /import \{ jsonArray, type PendingInvite \} from '@\/services\/users'/, 'pending-invite parsing must reuse services/users.ts\'s jsonArray(), not a second implementation');
+assert.doesNotMatch(service, /function jsonArray/, 'services/settings.ts must not define its own copy of jsonArray');
+
+// Monthly Usage / Approval Usage must never invent a plan-limit denominator -
+// there is no monthly-approval limit field anywhere in lib/plans.ts.
+assert.match(shell, /No plan limit configured/, 'Monthly Usage / Approval Usage must show an honest "no plan limit configured" state, not a fabricated denominator');
+assert.doesNotMatch(shell, /742|1,250|1250/, 'the screenshot\'s sample numbers must never be hardcoded into the real component');
+
+// --- Compliance Frameworks: real data, not a certification claim -------------
+
+assert.match(shell, /data\.complianceFrameworks\.map/, 'Security & Compliance must render real per-org ComplianceFramework rows, not a static SOC2/GDPR list');
+assert.match(shell, /not a claim of third-party certification/, 'enabling a framework in-app must be clearly labeled as configuration, never as an actual certification claim');
+assert.doesNotMatch(service, /prisma\.complianceFramework\.findMany\(\{\s*where: \{[^t]/, 'the compliance framework query must be tenant-scoped via tenantScopedWhere, never a bare organizationId filter that could be bypassed');
+
+// --- Branding: honest "not yet available" states, no dead interactive controls
+
+assert.match(shell, /Not yet available/, 'Logo upload / Brand color / Custom domain must be represented as honestly unavailable, not fake interactive controls');
+assert.doesNotMatch(shell, /Upload Logo|Brand Color picker|<input[^>]*type="color"/, 'there is no file-upload or color-picker infrastructure in this codebase - the UI must not offer controls that cannot persist anything');
+
+// --- Edit Organization Information drawer: real accessible dialog ------------
+
+assert.match(shell, /function EditOrganizationDrawer/, 'Organization Information must be editable via a real drawer component, not just an inline dirty-state form');
+assert.match(shell, /<DetailDrawer open onClose=\{onClose\} titleId=\{titleId\}/, 'the edit drawer must reuse the shared accessible DetailDrawer primitive (focus trap, Escape, aria-labelledby), not a second hand-rolled overlay');
+assert.match(shell, /import \{ DetailDrawer \} from '@\/components\/dashboard\/DetailDrawer'/, 'must import the existing DetailDrawer rather than reimplementing dialog accessibility');
+
+// primaryAdminName/primaryAdminEmail must now be patchable via the same
+// validated route (Primary Contact / Contact Email in Organization Information).
+assert.match(apiRoute, /primaryAdminName: z\.string\(\)\.max\(200\)\.optional\(\)\.nullable\(\)/, 'primaryAdminName must be Zod-validated like every other field');
+assert.match(apiRoute, /primaryAdminEmail: z\.string\(\)[\s\S]{0,80}\.email\(\)/, 'primaryAdminEmail must be validated as a real email, not accepted as arbitrary text');
+
+// --- Top navigation matches the approved Organization Settings IA -----------
+
+for (const label of ['Overview', 'Users & Teams', 'Integrations', 'Approval Settings', 'Security & Compliance', 'Billing & Plan', 'Usage & Limits', 'Audit & Logs']) {
+  assert.match(shell, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `top Settings navigation must include "${label}"`);
+}
+
+// Usage & Limits must reuse the exact same billing.* seat fields as Billing &
+// Plan - not a second usage-calculation engine.
+const usageTabMatch = shell.match(/function UsageLimitsTab[\s\S]{0,3000}?\n}/);
+assert.ok(usageTabMatch, 'expected to find UsageLimitsTab');
+assert.match(usageTabMatch![0], /billing\.purchasedSeats/, 'Usage & Limits must read the same billing.purchasedSeats field Billing & Plan uses');
+assert.doesNotMatch(usageTabMatch![0], /prisma\./, 'Usage & Limits must not run its own Prisma queries - it is a client component reading the already-fetched SettingsOverview, same as every other tab');
+
+console.log('Validated Organization Settings: tenant/RBAC-scoped organization update route with a real audit trail, tenant-scoped and honestly-nullable Billing & Plan / Seats & Usage data (CustomerAccount + CustomerSeatAllocation, never CustomerHealth.activeUsers, never the founder-internal estimatedArrUsd), the rebuilt Overview KPI strip and Compliance Frameworks section backed by real tenant-scoped aggregates with no invented denominators, an accessible Edit Organization Information drawer reusing DetailDrawer, honest "not yet available" Branding states instead of dead controls, no secrets rendered, every "Manage X" link resolving to a real existing route, and canonical design-token usage.');

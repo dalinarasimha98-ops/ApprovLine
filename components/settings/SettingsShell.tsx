@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
-  Activity,
   AlertTriangle,
-  Building2,
+  BarChart3,
   Cable,
   CheckCircle2,
   ChevronRight,
+  Database,
   ExternalLink,
   Key,
   Layers,
@@ -16,39 +17,37 @@ import {
   ScrollText,
   Settings2,
   Shield,
-  ShieldCheck,
   Sliders,
   Tag,
   Users,
+  UserPlus,
+  X,
   XCircle,
 } from 'lucide-react';
 import type { SettingsOverview } from '@/services/settings';
+import { DetailDrawer } from '@/components/dashboard/DetailDrawer';
 
 type Tab =
   | 'overview'
-  | 'organization'
-  | 'security'
   | 'users'
-  | 'workflow'
-  | 'evidence'
   | 'integrations'
-  | 'notifications'
+  | 'approvals'
+  | 'security'
   | 'billing'
+  | 'usage'
   | 'audit'
   | 'system';
 
 const TABS: { id: Tab; label: string; icon: typeof Settings2 }[] = [
   { id: 'overview', label: 'Overview', icon: Layers },
-  { id: 'organization', label: 'Organization', icon: Building2 },
-  { id: 'security', label: 'Security', icon: Shield },
   { id: 'users', label: 'Users & Teams', icon: Users },
-  { id: 'workflow', label: 'Workflow & Approvals', icon: Sliders },
-  { id: 'evidence', label: 'Evidence & Data', icon: ShieldCheck },
   { id: 'integrations', label: 'Integrations', icon: Cable },
-  { id: 'notifications', label: 'Notifications', icon: Activity },
+  { id: 'approvals', label: 'Approval Settings', icon: Sliders },
+  { id: 'security', label: 'Security & Compliance', icon: Shield },
   { id: 'billing', label: 'Billing & Plan', icon: Tag },
-  { id: 'audit', label: 'Audit', icon: ScrollText },
-  { id: 'system', label: 'System Preferences', icon: Settings2 },
+  { id: 'usage', label: 'Usage & Limits', icon: BarChart3 },
+  { id: 'audit', label: 'Audit & Logs', icon: ScrollText },
+  { id: 'system', label: 'System', icon: Settings2 },
 ];
 
 // ─── Shared UI primitives ─────────────────────────────────────────────────────
@@ -93,19 +92,303 @@ function ConfigRow({ label, value, valueClass = '' }: { label: string; value: st
   );
 }
 
-function StatusBadge({ ok }: { ok: boolean }) {
+function StatusBadge({ ok, trueLabel = 'Configured', falseLabel = 'Not configured' }: { ok: boolean; trueLabel?: string; falseLabel?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${ok ? 'bg-al-success/10 text-al-success' : 'bg-al-danger/10 text-al-danger'}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-al-success' : 'bg-al-danger'}`} />
-      {ok ? 'Configured' : 'Not configured'}
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${ok ? 'bg-al-success/10 text-al-success' : 'bg-al-text-muted/15 text-al-text-secondary'}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-al-success' : 'bg-al-text-muted'}`} />
+      {ok ? trueLabel : falseLabel}
     </span>
+  );
+}
+
+// ─── KPI strip ─────────────────────────────────────────────────────────────────
+
+function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-al-border bg-al-surface p-4 shadow-sm">
+      <div className="flex items-start justify-between">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-al-accent/10 text-al-accent">
+          <Icon className="h-4.5 w-4.5" />
+        </div>
+      </div>
+      <p className="mt-3 text-xs font-semibold text-al-text-muted">{label}</p>
+      <p className="mt-0.5 text-2xl font-black tracking-tight text-al-text">{value}</p>
+      <p className="mt-0.5 text-[11px] font-semibold text-al-text-muted">{detail}</p>
+    </div>
+  );
+}
+
+function KpiStrip({ data }: { data: SettingsOverview }) {
+  const { stats, kpis } = data;
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <KpiCard
+        icon={Users}
+        label="Total Users"
+        value={`${stats.totalUsers}`}
+        detail={kpis.pendingInvites > 0 ? `${kpis.pendingInvites} pending invite${kpis.pendingInvites === 1 ? '' : 's'}` : 'No pending invites'}
+      />
+      <KpiCard
+        icon={Cable}
+        label="Connected Integrations"
+        value={`${kpis.connectedIntegrations}`}
+        detail={kpis.integrationsInCatalog > 0 ? `${kpis.integrationsInCatalog} in catalog` : 'Catalog unavailable'}
+      />
+      <KpiCard
+        icon={Sliders}
+        label="Approval Workflows"
+        value={`${kpis.workflowsTotal}`}
+        detail={`${kpis.workflowsActive} active`}
+      />
+      <KpiCard
+        icon={Database}
+        label="Data Sources"
+        value={`${kpis.dataSourcesTotal}`}
+        detail={`${kpis.dataSourcesCapturing} capturing`}
+      />
+      <KpiCard
+        icon={BarChart3}
+        label="Monthly Usage"
+        value={`${kpis.approvalsThisMonth}`}
+        detail="No plan limit configured"
+      />
+    </div>
+  );
+}
+
+// ─── Edit Organization Information drawer ──────────────────────────────────────
+
+type OrgForm = {
+  name: string;
+  companyDomain: string;
+  industry: string;
+  companySize: string;
+  country: string;
+  primaryAdminName: string;
+  primaryAdminEmail: string;
+};
+
+function orgFormFromData(org: SettingsOverview['organization']): OrgForm {
+  return {
+    name: org.name,
+    companyDomain: org.companyDomain ?? '',
+    industry: org.industry ?? '',
+    companySize: org.companySize ?? '',
+    country: org.country ?? '',
+    primaryAdminName: org.primaryAdminName ?? '',
+    primaryAdminEmail: org.primaryAdminEmail ?? '',
+  };
+}
+
+const COMPANY_SIZES = ['1–10', '11–50', '51–200', '201–500', '501–1000', '1000+'];
+
+function EditOrganizationDrawer({
+  org,
+  onClose,
+  onSaved,
+}: {
+  org: SettingsOverview['organization'];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const titleId = useId();
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+  const [form, setForm] = useState<OrgForm>(() => orgFormFromData(org));
+  const [saving, startSaving] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const initial = orgFormFromData(org);
+  const dirty = (Object.keys(form) as (keyof OrgForm)[]).some((k) => form[k] !== initial[k]);
+
+  useEffect(() => {
+    firstFieldRef.current?.focus();
+  }, []);
+
+  function update(key: keyof OrgForm, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
+    setError(null);
+  }
+
+  function save() {
+    setError(null);
+    startSaving(async () => {
+      const res = await fetch('/api/settings/organization', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          companyDomain: form.companyDomain || null,
+          industry: form.industry || null,
+          companySize: form.companySize || null,
+          country: form.country || null,
+          primaryAdminName: form.primaryAdminName || null,
+          primaryAdminEmail: form.primaryAdminEmail || null,
+        }),
+      });
+      if (res.ok) {
+        onSaved();
+        onClose();
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setError(body.error ?? 'Could not save organization information. Please try again.');
+      }
+    });
+  }
+
+  return (
+    <DetailDrawer open onClose={onClose} titleId={titleId} size="md">
+      <div className="flex shrink-0 items-center justify-between border-b border-al-border px-6 py-4">
+        <div>
+          <p id={titleId} className="text-base font-black text-al-text">Edit Organization Information</p>
+          <p className="mt-0.5 text-xs text-al-text-muted">Changes are audited and visible to all workspace admins.</p>
+        </div>
+        <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-al-text-muted hover:bg-al-surface-elevated">
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        {error && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-al-danger/30 bg-al-danger/10 px-4 py-3 text-sm font-semibold text-al-danger">
+            <XCircle className="h-4 w-4 shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <div className="grid gap-4">
+          <div>
+            <label htmlFor="org-name" className="block text-xs font-semibold text-al-text-secondary">Organization name</label>
+            <input
+              ref={firstFieldRef}
+              id="org-name"
+              type="text"
+              value={form.name}
+              onChange={(e) => update('name', e.target.value)}
+              maxLength={200}
+              className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
+            />
+          </div>
+          <div>
+            <label htmlFor="org-domain" className="block text-xs font-semibold text-al-text-secondary">Website / domain</label>
+            <input
+              id="org-domain"
+              type="text"
+              value={form.companyDomain}
+              onChange={(e) => update('companyDomain', e.target.value)}
+              placeholder="acme.com"
+              maxLength={200}
+              className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="org-industry" className="block text-xs font-semibold text-al-text-secondary">Industry</label>
+              <input
+                id="org-industry"
+                type="text"
+                value={form.industry}
+                onChange={(e) => update('industry', e.target.value)}
+                placeholder="e.g. Financial Services"
+                maxLength={100}
+                className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
+              />
+            </div>
+            <div>
+              <label htmlFor="org-size" className="block text-xs font-semibold text-al-text-secondary">Company size</label>
+              <select
+                id="org-size"
+                value={form.companySize}
+                onChange={(e) => update('companySize', e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
+              >
+                <option value="">Select size…</option>
+                {COMPANY_SIZES.map((s) => <option key={s} value={s}>{s} employees</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="org-country" className="block text-xs font-semibold text-al-text-secondary">Country / Region</label>
+            <input
+              id="org-country"
+              type="text"
+              value={form.country}
+              onChange={(e) => update('country', e.target.value)}
+              placeholder="e.g. United States"
+              maxLength={100}
+              className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="org-contact-name" className="block text-xs font-semibold text-al-text-secondary">Primary contact</label>
+              <input
+                id="org-contact-name"
+                type="text"
+                value={form.primaryAdminName}
+                onChange={(e) => update('primaryAdminName', e.target.value)}
+                maxLength={200}
+                className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
+              />
+            </div>
+            <div>
+              <label htmlFor="org-contact-email" className="block text-xs font-semibold text-al-text-secondary">Contact email</label>
+              <input
+                id="org-contact-email"
+                type="email"
+                value={form.primaryAdminEmail}
+                onChange={(e) => update('primaryAdminEmail', e.target.value)}
+                maxLength={320}
+                className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
+              />
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-5 rounded-xl border border-al-border bg-al-surface-sunken px-4 py-3 text-xs leading-5 text-al-text-muted">
+          Phone number and street address are not yet part of Organization Settings. Departments and Approval Categories are managed from the onboarding wizard.
+        </p>
+      </div>
+
+      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-al-border px-6 py-4">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={saving}
+          className="rounded-lg border border-al-border bg-al-surface px-4 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving || !dirty || !form.name.trim()}
+          className="flex items-center gap-1.5 rounded-lg bg-al-accent px-4 py-2 text-xs font-semibold text-white hover:bg-al-accent-hover disabled:opacity-50"
+        >
+          {saving && <RefreshCw className="h-3 w-3 animate-spin" />}
+          {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+    </DetailDrawer>
   );
 }
 
 // ─── Tab: Overview ────────────────────────────────────────────────────────────
 
-function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab) => void }) {
-  const { organization: org, stats, systemStatus } = data;
+function OverviewTab({ data, setTab, onOrgSaved }: { data: SettingsOverview; setTab: (t: Tab) => void; onOrgSaved: () => void }) {
+  const { organization: org, systemStatus } = data;
+  const [editOpen, setEditOpen] = useState(false);
+  const [savedNote, setSavedNote] = useState(false);
 
   const systemOk = systemStatus.ready;
   const systemChecks = [
@@ -113,6 +396,12 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
     { label: 'Queue', ok: systemStatus.redis.status === 'ok' },
     { label: 'AI', ok: systemStatus.anthropic.status === 'ok' || systemStatus.openai.status === 'ok' },
   ];
+
+  useEffect(() => {
+    if (!savedNote) return;
+    const t = setTimeout(() => setSavedNote(false), 4000);
+    return () => clearTimeout(t);
+  }, [savedNote]);
 
   return (
     <div className="grid gap-4">
@@ -134,55 +423,90 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
         </Link>
       </div>
 
-      {/* Overview config summary cards — 2-column grid */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/* Workspace */}
+      <KpiStrip data={data} />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Organization Information */}
         <SectionCard>
-          <SectionHeader title="Workspace" action={<ManageLink href="/dashboard/settings" label="Edit" />} />
+          <SectionHeader
+            title="Organization Information"
+            subtitle="Manage your organization's basic details"
+            action={
+              <button
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-1.5 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken"
+              >
+                Edit Information
+              </button>
+            }
+          />
+          {savedNote && (
+            <div className="mx-6 mt-4 inline-flex items-center gap-1.5 rounded-full bg-al-success/10 px-3 py-1 text-xs font-bold text-al-success">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Saved
+            </div>
+          )}
           <div className="divide-y divide-al-border px-6">
-            <ConfigRow label="Organization" value={org.name} />
-            <ConfigRow label="Industry" value={org.industry ?? '—'} />
-            <ConfigRow label="Company size" value={org.companySize ?? '—'} />
-            <ConfigRow label="Country" value={org.country ?? '—'} />
+            <ConfigRow label="Organization name" value={org.name} />
+            <ConfigRow label="Website" value={org.companyDomain ?? 'Not set'} />
+            <ConfigRow label="Industry" value={org.industry ?? 'Not set'} />
+            <ConfigRow label="Company size" value={org.companySize ?? 'Not set'} />
+            <ConfigRow label="Primary contact" value={org.primaryAdminName ?? 'Not set'} />
+            <ConfigRow label="Contact email" value={org.primaryAdminEmail ?? 'Not set'} />
+            <ConfigRow label="Country / Region" value={org.country ?? 'Not set'} />
+          </div>
+          <div className="px-6 pb-4 pt-2 text-[11px] text-al-text-muted">
+            Phone and street address aren&apos;t part of Organization Settings yet.
+          </div>
+        </SectionCard>
+
+        {/* Organization Branding */}
+        <SectionCard>
+          <SectionHeader title="Organization Branding" subtitle="Customize how your organization appears" />
+          <div className="divide-y divide-al-border px-6">
+            <ConfigRow label="Display name" value={org.name} />
+            <div className="flex items-center justify-between py-3">
+              <span className="text-sm text-al-text-muted">Logo upload</span>
+              <StatusBadge ok={false} falseLabel="Not yet available" />
+            </div>
+            <div className="flex items-center justify-between py-3">
+              <span className="text-sm text-al-text-muted">Brand color</span>
+              <StatusBadge ok={false} falseLabel="Not yet available" />
+            </div>
+            <div className="flex items-center justify-between py-3">
+              <span className="text-sm text-al-text-muted">Custom domain</span>
+              <StatusBadge ok={false} falseLabel="Not yet available" />
+            </div>
+          </div>
+          <div className="px-6 pb-4 pt-2 text-[11px] text-al-text-muted">
+            Logo upload, brand color, and custom domains are not yet part of the ApprovLine architecture — this section will
+            become editable once that infrastructure exists rather than showing controls that don&apos;t persist.
+          </div>
+        </SectionCard>
+      </div>
+
+      {/* Quick-link summary cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <SectionCard>
+          <SectionHeader title="Approval Settings" action={<ManageLink href="/playbooks" label="Playbooks" />} />
+          <div className="divide-y divide-al-border px-6">
+            <ConfigRow label="Workflows (playbooks)" value={`${data.kpis.workflowsTotal}`} />
+            <ConfigRow label="Active" value={`${data.kpis.workflowsActive}`} />
           </div>
           <div className="px-6 pb-4">
-            <button onClick={() => setTab('organization')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
-              Configure organization <ChevronRight className="h-3.5 w-3.5" />
+            <button onClick={() => setTab('approvals')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
+              Configure approval settings <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
         </SectionCard>
 
-        {/* Members & Access */}
         <SectionCard>
-          <SectionHeader title="Members & Access" action={<ManageLink href="/settings/users" />} />
-          <div className="divide-y divide-al-border px-6">
-            <ConfigRow label="Users" value={`${stats.totalUsers}`} />
-            <ConfigRow label="Teams" value={`${stats.totalTeams}`} />
-            <ConfigRow label="Approval categories" value={`${org.approvalCategories.length} configured`} />
-          </div>
-          <div className="px-6 pb-4">
-            <Link href="/settings/users" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
-              Manage users & teams <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </SectionCard>
-
-        {/* Security */}
-        <SectionCard>
-          <SectionHeader title="Security" action={<ManageLink href="/settings/identity" label="Configure" />} />
+          <SectionHeader title="Security & Compliance" action={<ManageLink href="/settings/identity" label="Configure" />} />
           <div className="divide-y divide-al-border px-6">
             <div className="flex items-center justify-between py-3">
               <span className="text-sm text-al-text-muted">Authentication</span>
               <StatusBadge ok={true} />
             </div>
-            <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-al-text-muted">MFA</span>
-              <span className="text-xs font-semibold text-al-text">Enforced via Clerk</span>
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-al-text-muted">Token encryption</span>
-              <span className="text-xs font-semibold text-al-text">AES-256-GCM</span>
-            </div>
+            <ConfigRow label="Compliance frameworks" value={`${data.complianceFrameworks.filter((f) => f.isEnabled).length} enabled`} />
           </div>
           <div className="px-6 pb-4">
             <button onClick={() => setTab('security')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
@@ -191,42 +515,11 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
           </div>
         </SectionCard>
 
-        {/* Workflows */}
-        <SectionCard>
-          <SectionHeader title="Workflows" action={<ManageLink href="/playbooks" label="Configure" />} />
-          <div className="divide-y divide-al-border px-6">
-            <ConfigRow label="Playbooks" value={`${stats.totalPlaybooks} configured`} />
-            <ConfigRow label="Classifier" value="Anthropic Claude + OpenAI" />
-            <ConfigRow label="Queue" value="BullMQ + Redis" />
-          </div>
-          <div className="px-6 pb-4">
-            <button onClick={() => setTab('workflow')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
-              Configure workflows <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </SectionCard>
-
-        {/* Evidence & Data */}
-        <SectionCard>
-          <SectionHeader title="Evidence & Data" action={<ManageLink href="/evidence" label="View" />} />
-          <div className="divide-y divide-al-border px-6">
-            <ConfigRow label="Evidence capture" value="Enabled" valueClass="text-al-success" />
-            <ConfigRow label="Deduplication" value="Content-hash idempotency" />
-            <ConfigRow label="Cross-source correlation" value="Unified evidence records" />
-          </div>
-          <div className="px-6 pb-4">
-            <button onClick={() => setTab('evidence')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
-              Configure evidence <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </SectionCard>
-
-        {/* Integrations */}
         <SectionCard>
           <SectionHeader title="Integrations" action={<ManageLink href="/dashboard/settings/integrations" />} />
           <div className="divide-y divide-al-border px-6">
-            <ConfigRow label="Connected" value={`${stats.activeIntegrations} integration${stats.activeIntegrations !== 1 ? 's' : ''}`} />
-            <ConfigRow label="Token security" value="AES-256-GCM at rest" />
+            <ConfigRow label="Connected" value={`${data.kpis.connectedIntegrations}`} />
+            <ConfigRow label="In catalog" value={`${data.kpis.integrationsInCatalog}`} />
           </div>
           <div className="px-6 pb-4">
             <Link href="/dashboard/settings/integrations" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
@@ -234,238 +527,62 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
             </Link>
           </div>
         </SectionCard>
+
+        <SectionCard>
+          <SectionHeader title="Users & Teams" action={<ManageLink href="/settings/users" />} />
+          <div className="divide-y divide-al-border px-6">
+            <ConfigRow label="Users" value={`${data.stats.totalUsers}`} />
+            <ConfigRow label="Teams" value={`${data.stats.totalTeams}`} />
+          </div>
+          <div className="px-6 pb-4">
+            <Link href="/settings/users" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
+              Manage users & teams <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </SectionCard>
+
+        <SectionCard>
+          <SectionHeader title="Billing & Plan" action={data.billing ? <ManageLink href="mailto:support@approvline.ai" label="Contact" /> : undefined} />
+          <div className="divide-y divide-al-border px-6">
+            {data.billing ? (
+              <>
+                <ConfigRow label="Plan" value={data.billing.planLabel} />
+                <ConfigRow label="Status" value={data.billing.accountStatus} />
+              </>
+            ) : (
+              <p className="py-3 text-sm text-al-text-muted">Not yet provisioned</p>
+            )}
+          </div>
+          <div className="px-6 pb-4">
+            <button onClick={() => setTab('billing')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
+              View billing & plan <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </SectionCard>
+
+        <SectionCard>
+          <SectionHeader title="Audit & Logs" action={<ManageLink href="/dashboard/audit-log" />} />
+          <div className="divide-y divide-al-border px-6">
+            <ConfigRow label="Recent events" value={`${data.recentActivity.length}`} />
+          </div>
+          <div className="px-6 pb-4">
+            <button onClick={() => setTab('audit')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
+              Open audit & logs <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </SectionCard>
       </div>
-    </div>
-  );
-}
 
-// ─── Tab: Organization ────────────────────────────────────────────────────────
-
-function InputField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = 'text',
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  type?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-al-text-secondary">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
-      />
-    </div>
-  );
-}
-
-function OrganizationTab({ data }: { data: SettingsOverview }) {
-  const org = data.organization;
-  const [form, setForm] = useState({
-    name: org.name,
-    companyDomain: org.companyDomain ?? '',
-    industry: org.industry ?? '',
-    companySize: org.companySize ?? '',
-    country: org.country ?? '',
-  });
-  const [dirty, setDirty] = useState(false);
-  const [saving, startSaving] = useTransition();
-  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
-
-  function update(key: keyof typeof form, value: string) {
-    setForm((f) => ({ ...f, [key]: value }));
-    setDirty(true);
-    setResult(null);
-  }
-
-  function discard() {
-    setForm({
-      name: org.name,
-      companyDomain: org.companyDomain ?? '',
-      industry: org.industry ?? '',
-      companySize: org.companySize ?? '',
-      country: org.country ?? '',
-    });
-    setDirty(false);
-    setResult(null);
-  }
-
-  function save() {
-    startSaving(async () => {
-      const res = await fetch('/api/settings/organization', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          companyDomain: form.companyDomain || null,
-          industry: form.industry || null,
-          companySize: form.companySize || null,
-          country: form.country || null,
-        }),
-      });
-      if (res.ok) {
-        setResult({ ok: true, msg: 'Organization settings saved.' });
-        setDirty(false);
-      } else {
-        const body = await res.json().catch(() => ({})) as { error?: string };
-        setResult({ ok: false, msg: body.error ?? 'Save failed.' });
-      }
-    });
-  }
-
-  const sizes = ['1–10', '11–50', '51–200', '201–500', '501–1000', '1000+'];
-
-  return (
-    <div className="grid gap-4">
-      {/* Unsaved changes banner */}
-      {dirty && (
-        <div className="flex items-center justify-between rounded-xl border border-al-warning/30 bg-al-warning/10 px-4 py-3">
-          <span className="text-sm font-semibold text-al-warning">You have unsaved changes</span>
-          <div className="flex gap-2">
-            <button onClick={discard} disabled={saving} className="rounded-lg border border-al-border bg-al-surface px-3 py-1.5 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">
-              Discard
-            </button>
-            <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-al-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-al-accent-hover disabled:opacity-50">
-              {saving && <RefreshCw className="h-3 w-3 animate-spin" />}
-              {saving ? 'Saving…' : 'Save changes'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {result && (
-        <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${result.ok ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-al-danger/30 bg-al-danger/10 text-al-danger'}`}>
-          {result.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-          {result.msg}
-        </div>
-      )}
-
-      <SectionCard>
-        <SectionHeader title="Organization Details" subtitle="Basic information about your organization" />
-        <div className="grid gap-4 p-6 sm:grid-cols-2">
-          <InputField label="Organization name" value={form.name} onChange={(v) => update('name', v)} placeholder="Acme Corporation" />
-          <InputField label="Company domain" value={form.companyDomain} onChange={(v) => update('companyDomain', v)} placeholder="acme.com" />
-          <InputField label="Industry" value={form.industry} onChange={(v) => update('industry', v)} placeholder="e.g. Financial Services" />
-          <div>
-            <label className="block text-xs font-semibold text-al-text-secondary">Company size</label>
-            <select
-              value={form.companySize}
-              onChange={(e) => update('companySize', e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
-            >
-              <option value="">Select size…</option>
-              {sizes.map((s) => <option key={s} value={s}>{s} employees</option>)}
-            </select>
-          </div>
-          <InputField label="Country / Region" value={form.country} onChange={(v) => update('country', v)} placeholder="e.g. United States" />
-        </div>
-        {!dirty && (
-          <div className="flex justify-end border-t border-al-border px-6 py-4">
-            <button onClick={() => setDirty(true)} className="rounded-lg border border-al-border bg-al-surface px-4 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
-              Edit
-            </button>
-          </div>
-        )}
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeader
-          title="Departments"
-          subtitle="Organizational units used for routing and reporting"
-          action={<ManageLink href="/settings/onboarding" label="Edit in onboarding" />}
+      {editOpen && (
+        <EditOrganizationDrawer
+          org={org}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => {
+            onOrgSaved();
+            setSavedNote(true);
+          }}
         />
-        <div className="flex flex-wrap gap-2 p-6">
-          {org.departments.length > 0
-            ? org.departments.map((d) => (
-                <span key={d} className="rounded-full border border-al-border bg-al-surface-sunken px-2.5 py-1 text-xs font-medium text-al-text-secondary">{d}</span>
-              ))
-            : <span className="text-sm text-al-text-muted">No departments configured.</span>}
-        </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeader
-          title="Approval Categories"
-          subtitle="Labels used by the AI classifier for approval decisions"
-          action={<ManageLink href="/settings/onboarding" label="Edit in onboarding" />}
-        />
-        <div className="flex flex-wrap gap-2 p-6">
-          {org.approvalCategories.length > 0
-            ? org.approvalCategories.map((c) => (
-                <span key={c} className="rounded-full border border-al-info/30 bg-al-info/10 px-2.5 py-1 text-xs font-medium text-al-info">{c}</span>
-              ))
-            : <span className="text-sm text-al-text-muted">No categories configured.</span>}
-        </div>
-      </SectionCard>
-    </div>
-  );
-}
-
-// ─── Tab: Security ────────────────────────────────────────────────────────────
-
-function SecurityTab() {
-  return (
-    <div className="grid gap-4">
-      <SectionCard>
-        <SectionHeader title="Authentication" subtitle="Identity and access management via Clerk" action={<ManageLink href="/settings/identity" label="Configure" />} />
-        <div className="divide-y divide-al-border px-6">
-          <ConfigRow label="Identity provider" value="Clerk" />
-          <ConfigRow label="MFA enforcement" value="Configured via Clerk organization settings" />
-          <ConfigRow label="SSO" value="Configure in Identity Center" />
-          <ConfigRow label="Session management" value="Clerk-managed" />
-          <ConfigRow label="OAuth connector tokens" value="AES-256-GCM encrypted at rest" />
-        </div>
-        <div className="border-t border-al-border px-6 py-4">
-          <Link
-            href="/settings/identity"
-            className="inline-flex items-center gap-2 rounded-lg border border-al-info/30 bg-al-info/10 px-4 py-2 text-sm font-semibold text-al-info hover:bg-al-info/15"
-          >
-            <Key className="h-4 w-4" />
-            Open Identity Center
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeader title="Security Posture" subtitle="Active security controls" />
-        <div className="grid gap-2 p-6 sm:grid-cols-2">
-          {[
-            'Read-only OAuth connector scopes',
-            'AES-256-GCM token encryption at rest',
-            'Complete audit trail for all mutations',
-            'Column-based tenant isolation (organizationId)',
-            'IDOR prevention on all API mutations',
-            'RBAC enforced at page, API, and service layers',
-          ].map((item) => (
-            <div key={item} className="flex items-start gap-2.5 rounded-lg border border-al-success/20 bg-al-success/10 px-3 py-2.5">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-al-success" />
-              <span className="text-xs text-al-text-secondary">{item}</span>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeader title="Trust & Compliance" />
-        <div className="flex flex-wrap gap-2 p-6">
-          <Link href="/trust" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
-            Security & Trust Center <ExternalLink className="h-3 w-3" />
-          </Link>
-          <Link href="/trust/compliance" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
-            Compliance Hub <ExternalLink className="h-3 w-3" />
-          </Link>
-        </div>
-      </SectionCard>
+      )}
     </div>
   );
 }
@@ -480,13 +597,14 @@ function UsersTab({ data }: { data: SettingsOverview }) {
         <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Total users" value={`${data.stats.totalUsers}`} />
           <ConfigRow label="Total teams" value={`${data.stats.totalTeams}`} />
+          <ConfigRow label="Pending invites" value={`${data.kpis.pendingInvites}`} />
         </div>
         <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/settings/users"
             className="inline-flex items-center gap-2 rounded-lg bg-al-accent px-4 py-2 text-sm font-semibold text-white hover:bg-al-accent-hover"
           >
-            <Users className="h-4 w-4" />
+            <UserPlus className="h-4 w-4" />
             Open Users & Teams
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>
@@ -531,9 +649,72 @@ function UsersTab({ data }: { data: SettingsOverview }) {
   );
 }
 
-// ─── Tab: Workflow & Approvals ────────────────────────────────────────────────
+// ─── Tab: Integrations ────────────────────────────────────────────────────────
 
-function WorkflowTab({ data }: { data: SettingsOverview }) {
+function IntegrationsTab({ data }: { data: SettingsOverview }) {
+  return (
+    <div className="grid gap-4">
+      <SectionCard>
+        <SectionHeader
+          title="Connected Integrations"
+          subtitle={`${data.kpis.connectedIntegrations} connected · ${data.kpis.integrationsInCatalog} in catalog`}
+        />
+        <div className="divide-y divide-al-border px-6">
+          <ConfigRow label="Token security" value="AES-256-GCM encrypted at rest" />
+          <ConfigRow label="OAuth scopes" value="Read-only by design" />
+          <ConfigRow label="Providers" value="Slack, Gmail, Teams, Jira, ServiceNow, Zoom" />
+        </div>
+        <div className="border-t border-al-border px-6 py-4">
+          <Link
+            href="/dashboard/settings/integrations"
+            className="inline-flex items-center gap-2 rounded-lg bg-al-accent px-4 py-2 text-sm font-semibold text-white hover:bg-al-accent-hover"
+          >
+            <Cable className="h-4 w-4" />
+            Manage Integrations
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </SectionCard>
+
+      <SectionCard>
+        <SectionHeader title="Evidence Data Sources" subtitle="Evidence provider connections feeding the capture pipeline" />
+        <div className="divide-y divide-al-border px-6">
+          <ConfigRow label="Configured" value={`${data.kpis.dataSourcesTotal}`} />
+          <ConfigRow label="Actively capturing" value={`${data.kpis.dataSourcesCapturing}`} />
+        </div>
+        <div className="border-t border-al-border px-6 py-4">
+          <Link href="/evidence" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+            Unified Evidence <ExternalLink className="h-3 w-3" />
+          </Link>
+        </div>
+      </SectionCard>
+
+      <SectionCard>
+        <SectionHeader title="Universal Approval Gateway" subtitle="Enterprise system connections via API key" />
+        <div className="divide-y divide-al-border px-6">
+          <ConfigRow label="Authentication" value="Static API key (timing-safe comparison)" />
+          <ConfigRow label="Enterprise systems" value="SAP, Oracle, Coupa, Workday, Salesforce, HubSpot" />
+        </div>
+        <div className="border-t border-al-border px-6 py-4">
+          <Link href="/dashboard/gateway" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+            Universal Gateway <ExternalLink className="h-3 w-3" />
+          </Link>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+// ─── Tab: Approval Settings (Workflow + Evidence retention + Notifications) ────
+
+function ApprovalSettingsTab({ data }: { data: SettingsOverview }) {
+  const channels = [
+    { label: 'Email notifications', status: 'Via alert configuration' },
+    { label: 'In-app alerts', status: 'Enabled' },
+    { label: 'Slack alerts', status: 'Via Slack integration' },
+    { label: 'Webhook delivery', status: 'Per-integration' },
+  ];
+
   return (
     <div className="grid gap-4">
       <SectionCard>
@@ -541,16 +722,22 @@ function WorkflowTab({ data }: { data: SettingsOverview }) {
         <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Primary classifier" value="Anthropic Claude" />
           <ConfigRow label="Fallback classifier" value="OpenAI GPT" />
+          <ConfigRow label="Auto-categorization" value="Always on — runs on every ingested message" />
+          <ConfigRow label="Risk detection" value="Always on — every approval is compliance-evaluated" />
           <ConfigRow label="Queue" value="BullMQ + Redis (concurrency 10)" />
-          <ConfigRow label="Dead-letter handling" value="Enabled" />
+        </div>
+        <div className="border-t border-al-border px-6 py-4 text-[11px] text-al-text-muted">
+          Auto-categorization and risk detection run for every organization today — there is no per-org opt-out in the
+          current classification architecture, so this is shown as status rather than a toggle with no effect.
         </div>
       </SectionCard>
 
       <SectionCard>
-        <SectionHeader title="Playbook AI" subtitle="Compliance playbooks that guide approval evaluation" action={<ManageLink href="/playbooks" label="Manage playbooks" />} />
+        <SectionHeader title="Playbook AI — Approval Workflows" subtitle="Compliance playbooks that define approval evaluation rules" action={<ManageLink href="/playbooks" label="Manage playbooks" />} />
         <div className="divide-y divide-al-border px-6">
-          <ConfigRow label="Configured playbooks" value={`${data.stats.totalPlaybooks}`} />
-          <ConfigRow label="Evaluation" value="Per-approval compliance scoring" />
+          <ConfigRow label="Configured workflows" value={`${data.kpis.workflowsTotal}`} />
+          <ConfigRow label="Active (ready)" value={`${data.kpis.workflowsActive}`} />
+          <ConfigRow label="Evidence requirements" value="Defined per playbook rule, not a single org-wide toggle" />
         </div>
         <div className="border-t border-al-border px-6 py-4">
           <Link href="/playbooks" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
@@ -573,23 +760,27 @@ function WorkflowTab({ data }: { data: SettingsOverview }) {
             : <span className="text-sm text-al-text-muted">No categories configured.</span>}
         </div>
       </SectionCard>
-    </div>
-  );
-}
 
-// ─── Tab: Evidence & Data ─────────────────────────────────────────────────────
+      <SectionCard>
+        <SectionHeader title="Notification Triggers" subtitle="Alert channels and categories for approval events" action={<ManageLink href="/dashboard/alerts" label="Configure alerts" />} />
+        <div className="divide-y divide-al-border px-6">
+          {channels.map(({ label, status }) => (
+            <ConfigRow key={label} label={label} value={status} />
+          ))}
+        </div>
+        <div className="border-t border-al-border px-6 py-4">
+          <Link href="/dashboard/alerts" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+            Configure Alerts & Risks <ExternalLink className="h-3 w-3" />
+          </Link>
+        </div>
+      </SectionCard>
 
-function EvidenceTab() {
-  return (
-    <div className="grid gap-4">
       <SectionCard>
         <SectionHeader title="Evidence Pipeline" subtitle="Capture, deduplication, and correlation settings" />
         <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Evidence capture" value="Enabled" valueClass="text-al-success" />
           <ConfigRow label="Deduplication" value="Content-hash idempotency" />
           <ConfigRow label="Cross-source correlation" value="UnifiedEvidenceRecord" />
-          <ConfigRow label="Memory graph" value="Entity-relationship timeline" />
-          <ConfigRow label="Tenant isolation" value="Column-based (organizationId)" />
         </div>
         <div className="flex flex-wrap gap-2 border-t border-al-border px-6 py-4">
           <Link href="/evidence" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
@@ -614,87 +805,104 @@ function EvidenceTab() {
   );
 }
 
-// ─── Tab: Integrations ────────────────────────────────────────────────────────
+// ─── Tab: Security & Compliance ────────────────────────────────────────────────
 
-function IntegrationsTab({ data }: { data: SettingsOverview }) {
+function SecurityTab({ data }: { data: SettingsOverview }) {
   return (
     <div className="grid gap-4">
       <SectionCard>
-        <SectionHeader
-          title="Connected Integrations"
-          subtitle={`${data.stats.activeIntegrations} integration${data.stats.activeIntegrations !== 1 ? 's' : ''} currently connected`}
-        />
+        <SectionHeader title="Authentication" subtitle="Identity and access management via Clerk" action={<ManageLink href="/settings/identity" label="Configure" />} />
         <div className="divide-y divide-al-border px-6">
-          <ConfigRow label="Token security" value="AES-256-GCM encrypted at rest" />
-          <ConfigRow label="OAuth scopes" value="Read-only by design" />
-          <ConfigRow label="Providers" value="Slack, Gmail, Teams, Jira, ServiceNow, Zoom" />
+          <ConfigRow label="Identity provider" value="Clerk" />
+          <ConfigRow label="Single Sign-On (SSO)" value="Configure in Identity Center" />
+          <ConfigRow label="Two-factor authentication" value="Per-user, enforced via Clerk (not an org-wide policy today)" />
+          <ConfigRow label="Password policy" value="Managed by Clerk" />
+          <ConfigRow label="Session management" value="Clerk-managed" />
+          <ConfigRow label="OAuth connector tokens" value="AES-256-GCM encrypted at rest" />
         </div>
         <div className="border-t border-al-border px-6 py-4">
           <Link
-            href="/dashboard/settings/integrations"
-            className="inline-flex items-center gap-2 rounded-lg bg-al-accent px-4 py-2 text-sm font-semibold text-white hover:bg-al-accent-hover"
+            href="/settings/identity"
+            className="inline-flex items-center gap-2 rounded-lg border border-al-info/30 bg-al-info/10 px-4 py-2 text-sm font-semibold text-al-info hover:bg-al-info/15"
           >
-            <Cable className="h-4 w-4" />
-            Manage Integrations
+            <Key className="h-4 w-4" />
+            Open Identity Center
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>
         </div>
       </SectionCard>
 
       <SectionCard>
-        <SectionHeader title="Universal Approval Gateway" subtitle="Enterprise system connections via API key" />
-        <div className="divide-y divide-al-border px-6">
-          <ConfigRow label="Authentication" value="Static API key (timing-safe comparison)" />
-          <ConfigRow label="Enterprise systems" value="SAP, Oracle, Coupa, Workday, Salesforce, HubSpot" />
-        </div>
-        <div className="border-t border-al-border px-6 py-4">
-          <Link href="/dashboard/gateway" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
-            Universal Gateway <ExternalLink className="h-3 w-3" />
-          </Link>
+        <SectionHeader
+          title="Compliance Frameworks"
+          subtitle="Frameworks enabled for this organization in the Compliance Hub"
+          action={<ManageLink href="/trust/compliance" label="Compliance Hub" />}
+        />
+        {data.complianceFrameworks.length === 0 ? (
+          <p className="p-6 text-sm text-al-text-muted">No compliance frameworks configured yet.</p>
+        ) : (
+          <div className="divide-y divide-al-border px-6">
+            {data.complianceFrameworks.map((f) => (
+              <div key={f.slug} className="flex items-center justify-between py-3">
+                <div>
+                  <span className="text-sm font-semibold text-al-text">{f.name}</span>
+                  {f.lastAssessmentAt && (
+                    <span className="ml-2 text-[11px] text-al-text-muted">
+                      Last assessed {new Date(f.lastAssessmentAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                <StatusBadge ok={f.isEnabled} trueLabel="Enabled" falseLabel="Disabled" />
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="px-6 pb-4 pt-2 text-[11px] text-al-text-muted">
+          Enabled reflects internal configuration in ApprovLine&apos;s Compliance Hub — it is not a claim of third-party certification.
         </div>
       </SectionCard>
-    </div>
-  );
-}
 
-// ─── Tab: Notifications ───────────────────────────────────────────────────────
-
-function NotificationsTab() {
-  const channels = [
-    { label: 'Email notifications', status: 'Via alert configuration' },
-    { label: 'In-app alerts', status: 'Enabled' },
-    { label: 'Slack alerts', status: 'Via Slack integration' },
-    { label: 'Webhook delivery', status: 'Per-integration' },
-  ];
-  const categories = [
-    'Approval requests',
-    'High-risk approvals',
-    'Evidence gaps',
-    'Compliance issues',
-    'Investigation updates',
-    'Security alerts',
-    'Integration failures',
-  ];
-  return (
-    <div className="grid gap-4">
       <SectionCard>
-        <SectionHeader title="Notification Channels" action={<ManageLink href="/dashboard/alerts" label="Configure alerts" />} />
+        <SectionHeader title="Data Retention & Audit Log Retention" />
         <div className="divide-y divide-al-border px-6">
-          {channels.map(({ label, status }) => (
-            <ConfigRow key={label} label={label} value={status} />
+          <ConfigRow
+            label="Data retention"
+            value={data.dataRetentionDays !== null ? `${data.dataRetentionDays} days` : 'Not yet provisioned'}
+          />
+          <ConfigRow label="Audit log retention" value="Full history retained" />
+        </div>
+        <div className="px-6 pb-4 pt-2 text-[11px] text-al-text-muted">
+          Data retention is provisioned by ApprovLine at account setup — it is informational here, not a customer-editable control.
+        </div>
+      </SectionCard>
+
+      <SectionCard>
+        <SectionHeader title="Security Posture" subtitle="Active security controls" />
+        <div className="grid gap-2 p-6 sm:grid-cols-2">
+          {[
+            'Read-only OAuth connector scopes',
+            'AES-256-GCM token encryption at rest',
+            'Complete audit trail for all mutations',
+            'Column-based tenant isolation (organizationId)',
+            'IDOR prevention on all API mutations',
+            'RBAC enforced at page, API, and service layers',
+          ].map((item) => (
+            <div key={item} className="flex items-start gap-2.5 rounded-lg border border-al-success/20 bg-al-success/10 px-3 py-2.5">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-al-success" />
+              <span className="text-xs text-al-text-secondary">{item}</span>
+            </div>
           ))}
         </div>
       </SectionCard>
+
       <SectionCard>
-        <SectionHeader title="Notification Categories" subtitle="Alert types delivered through configured channels" />
+        <SectionHeader title="Trust & Compliance" />
         <div className="flex flex-wrap gap-2 p-6">
-          {categories.map((c) => (
-            <span key={c} className="rounded-full border border-al-border bg-al-surface-sunken px-2.5 py-1 text-xs font-medium text-al-text-secondary">{c}</span>
-          ))}
-        </div>
-        <div className="border-t border-al-border px-6 py-4">
-          <Link href="/dashboard/alerts" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
-            Configure Alerts & Risks <ExternalLink className="h-3 w-3" />
+          <Link href="/trust" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+            Security & Trust Center <ExternalLink className="h-3 w-3" />
+          </Link>
+          <Link href="/trust/compliance" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+            Compliance Hub <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
       </SectionCard>
@@ -702,7 +910,7 @@ function NotificationsTab() {
   );
 }
 
-// ─── Tab: Billing ─────────────────────────────────────────────────────────────
+// ─── Tab: Billing & Plan ────────────────────────────────────────────────────────
 
 const ACCOUNT_STATUS_TONE: Record<string, { label: string; className: string }> = {
   ACTIVE: { label: 'Active', className: 'bg-al-success/10 text-al-success' },
@@ -711,7 +919,7 @@ const ACCOUNT_STATUS_TONE: Record<string, { label: string; className: string }> 
   CHURNED: { label: 'Churned', className: 'bg-al-danger/10 text-al-danger' },
 };
 
-function BillingTab({ data }: { data: SettingsOverview }) {
+function BillingTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab) => void }) {
   const org = data.organization;
   const billing = data.billing;
 
@@ -739,11 +947,34 @@ function BillingTab({ data }: { data: SettingsOverview }) {
           ) : null}
           <ConfigRow label="Members" value={`${data.stats.totalUsers}`} />
         </div>
+        <div className="border-t border-al-border px-6 py-4">
+          <button onClick={() => setTab('usage')} className="inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
+            View seats & usage <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </SectionCard>
 
+      <div className="rounded-xl border border-al-info/20 bg-al-info/10 p-5">
+        <p className="text-sm font-semibold text-al-info">Billing is managed externally</p>
+        <p className="mt-1 text-xs text-al-text-secondary">
+          For plan changes, seat additions, or billing inquiries, contact your account representative at{' '}
+          <a href="mailto:support@approvline.ai" className="font-semibold text-al-info underline">support@approvline.ai</a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab: Usage & Limits ──────────────────────────────────────────────────────
+
+function UsageLimitsTab({ data }: { data: SettingsOverview }) {
+  const billing = data.billing;
+
+  return (
+    <div className="grid gap-4">
       {billing ? (
         <SectionCard>
-          <SectionHeader title="Seats & Usage" subtitle="Purchased, allocated, and used seats for this workspace" />
+          <SectionHeader title="Seats & Usage" subtitle="Purchased, allocated, and used seats for this workspace — same source as Billing & Plan" />
           <div className="divide-y divide-al-border px-6">
             <ConfigRow label="Purchased seats" value={`${billing.purchasedSeats}`} />
             <ConfigRow label="Allocated seats" value={`${billing.allocatedSeats}`} />
@@ -763,18 +994,34 @@ function BillingTab({ data }: { data: SettingsOverview }) {
         </SectionCard>
       )}
 
+      <SectionCard>
+        <SectionHeader title="Approval Usage" subtitle="Approvals processed this calendar month" />
+        <div className="divide-y divide-al-border px-6">
+          <ConfigRow label="Approvals this month" value={`${data.kpis.approvalsThisMonth}`} />
+          <ConfigRow label="Plan limit" value="No plan limit configured" />
+        </div>
+      </SectionCard>
+
+      <SectionCard>
+        <SectionHeader title="Connected Systems" subtitle="Integrations and data sources against catalog availability" />
+        <div className="divide-y divide-al-border px-6">
+          <ConfigRow label="Connected integrations" value={`${data.kpis.connectedIntegrations}`} />
+          <ConfigRow label="Evidence data sources" value={`${data.kpis.dataSourcesTotal} configured, ${data.kpis.dataSourcesCapturing} capturing`} />
+        </div>
+      </SectionCard>
+
       <div className="rounded-xl border border-al-info/20 bg-al-info/10 p-5">
-        <p className="text-sm font-semibold text-al-info">Billing is managed externally</p>
+        <p className="text-sm font-semibold text-al-info">Contractual limits</p>
         <p className="mt-1 text-xs text-al-text-secondary">
-          For plan changes, seat additions, or billing inquiries, contact your account representative at{' '}
-          <span className="font-semibold text-al-info">support@approvline.ai</span>
+          Limits not shown here (e.g. storage, API usage) are contract-defined rather than tracked as live metrics in this
+          architecture. Contact your account representative for contract-specific limits.
         </p>
       </div>
     </div>
   );
 }
 
-// ─── Tab: Audit ───────────────────────────────────────────────────────────────
+// ─── Tab: Audit & Logs ───────────────────────────────────────────────────────
 
 function relDate(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -840,7 +1087,7 @@ function AuditTab({ data }: { data: SettingsOverview }) {
   );
 }
 
-// ─── Tab: System Preferences ──────────────────────────────────────────────────
+// ─── Tab: System ──────────────────────────────────────────────────────────────
 
 function SystemTab({ data }: { data: SettingsOverview }) {
   const { systemStatus } = data;
@@ -908,56 +1155,43 @@ function SystemTab({ data }: { data: SettingsOverview }) {
 
 export function SettingsShell({ data }: { data: SettingsOverview }) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const router = useRouter();
+
+  // The PATCH route already revalidates the server cache tag (settingsCacheTag);
+  // router.refresh() re-runs the Server Component tree so the Organization
+  // Information card reflects the saved values immediately, without a manual
+  // page reload. A local state bump alone would not re-fetch anything.
+  const onOrgSaved = () => router.refresh();
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
-      {/* Secondary settings nav — desktop sidebar */}
-      <aside className="hidden w-48 shrink-0 lg:block">
-        <nav className="grid gap-0.5">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors ${
-                activeTab === id
-                  ? 'bg-al-info/10 text-al-info font-semibold'
-                  : 'text-al-text-secondary hover:bg-al-surface-elevated hover:text-al-text'
-              }`}
-            >
-              <Icon className={`h-3.5 w-3.5 shrink-0 ${activeTab === id ? 'text-al-accent' : 'text-al-text-muted'}`} />
-              <span className="truncate">{label}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
-
-      {/* Mobile tab strip */}
-      <div className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
+    <div className="grid gap-4">
+      {/* Top settings navigation */}
+      <nav className="flex gap-1 overflow-x-auto border-b border-al-border">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold whitespace-nowrap ${
-              activeTab === id ? 'border-al-accent bg-al-accent text-white' : 'border-al-border bg-al-surface text-al-text-secondary'
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] font-semibold transition-colors ${
+              activeTab === id
+                ? 'border-al-accent text-al-accent'
+                : 'border-transparent text-al-text-secondary hover:text-al-text'
             }`}
           >
-            <Icon className="h-3 w-3" />
+            <Icon className="h-3.5 w-3.5 shrink-0" />
             {label}
           </button>
         ))}
-      </div>
+      </nav>
 
       {/* Tab content */}
-      <div className="min-w-0 flex-1">
-        {activeTab === 'overview' && <OverviewTab data={data} setTab={setActiveTab} />}
-        {activeTab === 'organization' && <OrganizationTab data={data} />}
-        {activeTab === 'security' && <SecurityTab />}
+      <div className="min-w-0">
+        {activeTab === 'overview' && <OverviewTab data={data} setTab={setActiveTab} onOrgSaved={onOrgSaved} />}
         {activeTab === 'users' && <UsersTab data={data} />}
-        {activeTab === 'workflow' && <WorkflowTab data={data} />}
-        {activeTab === 'evidence' && <EvidenceTab />}
         {activeTab === 'integrations' && <IntegrationsTab data={data} />}
-        {activeTab === 'notifications' && <NotificationsTab />}
-        {activeTab === 'billing' && <BillingTab data={data} />}
+        {activeTab === 'approvals' && <ApprovalSettingsTab data={data} />}
+        {activeTab === 'security' && <SecurityTab data={data} />}
+        {activeTab === 'billing' && <BillingTab data={data} setTab={setActiveTab} />}
+        {activeTab === 'usage' && <UsageLimitsTab data={data} />}
         {activeTab === 'audit' && <AuditTab data={data} />}
         {activeTab === 'system' && <SystemTab data={data} />}
       </div>
