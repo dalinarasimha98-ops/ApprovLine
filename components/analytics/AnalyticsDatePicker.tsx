@@ -95,15 +95,15 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {/* Preset pills */}
-      <div className="flex rounded-lg border border-[#1E2D4A] bg-[#0D1526] p-0.5 gap-0.5">
+      <div className="flex rounded-lg border border-al-border bg-[#0D1526] p-0.5 gap-0.5">
         {PRESETS.map((preset) => (
           <button
             key={preset.label}
             onClick={() => applyPreset(preset.days)}
             className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
               activePreset?.label === preset.label
-                ? 'bg-violet-600 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-white/10'
+                ? 'bg-al-accent text-white'
+                : 'text-al-text-muted hover:text-white hover:bg-white/10'
             }`}
           >
             {preset.label}
@@ -112,7 +112,7 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
         <button
           onClick={() => setShowCustom((v) => !v)}
           className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-            showCustom ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/10'
+            showCustom ? 'bg-al-accent text-white' : 'text-al-text-muted hover:text-white hover:bg-white/10'
           }`}
         >
           Custom
@@ -120,7 +120,7 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
       </div>
 
       {/* Current range display */}
-      <span className="text-xs font-medium text-slate-400 hidden sm:inline">
+      <span className="text-xs font-medium text-al-text-muted hidden sm:inline">
         {displayLabel}
       </span>
 
@@ -133,29 +133,29 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
         }}
         className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
           compare
-            ? 'border-violet-500/50 bg-violet-500/10 text-violet-300'
-            : 'border-[#1E2D4A] bg-[#0D1526] text-slate-400 hover:text-white'
+            ? 'border-al-accent/50 bg-al-accent-hover/10 text-al-accent'
+            : 'border-al-border bg-[#0D1526] text-al-text-muted hover:text-white'
         }`}
       >
-        <span className={`h-1.5 w-1.5 rounded-full ${compare ? 'bg-violet-400' : 'bg-slate-500'}`} />
+        <span className={`h-1.5 w-1.5 rounded-full ${compare ? 'bg-violet-400' : 'bg-al-text-muted'}`} />
         Compare
       </button>
 
       {/* Custom date inputs */}
       {showCustom && (
-        <div className="flex items-center gap-2 rounded-lg border border-[#1E2D4A] bg-[#0D1526] p-2">
+        <div className="flex items-center gap-2 rounded-lg border border-al-border bg-[#0D1526] p-2">
           <input
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="h-8 rounded-md border border-[#1E2D4A] bg-[#0A0E1A] px-2 text-xs text-slate-200 outline-none focus:border-violet-500"
+            className="h-8 rounded-md border border-al-border bg-[#0A0E1A] px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
           />
-          <span className="text-xs text-slate-500">to</span>
+          <span className="text-xs text-al-text-muted">to</span>
           <input
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="h-8 rounded-md border border-[#1E2D4A] bg-[#0A0E1A] px-2 text-xs text-slate-200 outline-none focus:border-violet-500"
+            className="h-8 rounded-md border border-al-border bg-[#0A0E1A] px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
           />
           <button
             onClick={() => {
@@ -164,7 +164,7 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
                 setShowCustom(false);
               }
             }}
-            className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-violet-500"
+            className="rounded-md bg-al-accent px-3 py-1.5 text-xs font-bold text-white hover:bg-al-accent-hover"
           >
             Apply
           </button>

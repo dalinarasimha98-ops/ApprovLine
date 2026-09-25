@@ -54,12 +54,12 @@ export function MarketplaceSection() {
       {/* Coming Soon section */}
       <div className="grid gap-5">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-black uppercase tracking-[0.08em] text-slate-500">Coming Soon</h3>
+          <h3 className="text-xl font-black uppercase tracking-[0.08em] text-al-text-muted">Coming Soon</h3>
           <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-600">
             {COMING_SOON.length} planned
           </span>
         </div>
-        <p className="text-sm font-semibold text-slate-500">
+        <p className="text-sm font-semibold text-al-text-muted">
           These integrations are on our roadmap. Request the ones you need to help us prioritize.
         </p>
 
@@ -67,21 +67,21 @@ export function MarketplaceSection() {
           {COMING_SOON.map((provider) => (
             <div
               key={provider.slug}
-              className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+              className="flex items-start gap-4 rounded-2xl border border-al-border bg-white p-5 shadow-sm"
             >
               <ProviderIcon name={provider.name} color={provider.color} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="block text-sm font-black text-slate-950">{provider.name}</span>
+                  <span className="block text-sm font-black text-al-text">{provider.name}</span>
                   <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
                     Soon
                   </span>
                 </div>
-                <span className="mt-0.5 block text-xs font-semibold text-slate-400">{provider.category}</span>
-                <p className="mt-1.5 text-xs font-semibold leading-5 text-slate-500">{provider.description}</p>
+                <span className="mt-0.5 block text-xs font-semibold text-al-text-muted">{provider.category}</span>
+                <p className="mt-1.5 text-xs font-semibold leading-5 text-al-text-muted">{provider.description}</p>
                 <button
                   onClick={() => openModal({ name: provider.name, slug: provider.slug })}
-                  className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                  className="mt-3 rounded-lg border border-al-border bg-white px-3 py-1.5 text-xs font-black text-al-text-secondary transition hover:bg-al-surface-sunken hover:text-al-text"
                 >
                   Request access
                 </button>
@@ -92,17 +92,17 @@ export function MarketplaceSection() {
       </div>
 
       {/* Request custom integration */}
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6">
+      <div className="rounded-2xl border border-dashed border-al-border-strong bg-al-surface-sunken p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-lg font-black text-slate-950">Don&apos;t see your tool?</h3>
-            <p className="mt-1 max-w-lg text-sm font-semibold text-slate-500">
+            <h3 className="text-lg font-black text-al-text">Don&apos;t see your tool?</h3>
+            <p className="mt-1 max-w-lg text-sm font-semibold text-al-text-muted">
               Request any integration — enterprise ERP, niche ITSM tool, home-grown system. We prioritize by customer demand.
             </p>
           </div>
           <button
             onClick={() => openModal(undefined)}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#2155d9] px-5 py-3 text-sm font-black text-white transition hover:bg-[#1a44be]"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-al-accent px-5 py-3 text-sm font-black text-white transition hover:bg-al-accent-hover"
           >
             Request an Integration
           </button>

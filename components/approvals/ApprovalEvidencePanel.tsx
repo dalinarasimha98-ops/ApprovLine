@@ -48,7 +48,7 @@ export function parseThreadPayload(rawPayload: unknown): ApprovalEvidencePanelPa
   return { channelName: typeof value.channelName === 'string' ? value.channelName : undefined, threadMessages: parsed };
 }
 
-const AVATAR_COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500', 'bg-violet-500', 'bg-cyan-500'];
+const AVATAR_COLORS = ['bg-blue-500', 'bg-al-success', 'bg-al-danger', 'bg-al-warning', 'bg-al-accent-hover', 'bg-cyan-500'];
 
 function avatarColor(name: string) {
   let hash = 0;
@@ -100,15 +100,15 @@ export function ApprovalEvidencePanel({
   let lastDay: string | null = null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+    <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-al-border bg-al-surface-sunken px-5 py-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-lg font-black text-slate-950">{channelName ?? 'Captured thread'}</h2>
-          <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+          <h2 className="text-lg font-black text-al-text">{channelName ?? 'Captured thread'}</h2>
+          <span className="rounded-full border border-al-border bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-al-text-muted">
             {platform ?? 'Source'} · read-only view
           </span>
         </div>
-        <p className="text-xs font-bold text-slate-500">{threadMessages.length} messages · {participantCount} participants</p>
+        <p className="text-xs font-bold text-al-text-muted">{threadMessages.length} messages · {participantCount} participants</p>
       </div>
 
       <div className="border-b border-blue-100 bg-blue-50 px-5 py-3">
@@ -126,7 +126,7 @@ export function ApprovalEvidencePanel({
           return (
             <div key={`${message.senderName}-${message.timestamp}-${index}`}>
               {showDivider ? (
-                <div className="my-2 flex items-center gap-3 text-xs font-bold uppercase tracking-wide text-slate-400">
+                <div className="my-2 flex items-center gap-3 text-xs font-bold uppercase tracking-wide text-al-text-muted">
                   <span className="h-px flex-1 bg-slate-200" />
                   {label}
                   <span className="h-px flex-1 bg-slate-200" />
@@ -138,19 +138,19 @@ export function ApprovalEvidencePanel({
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-black text-slate-950">{message.senderName}</p>
-                    <span className="text-xs font-semibold text-slate-400">{timeLabel(message.timestamp)}</span>
+                    <p className="font-black text-al-text">{message.senderName}</p>
+                    <span className="text-xs font-semibold text-al-text-muted">{timeLabel(message.timestamp)}</span>
                     {message.isApprovalMoment ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700">
                         <CheckCircle2 className="h-3 w-3" /> Approval captured
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700">{message.content}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-al-text-secondary">{message.content}</p>
                   {message.reactions?.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {message.reactions.map((reaction) => (
-                        <span key={reaction.emoji} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-bold text-slate-600">
+                        <span key={reaction.emoji} className="inline-flex items-center gap-1 rounded-full border border-al-border bg-al-surface-sunken px-2 py-0.5 text-xs font-bold text-al-text-secondary">
                           {reaction.emoji} {reaction.count}
                         </span>
                       ))}
@@ -163,13 +163,13 @@ export function ApprovalEvidencePanel({
         })}
       </div>
 
-      <div className="flex flex-wrap gap-3 border-t border-slate-200 p-5">
+      <div className="flex flex-wrap gap-3 border-t border-al-border p-5">
         {sourceUrl ? (
-          <a href={sourceUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#2155d9] px-4 text-sm font-bold text-white">
+          <a href={sourceUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-xl bg-al-accent px-4 text-sm font-bold text-white">
             <ExternalLink className="h-4 w-4" /> Open in {platform ?? 'source'}
           </a>
         ) : null}
-        <CopyEvidenceLinkButton path={evidenceLinkPath} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50" />
+        <CopyEvidenceLinkButton path={evidenceLinkPath} className="inline-flex h-10 items-center gap-2 rounded-xl border border-al-border bg-white px-4 text-sm font-bold text-al-text-secondary hover:bg-al-surface-sunken" />
       </div>
     </div>
   );

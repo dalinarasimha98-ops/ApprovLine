@@ -96,19 +96,19 @@ function KpiCard({
   href?: string;
   linkLabel?: string;
 }) {
-  const toneClass = tone === 'positive' ? 'text-emerald-400' : tone === 'warning' ? 'text-amber-400' : 'text-slate-400';
+  const toneClass = tone === 'positive' ? 'text-al-success' : tone === 'warning' ? 'text-al-warning' : 'text-al-text-muted';
   return (
     <article className={`${panelClass} relative min-h-[134px] overflow-hidden p-4`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-medium text-slate-400">{label}</p>
-          <p className="mt-1 text-[25px] font-bold leading-none tracking-tight text-slate-100">{value}</p>
+          <p className="text-[11px] font-medium text-al-text-muted">{label}</p>
+          <p className="mt-1 text-[25px] font-bold leading-none tracking-tight text-al-text">{value}</p>
         </div>
         <span className="grid h-8 w-8 place-items-center rounded-full border" style={{ borderColor: `${color}66`, color }}>{icon}</span>
       </div>
       <div className={`mt-2 flex items-center justify-between gap-1 text-[10px] font-semibold ${toneClass}`}>
         <span className="flex items-center gap-1"><Activity className="h-3 w-3" />{context}</span>
-        {href ? <Link href={href} className="font-bold text-blue-400 hover:text-blue-300">{linkLabel ?? 'View →'}</Link> : null}
+        {href ? <Link href={href} className="font-bold text-al-info hover:text-blue-300">{linkLabel ?? 'View →'}</Link> : null}
       </div>
       <div className="absolute inset-x-3 bottom-0"><Sparkline color={color} points={points} /></div>
     </article>
@@ -143,7 +143,7 @@ function Donut({ values, total, centerLabel }: { values: number[]; total: number
       </svg>
       <div className="absolute text-center">
         <p className="text-2xl font-bold text-white">{compact(total)}</p>
-        <p className="text-[10px] text-slate-500">{centerLabel}</p>
+        <p className="text-[10px] text-al-text-muted">{centerLabel}</p>
       </div>
     </div>
   );
@@ -152,12 +152,12 @@ function Donut({ values, total, centerLabel }: { values: number[]; total: number
 function ProviderIcon({ provider }: { provider: string }) {
   const normalized = provider.toLowerCase();
   const styles =
-    normalized.includes('gmail') ? 'bg-rose-500/15 text-rose-300' :
+    normalized.includes('gmail') ? 'bg-al-danger/15 text-al-danger' :
     normalized.includes('slack') ? 'bg-fuchsia-500/15 text-fuchsia-300' :
     normalized.includes('teams') ? 'bg-indigo-500/15 text-indigo-300' :
     normalized.includes('jira') ? 'bg-blue-500/15 text-blue-300' :
     normalized.includes('outlook') ? 'bg-cyan-500/15 text-cyan-300' :
-    'bg-emerald-500/15 text-emerald-300';
+    'bg-al-success/15 text-al-success';
   return (
     <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/[0.06] ${styles}`}>
       {normalized.includes('mail') || normalized.includes('outlook') ? <Mail className="h-3.5 w-3.5" /> : <MessageSquare className="h-3.5 w-3.5" />}
@@ -169,10 +169,10 @@ function SectionHeader({ title, subtitle, href, linkLabel = 'View all' }: { titl
   return (
     <div className="flex items-start justify-between gap-3">
       <div>
-        <h2 className="text-sm font-bold text-slate-100">{title}</h2>
-        <p className="mt-0.5 text-[10px] text-slate-500">{subtitle}</p>
+        <h2 className="text-sm font-bold text-al-text">{title}</h2>
+        <p className="mt-0.5 text-[10px] text-al-text-muted">{subtitle}</p>
       </div>
-      {href ? <Link href={href} className="text-[10px] font-semibold text-blue-400 hover:text-blue-300">{linkLabel} →</Link> : null}
+      {href ? <Link href={href} className="text-[10px] font-semibold text-al-info hover:text-blue-300">{linkLabel} →</Link> : null}
     </div>
   );
 }
@@ -247,14 +247,14 @@ export default async function DashboardPage() {
   const chartPoints = dayCounts.map((count, index) => `${8 + index * 15.3},${88 - (count / chartMax) * 62}`).join(' ');
 
   return (
-    <section className="grid gap-3 text-slate-200">
+    <section className="grid gap-3 text-al-text-secondary">
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white">Good morning, {displayName} 👋</h1>
-          <p className="mt-1 text-xs text-slate-500">Here&apos;s what&apos;s happening across your organization today.</p>
+          <p className="mt-1 text-xs text-al-text-muted">Here&apos;s what&apos;s happening across your organization today.</p>
         </div>
         {tenant.status !== 'ready' || degradedMetrics.length > 0 ? (
-          <Link href="/api/debug/dashboard" className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-200">
+          <Link href="/api/debug/dashboard" className="rounded-md border border-al-warning/30 bg-al-warning/10 px-3 py-2 text-xs font-semibold text-al-warning">
             Workspace data delayed · Some numbers below may be incomplete · Open diagnostics
           </Link>
         ) : null}
@@ -276,15 +276,15 @@ export default async function DashboardPage() {
             {(recentApprovals.length ? recentApprovals.slice(0, 5) : []).map((approval) => (
               <Link href={`/approvals/${approval.id}`} key={approval.id} className="grid grid-cols-[28px_50px_1fr_auto] items-center gap-2 py-2.5 hover:bg-white/[0.025]">
                 <ProviderIcon provider={approval.sourcePlatform ?? 'manual'} />
-                <span className="text-[9px] text-slate-500">{approval.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="text-[9px] text-al-text-muted">{approval.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 <span className="min-w-0">
-                  <span className="block truncate text-[10px] text-slate-400">{statusLabel(approval.sourcePlatform ?? 'manual')}</span>
-                  <span className="block truncate text-[11px] font-medium text-slate-200">{approval.subject}</span>
+                  <span className="block truncate text-[10px] text-al-text-muted">{statusLabel(approval.sourcePlatform ?? 'manual')}</span>
+                  <span className="block truncate text-[11px] font-medium text-al-text-secondary">{approval.subject}</span>
                 </span>
-                <span className="max-w-20 truncate text-right text-[10px] text-slate-400">{approval.approverName ?? 'Unknown'}</span>
+                <span className="max-w-20 truncate text-right text-[10px] text-al-text-muted">{approval.approverName ?? 'Unknown'}</span>
               </Link>
             ))}
-            {!recentApprovals.length ? <p className="py-10 text-center text-xs text-slate-500">Evidence appears here as approvals are captured.</p> : null}
+            {!recentApprovals.length ? <p className="py-10 text-center text-xs text-al-text-muted">Evidence appears here as approvals are captured.</p> : null}
           </div>
         </article>
 
@@ -296,14 +296,14 @@ export default async function DashboardPage() {
               {(sourceSummary.length ? sourceSummary : [['No sources', 0] as [string, number]]).map(([source, count], index) => (
                 <div key={source} className="flex items-center gap-2 text-[10px]">
                   <span className="h-2 w-3 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }} />
-                  <span className="min-w-0 flex-1 truncate text-slate-400">{statusLabel(source)}</span>
-                  <span className="font-semibold text-slate-200">{count}</span>
+                  <span className="min-w-0 flex-1 truncate text-al-text-muted">{statusLabel(source)}</span>
+                  <span className="font-semibold text-al-text-secondary">{count}</span>
                 </div>
               ))}
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.025] p-2.5">
-            <span className="text-[10px] font-semibold text-slate-400">{connected.length} connected</span>
+            <span className="text-[10px] font-semibold text-al-text-muted">{connected.length} connected</span>
             <div className="ml-auto flex -space-x-1">
               {connected.slice(0, 8).map((integration) => <ProviderIcon key={integration.id} provider={integration.provider} />)}
             </div>
@@ -321,14 +321,14 @@ export default async function DashboardPage() {
               return (
                 <Link href={detailHref} key={id} className="flex items-center gap-3 py-3 hover:bg-white/[0.025]">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-semibold text-slate-100">{subject}</p>
-                    <p className="mt-0.5 truncate text-[9px] text-slate-500">{'department' in record ? record.department ?? 'General' : 'General'}</p>
+                    <p className="truncate text-[11px] font-semibold text-al-text">{subject}</p>
+                    <p className="mt-0.5 truncate text-[9px] text-al-text-muted">{'department' in record ? record.department ?? 'General' : 'General'}</p>
                   </div>
-                  <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[9px] font-semibold text-emerald-300">{statusLabel(String(status))}</span>
+                  <span className="rounded border border-al-success/20 bg-al-success/10 px-2 py-1 text-[9px] font-semibold text-al-success">{statusLabel(String(status))}</span>
                 </Link>
               );
             })}
-            {!recentEvidence.length && !recentApprovals.length ? <p className="py-10 text-center text-xs text-slate-500">No unified records yet.</p> : null}
+            {!recentEvidence.length && !recentApprovals.length ? <p className="py-10 text-center text-xs text-al-text-muted">No unified records yet.</p> : null}
           </div>
         </article>
       </div>
@@ -338,12 +338,12 @@ export default async function DashboardPage() {
           <SectionHeader title="AI Copilot" subtitle="Ask anything about approvals" href="/copilot" linkLabel="Open" />
           <div className="mt-3 grid gap-2">
             {['Who approved the latest budget?', 'Show high-risk approvals this month', 'Which approvals need Finance?', 'Show approvals above $50,000'].map((question) => (
-              <Link key={question} href={`/copilot?q=${encodeURIComponent(question)}`} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-[10px] text-slate-300 hover:border-violet-500/30 hover:bg-violet-500/[0.06]">
-                <Sparkles className="h-3 w-3 text-violet-400" /> {question}
+              <Link key={question} href={`/copilot?q=${encodeURIComponent(question)}`} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-[10px] text-al-text-secondary hover:border-al-accent/30 hover:bg-al-accent-hover/[0.06]">
+                <Sparkles className="h-3 w-3 text-al-accent" /> {question}
               </Link>
             ))}
           </div>
-          <Link href="/copilot" className="mt-3 flex h-9 items-center rounded-md border border-white/[0.08] px-3 text-[10px] text-slate-500 hover:text-white">Ask a question… <Bot className="ml-auto h-3.5 w-3.5 text-violet-400" /></Link>
+          <Link href="/copilot" className="mt-3 flex h-9 items-center rounded-md border border-white/[0.08] px-3 text-[10px] text-al-text-muted hover:text-white">Ask a question… <Bot className="ml-auto h-3.5 w-3.5 text-al-accent" /></Link>
         </article>
 
         <article className={`${panelClass} p-4 xl:col-span-5`}>
@@ -355,7 +355,7 @@ export default async function DashboardPage() {
               {dayCounts.map((count, index) => <circle key={index} cx={8 + index * 15.3} cy={88 - (count / chartMax) * 62} r="1.6" fill="#071525" stroke="#347dff" strokeWidth="1.2" />)}
             </svg>
           </div>
-          <div className="grid grid-cols-7 text-center text-[9px] text-slate-600">
+          <div className="grid grid-cols-7 text-center text-[9px] text-al-text-secondary">
             {dayCounts.map((_, index) => {
               const date = new Date();
               date.setDate(date.getDate() - (6 - index));
@@ -369,21 +369,21 @@ export default async function DashboardPage() {
           <div className="mt-4 grid grid-cols-[1fr_140px] items-center gap-3">
             <div className="space-y-2">
               {[
-                ['High Risk Approvals', highRiskApprovals, 'text-rose-400'],
-                ['Missing Evidence', Math.max(0, totalApprovals - evidenceTotal), 'text-amber-400'],
-                ['Policy Violations', categories.filter((item) => item.category?.toLowerCase().includes('compliance')).reduce((sum, item) => sum + item._count._all, 0), 'text-violet-400'],
-                ['Pending Review', pendingReview, 'text-blue-400'],
+                ['High Risk Approvals', highRiskApprovals, 'text-al-danger'],
+                ['Missing Evidence', Math.max(0, totalApprovals - evidenceTotal), 'text-al-warning'],
+                ['Policy Violations', categories.filter((item) => item.category?.toLowerCase().includes('compliance')).reduce((sum, item) => sum + item._count._all, 0), 'text-al-accent'],
+                ['Pending Review', pendingReview, 'text-al-info'],
               ].map(([label, value, color]) => (
                 <div key={String(label)} className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-white/[0.02] px-2.5 py-2 text-[10px]">
                   <AlertTriangle className={`h-3.5 w-3.5 ${color}`} />
-                  <span className="flex-1 text-slate-400">{label}</span>
+                  <span className="flex-1 text-al-text-muted">{label}</span>
                   <span className={`font-bold ${color}`}>{value}</span>
                 </div>
               ))}
             </div>
             <div className="relative grid h-32 w-32 place-items-center rounded-full" style={{ background: `conic-gradient(#45cf78 ${complianceScore}%, #17273a 0)` }}>
               <div className="grid h-24 w-24 place-items-center rounded-full bg-[#071525] text-center">
-                <div><p className="text-2xl font-bold text-white">{complianceScore}%</p><p className="text-[9px] text-slate-500">Compliance</p></div>
+                <div><p className="text-2xl font-bold text-white">{complianceScore}%</p><p className="text-[9px] text-al-text-muted">Compliance</p></div>
               </div>
             </div>
           </div>
@@ -396,12 +396,12 @@ export default async function DashboardPage() {
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {recentAudit.map((event, index) => (
               <div key={event.id} className="min-w-0 border-l border-white/[0.08] pl-3 first:border-l-0">
-                <span className={`grid h-7 w-7 place-items-center rounded-full ${index % 2 ? 'bg-emerald-500/15 text-emerald-300' : 'bg-blue-500/15 text-blue-300'}`}><Activity className="h-3.5 w-3.5" /></span>
-                <p className="mt-2 truncate text-[10px] font-semibold text-slate-200">{statusLabel(event.action)}</p>
-                <p className="mt-0.5 text-[9px] text-slate-600">{event.createdAt.toLocaleString()}</p>
+                <span className={`grid h-7 w-7 place-items-center rounded-full ${index % 2 ? 'bg-al-success/15 text-al-success' : 'bg-blue-500/15 text-blue-300'}`}><Activity className="h-3.5 w-3.5" /></span>
+                <p className="mt-2 truncate text-[10px] font-semibold text-al-text-secondary">{statusLabel(event.action)}</p>
+                <p className="mt-0.5 text-[9px] text-al-text-secondary">{event.createdAt.toLocaleString()}</p>
               </div>
             ))}
-            {!recentAudit.length ? <p className="col-span-full py-5 text-center text-xs text-slate-500">Recent actions will appear here.</p> : null}
+            {!recentAudit.length ? <p className="col-span-full py-5 text-center text-xs text-al-text-muted">Recent actions will appear here.</p> : null}
           </div>
         </article>
 
@@ -409,13 +409,13 @@ export default async function DashboardPage() {
           <SectionHeader title="System Health" subtitle="Core workspace services" href="/health" linkLabel="Status page" />
           <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
             {['Capture Engine', 'AI Classifier', 'Integrations', 'Data Pipeline', 'Storage', 'API Gateway'].map((service) => (
-              <div key={service} className="flex items-center gap-2 text-[10px] text-slate-400"><Check className="h-3.5 w-3.5 rounded-full bg-emerald-500/20 p-0.5 text-emerald-400" />{service}</div>
+              <div key={service} className="flex items-center gap-2 text-[10px] text-al-text-muted"><Check className="h-3.5 w-3.5 rounded-full bg-al-success/20 p-0.5 text-al-success" />{service}</div>
             ))}
           </div>
         </article>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-1 pt-3 text-[9px] text-slate-600">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-1 pt-3 text-[9px] text-al-text-secondary">
         <div className="flex flex-wrap gap-4"><span>Enterprise-grade security</span><span>SOC 2 ready</span><span>GDPR aligned</span><span>Read-only integrations</span></div>
         <span>© 2026 ApprovLine</span>
       </div>

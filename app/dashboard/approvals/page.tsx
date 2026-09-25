@@ -25,8 +25,8 @@ export const dynamic = 'force-dynamic';
 
 // ── Dept bar colours cycling ───────────────────────────────────────────────────
 const DEPT_COLORS = [
-  'bg-emerald-500', 'bg-violet-500', 'bg-blue-500',
-  'bg-amber-500',   'bg-rose-500',   'bg-teal-500',
+  'bg-al-success', 'bg-al-accent-hover', 'bg-blue-500',
+  'bg-al-warning',   'bg-al-danger',   'bg-teal-500',
 ];
 
 // The five quick filter chips above the table. Each writes straight to the
@@ -215,10 +215,10 @@ export default async function ApprovalsPage({
   // take ink from the risk ramp (lib/risk-ramp.ts); Total and Approved stay
   // neutral, since they aren't risk signals.
   const tiles = [
-    { label: 'Total',            value: statusCounts.total,    ink: 'text-[#E8EEFF]' },
-    { label: 'Approved',         value: statusCounts.approved, ink: 'text-[#E8EEFF]' },
-    { label: 'Pending review',   value: statusCounts.pending,  ink: 'text-amber-400' },
-    { label: 'High or critical', value: statusCounts.highRisk, ink: 'text-red-400' },
+    { label: 'Total',            value: statusCounts.total,    ink: 'text-al-text' },
+    { label: 'Approved',         value: statusCounts.approved, ink: 'text-al-text' },
+    { label: 'Pending review',   value: statusCounts.pending,  ink: 'text-al-warning' },
+    { label: 'High or critical', value: statusCounts.highRisk, ink: 'text-al-danger' },
   ] as const;
 
   const chipCount: Record<FilterChipKey, number> = {
@@ -233,19 +233,19 @@ export default async function ApprovalsPage({
     <div className="flex flex-col gap-5">
 
       {/* ── Page header ──────────────────────────────────── */}
-      <div className="overflow-hidden rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
-        <p className="text-[10.5px] font-black uppercase tracking-[0.18em] text-violet-400">
+      <div className="overflow-hidden rounded-xl border border-al-border bg-al-surface p-5">
+        <p className="text-[10.5px] font-black uppercase tracking-[0.18em] text-al-accent">
           Approval Intelligence
         </p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-black tracking-tight text-[#E8EEFF] sm:text-3xl">
+              <h1 className="text-2xl font-black tracking-tight text-al-text sm:text-3xl">
                 Approval History
               </h1>
               <LiveCaptureBadge status={captureStatus} />
             </div>
-            <p className="mt-1.5 max-w-2xl text-sm font-semibold leading-6 text-[#6B7FA8]">
+            <p className="mt-1.5 max-w-2xl text-sm font-semibold leading-6 text-al-text-muted">
               Every approval decision, with the sources that captured it.
             </p>
           </div>
@@ -253,21 +253,21 @@ export default async function ApprovalsPage({
             <PendingLink
               href="/approvals/manual"
               pendingText="Opening recorder…"
-              className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-violet-500"
+              className="rounded-lg bg-al-accent px-4 py-2 text-sm font-bold text-white transition hover:bg-al-accent-hover"
             >
               + New Approval
             </PendingLink>
             <PendingLink
               href="/api/export/approvals?format=csv"
               pendingText="Preparing CSV…"
-              className="rounded-lg border border-[#1E2D4A] bg-[#152040] px-4 py-2 text-sm font-bold text-[#E8EEFF] transition hover:border-violet-500/40"
+              className="rounded-lg border border-al-border bg-al-surface-elevated px-4 py-2 text-sm font-bold text-al-text transition hover:border-al-accent/40"
             >
               Export CSV
             </PendingLink>
             <PendingLink
               href="/api/export/approvals?format=pdf"
               pendingText="Preparing PDF…"
-              className="rounded-lg border border-[#1E2D4A] bg-[#152040] px-4 py-2 text-sm font-bold text-[#E8EEFF] transition hover:border-violet-500/40"
+              className="rounded-lg border border-al-border bg-al-surface-elevated px-4 py-2 text-sm font-bold text-al-text transition hover:border-al-accent/40"
             >
               Export PDF
             </PendingLink>
@@ -278,8 +278,8 @@ export default async function ApprovalsPage({
       {/* ── Stat tiles ───────────────────────────────────── */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((tile) => (
-          <div key={tile.label} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
-            <p className="text-[11px] font-semibold text-[#6B7FA8]">{tile.label}</p>
+          <div key={tile.label} className="rounded-xl border border-al-border bg-al-surface p-4">
+            <p className="text-[11px] font-semibold text-al-text-muted">{tile.label}</p>
             <p className={`mt-0.5 font-mono text-2xl font-black tracking-tight ${tile.ink}`}>
               {tile.value.toLocaleString()}
             </p>
@@ -289,20 +289,20 @@ export default async function ApprovalsPage({
 
       {/* ── Backfill notice ───────────────────────────────── */}
       {unlinkedOnPage > 0 ? (
-        <div className="flex flex-col justify-between gap-3 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-3 rounded-xl border border-al-accent/20 bg-al-accent-hover/5 p-4 sm:flex-row sm:items-center">
           <div>
-            <h3 className="text-sm font-bold text-[#E8EEFF]">
+            <h3 className="text-sm font-bold text-al-text">
               {unlinkedOnPage} approval{unlinkedOnPage === 1 ? '' : 's'} on this page{' '}
               {unlinkedOnPage === 1 ? "isn't" : "aren't"} in Unified Evidence yet
             </h3>
-            <p className="mt-1 text-sm text-[#6B7FA8]">
+            <p className="mt-1 text-sm text-al-text-muted">
               Backfill creates the missing Unified Evidence record from existing approval data — nothing is fabricated.
             </p>
           </div>
           <form action="/api/evidence/backfill" method="post">
             <FormSubmitButton
               pendingText="Backfilling…"
-              className="min-h-0 h-9 shrink-0 rounded-lg bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500"
+              className="min-h-0 h-9 shrink-0 rounded-lg bg-al-accent px-5 text-sm font-bold text-white hover:bg-al-accent-hover"
             >
               Backfill Evidence
             </FormSubmitButton>
@@ -311,7 +311,7 @@ export default async function ApprovalsPage({
       ) : null}
 
       {/* ── Filter chips ─────────────────────────────────── */}
-      <div className="flex flex-wrap gap-1.5 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-1.5">
+      <div className="flex flex-wrap gap-1.5 rounded-xl border border-al-border bg-al-surface p-1.5">
         {FILTER_CHIPS.map(({ key, label }) => {
           const isActive = activeChip === key;
           return (
@@ -321,14 +321,14 @@ export default async function ApprovalsPage({
               pendingText="Filtering…"
               className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-bold transition ${
                 isActive
-                  ? 'bg-violet-600 text-white'
-                  : 'text-[#A8BAD8] hover:bg-[#152040]'
+                  ? 'bg-al-accent text-white'
+                  : 'text-al-text-secondary hover:bg-al-surface-elevated'
               }`}
             >
               {label}
               <span
                 className={`rounded-full px-1.5 py-0.5 text-[10px] font-black tabular-nums ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-[#152040] text-[#6B7FA8]'
+                  isActive ? 'bg-white/20 text-white' : 'bg-al-surface-elevated text-al-text-muted'
                 }`}
               >
                 {chipCount[key].toLocaleString()}
@@ -339,11 +339,11 @@ export default async function ApprovalsPage({
       </div>
 
       {/* ── Search + filters ─────────────────────────────── */}
-      <form id="filters" className="scroll-mt-32 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+      <form id="filters" className="scroll-mt-32 rounded-xl border border-al-border bg-al-surface p-4">
         <input type="hidden" name="multiSource" value={filters.multiSource ? 'true' : ''} />
         <input type="hidden" name="pageSize" value={pageSize} />
         <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
+          <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">
             Search approvals, people, sources, or keywords
           </span>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -351,11 +351,11 @@ export default async function ApprovalsPage({
               name="q"
               defaultValue={filters.q ?? ''}
               placeholder="Search approvals, people, sources, or keywords…"
-              className="h-10 flex-1 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] placeholder:text-[#3D5070] outline-none focus:border-violet-500/60"
+              className="h-10 flex-1 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text placeholder:text-al-text-secondary outline-none focus:border-al-accent/60"
             />
             <FormSubmitButton
               pendingText="Searching…"
-              className="min-h-0 h-10 rounded-lg bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500"
+              className="min-h-0 h-10 rounded-lg bg-al-accent px-5 text-sm font-bold text-white hover:bg-al-accent-hover"
             >
               Search
             </FormSubmitButton>
@@ -363,7 +363,7 @@ export default async function ApprovalsPage({
         </div>
 
         <details className="mt-3 group">
-          <summary className="cursor-pointer list-none text-xs font-bold text-violet-400 hover:text-violet-300">
+          <summary className="cursor-pointer list-none text-xs font-bold text-al-accent hover:text-al-accent">
             Filters ▾
           </summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
@@ -378,23 +378,23 @@ export default async function ApprovalsPage({
               ] as ['employee' | 'department' | 'sourcePlatform' | 'category' | 'riskLevel' | 'approvalType', string][]
             ).map(([name, placeholder]) => (
               <label key={name} className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
+                <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">
                   {placeholder}
                 </span>
                 <input
                   name={name}
                   defaultValue={filters[name] ?? ''}
                   placeholder={placeholder}
-                  className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] placeholder:text-[#3D5070] outline-none focus:border-violet-500/60"
+                  className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text placeholder:text-al-text-secondary outline-none focus:border-al-accent/60"
                 />
               </label>
             ))}
             <label className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">Status</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">Status</span>
               <select
                 name="status"
                 defaultValue={filters.status ?? ''}
-                className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+                className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
               >
                 <option value="">All statuses</option>
                 <option value="PENDING_REVIEW">Pending review</option>
@@ -403,27 +403,27 @@ export default async function ApprovalsPage({
               </select>
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">From</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">From</span>
               <input
                 name="from"
                 type="date"
                 defaultValue={filters.from ?? ''}
-                className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+                className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">To</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">To</span>
               <input
                 name="to"
                 type="date"
                 defaultValue={filters.to ?? ''}
-                className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+                className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
               />
             </label>
             <div className="flex items-end">
               <FormSubmitButton
                 pendingText="Filtering…"
-                className="min-h-0 h-9 w-full rounded-lg bg-violet-600 px-4 text-sm font-bold text-white hover:bg-violet-500"
+                className="min-h-0 h-9 w-full rounded-lg bg-al-accent px-4 text-sm font-bold text-white hover:bg-al-accent-hover"
               >
                 Apply filters
               </FormSubmitButton>
@@ -434,20 +434,20 @@ export default async function ApprovalsPage({
 
       {/* ── Status / stale / error banners ───────────────── */}
       {staleNotice ? (
-        <p className="-mt-2 text-xs font-semibold text-[#3D5070]">{staleNotice}</p>
+        <p className="-mt-2 text-xs font-semibold text-al-text-secondary">{staleNotice}</p>
       ) : null}
       {isAlert ? <AutoRetryOnDegraded /> : null}
       {cacheNotice ? (
         <div
           className={
             isAlert
-              ? 'rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-200'
-              : 'rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4 text-[#6B7FA8]'
+              ? 'rounded-xl border border-al-warning/20 bg-al-warning/5 p-4 text-al-warning'
+              : 'rounded-xl border border-al-border bg-al-surface p-4 text-al-text-muted'
           }
         >
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
-              <h3 className="font-bold text-[#E8EEFF]">
+              <h3 className="font-bold text-al-text">
                 {isAlert ? 'Approval records are recovering' : 'Approval records are loading'}
               </h3>
               <p className="mt-1 text-sm">{cacheNotice}</p>
@@ -458,7 +458,7 @@ export default async function ApprovalsPage({
             <PendingLink
               href="/dashboard/approvals"
               pendingText="Retrying…"
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-[#1E2D4A] bg-[#152040] px-4 text-sm font-bold text-[#E8EEFF] hover:border-violet-500/40"
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-al-border bg-al-surface-elevated px-4 text-sm font-bold text-al-text hover:border-al-accent/40"
             >
               Retry now
             </PendingLink>
@@ -466,7 +466,7 @@ export default async function ApprovalsPage({
         </div>
       ) : null}
       {loadError ? (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5 text-amber-200">
+        <div className="rounded-xl border border-al-warning/20 bg-al-warning/5 p-5 text-al-warning">
           <h3 className="font-bold">Approvals couldn&apos;t be loaded</h3>
           <p className="mt-1 text-sm">
             Try again or return to your dashboard. Your workspace shell is still available.
@@ -477,7 +477,7 @@ export default async function ApprovalsPage({
           <PendingLink
             href="/dashboard/approvals"
             pendingText="Retrying…"
-            className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-violet-600 px-4 text-sm font-bold text-white hover:bg-violet-500"
+            className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-al-accent px-4 text-sm font-bold text-white hover:bg-al-accent-hover"
           >
             Retry
           </PendingLink>
@@ -486,14 +486,14 @@ export default async function ApprovalsPage({
 
       {/* ── Empty state ───────────────────────────────────── */}
       {!loadError && approvals.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#1E2D4A] bg-[#0E1830]/50 p-12 text-center">
-          <p className="text-xs font-black uppercase tracking-widest text-violet-400">
+        <div className="rounded-xl border border-dashed border-al-border bg-al-surface/50 p-12 text-center">
+          <p className="text-xs font-black uppercase tracking-widest text-al-accent">
             No approvals yet
           </p>
-          <h3 className="mt-3 text-xl font-black text-[#E8EEFF]">
+          <h3 className="mt-3 text-xl font-black text-al-text">
             {activeChip === 'all' && !filters.q ? 'No approvals yet' : 'No approvals match these filters'}
           </h3>
-          <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-[#6B7FA8]">
+          <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-al-text-muted">
             {activeChip === 'all' && !filters.q
               ? 'Approvals from your connected systems will appear here.'
               : 'Try clearing filters or choosing a different filter chip.'}
@@ -502,14 +502,14 @@ export default async function ApprovalsPage({
             <PendingLink
               href="/dashboard/settings/integrations"
               pendingText="Opening…"
-              className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-bold text-white hover:bg-violet-500"
+              className="rounded-lg bg-al-accent px-5 py-2 text-sm font-bold text-white hover:bg-al-accent-hover"
             >
               Connect a Source →
             </PendingLink>
             <PendingLink
               href="/approvals/manual"
               pendingText="Opening recorder…"
-              className="rounded-lg border border-[#1E2D4A] bg-[#152040] px-5 py-2 text-sm font-bold text-violet-400 hover:border-violet-500/40"
+              className="rounded-lg border border-al-border bg-al-surface-elevated px-5 py-2 text-sm font-bold text-al-accent hover:border-al-accent/40"
             >
               Record manual approval
             </PendingLink>
@@ -517,7 +517,7 @@ export default async function ApprovalsPage({
               <form action="/api/demo/seed" method="post">
                 <FormSubmitButton
                   pendingText="Generating…"
-                  className="min-h-0 rounded-lg border border-[#1E2D4A] bg-[#152040] px-5 py-2 text-sm font-bold text-[#E8EEFF] hover:border-violet-500/40"
+                  className="min-h-0 rounded-lg border border-al-border bg-al-surface-elevated px-5 py-2 text-sm font-bold text-al-text hover:border-al-accent/40"
                 >
                   Generate demo data
                 </FormSubmitButton>
@@ -534,8 +534,8 @@ export default async function ApprovalsPage({
             <ApprovalTable approvals={approvals} />
 
             {/* Pagination */}
-            <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-4 py-3 sm:flex-row">
-              <p className="text-xs font-semibold text-[#6B7FA8]">
+            <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-al-border bg-al-surface px-4 py-3 sm:flex-row">
+              <p className="text-xs font-semibold text-al-text-muted">
                 Showing {rangeStart.toLocaleString()}–{rangeEnd.toLocaleString()} of {total.toLocaleString()} approvals
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -543,22 +543,22 @@ export default async function ApprovalsPage({
                   href={buildApprovalsHref(rawParams, { page: Math.max(1, currentPage - 1) })}
                   pendingText="…"
                   aria-disabled={currentPage <= 1}
-                  className={`inline-flex h-8 items-center rounded-lg border border-[#1E2D4A] px-3 text-xs font-bold ${
-                    currentPage <= 1 ? 'pointer-events-none opacity-40' : 'text-[#A8BAD8] hover:border-violet-500/40'
+                  className={`inline-flex h-8 items-center rounded-lg border border-al-border px-3 text-xs font-bold ${
+                    currentPage <= 1 ? 'pointer-events-none opacity-40' : 'text-al-text-secondary hover:border-al-accent/40'
                   }`}
                 >
                   Previous
                 </PendingLink>
                 {pageWindow(currentPage, totalPages).map((p, idx) =>
                   p === null ? (
-                    <span key={`gap-${idx}`} className="px-1 text-xs text-[#3D5070]">…</span>
+                    <span key={`gap-${idx}`} className="px-1 text-xs text-al-text-secondary">…</span>
                   ) : (
                     <PendingLink
                       key={p}
                       href={buildApprovalsHref(rawParams, { page: p })}
                       pendingText="…"
                       className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-bold tabular-nums ${
-                        p === currentPage ? 'bg-violet-600 text-white' : 'text-[#A8BAD8] hover:bg-[#152040]'
+                        p === currentPage ? 'bg-al-accent text-white' : 'text-al-text-secondary hover:bg-al-surface-elevated'
                       }`}
                     >
                       {p}
@@ -569,14 +569,14 @@ export default async function ApprovalsPage({
                   href={buildApprovalsHref(rawParams, { page: Math.min(totalPages, currentPage + 1) })}
                   pendingText="…"
                   aria-disabled={currentPage >= totalPages}
-                  className={`inline-flex h-8 items-center rounded-lg border border-[#1E2D4A] px-3 text-xs font-bold ${
-                    currentPage >= totalPages ? 'pointer-events-none opacity-40' : 'text-[#A8BAD8] hover:border-violet-500/40'
+                  className={`inline-flex h-8 items-center rounded-lg border border-al-border px-3 text-xs font-bold ${
+                    currentPage >= totalPages ? 'pointer-events-none opacity-40' : 'text-al-text-secondary hover:border-al-accent/40'
                   }`}
                 >
                   Next
                 </PendingLink>
               </div>
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#6B7FA8]">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-al-text-muted">
                 <span>Per page:</span>
                 {PAGE_SIZE_OPTIONS.map((size) => (
                   <PendingLink
@@ -584,7 +584,7 @@ export default async function ApprovalsPage({
                     href={buildApprovalsHref(rawParams, { pageSize: size, page: 1 })}
                     pendingText="…"
                     className={`inline-flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 font-bold tabular-nums ${
-                      size === pageSize ? 'bg-violet-600 text-white' : 'text-[#A8BAD8] hover:bg-[#152040]'
+                      size === pageSize ? 'bg-al-accent text-white' : 'text-al-text-secondary hover:bg-al-surface-elevated'
                     }`}
                   >
                     {size}
@@ -597,8 +597,8 @@ export default async function ApprovalsPage({
           {/* Right rail */}
           <div className="flex flex-col gap-3">
             {/* Status donut (org-wide, matches KPI strip) */}
-            <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
-              <h3 className="mb-3 font-bold text-[#E8EEFF]">Approvals by Status</h3>
+            <div className="rounded-xl border border-al-border bg-al-surface p-4">
+              <h3 className="mb-3 font-bold text-al-text">Approvals by Status</h3>
               <div className="flex items-center gap-4">
                 <div className="relative h-[80px] w-[80px] flex-shrink-0">
                   <svg width="80" height="80" viewBox="0 0 80 80">
@@ -629,8 +629,8 @@ export default async function ApprovalsPage({
                     ) : null}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="font-mono text-lg font-black text-[#E8EEFF]">{statusCounts.total}</span>
-                    <span className="text-[9px] text-[#6B7FA8]">Total</span>
+                    <span className="font-mono text-lg font-black text-al-text">{statusCounts.total}</span>
+                    <span className="text-[9px] text-al-text-muted">Total</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -641,9 +641,9 @@ export default async function ApprovalsPage({
                   ].map(({ label, count, color }) => (
                     <div key={label} className="flex items-center gap-2">
                       <span className={`h-2 w-2 flex-shrink-0 rounded-full ${color}`} />
-                      <span className="text-[11px] text-[#6B7FA8]">{label}</span>
-                      <span className="ml-auto font-mono text-[11px] font-bold text-[#E8EEFF]">{count}</span>
-                      <span className="w-8 text-right text-[10px] text-[#3D5070]">
+                      <span className="text-[11px] text-al-text-muted">{label}</span>
+                      <span className="ml-auto font-mono text-[11px] font-bold text-al-text">{count}</span>
+                      <span className="w-8 text-right text-[10px] text-al-text-secondary">
                         ({Math.round((count / (statusCounts.total || 1)) * 100)}%)
                       </span>
                     </div>
@@ -654,13 +654,13 @@ export default async function ApprovalsPage({
 
             {/* Department breakdown (org-wide) */}
             {departments.length > 0 ? (
-              <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+              <div className="rounded-xl border border-al-border bg-al-surface p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-bold text-[#E8EEFF]">Approvals by Dept</h3>
+                  <h3 className="font-bold text-al-text">Approvals by Dept</h3>
                   <PendingLink
                     href="/trust/compliance"
                     pendingText="Opening…"
-                    className="text-[11px] font-semibold text-violet-400 hover:text-violet-300"
+                    className="text-[11px] font-semibold text-al-accent hover:text-al-accent"
                   >
                     View all
                   </PendingLink>
@@ -671,13 +671,13 @@ export default async function ApprovalsPage({
                     return (
                       <div key={dept}>
                         <div className="mb-1 flex items-center gap-2">
-                          <span className="flex-1 truncate text-[11px] font-medium text-[#E8EEFF]">{dept}</span>
-                          <span className="font-mono text-[11px] text-[#6B7FA8]">{count}</span>
-                          <span className="w-10 text-right text-[10px] text-[#3D5070]">
+                          <span className="flex-1 truncate text-[11px] font-medium text-al-text">{dept}</span>
+                          <span className="font-mono text-[11px] text-al-text-muted">{count}</span>
+                          <span className="w-10 text-right text-[10px] text-al-text-secondary">
                             ({Math.round((count / (statusCounts.total || 1)) * 100)}%)
                           </span>
                         </div>
-                        <div className="h-1 overflow-hidden rounded-full bg-[#152040]">
+                        <div className="h-1 overflow-hidden rounded-full bg-al-surface-elevated">
                           <div
                             className={`h-full rounded-full ${DEPT_COLORS[idx % DEPT_COLORS.length]}`}
                             style={{ width: `${pct}%` }}
@@ -691,8 +691,8 @@ export default async function ApprovalsPage({
             ) : null}
 
             {/* Quick actions */}
-            <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
-              <h3 className="mb-3 font-bold text-[#E8EEFF]">Quick Actions</h3>
+            <div className="rounded-xl border border-al-border bg-al-surface p-4">
+              <h3 className="mb-3 font-bold text-al-text">Quick Actions</h3>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: 'New Approval',    href: '/approvals/manual',              icon: '＋', pending: 'Opening recorder…' },
@@ -704,10 +704,10 @@ export default async function ApprovalsPage({
                     key={label}
                     href={href}
                     pendingText={pending}
-                    className="flex flex-col items-center gap-1.5 rounded-lg border border-[#1E2D4A] bg-[#152040] p-3 text-center transition hover:border-violet-500/40"
+                    className="flex flex-col items-center gap-1.5 rounded-lg border border-al-border bg-al-surface-elevated p-3 text-center transition hover:border-al-accent/40"
                   >
                     <span className="text-xl">{icon}</span>
-                    <span className="text-[10px] font-semibold text-[#6B7FA8]">{label}</span>
+                    <span className="text-[10px] font-semibold text-al-text-muted">{label}</span>
                   </PendingLink>
                 ))}
               </div>

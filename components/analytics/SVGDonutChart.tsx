@@ -48,10 +48,10 @@ export function SVGDonutChart({
     return (
       <div className="flex flex-col items-center gap-3">
         <div
-          className="flex items-center justify-center rounded-full border border-[#1E2D4A]"
+          className="flex items-center justify-center rounded-full border border-al-border"
           style={{ width: size, height: size }}
         >
-          <p className="text-xs font-semibold text-slate-500">No data</p>
+          <p className="text-xs font-semibold text-al-text-muted">No data</p>
         </div>
       </div>
     );
@@ -95,7 +95,7 @@ export function SVGDonutChart({
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <p className="text-xl font-black text-white leading-none">{centerLabel}</p>
             {centerSublabel && (
-              <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{centerSublabel}</p>
+              <p className="mt-0.5 text-[10px] font-semibold text-al-text-muted">{centerSublabel}</p>
             )}
           </div>
         )}
@@ -107,11 +107,11 @@ export function SVGDonutChart({
             <div key={seg.label} className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
-                <span className="text-xs font-medium text-slate-400">{seg.label}</span>
+                <span className="text-xs font-medium text-al-text-muted">{seg.label}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-white">{nf(seg.value)}</span>
-                <span className="text-[10px] text-slate-500">
+                <span className="text-[10px] text-al-text-muted">
                   {total > 0 ? `${Math.round((seg.value / total) * 100)}%` : '0%'}
                 </span>
               </div>

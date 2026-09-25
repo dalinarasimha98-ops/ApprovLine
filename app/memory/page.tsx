@@ -113,23 +113,23 @@ export default async function MemoryPage({ searchParams }: MemoryPageProps) {
     <DashboardShell>
       <div className="flex flex-col h-full min-h-0 gap-0">
         {/* Page header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-[#1E2D4A] flex-shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-b border-al-border flex-shrink-0">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-400">Enterprise Intelligence</p>
-            <h1 className="mt-0.5 text-xl font-bold text-[#E8EEFF] tracking-tight">Memory Graph</h1>
-            <p className="mt-0.5 text-xs text-[#6B7FA8] max-w-xl">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-al-accent">Enterprise Intelligence</p>
+            <h1 className="mt-0.5 text-xl font-bold text-al-text tracking-tight">Memory Graph</h1>
+            <p className="mt-0.5 text-xs text-al-text-muted max-w-xl">
               Relationships between approvals, people, vendors, contracts, policies, evidence, and risk signals — visualized as an interactive graph.
             </p>
           </div>
           <div className="flex items-center gap-2">
             {params.refresh === 'complete' && (
-              <span className="rounded-lg bg-emerald-950/60 border border-emerald-900/50 px-3 py-1.5 text-xs font-semibold text-emerald-400">Graph refreshed</span>
+              <span className="rounded-lg bg-emerald-950/60 border border-emerald-900/50 px-3 py-1.5 text-xs font-semibold text-al-success">Graph refreshed</span>
             )}
             {params.refresh === 'error' && (
-              <span className="rounded-lg bg-rose-950/50 border border-rose-900/50 px-3 py-1.5 text-xs font-semibold text-rose-400">Refresh failed — try again</span>
+              <span className="rounded-lg bg-rose-950/50 border border-rose-900/50 px-3 py-1.5 text-xs font-semibold text-al-danger">Refresh failed — try again</span>
             )}
             <form action={refreshMemoryGraphAction}>
-              <button type="submit" className="rounded-lg bg-[#0E1830] border border-[#1E2D4A] px-3 py-1.5 text-xs font-semibold text-[#6B7FA8] hover:text-[#E8EEFF] hover:border-violet-500/50 transition">
+              <button type="submit" className="rounded-lg bg-al-surface border border-al-border px-3 py-1.5 text-xs font-semibold text-al-text-muted hover:text-al-text hover:border-al-accent/50 transition">
                 ↺ Rebuild Graph
               </button>
             </form>

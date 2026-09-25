@@ -37,7 +37,7 @@ export function KPICard({
   const isPositive = change !== null ? change >= 0 : null;
 
   const content = (
-    <div className="group relative rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-4 transition-all hover:border-[#2A3F66] hover:shadow-lg hover:shadow-black/30">
+    <div className="group relative rounded-2xl border border-al-border bg-[#0D1526] p-4 transition-all hover:border-al-border-strong hover:shadow-lg hover:shadow-black/30">
       {/* Top row: icon + title */}
       <div className="flex items-center gap-2.5">
         <div
@@ -46,13 +46,13 @@ export function KPICard({
         >
           {icon}
         </div>
-        <p className="text-[11px] font-semibold leading-tight text-slate-400">{title}</p>
+        <p className="text-[11px] font-semibold leading-tight text-al-text-muted">{title}</p>
       </div>
 
       {/* Value */}
       <p className="mt-2.5 text-[26px] font-black leading-none tracking-tight text-white">
         {value}
-        {unit && <span className="ml-1 text-sm font-semibold text-slate-400">{unit}</span>}
+        {unit && <span className="ml-1 text-sm font-semibold text-al-text-muted">{unit}</span>}
       </p>
 
       {/* Trend + comparison */}
@@ -61,8 +61,8 @@ export function KPICard({
           <div
             className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${
               isPositive
-                ? 'bg-emerald-500/10 text-emerald-400'
-                : 'bg-red-500/10 text-red-400'
+                ? 'bg-al-success/10 text-al-success'
+                : 'bg-al-danger/10 text-al-danger'
             }`}
           >
             <span>{isPositive ? '↑' : '↓'}</span>
@@ -70,14 +70,14 @@ export function KPICard({
           </div>
         )}
         {trendLabel && (
-          <p className="text-[10px] font-medium text-slate-600 truncate">{trendLabel}</p>
+          <p className="text-[10px] font-medium text-al-text-secondary truncate">{trendLabel}</p>
         )}
       </div>
 
       {/* Hover arrow */}
       {href && (
         <div className="absolute bottom-3 right-3 opacity-0 transition-opacity group-hover:opacity-100">
-          <span className="text-[10px] font-bold text-slate-500">View &rarr;</span>
+          <span className="text-[10px] font-bold text-al-text-muted">View &rarr;</span>
         </div>
       )}
     </div>

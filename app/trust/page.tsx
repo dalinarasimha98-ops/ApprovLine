@@ -137,7 +137,7 @@ function statusClass(tone: Tone) {
     ok: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     warning: 'border-amber-200 bg-amber-50 text-amber-800',
     error: 'border-rose-200 bg-rose-50 text-rose-700',
-    neutral: 'border-slate-200 bg-slate-50 text-slate-600',
+    neutral: 'border-al-border bg-al-surface-sunken text-al-text-secondary',
   }[tone];
 }
 
@@ -152,9 +152,9 @@ function StatusPill({ label, tone = 'ok' }: { label: string; tone?: Tone }) {
 function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-[0.22em] text-[#2155d9]">{eyebrow}</p>
-      <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">{title}</h2>
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{description}</p>
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-al-accent">{eyebrow}</p>
+      <h2 className="mt-2 text-2xl font-black tracking-tight text-al-text">{title}</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-al-text-secondary">{description}</p>
     </div>
   );
 }
@@ -162,19 +162,19 @@ function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title
 function ReadinessCard({ label, check }: { label: string; check: ReadinessCheck }) {
   const tone = toneFromStatus(check.status);
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-black text-slate-950">{label}</p>
+        <p className="text-sm font-black text-al-text">{label}</p>
         <StatusPill label={check.status} tone={tone} />
       </div>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{check.message}</p>
+      <p className="mt-3 text-sm leading-6 text-al-text-secondary">{check.message}</p>
     </div>
   );
 }
 
 function PermissionValue({ value }: { value: boolean }) {
   return (
-    <span className={`inline-flex min-w-16 justify-center rounded-full px-2.5 py-1 text-xs font-black ${value ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+    <span className={`inline-flex min-w-16 justify-center rounded-full px-2.5 py-1 text-xs font-black ${value ? 'bg-emerald-50 text-emerald-700' : 'bg-al-surface-elevated text-al-text-muted'}`}>
       {value ? 'Yes' : 'No'}
     </span>
   );
@@ -235,11 +235,11 @@ export default async function TrustPage() {
   return (
     <DashboardShell>
       <section className="grid gap-8">
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="bg-[#07111f] px-6 py-8 text-white sm:px-8">
+        <div className="overflow-hidden rounded-3xl border border-al-border bg-white shadow-sm">
+          <div className="bg-al-bg px-6 py-8 text-white sm:px-8">
             <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Security & Trust Center</p>
             <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">Enterprise security, permissions, privacy, and compliance in one place.</h1>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300">
+            <p className="mt-4 max-w-3xl text-base leading-7 text-al-text-secondary">
               ApprovLine is built as a read-only approval intelligence layer with tenant isolation, encrypted storage, audit logging, and clear integration permissions.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
@@ -262,13 +262,13 @@ export default async function TrustPage() {
           />
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {securityPrinciples.map((principle) => (
-              <div key={principle.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div key={principle.title} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-lg font-black text-slate-950">{principle.title}</h3>
+                  <h3 className="text-lg font-black text-al-text">{principle.title}</h3>
                   <StatusPill label={principle.status} />
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-600">{principle.description}</p>
-                <p className="mt-5 text-xs font-black uppercase tracking-wide text-slate-500">Last verification date: {lastVerified}</p>
+                <p className="mt-3 text-sm leading-6 text-al-text-secondary">{principle.description}</p>
+                <p className="mt-5 text-xs font-black uppercase tracking-wide text-al-text-muted">Last verification date: {lastVerified}</p>
               </div>
             ))}
           </div>
@@ -280,10 +280,10 @@ export default async function TrustPage() {
             title="Connector permissions"
             description="Every connector is documented with what ApprovLine can read and what it is intentionally not allowed to do."
           />
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
                   <tr>
                     <th className="px-4 py-3">System</th>
                     <th className="px-4 py-3">Access Type</th>
@@ -293,11 +293,11 @@ export default async function TrustPage() {
                 </thead>
                 <tbody>
                   {integrationPermissions.map((integration) => (
-                    <tr key={integration.name} className="border-t border-slate-100">
-                      <td className="px-4 py-4 font-black text-slate-950">{integration.name}</td>
+                    <tr key={integration.name} className="border-t border-al-border">
+                      <td className="px-4 py-4 font-black text-al-text">{integration.name}</td>
                       <td className="px-4 py-4"><StatusPill label={integration.accessType} /></td>
-                      <td className="px-4 py-4 text-slate-600">{integration.canRead.join(', ')}</td>
-                      <td className="px-4 py-4 text-slate-600">{integration.cannot.join(', ')}</td>
+                      <td className="px-4 py-4 text-al-text-secondary">{integration.canRead.join(', ')}</td>
+                      <td className="px-4 py-4 text-al-text-secondary">{integration.cannot.join(', ')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -312,10 +312,10 @@ export default async function TrustPage() {
             title="Data types stored"
             description="ApprovLine stores only the evidence and metadata needed to provide approval intelligence, auditability, investigations, analytics, and Copilot context."
           />
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] border-collapse text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
                   <tr>
                     <th className="px-4 py-3">Data Type</th>
                     <th className="px-4 py-3">Retention Policy</th>
@@ -325,10 +325,10 @@ export default async function TrustPage() {
                 </thead>
                 <tbody>
                   {storedDataTypes.map(([type, retention, location, encryption]) => (
-                    <tr key={type} className="border-t border-slate-100">
-                      <td className="px-4 py-4 font-black text-slate-950">{type}</td>
-                      <td className="px-4 py-4 text-slate-600">{retention}</td>
-                      <td className="px-4 py-4 text-slate-600">{location}</td>
+                    <tr key={type} className="border-t border-al-border">
+                      <td className="px-4 py-4 font-black text-al-text">{type}</td>
+                      <td className="px-4 py-4 text-al-text-secondary">{retention}</td>
+                      <td className="px-4 py-4 text-al-text-secondary">{location}</td>
                       <td className="px-4 py-4"><StatusPill label={encryption} /></td>
                     </tr>
                   ))}
@@ -346,9 +346,9 @@ export default async function TrustPage() {
           />
           <div className="grid gap-4 md:grid-cols-4">
             {tenantIsolation.map((item) => (
-              <div key={item} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div key={item} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
                 <StatusPill label="Isolated" />
-                <p className="mt-4 text-base font-black text-slate-950">{item}</p>
+                <p className="mt-4 text-base font-black text-al-text">{item}</p>
               </div>
             ))}
           </div>
@@ -364,10 +364,10 @@ export default async function TrustPage() {
             title="Role-based permissions matrix"
             description="Workspace roles determine whether a user can view, edit, investigate, use Copilot, or export approval evidence."
           />
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] border-collapse text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
                   <tr>
                     <th className="px-4 py-3">Role</th>
                     <th className="px-4 py-3">Can View</th>
@@ -379,8 +379,8 @@ export default async function TrustPage() {
                 </thead>
                 <tbody>
                   {roleMatrix.map((row) => (
-                    <tr key={row.role} className="border-t border-slate-100">
-                      <td className="px-4 py-4 font-black text-slate-950">{row.role}</td>
+                    <tr key={row.role} className="border-t border-al-border">
+                      <td className="px-4 py-4 font-black text-al-text">{row.role}</td>
                       <td className="px-4 py-4"><PermissionValue value={row.view} /></td>
                       <td className="px-4 py-4"><PermissionValue value={row.edit} /></td>
                       <td className="px-4 py-4"><PermissionValue value={row.investigate} /></td>
@@ -395,7 +395,7 @@ export default async function TrustPage() {
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
             <SectionHeader
               eyebrow="Auditability"
               title="Every action recorded"
@@ -403,14 +403,14 @@ export default async function TrustPage() {
             />
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {auditExamples.map((example) => (
-                <div key={example} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
+                <div key={example} className="rounded-xl border border-al-border bg-al-surface-sunken px-4 py-3 text-sm font-black text-al-text-secondary">
                   {example}
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
             <SectionHeader
               eyebrow="FAQ"
               title="Common security questions"
@@ -418,9 +418,9 @@ export default async function TrustPage() {
             />
             <div className="mt-5 grid gap-3">
               {faqs.map((faq) => (
-                <details key={faq.question} className="group rounded-xl border border-slate-200 bg-white p-4">
-                  <summary className="cursor-pointer text-sm font-black text-slate-950 marker:text-[#2155d9]">{faq.question}</summary>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">{faq.answer}</p>
+                <details key={faq.question} className="group rounded-xl border border-al-border bg-white p-4">
+                  <summary className="cursor-pointer text-sm font-black text-al-text marker:text-al-accent">{faq.question}</summary>
+                  <p className="mt-3 text-sm leading-6 text-al-text-secondary">{faq.answer}</p>
                 </details>
               ))}
             </div>
@@ -441,24 +441,24 @@ export default async function TrustPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
           <SectionHeader
             eyebrow="Contacts"
             title="Security, support, and issue reporting"
             description="Use these channels for vendor review, support requests, and pilot issue reporting."
           />
           <div className="mt-5 grid gap-4 md:grid-cols-3">
-            <a href="mailto:security@approvline.com" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
-              <p className="text-base font-black text-slate-950">Security Contact</p>
-              <p className="mt-2 text-sm font-semibold text-slate-600">security@approvline.com</p>
+            <a href="mailto:security@approvline.com" className="rounded-2xl border border-al-border bg-al-surface-sunken p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+              <p className="text-base font-black text-al-text">Security Contact</p>
+              <p className="mt-2 text-sm font-semibold text-al-text-secondary">security@approvline.com</p>
             </a>
-            <a href="mailto:support@approvline.com" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
-              <p className="text-base font-black text-slate-950">Support Contact</p>
-              <p className="mt-2 text-sm font-semibold text-slate-600">support@approvline.com</p>
+            <a href="mailto:support@approvline.com" className="rounded-2xl border border-al-border bg-al-surface-sunken p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+              <p className="text-base font-black text-al-text">Support Contact</p>
+              <p className="mt-2 text-sm font-semibold text-al-text-secondary">support@approvline.com</p>
             </a>
-            <PendingLink href="/dashboard/pilot" pendingText="Opening issue reporting..." className="rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
-              <p className="text-base font-black text-slate-950">Issue Reporting</p>
-              <p className="mt-2 text-sm font-semibold text-slate-600">Open pilot feedback and issue reporting.</p>
+            <PendingLink href="/dashboard/pilot" pendingText="Opening issue reporting..." className="rounded-2xl border border-al-border bg-al-surface-sunken p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+              <p className="text-base font-black text-al-text">Issue Reporting</p>
+              <p className="mt-2 text-sm font-semibold text-al-text-secondary">Open pilot feedback and issue reporting.</p>
             </PendingLink>
           </div>
         </section>

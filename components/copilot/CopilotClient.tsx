@@ -26,17 +26,17 @@ type CopilotClientProps = {
 
 function badgeClass(type: string) {
   if (type === 'approval') return 'border-teal-800 bg-teal-950 text-teal-400';
-  if (type === 'policy') return 'border-emerald-800 bg-emerald-950 text-emerald-400';
-  if (type === 'investigation') return 'border-rose-800 bg-rose-950 text-rose-400';
-  if (type === 'audit_log') return 'border-amber-800 bg-amber-950 text-amber-400';
+  if (type === 'policy') return 'border-emerald-800 bg-emerald-950 text-al-success';
+  if (type === 'investigation') return 'border-rose-800 bg-rose-950 text-al-danger';
+  if (type === 'audit_log') return 'border-amber-800 bg-amber-950 text-al-warning';
   return 'border-[#1E3354] bg-[#0D1B30] text-[#8BA3BE]';
 }
 
 function confidenceClass(confidence: number) {
-  if (confidence >= 90) return 'bg-emerald-950 text-emerald-400 border-emerald-800';
+  if (confidence >= 90) return 'bg-emerald-950 text-al-success border-emerald-800';
   if (confidence >= 75) return 'bg-teal-950 text-teal-400 border-teal-800';
-  if (confidence >= 60) return 'bg-amber-950 text-amber-400 border-amber-800';
-  return 'bg-rose-950 text-rose-400 border-rose-800';
+  if (confidence >= 60) return 'bg-amber-950 text-al-warning border-amber-800';
+  return 'bg-rose-950 text-al-danger border-rose-800';
 }
 
 function ResponseSkeleton() {
@@ -188,13 +188,13 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
           </div>
           <div className="border-r border-[#1E3354] px-5 py-3.5">
             <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">High Risk</p>
-            <p className="mt-1 font-mono text-xl font-medium tabular-nums text-amber-400">
+            <p className="mt-1 font-mono text-xl font-medium tabular-nums text-al-warning">
               {stats.highRisk.toLocaleString()}
             </p>
           </div>
           <div className="border-r border-[#1E3354] px-5 py-3.5">
             <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">Violations</p>
-            <p className="mt-1 font-mono text-xl font-medium tabular-nums text-rose-400">
+            <p className="mt-1 font-mono text-xl font-medium tabular-nums text-al-danger">
               {stats.violations.toLocaleString()}
             </p>
           </div>
@@ -249,7 +249,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
 
                   {/* Error */}
                   {turn.error ? (
-                    <div className="p-4 text-sm font-medium text-rose-400">
+                    <div className="p-4 text-sm font-medium text-al-danger">
                       {turn.error}
                     </div>
                   ) : null}
@@ -407,8 +407,8 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
             <div className="mt-3 grid gap-1.5">
               {[
                 { label: 'Records in scope', value: stats.total.toLocaleString(), color: 'text-[#E8F0FE]' },
-                { label: 'High risk', value: stats.highRisk.toLocaleString(), color: 'text-amber-400' },
-                { label: 'Violations', value: stats.violations.toLocaleString(), color: 'text-rose-400' },
+                { label: 'High risk', value: stats.highRisk.toLocaleString(), color: 'text-al-warning' },
+                { label: 'Violations', value: stats.violations.toLocaleString(), color: 'text-al-danger' },
                 { label: 'Evidence coverage', value: `${stats.evidenceCoverage}%`, color: 'text-teal-400' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="flex items-center justify-between border-b border-[#1E3354]/50 py-1.5 last:border-0">
@@ -451,7 +451,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
           <div className="grid gap-1.5 p-3">
             {coverageItems.map((item) => (
               <div key={item} className="flex items-center gap-2.5 rounded-lg border border-[#1E3354] bg-[#060C17]/40 px-3 py-2">
-                <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-950 text-emerald-500 ring-1 ring-emerald-800">
+                <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-950 text-al-success ring-1 ring-emerald-800">
                   <svg viewBox="0 0 16 16" className="h-2.5 w-2.5" fill="none" aria-hidden="true">
                     <path d="M3 8.5L6.5 12 13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>

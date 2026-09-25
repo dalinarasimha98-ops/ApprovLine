@@ -9,18 +9,18 @@ type ProviderStyle = {
 
 const PROVIDER_STYLES: Record<string, ProviderStyle> = {
   slack: { label: 'Slack', badge: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200', avatar: 'bg-fuchsia-500', Icon: MessageSquare },
-  gmail: { label: 'Gmail', badge: 'bg-rose-50 text-rose-700 border-rose-200', avatar: 'bg-rose-500', Icon: Mail },
+  gmail: { label: 'Gmail', badge: 'bg-rose-50 text-rose-700 border-rose-200', avatar: 'bg-al-danger', Icon: Mail },
   outlook: { label: 'Outlook', badge: 'bg-cyan-50 text-cyan-700 border-cyan-200', avatar: 'bg-cyan-500', Icon: Mail },
   microsoft_teams: { label: 'Microsoft Teams', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', avatar: 'bg-indigo-500', Icon: MessageSquare },
   jira: { label: 'Jira', badge: 'bg-blue-50 text-blue-700 border-blue-200', avatar: 'bg-blue-500', Icon: Ticket },
-  servicenow: { label: 'ServiceNow', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', avatar: 'bg-emerald-500', Icon: Wrench },
+  servicenow: { label: 'ServiceNow', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', avatar: 'bg-al-success', Icon: Wrench },
   zoom: { label: 'Zoom', badge: 'bg-sky-50 text-sky-700 border-sky-200', avatar: 'bg-sky-500', Icon: Video },
-  sap: { label: 'SAP', badge: 'bg-amber-50 text-amber-700 border-amber-200', avatar: 'bg-amber-500', Icon: Wrench },
+  sap: { label: 'SAP', badge: 'bg-amber-50 text-amber-700 border-amber-200', avatar: 'bg-al-warning', Icon: Wrench },
 };
 
 function providerStyle(platform?: string | null): ProviderStyle {
   const key = platform?.trim().toLowerCase() ?? '';
-  return PROVIDER_STYLES[key] ?? { label: platform || 'Source', badge: 'bg-slate-100 text-slate-700 border-slate-200', avatar: 'bg-slate-500', Icon: MessageSquare };
+  return PROVIDER_STYLES[key] ?? { label: platform || 'Source', badge: 'bg-al-surface-elevated text-al-text-secondary border-al-border', avatar: 'bg-al-text-muted', Icon: MessageSquare };
 }
 
 function initials(name: string) {
@@ -63,17 +63,17 @@ export function EvidenceMessageCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-black text-slate-950">{senderName}</p>
-            <span className="text-xs font-semibold text-slate-400">{timestamp}</span>
+            <p className="font-black text-al-text">{senderName}</p>
+            <span className="text-xs font-semibold text-al-text-muted">{timestamp}</span>
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700">
               <CheckCircle2 className="h-3 w-3" /> Approval captured
             </span>
           </div>
           <p className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${style.badge}`}>
             <Icon className="h-3 w-3" /> {style.label}
-            {senderEmail ? <span className="font-semibold normal-case text-slate-500">· {senderEmail}</span> : null}
+            {senderEmail ? <span className="font-semibold normal-case text-al-text-muted">· {senderEmail}</span> : null}
           </p>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-al-text-secondary">
             {content || 'No message content was retained for this evidence event.'}
           </p>
         </div>

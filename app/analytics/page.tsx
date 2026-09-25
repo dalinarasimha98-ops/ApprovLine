@@ -56,7 +56,7 @@ function pctChange(current: number | undefined, previous: number | undefined): s
 
 function DarkCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 ${className}`}>
+    <div className={`rounded-2xl border border-al-border bg-[#0D1526] p-5 ${className}`}>
       {children}
     </div>
   );
@@ -64,7 +64,7 @@ function DarkCard({ children, className = '' }: { children: React.ReactNode; cla
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-400">{children}</p>
+    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-al-accent">{children}</p>
   );
 }
 
@@ -84,10 +84,10 @@ function SectionHeader({
       <div className="min-w-0">
         {label && <SectionLabel>{label}</SectionLabel>}
         <CardTitle className={label ? 'mt-1' : ''}>{title}</CardTitle>
-        {subtitle && <p className="mt-0.5 text-[10px] text-slate-500">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-[10px] text-al-text-muted">{subtitle}</p>}
       </div>
       {href && (
-        <Link href={href} className="mt-0.5 flex-shrink-0 text-[10px] font-bold text-violet-400 transition-colors hover:text-violet-300">
+        <Link href={href} className="mt-0.5 flex-shrink-0 text-[10px] font-bold text-al-accent transition-colors hover:text-al-accent">
           {hrefLabel ?? 'View all →'}
         </Link>
       )}
@@ -105,13 +105,13 @@ function ConnectorBars({ items }: { items: CoreAnalytics['connectorActivity'] })
   function statusBadge(status: string) {
     const s = status?.toLowerCase();
     if (s === 'connected' || s === 'active') {
-      return <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">Live</span>;
+      return <span className="rounded-full bg-al-success/15 px-1.5 py-0.5 text-[9px] font-bold text-al-success">Live</span>;
     }
     if (s === 'error' || s === 'failed') {
-      return <span className="rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-400">Error</span>;
+      return <span className="rounded-full bg-al-danger/15 px-1.5 py-0.5 text-[9px] font-bold text-al-danger">Error</span>;
     }
     if (s === 'disconnected') {
-      return <span className="rounded-full bg-slate-500/15 px-1.5 py-0.5 text-[9px] font-bold text-slate-400">Off</span>;
+      return <span className="rounded-full bg-al-text-muted/15 px-1.5 py-0.5 text-[9px] font-bold text-al-text-muted">Off</span>;
     }
     return null;
   }
@@ -119,23 +119,23 @@ function ConnectorBars({ items }: { items: CoreAnalytics['connectorActivity'] })
   return (
     <div className="grid gap-2.5">
       {items.length === 0 ? (
-        <div className="rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] p-4 text-center">
-          <p className="text-xs font-semibold text-slate-500">No connector data yet.</p>
-          <p className="mt-1 text-[11px] text-slate-600">Connect integrations to see approval source activity.</p>
+        <div className="rounded-xl border border-al-border bg-[#0A0E1A] p-4 text-center">
+          <p className="text-xs font-semibold text-al-text-muted">No connector data yet.</p>
+          <p className="mt-1 text-[11px] text-al-text-secondary">Connect integrations to see approval source activity.</p>
         </div>
       ) : items.map((item) => (
         <div key={item.name} className="grid gap-1">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="truncate text-[11px] font-semibold text-slate-300">{item.name}</span>
+              <span className="truncate text-[11px] font-semibold text-al-text-secondary">{item.name}</span>
               {statusBadge(item.status)}
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              <span className="text-[11px] font-bold text-slate-400">{numberFormat(item.count)}</span>
-              <span className="text-[10px] text-slate-600">({item.percentage}%)</span>
+              <span className="text-[11px] font-bold text-al-text-muted">{numberFormat(item.count)}</span>
+              <span className="text-[10px] text-al-text-secondary">({item.percentage}%)</span>
             </div>
           </div>
-          <div className="h-1.5 rounded-full bg-[#1E2D4A]">
+          <div className="h-1.5 rounded-full bg-al-border">
             <div
               className="h-1.5 rounded-full bg-blue-500"
               style={{ width: `${Math.max(2, (item.count / max) * 100)}%` }}
@@ -158,21 +158,21 @@ function CategoryBars({ items }: { items: Array<{ name: string; count: number }>
   return (
     <div className="grid gap-2.5">
       {items.length === 0 ? (
-        <p className="text-xs font-semibold text-slate-500">Categories appear once approvals are captured.</p>
+        <p className="text-xs font-semibold text-al-text-muted">Categories appear once approvals are captured.</p>
       ) : items.map((item) => {
         const pct = Math.round((item.count / total) * 100);
         return (
           <div key={item.name} className="grid gap-1">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-300">{item.name}</span>
+              <span className="text-[11px] font-semibold text-al-text-secondary">{item.name}</span>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
+                <span className="text-[11px] font-bold text-al-text-muted">{pct}%</span>
                 <span className="w-10 text-right text-[11px] font-bold text-white">{numberFormat(item.count)}</span>
               </div>
             </div>
-            <div className="h-1.5 rounded-full bg-[#1E2D4A]">
+            <div className="h-1.5 rounded-full bg-al-border">
               <div
-                className="h-1.5 rounded-full bg-violet-500"
+                className="h-1.5 rounded-full bg-al-accent-hover"
                 style={{ width: `${Math.max(2, (item.count / max) * 100)}%` }}
               />
             </div>
@@ -189,7 +189,7 @@ function CategoryBars({ items }: { items: Array<{ name: string; count: number }>
 
 function DegradedNotice({ label }: { label: string }) {
   return (
-    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-xs font-bold text-amber-300">
+    <div className="rounded-xl border border-al-warning/20 bg-al-warning/10 px-4 py-2.5 text-xs font-bold text-al-warning">
       {label}: showing last successfully loaded data while the live query recovers.
     </div>
   );
@@ -197,9 +197,9 @@ function DegradedNotice({ label }: { label: string }) {
 
 function SectionUnavailable({ title, message }: { title: string; message: string }) {
   return (
-    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5">
-      <p className="text-xs font-black uppercase tracking-wide text-amber-300">{title}</p>
-      <p className="mt-2 text-sm font-semibold text-amber-200">{message}</p>
+    <div className="rounded-2xl border border-al-warning/20 bg-al-warning/10 p-5">
+      <p className="text-xs font-black uppercase tracking-wide text-al-warning">{title}</p>
+      <p className="mt-2 text-sm font-semibold text-al-warning">{message}</p>
     </div>
   );
 }
@@ -356,12 +356,12 @@ async function ExecutiveDashboardSection({
       {/* Data freshness + demo badge row */}
       <div className="flex items-center justify-between gap-2">
         {freshnessLabel && (
-          <p className="text-[10px] font-semibold text-slate-600">
+          <p className="text-[10px] font-semibold text-al-text-secondary">
             Data as of {freshnessLabel}{report.demoProjection ? '' : ' · Live workspace'}
           </p>
         )}
         {report.demoProjection && (
-          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-violet-400">
+          <span className="rounded-full border border-al-accent/30 bg-al-accent-hover/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-al-accent">
             Demo Mode
           </span>
         )}
@@ -369,29 +369,29 @@ async function ExecutiveDashboardSection({
 
       {/* Demo mode banner */}
       {report.demoProjection && (
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border-2 border-violet-500/50 bg-violet-500/10 p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border-2 border-al-accent/50 bg-al-accent-hover/10 p-4 sm:flex-row sm:items-center">
           <div>
             <h3 className="font-black text-white">Demo analytics preview — synthetic numbers only</h3>
-            <p className="mt-1 text-sm font-semibold text-slate-300">Use this for sales conversations. Every figure is scaled/fabricated.</p>
+            <p className="mt-1 text-sm font-semibold text-al-text-secondary">Use this for sales conversations. Every figure is scaled/fabricated.</p>
           </div>
-          <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex h-9 items-center justify-center rounded-lg border border-[#1E2D4A] bg-[#0D1526] px-4 text-sm font-bold text-slate-200 hover:bg-[#1a2a45]">
+          <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex h-9 items-center justify-center rounded-lg border border-al-border bg-[#0D1526] px-4 text-sm font-bold text-al-text-secondary hover:bg-[#1a2a45]">
             View live data
           </PendingLink>
         </div>
       )}
 
       {hasNoLiveData && (
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-al-border bg-[#0D1526] p-4 sm:flex-row sm:items-center">
           <div>
             <h3 className="font-black text-white">No approvals captured yet</h3>
-            <p className="mt-1 text-sm font-semibold text-slate-400">These are your real, live numbers — zero because no approvals have been captured. Connect an integration to start.</p>
+            <p className="mt-1 text-sm font-semibold text-al-text-muted">These are your real, live numbers — zero because no approvals have been captured. Connect an integration to start.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex h-9 items-center justify-center rounded-lg bg-violet-600 px-4 text-sm font-bold text-white hover:bg-violet-500">
+            <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex h-9 items-center justify-center rounded-lg bg-al-accent px-4 text-sm font-bold text-white hover:bg-al-accent-hover">
               Preview demo
             </PendingLink>
             <form action="/api/demo/seed" method="post">
-              <FormSubmitButton pendingText="Generating..." className="inline-flex h-9 items-center justify-center rounded-lg border border-[#1E2D4A] bg-[#0D1526] px-4 text-sm font-bold text-slate-200">
+              <FormSubmitButton pendingText="Generating..." className="inline-flex h-9 items-center justify-center rounded-lg border border-al-border bg-[#0D1526] px-4 text-sm font-bold text-al-text-secondary">
                 Generate demo data
               </FormSubmitButton>
             </form>
@@ -476,7 +476,7 @@ async function ExecutiveDashboardSection({
                 <div className="min-w-0">
                   <CardTitle>Approval Volume Trend</CardTitle>
                 </div>
-                <Link href="/approvals" className="mt-0.5 flex-shrink-0 text-[10px] font-bold text-violet-400 transition-colors hover:text-violet-300">
+                <Link href="/approvals" className="mt-0.5 flex-shrink-0 text-[10px] font-bold text-al-accent transition-colors hover:text-al-accent">
                   View all approvals →
                 </Link>
               </div>
@@ -485,7 +485,7 @@ async function ExecutiveDashboardSection({
                 {lineSeries.map((s) => (
                   <div key={s.key} className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-                    <span className="text-[10px] font-semibold text-slate-400">{s.label}</span>
+                    <span className="text-[10px] font-semibold text-al-text-muted">{s.label}</span>
                   </div>
                 ))}
               </div>
@@ -517,19 +517,19 @@ async function ExecutiveDashboardSection({
                 </div>
                 <div className="min-w-0 flex-1 grid gap-1">
                   {deptSegments.length === 0 ? (
-                    <p className="text-[11px] text-slate-500">No department data yet.</p>
+                    <p className="text-[11px] text-al-text-muted">No department data yet.</p>
                   ) : deptSegments.map((seg) => {
                     const pct = total > 0 ? Math.round((seg.value / total) * 100) : 0;
                     return (
                       <Link
                         key={seg.label}
                         href={`/approvals?department=${encodeURIComponent(seg.label)}`}
-                        className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-[#1E2D4A]/60"
+                        className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-al-border/60"
                       >
                         <div className="h-2.5 w-2.5 flex-shrink-0 rounded-sm" style={{ backgroundColor: seg.color }} />
-                        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-slate-300">{seg.label}</span>
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-al-text-secondary">{seg.label}</span>
                         <span className="text-[11px] font-bold text-white">{pct}%</span>
-                        <span className="w-9 text-right text-[10px] text-slate-500">({numberFormat(seg.value)})</span>
+                        <span className="w-9 text-right text-[10px] text-al-text-muted">({numberFormat(seg.value)})</span>
                       </Link>
                     );
                   })}
@@ -564,16 +564,16 @@ async function ExecutiveDashboardSection({
                       <Link
                         key={seg.label}
                         href={`/approvals?riskLevel=${riskParam}`}
-                        className="flex items-center gap-1.5 rounded-lg px-1 py-0.5 transition-colors hover:bg-[#1E2D4A]/50"
+                        className="flex items-center gap-1.5 rounded-lg px-1 py-0.5 transition-colors hover:bg-al-border/50"
                       >
                         <div className="h-2.5 w-2.5 flex-shrink-0 rounded-sm" style={{ backgroundColor: seg.color }} />
-                        <span className="flex-1 text-[11px] font-semibold text-slate-300">{seg.label} Risk</span>
-                        <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
-                        <span className="w-10 text-right text-[10px] text-slate-500">({numberFormat(seg.value)})</span>
+                        <span className="flex-1 text-[11px] font-semibold text-al-text-secondary">{seg.label} Risk</span>
+                        <span className="text-[11px] font-bold text-al-text-muted">{pct}%</span>
+                        <span className="w-10 text-right text-[10px] text-al-text-muted">({numberFormat(seg.value)})</span>
                       </Link>
                     );
                   }) : (
-                    <p className="text-[11px] text-slate-500">No risk data yet.</p>
+                    <p className="text-[11px] text-al-text-muted">No risk data yet.</p>
                   )}
                 </div>
               </div>
@@ -586,17 +586,17 @@ async function ExecutiveDashboardSection({
                 hrefLabel="View all investigations →"
               />
               {report.investigationMetrics.total === 0 ? (
-                <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] py-8 text-center">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-500/10">
-                    <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-xl border border-al-border bg-[#0A0E1A] py-8 text-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-al-text-muted/10">
+                    <svg className="h-5 w-5 text-al-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-400">No investigations created yet</p>
-                    <p className="mt-1 text-[11px] text-slate-600">Open the Investigation Center to start reviewing high-risk approvals.</p>
+                    <p className="text-xs font-bold text-al-text-muted">No investigations created yet</p>
+                    <p className="mt-1 text-[11px] text-al-text-secondary">Open the Investigation Center to start reviewing high-risk approvals.</p>
                   </div>
-                  <Link href="/investigations/new" className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-violet-600/20 px-3 py-1.5 text-xs font-bold text-violet-300 hover:bg-violet-600/30 transition-colors border border-violet-500/20">
+                  <Link href="/investigations/new" className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-al-accent/20 px-3 py-1.5 text-xs font-bold text-al-accent hover:bg-al-accent/30 transition-colors border border-al-accent/20">
                     Open Investigation Center →
                   </Link>
                 </div>
@@ -616,17 +616,17 @@ async function ExecutiveDashboardSection({
                         <Link
                           key={label}
                           href={`/investigations${status ? `?status=${status}` : ''}`}
-                          className="flex flex-col items-center rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] px-1 py-2.5 text-center transition-colors hover:border-[#2A3F66]"
+                          className="flex flex-col items-center rounded-xl border border-al-border bg-[#0A0E1A] px-1 py-2.5 text-center transition-colors hover:border-al-border-strong"
                         >
                           <div className="mb-1.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${color}20` }}>
                             <svg className="h-4.5 w-4.5 h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d={iconPath} />
                             </svg>
                           </div>
-                          <span className="text-[9px] font-semibold leading-snug text-slate-500 whitespace-nowrap">{label}</span>
+                          <span className="text-[9px] font-semibold leading-snug text-al-text-muted whitespace-nowrap">{label}</span>
                           <span className="mt-0.5 text-lg font-black text-white leading-none">{numberFormat(value)}</span>
                           {trendPct !== null && (
-                            <div className={`mt-1 flex items-center gap-0.5 text-[9px] font-bold ${trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                            <div className={`mt-1 flex items-center gap-0.5 text-[9px] font-bold ${trendUp ? 'text-al-success' : 'text-al-danger'}`}>
                               <span>{trendUp ? '↗' : '↘'}</span>
                               <span>{trendPct}%</span>
                             </div>
@@ -635,11 +635,11 @@ async function ExecutiveDashboardSection({
                       ))}
                     </div>
                     {report.investigationMetrics.avgResolutionHours !== null && (
-                      <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#1E2D4A] bg-[#0A0E1A] px-3 py-2">
-                        <svg className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <div className="mt-3 flex items-center gap-2 rounded-lg border border-al-border bg-[#0A0E1A] px-3 py-2">
+                        <svg className="h-3.5 w-3.5 flex-shrink-0 text-al-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span className="text-[11px] text-slate-400">Avg resolution time:</span>
+                        <span className="text-[11px] text-al-text-muted">Avg resolution time:</span>
                         <span className="text-[11px] font-bold text-white">{report.investigationMetrics.avgResolutionHours}h</span>
                       </div>
                     )}
@@ -665,20 +665,20 @@ async function ExecutiveDashboardSection({
                   if (!change) return null;
                   const isPos = !change.startsWith('-');
                   return (
-                    <p className={`text-[11px] font-bold ${isPos ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <p className={`text-[11px] font-bold ${isPos ? 'text-al-success' : 'text-al-danger'}`}>
                       {change} vs previous period
                     </p>
                   );
                 })()}
                 {/* Show evidence counts only when they have real data */}
                 {(report.evidenceMetrics.totalEvents > 0 || report.evidenceMetrics.unifiedRecords > 0) && (
-                  <div className="w-full grid grid-cols-2 gap-2 border-t border-[#1E2D4A] pt-3">
-                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-[#1E2D4A] bg-[#0A0E1A] px-2 py-1.5 hover:border-[#2A3F66] transition-colors">
-                      <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">Evidence Events</span>
+                  <div className="w-full grid grid-cols-2 gap-2 border-t border-al-border pt-3">
+                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-al-border bg-[#0A0E1A] px-2 py-1.5 hover:border-al-border-strong transition-colors">
+                      <span className="text-[9px] font-semibold uppercase tracking-wide text-al-text-muted">Evidence Events</span>
                       <span className="mt-0.5 text-sm font-black text-white">{numberFormat(report.evidenceMetrics.totalEvents)}</span>
                     </Link>
-                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-[#1E2D4A] bg-[#0A0E1A] px-2 py-1.5 hover:border-[#2A3F66] transition-colors">
-                      <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">Unified Records</span>
+                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-al-border bg-[#0A0E1A] px-2 py-1.5 hover:border-al-border-strong transition-colors">
+                      <span className="text-[9px] font-semibold uppercase tracking-wide text-al-text-muted">Unified Records</span>
                       <span className="mt-0.5 text-sm font-black text-white">{numberFormat(report.evidenceMetrics.unifiedRecords)}</span>
                     </Link>
                   </div>
@@ -737,7 +737,7 @@ async function ExecutiveDashboardSection({
                     <SectionLabel>Operational Impact</SectionLabel>
                     <CardTitle>ApprovLine ROI &amp; Time Saved</CardTitle>
                   </div>
-                  <Link href="/api/export/analytics?format=csv" className="mt-1 flex-shrink-0 text-[10px] font-bold text-violet-400 transition-colors hover:text-violet-300">
+                  <Link href="/api/export/analytics?format=csv" className="mt-1 flex-shrink-0 text-[10px] font-bold text-al-accent transition-colors hover:text-al-accent">
                     Export report →
                   </Link>
                 </div>
@@ -749,21 +749,21 @@ async function ExecutiveDashboardSection({
                       { label: 'Search Time Saved', value: `${numberFormat(timeSaved.manualSearchHours)}h`, sub: 'manual search', color: '#0891B2' },
                       { label: 'Est. Operational Savings', value: `$${numberFormat(estimatedSavings)}`, sub: `at $${hrRate}/hr assumed`, color: '#F59E0B' },
                     ].map(({ label, value, sub, color }) => (
-                      <div key={label} className="rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] p-3">
-                        <p className="text-[10px] font-semibold text-slate-500">{label}</p>
+                      <div key={label} className="rounded-xl border border-al-border bg-[#0A0E1A] p-3">
+                        <p className="text-[10px] font-semibold text-al-text-muted">{label}</p>
                         <p className="mt-1.5 text-xl font-black text-white" style={{ color }}>{value}</p>
-                        <p className="mt-0.5 text-[10px] text-slate-600">{sub}</p>
+                        <p className="mt-0.5 text-[10px] text-al-text-secondary">{sub}</p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="mt-4 rounded-xl border border-[#1E2D4A] bg-[#0A0E1A] px-4 py-6 text-center">
-                    <p className="text-xs font-bold text-slate-500">ROI measurement requires additional historical approval activity.</p>
-                    <p className="mt-1 text-[11px] text-slate-600">Connect integrations and capture approvals to generate operational impact metrics.</p>
+                  <div className="mt-4 rounded-xl border border-al-border bg-[#0A0E1A] px-4 py-6 text-center">
+                    <p className="text-xs font-bold text-al-text-muted">ROI measurement requires additional historical approval activity.</p>
+                    <p className="mt-1 text-[11px] text-al-text-secondary">Connect integrations and capture approvals to generate operational impact metrics.</p>
                   </div>
                 )}
                 {hasROIData && (
-                  <p className="mt-3 text-[10px] text-slate-600">
+                  <p className="mt-3 text-[10px] text-al-text-secondary">
                     Estimates based on {numberFormat(total)} captured approvals. Hours saved = retrieval + search + audit prep avoided. Savings assume ${hrRate}/hr knowledge worker rate. Actual savings vary.
                   </p>
                 )}
@@ -793,12 +793,12 @@ function DashboardSkeleton() {
     <div className="grid gap-5">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-32 animate-pulse rounded-2xl border border-[#1E2D4A] bg-[#0D1526]" />
+          <div key={i} className="h-32 animate-pulse rounded-2xl border border-al-border bg-[#0D1526]" />
         ))}
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
-        <div className="h-64 animate-pulse rounded-2xl border border-[#1E2D4A] bg-[#0D1526]" />
-        <div className="h-64 animate-pulse rounded-2xl border border-[#1E2D4A] bg-[#0D1526]" />
+        <div className="h-64 animate-pulse rounded-2xl border border-al-border bg-[#0D1526]" />
+        <div className="h-64 animate-pulse rounded-2xl border border-al-border bg-[#0D1526]" />
       </div>
     </div>
   );
@@ -841,7 +841,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h1 className="text-2xl font-black tracking-tight text-white">Executive Analytics</h1>
-                <p className="mt-1 text-sm font-medium text-slate-400">
+                <p className="mt-1 text-sm font-medium text-al-text-muted">
                   Strategic intelligence for smarter, faster and safer decisions across your organization.
                 </p>
               </div>
@@ -862,7 +862,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
                   <PendingLink
                     href={`/api/export/analytics?format=csv${requestedDemo ? '&demo=1' : ''}`}
                     pendingText="Preparing..."
-                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 text-xs font-bold text-white hover:bg-violet-500 transition-colors"
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-al-accent px-3 text-xs font-bold text-white hover:bg-al-accent-hover transition-colors"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -873,7 +873,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
                     <PendingLink
                       href="/analytics?demo=1"
                       pendingText="Loading..."
-                      className="inline-flex h-8 items-center justify-center rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 text-xs font-bold text-violet-300 hover:bg-violet-500/20 transition-colors"
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-al-accent/30 bg-al-accent-hover/10 px-3 text-xs font-bold text-al-accent hover:bg-al-accent-hover/20 transition-colors"
                     >
                       Demo Mode
                     </PendingLink>

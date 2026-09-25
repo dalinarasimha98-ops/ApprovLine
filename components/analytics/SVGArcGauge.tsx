@@ -107,7 +107,7 @@ export function SVGArcGauge({
         )}
       </svg>
       {sublabel && (
-        <p className="mt-1 text-center text-xs font-medium text-slate-400">{sublabel}</p>
+        <p className="mt-1 text-center text-xs font-medium text-al-text-muted">{sublabel}</p>
       )}
     </div>
   );

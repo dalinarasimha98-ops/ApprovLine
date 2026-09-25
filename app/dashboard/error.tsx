@@ -10,16 +10,16 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
   return (
     <section className="grid gap-4 rounded-lg border border-amber-200 bg-white p-6">
       <p className="text-sm font-bold uppercase text-amber-700">Dashboard unavailable</p>
-      <h1 className="text-2xl font-black text-slate-950">We could not load your workspace</h1>
-      <p className="text-slate-600">
+      <h1 className="text-2xl font-black text-al-text">We could not load your workspace</h1>
+      <p className="text-al-text-secondary">
         Your session is still valid. Check service readiness, then retry the dashboard.
       </p>
-      {error.digest ? <p className="text-sm text-slate-500">Digest: {error.digest}</p> : null}
+      {error.digest ? <p className="text-sm text-al-text-muted">Digest: {error.digest}</p> : null}
       <div className="flex flex-wrap gap-3">
-        <button onClick={reset} className="rounded-md bg-[#2155d9] px-4 py-2 font-bold text-white">
+        <button onClick={reset} className="rounded-md bg-al-accent px-4 py-2 font-bold text-white">
           Retry dashboard
         </button>
-        <a href="/health" className="rounded-md border border-slate-200 px-4 py-2 font-bold text-slate-700">
+        <a href="/health" className="rounded-md border border-al-border px-4 py-2 font-bold text-al-text-secondary">
           Open health check
         </a>
       </div>

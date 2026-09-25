@@ -17,14 +17,14 @@ function jsonObject<T extends Record<string, unknown>>(value: unknown, fallback:
 
 function DatabaseSetupError({ message }: { message?: string }) {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] px-4 py-6 text-slate-950 sm:px-6">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] px-4 py-6 text-al-text sm:px-6">
       <section className="mx-auto mt-20 grid max-w-xl gap-4 rounded-2xl border border-rose-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:p-8">
         <p className="text-sm font-bold uppercase tracking-wide text-rose-600">Database setup required</p>
-        <h1 className="text-2xl font-black text-slate-950">ApprovLine database is not ready</h1>
-        <p className="text-sm leading-6 text-slate-600">
+        <h1 className="text-2xl font-black text-al-text">ApprovLine database is not ready</h1>
+        <p className="text-sm leading-6 text-al-text-secondary">
           {message ?? 'Confirm DATABASE_URL is set correctly and Prisma migrations have been deployed.'}
         </p>
-        <Link href="/health" className="inline-flex h-11 items-center justify-center rounded-xl bg-[#2155d9] px-5 text-sm font-bold text-white">
+        <Link href="/health" className="inline-flex h-11 items-center justify-center rounded-xl bg-al-accent px-5 text-sm font-bold text-white">
           Open health check
         </Link>
       </section>
@@ -45,12 +45,12 @@ export default async function OnboardingPage({ searchParams }: { searchParams?: 
 
   if (!hasAnyRole(tenant.user.role, ['OWNER', 'ADMIN'])) {
     return (
-      <main className="grid min-h-screen place-items-center bg-slate-50 px-4">
+      <main className="grid min-h-screen place-items-center bg-al-surface-sunken px-4">
         <section className="max-w-xl rounded-2xl border border-amber-200 bg-white p-8 shadow-sm">
           <p className="text-xs font-black uppercase tracking-wide text-amber-700">Org admin required</p>
-          <h1 className="mt-2 text-2xl font-black text-slate-950">Only organization admins can complete onboarding</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">Ask an organization admin to finish workspace setup or update your role.</p>
-          <Link href="/dashboard" className="mt-5 inline-flex rounded-xl bg-[#2155d9] px-5 py-3 text-sm font-black text-white">Return to dashboard</Link>
+          <h1 className="mt-2 text-2xl font-black text-al-text">Only organization admins can complete onboarding</h1>
+          <p className="mt-3 text-sm leading-6 text-al-text-secondary">Ask an organization admin to finish workspace setup or update your role.</p>
+          <Link href="/dashboard" className="mt-5 inline-flex rounded-xl bg-al-accent px-5 py-3 text-sm font-black text-white">Return to dashboard</Link>
         </section>
       </main>
     );

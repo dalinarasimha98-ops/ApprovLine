@@ -44,30 +44,30 @@ function dateText(value: Date) {
 function riskClass(risk?: string | null) {
   const v = risk?.toUpperCase();
   if (v === 'CRITICAL' || v === 'HIGH')
-    return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
-  if (v === 'MEDIUM') return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
-  if (v === 'LOW') return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-  return 'bg-slate-700/40 text-slate-400 border border-slate-600/30';
+    return 'bg-al-danger/10 text-al-danger border border-al-danger/20';
+  if (v === 'MEDIUM') return 'bg-al-warning/10 text-al-warning border border-al-warning/20';
+  if (v === 'LOW') return 'bg-al-success/10 text-al-success border border-al-success/20';
+  return 'bg-slate-700/40 text-al-text-muted border border-slate-600/30';
 }
 
 function riskCircleClass(risk?: string | null) {
   const v = risk?.toUpperCase();
-  if (v === 'CRITICAL' || v === 'HIGH') return 'bg-rose-500/10 text-rose-400';
-  if (v === 'MEDIUM') return 'bg-amber-500/10 text-amber-400';
-  return 'bg-emerald-500/10 text-emerald-400';
+  if (v === 'CRITICAL' || v === 'HIGH') return 'bg-al-danger/10 text-al-danger';
+  if (v === 'MEDIUM') return 'bg-al-warning/10 text-al-warning';
+  return 'bg-al-success/10 text-al-success';
 }
 
 function verificationClass(status: string) {
   if (status === 'HUMAN_VERIFIED' || status === 'APPROVER_CONFIRMED')
-    return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+    return 'bg-al-success/10 text-al-success border border-al-success/20';
   if (status === 'DISPUTED' || status === 'REJECTED')
-    return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
-  return 'bg-violet-500/10 text-violet-400 border border-violet-500/20';
+    return 'bg-al-danger/10 text-al-danger border border-al-danger/20';
+  return 'bg-al-accent-hover/10 text-al-accent border border-al-accent/20';
 }
 
 function providerDot(provider: string) {
   const map: Record<string, string> = {
-    slack: 'bg-rose-500',
+    slack: 'bg-al-danger',
     gmail: 'bg-orange-500',
     outlook: 'bg-blue-500',
     microsoft_teams: 'bg-indigo-500',
@@ -75,9 +75,9 @@ function providerDot(provider: string) {
     jira: 'bg-blue-600',
     zoom: 'bg-blue-400',
     servicenow: 'bg-green-500',
-    universal_gateway: 'bg-violet-500',
+    universal_gateway: 'bg-al-accent-hover',
   };
-  return map[provider] ?? 'bg-slate-500';
+  return map[provider] ?? 'bg-al-text-muted';
 }
 
 function paginationHref(params: EvidenceSearchParams, page: number) {
@@ -95,7 +95,7 @@ function KpiSkeleton() {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="h-24 animate-pulse rounded-xl border border-[#1E2D4A] bg-[#0E1830]" />
+        <div key={i} className="h-24 animate-pulse rounded-xl border border-al-border bg-al-surface" />
       ))}
     </div>
   );
@@ -103,13 +103,13 @@ function KpiSkeleton() {
 
 function TableSkeleton() {
   return (
-    <div className="overflow-hidden rounded-xl border border-[#1E2D4A] bg-[#0E1830]">
-      <div className="border-b border-[#1E2D4A] px-5 py-3.5">
-        <div className="h-4 w-40 animate-pulse rounded bg-[#152040]" />
+    <div className="overflow-hidden rounded-xl border border-al-border bg-al-surface">
+      <div className="border-b border-al-border px-5 py-3.5">
+        <div className="h-4 w-40 animate-pulse rounded bg-al-surface-elevated" />
       </div>
       <div className="divide-y divide-[#1E2D4A]/60">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-14 animate-pulse bg-[#0a1524]" />
+          <div key={i} className="h-14 animate-pulse bg-al-surface-sunken" />
         ))}
       </div>
     </div>
@@ -193,10 +193,10 @@ async function EvidenceStatsSection({
   ] as const;
 
   const iconBg: Record<string, string> = {
-    violet: 'bg-violet-500/10 text-violet-400',
-    blue:   'bg-blue-500/10 text-blue-400',
-    emerald:'bg-emerald-500/10 text-emerald-400',
-    rose:   'bg-rose-500/10 text-rose-400',
+    violet: 'bg-al-accent-hover/10 text-al-accent',
+    blue:   'bg-al-info/10 text-al-info',
+    emerald:'bg-al-success/10 text-al-success',
+    rose:   'bg-al-danger/10 text-al-danger',
   };
 
   return (
@@ -204,18 +204,18 @@ async function EvidenceStatsSection({
       {tiles.map((tile) => (
         <div
           key={tile.label}
-          className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4 transition hover:border-violet-500/30"
+          className="rounded-xl border border-al-border bg-al-surface p-4 transition hover:border-al-accent/30"
         >
           <div className="flex items-start gap-3">
             <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-base font-bold ${iconBg[tile.color]}`}>
               {tile.icon}
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-[#6B7FA8]">{tile.label}</p>
-              <p className="mt-0.5 font-mono text-2xl font-black tracking-tight text-[#E8EEFF]">
+              <p className="text-[11px] font-semibold text-al-text-muted">{tile.label}</p>
+              <p className="mt-0.5 font-mono text-2xl font-black tracking-tight text-al-text">
                 {Number(tile.value).toLocaleString()}
               </p>
-              <p className="mt-0.5 text-[11px] text-[#3D5070]">{tile.sub}</p>
+              <p className="mt-0.5 text-[11px] text-al-text-secondary">{tile.sub}</p>
             </div>
           </div>
         </div>
@@ -248,18 +248,18 @@ async function EvidenceResultsSection({
 
   if (data.setupRequired) {
     return (
-      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5">
-        <p className="text-xs font-black uppercase tracking-wide text-amber-400">
+      <div className="rounded-xl border border-al-warning/20 bg-al-warning/5 p-5">
+        <p className="text-xs font-black uppercase tracking-wide text-al-warning">
           Evidence storage unavailable
         </p>
-        <h2 className="mt-2 text-xl font-black text-[#E8EEFF]">
+        <h2 className="mt-2 text-xl font-black text-al-text">
           Unified evidence is not ready yet
         </h2>
-        <p className="mt-2 text-sm font-semibold leading-6 text-amber-300/80">
+        <p className="mt-2 text-sm font-semibold leading-6 text-al-warning/80">
           Run <code className="rounded bg-black/30 px-2 py-0.5">npm run db:deploy</code> against
           the production database, then retry this page.
         </p>
-        <p className="mt-3 rounded-lg bg-black/20 p-3 text-xs font-bold text-amber-300/70">
+        <p className="mt-3 rounded-lg bg-black/20 p-3 text-xs font-bold text-al-warning/70">
           {data.message}
         </p>
       </div>
@@ -306,8 +306,8 @@ async function EvidenceResultsSection({
         <div
           className={
             data.alert
-              ? 'rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-200'
-              : 'rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4 text-[#6B7FA8]'
+              ? 'rounded-xl border border-al-warning/20 bg-al-warning/5 p-4 text-al-warning'
+              : 'rounded-xl border border-al-border bg-al-surface p-4 text-al-text-muted'
           }
         >
           {data.alert ? <AutoRetryOnDegraded /> : null}
@@ -318,26 +318,26 @@ async function EvidenceResultsSection({
               </h3>
               <p className="mt-1 text-sm">{data.message}</p>
             </div>
-            <RefreshButton className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#1E2D4A] bg-[#152040] px-4 text-sm font-bold text-[#E8EEFF] disabled:opacity-50" />
+            <RefreshButton className="inline-flex h-9 items-center gap-2 rounded-lg border border-al-border bg-al-surface-elevated px-4 text-sm font-bold text-al-text disabled:opacity-50" />
           </div>
         </div>
       ) : null}
       {!data.message && data.staleAsOfMs ? (
-        <p className="-mt-2 text-xs font-semibold text-[#3D5070]">
+        <p className="-mt-2 text-xs font-semibold text-al-text-secondary">
           Last updated {minutesAgo(data.staleAsOfMs)}.
         </p>
       ) : null}
 
       {/* Empty state */}
       {records.length === 0 && !data.degraded ? (
-        <div className="rounded-xl border border-dashed border-[#1E2D4A] bg-[#0E1830]/50 p-12 text-center">
-          <p className="text-xs font-black uppercase tracking-widest text-violet-400">
+        <div className="rounded-xl border border-dashed border-al-border bg-al-surface/50 p-12 text-center">
+          <p className="text-xs font-black uppercase tracking-widest text-al-accent">
             No matching evidence
           </p>
-          <h2 className="mt-3 text-2xl font-black text-[#E8EEFF]">
+          <h2 className="mt-3 text-2xl font-black text-al-text">
             Capture a decision from any source
           </h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm font-semibold leading-6 text-[#6B7FA8]">
+          <p className="mx-auto mt-2 max-w-xl text-sm font-semibold leading-6 text-al-text-muted">
             Connect a provider, send an event through the Universal Gateway, or record a verbal
             approval. ApprovLine will normalize and correlate it here.
           </p>
@@ -345,22 +345,22 @@ async function EvidenceResultsSection({
       ) : records.length > 0 ? (
         <div className="grid gap-3 lg:grid-cols-[1fr_272px]">
           {/* ── Records table ─────────────────────────────── */}
-          <div className="overflow-hidden rounded-xl border border-[#1E2D4A] bg-[#0E1830]">
+          <div className="overflow-hidden rounded-xl border border-al-border bg-al-surface">
             {/* Table header */}
-            <div className="flex items-center justify-between border-b border-[#1E2D4A] bg-[#152040]/50 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-al-border bg-al-surface-elevated/50 px-4 py-3">
               <div className="flex items-center gap-2.5">
-                <span className="font-bold text-[#E8EEFF]">Evidence Records</span>
-                <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[11px] font-bold text-violet-400">
+                <span className="font-bold text-al-text">Evidence Records</span>
+                <span className="rounded-full bg-al-accent-hover/10 px-2 py-0.5 text-[11px] font-bold text-al-accent">
                   {data.pagination.total.toLocaleString()}
                 </span>
               </div>
-              <span className="text-xs font-semibold text-[#6B7FA8]">
+              <span className="text-xs font-semibold text-al-text-muted">
                 Page {data.pagination.page} of {data.pagination.pages}
               </span>
             </div>
 
             {/* Column headers */}
-            <div className="grid grid-cols-[minmax(0,1fr)_130px_110px_80px] gap-0 border-b border-[#1E2D4A]/60 bg-[#0a1524] px-4 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-[#6B7FA8]">
+            <div className="grid grid-cols-[minmax(0,1fr)_130px_110px_80px] gap-0 border-b border-al-border/60 bg-al-surface-sunken px-4 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-al-text-muted">
               <span>Title / Decision</span>
               <span>Approver</span>
               <span>Status</span>
@@ -374,7 +374,7 @@ async function EvidenceResultsSection({
                   key={record.id}
                   href={`/evidence/${record.id}`}
                   pendingText="Opening evidence record…"
-                  className="grid grid-cols-[minmax(0,1fr)_130px_110px_80px] items-center gap-0 px-4 py-3 transition hover:bg-[#152040]"
+                  className="grid grid-cols-[minmax(0,1fr)_130px_110px_80px] items-center gap-0 px-4 py-3 transition hover:bg-al-surface-elevated"
                 >
                   {/* Title + meta */}
                   <div className="min-w-0 pr-3">
@@ -389,10 +389,10 @@ async function EvidenceResultsSection({
                         {record.riskLevel ?? 'unscored'}
                       </span>
                     </div>
-                    <p className="truncate text-sm font-semibold text-[#E8EEFF]">
+                    <p className="truncate text-sm font-semibold text-al-text">
                       {record.subject}
                     </p>
-                    <p className="mt-0.5 truncate text-[11px] text-[#6B7FA8]">
+                    <p className="mt-0.5 truncate text-[11px] text-al-text-muted">
                       {[record.outcome ?? record.decision, record.category, record.department]
                         .filter(Boolean)
                         .join(' · ') || 'Decision evidence'}
@@ -401,10 +401,10 @@ async function EvidenceResultsSection({
 
                   {/* Approver */}
                   <div className="min-w-0 pr-3">
-                    <p className="truncate text-sm font-semibold text-[#E8EEFF]">
+                    <p className="truncate text-sm font-semibold text-al-text">
                       {record.approverName ?? 'Unknown'}
                     </p>
-                    <p className="truncate text-[11px] text-[#6B7FA8]">
+                    <p className="truncate text-[11px] text-al-text-muted">
                       {record.approverEmail ?? 'No email captured'}
                     </p>
                   </div>
@@ -414,7 +414,7 @@ async function EvidenceResultsSection({
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${verificationClass(record.verificationStatus)}`}>
                       {record.verificationStatus?.replaceAll('_', ' ') ?? 'Unknown'}
                     </span>
-                    <p className="mt-1 text-[11px] text-[#3D5070]">{dateText(record.lastSeenAt)}</p>
+                    <p className="mt-1 text-[11px] text-al-text-secondary">{dateText(record.lastSeenAt)}</p>
                   </div>
 
                   {/* Confidence */}
@@ -422,7 +422,7 @@ async function EvidenceResultsSection({
                     <span className={`font-mono text-sm font-bold ${riskCircleClass(record.riskLevel)}`}>
                       {record.confidence}%
                     </span>
-                    <p className="mt-0.5 text-[10px] text-[#3D5070]">
+                    <p className="mt-0.5 text-[10px] text-al-text-secondary">
                       {record.evidenceCount}ev · {record.sourceCount}src
                     </p>
                   </div>
@@ -432,8 +432,8 @@ async function EvidenceResultsSection({
 
             {/* Pagination */}
             {data.pagination.pages > 1 ? (
-              <div className="flex items-center justify-between border-t border-[#1E2D4A] bg-[#0a1524] px-4 py-3">
-                <span className="text-xs font-semibold text-[#6B7FA8]">
+              <div className="flex items-center justify-between border-t border-al-border bg-al-surface-sunken px-4 py-3">
+                <span className="text-xs font-semibold text-al-text-muted">
                   Showing {(data.pagination.page - 1) * 25 + 1}–
                   {Math.min(data.pagination.page * 25, data.pagination.total).toLocaleString()} of{' '}
                   {data.pagination.total.toLocaleString()}
@@ -443,7 +443,7 @@ async function EvidenceResultsSection({
                     <PendingLink
                       href={paginationHref(params, data.pagination.page - 1)}
                       pendingText="Loading previous page…"
-                      className="rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 py-1.5 text-xs font-bold text-[#E8EEFF] hover:border-violet-500/40"
+                      className="rounded-lg border border-al-border bg-al-surface-elevated px-3 py-1.5 text-xs font-bold text-al-text hover:border-al-accent/40"
                     >
                       ← Prev
                     </PendingLink>
@@ -452,7 +452,7 @@ async function EvidenceResultsSection({
                     <PendingLink
                       href={paginationHref(params, data.pagination.page + 1)}
                       pendingText="Loading next page…"
-                      className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-violet-500"
+                      className="rounded-lg bg-al-accent px-3 py-1.5 text-xs font-bold text-white hover:bg-al-accent-hover"
                     >
                       Next →
                     </PendingLink>
@@ -465,8 +465,8 @@ async function EvidenceResultsSection({
           {/* ── Right rail ────────────────────────────────── */}
           <div className="flex flex-col gap-3">
             {/* Evidence Overview donut */}
-            <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
-              <h3 className="mb-3 font-bold text-[#E8EEFF]">Evidence Overview</h3>
+            <div className="rounded-xl border border-al-border bg-al-surface p-4">
+              <h3 className="mb-3 font-bold text-al-text">Evidence Overview</h3>
               <div className="flex items-center gap-4">
                 {/* SVG donut */}
                 <div className="relative h-[80px] w-[80px] flex-shrink-0">
@@ -498,8 +498,8 @@ async function EvidenceResultsSection({
                     ) : null}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="font-mono text-lg font-black text-[#E8EEFF]">{records.length}</span>
-                    <span className="text-[9px] text-[#6B7FA8]">on page</span>
+                    <span className="font-mono text-lg font-black text-al-text">{records.length}</span>
+                    <span className="text-[9px] text-al-text-muted">on page</span>
                   </div>
                 </div>
                 {/* Legend */}
@@ -511,8 +511,8 @@ async function EvidenceResultsSection({
                   ].map(({ label, count, color }) => (
                     <div key={label} className="flex items-center gap-2">
                       <span className={`h-2 w-2 flex-shrink-0 rounded-full ${color}`} />
-                      <span className="text-[11px] text-[#6B7FA8]">{label}</span>
-                      <span className="ml-auto font-mono text-[11px] font-bold text-[#E8EEFF]">{count}</span>
+                      <span className="text-[11px] text-al-text-muted">{label}</span>
+                      <span className="ml-auto font-mono text-[11px] font-bold text-al-text">{count}</span>
                     </div>
                   ))}
                 </div>
@@ -521,8 +521,8 @@ async function EvidenceResultsSection({
 
             {/* Sources breakdown */}
             {topProviders.length > 0 ? (
-              <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
-                <h3 className="mb-3 font-bold text-[#E8EEFF]">Sources</h3>
+              <div className="rounded-xl border border-al-border bg-al-surface p-4">
+                <h3 className="mb-3 font-bold text-al-text">Sources</h3>
                 <div className="flex flex-col gap-2.5">
                   {topProviders.map(([provider, count]) => {
                     const pct = Math.round((count / totalOnPage) * 100);
@@ -530,13 +530,13 @@ async function EvidenceResultsSection({
                       <div key={provider}>
                         <div className="mb-1 flex items-center gap-2">
                           <span className={`h-2 w-2 flex-shrink-0 rounded-full ${providerDot(provider)}`} />
-                          <span className="flex-1 text-[11px] font-medium capitalize text-[#E8EEFF]">
+                          <span className="flex-1 text-[11px] font-medium capitalize text-al-text">
                             {provider?.replaceAll('_', ' ') ?? 'Unknown'}
                           </span>
-                          <span className="font-mono text-[11px] text-[#6B7FA8]">{count}</span>
-                          <span className="w-8 text-right text-[10px] text-[#3D5070]">{pct}%</span>
+                          <span className="font-mono text-[11px] text-al-text-muted">{count}</span>
+                          <span className="w-8 text-right text-[10px] text-al-text-secondary">{pct}%</span>
                         </div>
-                        <div className="h-1 overflow-hidden rounded-full bg-[#152040]">
+                        <div className="h-1 overflow-hidden rounded-full bg-al-surface-elevated">
                           <div
                             className={`h-full rounded-full ${providerDot(provider)}`}
                             style={{ width: `${pct}%` }}
@@ -551,21 +551,21 @@ async function EvidenceResultsSection({
 
             {/* Top decision types */}
             {topCategories.length > 0 ? (
-              <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
-                <h3 className="mb-3 font-bold text-[#E8EEFF]">Decision Types</h3>
+              <div className="rounded-xl border border-al-border bg-al-surface p-4">
+                <h3 className="mb-3 font-bold text-al-text">Decision Types</h3>
                 <div className="flex flex-col gap-2.5">
                   {topCategories.map(([cat, count]) => {
                     const pct = Math.round((count / maxCat) * 100);
                     return (
                       <div key={cat} className="flex items-center gap-2.5">
-                        <span className="flex-1 truncate text-[11px] text-[#E8EEFF]">{cat}</span>
-                        <div className="h-1.5 w-20 flex-shrink-0 overflow-hidden rounded-full bg-[#152040]">
+                        <span className="flex-1 truncate text-[11px] text-al-text">{cat}</span>
+                        <div className="h-1.5 w-20 flex-shrink-0 overflow-hidden rounded-full bg-al-surface-elevated">
                           <div
-                            className="h-full rounded-full bg-violet-500"
+                            className="h-full rounded-full bg-al-accent-hover"
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                        <span className="w-5 text-right font-mono text-[11px] text-[#6B7FA8]">{count}</span>
+                        <span className="w-5 text-right font-mono text-[11px] text-al-text-muted">{count}</span>
                       </div>
                     );
                   })}
@@ -597,16 +597,16 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
     <DashboardShell>
       <div className="flex flex-col gap-5">
         {/* ── Page header ───────────────────────────────── */}
-        <div className="overflow-hidden rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
-          <p className="text-[10.5px] font-black uppercase tracking-[0.18em] text-violet-400">
+        <div className="overflow-hidden rounded-xl border border-al-border bg-al-surface p-5">
+          <p className="text-[10.5px] font-black uppercase tracking-[0.18em] text-al-accent">
             Universal Evidence Capture
           </p>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-[#E8EEFF] sm:text-3xl">
+              <h1 className="text-2xl font-black tracking-tight text-al-text sm:text-3xl">
                 Unified Evidence
               </h1>
-              <p className="mt-1.5 max-w-2xl text-sm font-semibold leading-6 text-[#6B7FA8]">
+              <p className="mt-1.5 max-w-2xl text-sm font-semibold leading-6 text-al-text-muted">
                 Your single source of truth for all approvals, decisions, and related evidence
                 across the organization.
               </p>
@@ -618,14 +618,14 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
               <PendingLink
                 href="/approvals/manual"
                 pendingText="Opening manual capture…"
-                className="rounded-lg border border-[#1E2D4A] bg-[#152040] px-4 py-2 text-sm font-bold text-[#E8EEFF] hover:border-violet-500/40 transition"
+                className="rounded-lg border border-al-border bg-al-surface-elevated px-4 py-2 text-sm font-bold text-al-text hover:border-al-accent/40 transition"
               >
                 Record verbal approval
               </PendingLink>
               <PendingLink
                 href="/dashboard/settings/integrations"
                 pendingText="Opening integrations…"
-                className="rounded-lg border border-[#1E2D4A] bg-[#152040] px-4 py-2 text-sm font-bold text-[#E8EEFF] hover:border-violet-500/40 transition"
+                className="rounded-lg border border-al-border bg-al-surface-elevated px-4 py-2 text-sm font-bold text-al-text hover:border-al-accent/40 transition"
               >
                 Manage sources
               </PendingLink>
@@ -641,28 +641,28 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
         {/* ── Filter bar ────────────────────────────────── */}
         <form
           action="/evidence"
-          className="overflow-hidden rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4"
+          className="overflow-hidden rounded-xl border border-al-border bg-al-surface p-4"
         >
           <div className="grid gap-3 sm:grid-cols-[1fr_200px_160px_auto]">
             <label className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
+              <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">
                 Search
               </span>
               <input
                 name="q"
                 defaultValue={params.q ?? ''}
                 placeholder="Decision, approver, department, category…"
-                className="h-9 min-w-0 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] placeholder:text-[#3D5070] outline-none focus:border-violet-500/60"
+                className="h-9 min-w-0 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text placeholder:text-al-text-secondary outline-none focus:border-al-accent/60"
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
+              <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">
                 Source
               </span>
               <select
                 name="provider"
                 defaultValue={params.provider ?? ''}
-                className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+                className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
               >
                 <option value="">All sources</option>
                 {evidenceProviderCatalog.map((p) => (
@@ -673,13 +673,13 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
               </select>
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7FA8]">
+              <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">
                 Risk
               </span>
               <select
                 name="risk"
                 defaultValue={params.risk ?? ''}
-                className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+                className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
               >
                 <option value="">All risk levels</option>
                 <option value="LOW">Low</option>
@@ -690,7 +690,7 @@ export default async function EvidencePage({ searchParams }: EvidencePageProps) 
             </label>
             <button
               type="submit"
-              className="h-9 self-end rounded-lg bg-violet-600 px-5 text-sm font-black text-white transition hover:bg-violet-500"
+              className="h-9 self-end rounded-lg bg-al-accent px-5 text-sm font-black text-white transition hover:bg-al-accent-hover"
             >
               Apply filters
             </button>

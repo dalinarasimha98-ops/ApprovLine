@@ -100,7 +100,7 @@ function deriveEvidenceCoverage(record: {
 
 function DarkCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 ${className}`}>
+    <div className={`rounded-2xl border border-al-border bg-[#0D1526] p-5 ${className}`}>
       {children}
     </div>
   );
@@ -168,11 +168,11 @@ function DonutLegend({
           <div key={seg.label} className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
               <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
-              <span className="text-[10px] font-medium text-slate-400 truncate">{seg.label}</span>
+              <span className="text-[10px] font-medium text-al-text-muted truncate">{seg.label}</span>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <span className="text-[10px] font-bold text-white">{pct}%</span>
-              <span className="text-[10px] text-slate-600">({numberFormat(seg.value)})</span>
+              <span className="text-[10px] text-al-text-secondary">({numberFormat(seg.value)})</span>
             </div>
           </div>
         );
@@ -726,7 +726,7 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
       <DashboardShell>
         <div className="min-h-screen" style={{ background: '#0A0E1A' }}>
           <section className="grid gap-5 px-1 pb-10">
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
+            <div className="rounded-2xl border border-al-danger/20 bg-al-danger/10 p-6">
               <p className="text-sm font-bold text-red-300">
                 Unable to load compliance readiness data. Please try again.
               </p>
@@ -800,7 +800,7 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
           <div className="flex flex-col gap-3 pt-1">
             <Link
               href={analyticsBack}
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-violet-400 hover:text-violet-300 transition-colors w-fit"
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-al-accent hover:text-al-accent transition-colors w-fit"
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -810,17 +810,17 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
 
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-400">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-al-accent">
                   Compliance Readiness
                 </p>
                 <h1 className="mt-1 text-2xl font-black tracking-tight text-white">
                   Compliance Readiness Records
                 </h1>
-                <p className="mt-1 text-sm font-medium text-slate-400">
+                <p className="mt-1 text-sm font-medium text-al-text-muted">
                   Per-record compliance scoring, evidence coverage, and audit trail readiness across all approval records.
                 </p>
                 {sampleTotal > 0 && sampleTotal < totalCount && (
-                  <p className="mt-1 text-[10px] text-slate-600">
+                  <p className="mt-1 text-[10px] text-al-text-secondary">
                     KPIs computed from a sample of {numberFormat(sampleTotal)} of {numberFormat(totalCount)} records.
                   </p>
                 )}
@@ -840,14 +840,14 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
                   Compliance Score {overallComplianceScore}%
                 </span>
                 {from && (
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[11px] text-al-text-muted">
                     {new Date(from).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     {to && ` – ${new Date(to).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
                   </span>
                 )}
                 <Link
                   href="/api/export/analytics?format=csv&type=compliance"
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 text-xs font-bold text-white hover:bg-violet-500 transition-colors"
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-al-accent px-3 text-xs font-bold text-white hover:bg-al-accent-hover transition-colors"
                 >
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -928,10 +928,10 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
           <div className="grid gap-5 md:grid-cols-3">
             {/* By Department */}
             <DarkCard>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-400">By Department</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-al-accent">By Department</p>
               <CardTitle className="mt-1 mb-4">Records by Department</CardTitle>
               {deptSegments.length === 0 ? (
-                <p className="text-[11px] text-slate-500">No department data yet.</p>
+                <p className="text-[11px] text-al-text-muted">No department data yet.</p>
               ) : (
                 <div className="flex items-center gap-4">
                   <div className="flex-shrink-0">
@@ -951,10 +951,10 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
 
             {/* By Category */}
             <DarkCard>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-400">By Category</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-al-accent">By Category</p>
               <CardTitle className="mt-1 mb-4">Records by Category</CardTitle>
               {catSegments.length === 0 ? (
-                <p className="text-[11px] text-slate-500">No category data yet.</p>
+                <p className="text-[11px] text-al-text-muted">No category data yet.</p>
               ) : (
                 <div className="flex items-center gap-4">
                   <div className="flex-shrink-0">
@@ -974,10 +974,10 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
 
             {/* By Source Platform */}
             <DarkCard>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-400">By Source</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-al-accent">By Source</p>
               <CardTitle className="mt-1 mb-4">Records by Source Platform</CardTitle>
               {srcSegments.length === 0 ? (
-                <p className="text-[11px] text-slate-500">No source data yet.</p>
+                <p className="text-[11px] text-al-text-muted">No source data yet.</p>
               ) : (
                 <div className="flex items-center gap-4">
                   <div className="flex-shrink-0">
@@ -1017,11 +1017,11 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
 
               <DarkCard className="overflow-hidden !p-0">
                 {/* Table header */}
-                <div className="border-b border-[#1E2D4A] px-5 py-4">
+                <div className="border-b border-al-border px-5 py-4">
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <CardTitle>Compliance Records</CardTitle>
-                      <p className="mt-0.5 text-[11px] text-slate-500">
+                      <p className="mt-0.5 text-[11px] text-al-text-muted">
                         {numberFormat(filteredTotal)} record{filteredTotal !== 1 ? 's' : ''}
                         {filteredTotal !== totalCount && ` (filtered from ${numberFormat(totalCount)} total)`}
                         {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
@@ -1029,7 +1029,7 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
                     </div>
                     <Link
                       href={buildSortUrl(query, sortBy, sortDir === 'asc' ? 'desc' : 'asc')}
-                      className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors"
+                      className="text-[10px] font-bold text-al-text-muted hover:text-al-text-muted transition-colors"
                     >
                       Sort: {sortBy} {sortDir === 'asc' ? '↑' : '↓'}
                     </Link>
@@ -1040,15 +1040,15 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
 
                 {/* Pagination */}
                 {filteredTotal > PAGE_SIZE && (
-                  <div className="flex items-center justify-between border-t border-[#1E2D4A] px-5 py-3">
-                    <p className="text-[11px] text-slate-500">
+                  <div className="flex items-center justify-between border-t border-al-border px-5 py-3">
+                    <p className="text-[11px] text-al-text-muted">
                       Page {page} of {totalPages}
                     </p>
                     <div className="flex items-center gap-2">
                       {page > 1 && (
                         <Link
                           href={buildPageUrl(query, page - 1)}
-                          className="inline-flex h-7 items-center justify-center rounded-lg border border-[#1E2D4A] px-3 text-[11px] font-bold text-slate-300 hover:border-[#2A3F66] hover:text-white transition-colors"
+                          className="inline-flex h-7 items-center justify-center rounded-lg border border-al-border px-3 text-[11px] font-bold text-al-text-secondary hover:border-al-border-strong hover:text-white transition-colors"
                         >
                           Prev
                         </Link>
@@ -1056,7 +1056,7 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
                       {page < totalPages && (
                         <Link
                           href={buildPageUrl(query, page + 1)}
-                          className="inline-flex h-7 items-center justify-center rounded-lg border border-[#1E2D4A] px-3 text-[11px] font-bold text-slate-300 hover:border-[#2A3F66] hover:text-white transition-colors"
+                          className="inline-flex h-7 items-center justify-center rounded-lg border border-al-border px-3 text-[11px] font-bold text-al-text-secondary hover:border-al-border-strong hover:text-white transition-colors"
                         >
                           Next
                         </Link>
@@ -1069,17 +1069,17 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
                 {filteredTotal === 0 && (
                   <div className="flex flex-col items-center justify-center gap-3 px-5 py-12 text-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800">
-                      <svg className="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="h-6 w-6 text-al-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-400">
+                      <p className="text-sm font-bold text-al-text-muted">
                         {totalCount === 0
                           ? 'No approval records captured yet'
                           : 'No records match your filters'}
                       </p>
-                      <p className="mt-1 text-[11px] text-slate-600">
+                      <p className="mt-1 text-[11px] text-al-text-secondary">
                         {totalCount === 0
                           ? 'Connect integrations and capture approvals to see compliance records here.'
                           : 'Try adjusting your search or filter criteria.'}
@@ -1088,7 +1088,7 @@ export default async function ComplianceReadinessPage({ searchParams }: PageProp
                     {totalCount > 0 && (
                       <Link
                         href="/analytics/drilldown/compliance-readiness"
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600/20 px-3 py-1.5 text-xs font-bold text-violet-300 hover:bg-violet-600/30 transition-colors border border-violet-500/20"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-al-accent/20 px-3 py-1.5 text-xs font-bold text-al-accent hover:bg-al-accent/30 transition-colors border border-al-accent/20"
                       >
                         Clear all filters
                       </Link>

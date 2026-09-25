@@ -87,14 +87,14 @@ export default async function ApprovalSourcePage({ params }: { params: Promise<{
     });
     return (
       <DashboardShell>
-        <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6">
-          <p className="text-xs font-bold uppercase tracking-wide text-amber-400">Evidence temporarily unavailable</p>
-          <h1 className="mt-2 text-2xl font-black text-[#E8EEFF]">The source record could not be loaded</h1>
-          <p className="mt-2 text-sm leading-6 text-[#6B7FA8]">Your approval is safe. Retry the evidence lookup or return to the approval record.</p>
-          <p className="mt-3 text-xs font-bold text-[#3D5070]">Reference: {correlationId}</p>
+        <section className="rounded-2xl border border-al-warning/20 bg-al-warning/5 p-6">
+          <p className="text-xs font-bold uppercase tracking-wide text-al-warning">Evidence temporarily unavailable</p>
+          <h1 className="mt-2 text-2xl font-black text-al-text">The source record could not be loaded</h1>
+          <p className="mt-2 text-sm leading-6 text-al-text-muted">Your approval is safe. Retry the evidence lookup or return to the approval record.</p>
+          <p className="mt-3 text-xs font-bold text-al-text-secondary">Reference: {correlationId}</p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <PendingLink href={`/approvals/${id}/source`} pendingText="Retrying..." className="inline-flex h-10 items-center rounded-xl bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500">Retry</PendingLink>
-            <PendingLink href={`/approvals/${id}`} pendingText="Opening approval..." className="inline-flex h-10 items-center rounded-xl border border-[#1E2D4A] px-5 text-sm font-bold text-[#A8BAD8] hover:border-violet-500/30 hover:text-[#E8EEFF]">Back to approval</PendingLink>
+            <PendingLink href={`/approvals/${id}/source`} pendingText="Retrying..." className="inline-flex h-10 items-center rounded-xl bg-al-accent px-5 text-sm font-bold text-white hover:bg-al-accent-hover">Retry</PendingLink>
+            <PendingLink href={`/approvals/${id}`} pendingText="Opening approval..." className="inline-flex h-10 items-center rounded-xl border border-al-border px-5 text-sm font-bold text-al-text-secondary hover:border-al-accent/30 hover:text-al-text">Back to approval</PendingLink>
           </div>
         </section>
       </DashboardShell>

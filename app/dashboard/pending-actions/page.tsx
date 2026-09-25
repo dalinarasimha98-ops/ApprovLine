@@ -19,7 +19,7 @@ export default async function PendingActionsPage({
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   if (!tenant.organization || !tenant.user) {
     return (
-      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6 text-amber-200">
+      <div className="rounded-xl border border-al-warning/20 bg-al-warning/5 p-6 text-al-warning">
         <h1 className="text-lg font-bold">Action Center couldn&apos;t load</h1>
         <p className="mt-2 text-sm">Please try again in a moment.</p>
       </div>
@@ -59,7 +59,7 @@ export default async function PendingActionsPage({
 
   if (loadError || !result) {
     return (
-      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6 text-amber-200">
+      <div className="rounded-xl border border-al-warning/20 bg-al-warning/5 p-6 text-al-warning">
         <h1 className="text-lg font-bold">Action Center couldn&apos;t load</h1>
         <p className="mt-2 text-sm">Please try again. If this keeps happening, contact support.</p>
       </div>

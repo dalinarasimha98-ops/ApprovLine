@@ -35,11 +35,11 @@ const defaults: ManualApprovalFormValues = {
   confidenceLevel: 50, secondPersonRequired: false, secondVerifierUserId: '', changeReason: 'Initial manual approval record',
 };
 
-const inputClass = 'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100';
+const inputClass = 'h-11 w-full rounded-xl border border-al-border bg-white px-3 text-sm font-semibold text-al-text outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100 disabled:bg-al-surface-elevated';
 const textAreaClass = `${inputClass} min-h-28 resize-y py-3`;
 
 function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) {
-  return <label className={`grid gap-1.5 ${wide ? 'md:col-span-2' : ''}`}><span className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</span>{children}</label>;
+  return <label className={`grid gap-1.5 ${wide ? 'md:col-span-2' : ''}`}><span className="text-xs font-black uppercase tracking-wide text-al-text-muted">{label}</span>{children}</label>;
 }
 
 export function ManualApprovalForm({ approvalId, initial, onCancel }: { approvalId?: string; initial?: Partial<ManualApprovalFormValues>; onCancel?: () => void }) {
@@ -88,16 +88,16 @@ export function ManualApprovalForm({ approvalId, initial, onCancel }: { approval
         <Field label="Related object type"><input className={inputClass} disabled={saving} value={values.relatedEntityType} onChange={(e) => update('relatedEntityType', e.target.value)} placeholder="Contract, ticket, project" /></Field>
         <Field label="Related object reference"><input className={inputClass} disabled={saving} value={values.relatedEntityId} onChange={(e) => update('relatedEntityId', e.target.value)} placeholder="CON-1024" /></Field>
         <Field label="Supporting notes" wide><textarea className={textAreaClass} disabled={saving} value={values.supportingNotes} onChange={(e) => update('supportingNotes', e.target.value)} /></Field>
-        <Field label="Verification status"><select className={inputClass} disabled={saving} value={values.verificationStatus} onChange={(e) => update('verificationStatus', e.target.value as ManualApprovalFormValues['verificationStatus'])}><option value="PENDING_CONFIRMATION">Pending confirmation</option>{values.verificationStatus === 'CONFIRMED_BY_APPROVER' ? <option value="CONFIRMED_BY_APPROVER">Confirmed by approver</option> : null}<option value="DISPUTED">Disputed</option><option value="SUPERSEDED">Superseded</option></select><span className="text-xs font-semibold leading-5 text-slate-500">Approver confirmation can only be granted through the secure confirmation workflow.</span></Field>
+        <Field label="Verification status"><select className={inputClass} disabled={saving} value={values.verificationStatus} onChange={(e) => update('verificationStatus', e.target.value as ManualApprovalFormValues['verificationStatus'])}><option value="PENDING_CONFIRMATION">Pending confirmation</option>{values.verificationStatus === 'CONFIRMED_BY_APPROVER' ? <option value="CONFIRMED_BY_APPROVER">Confirmed by approver</option> : null}<option value="DISPUTED">Disputed</option><option value="SUPERSEDED">Superseded</option></select><span className="text-xs font-semibold leading-5 text-al-text-muted">Approver confirmation can only be granted through the secure confirmation workflow.</span></Field>
         <Field label={`Confidence: ${values.confidenceLevel}%`}><input type="range" min="0" max="100" className="h-11 w-full accent-[#2155d9]" disabled={saving} value={values.confidenceLevel} onChange={(e) => update('confidenceLevel', Number(e.target.value))} /></Field>
         <Field label="Reason for this change" wide><textarea required minLength={5} className={textAreaClass} disabled={saving} value={values.changeReason} onChange={(e) => update('changeReason', e.target.value)} /></Field>
       </div>
-      <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold text-slate-700"><input type="checkbox" className="h-4 w-4 accent-[#2155d9]" checked={values.secondPersonRequired} disabled={saving} onChange={(e) => update('secondPersonRequired', e.target.checked)} />Require second-person verification</label>
+      <label className="flex items-center gap-3 rounded-xl border border-al-border bg-al-surface-sunken p-4 text-sm font-bold text-al-text-secondary"><input type="checkbox" className="h-4 w-4 accent-[#2155d9]" checked={values.secondPersonRequired} disabled={saving} onChange={(e) => update('secondPersonRequired', e.target.checked)} />Require second-person verification</label>
       {values.secondPersonRequired ? <Field label="Second verifier user ID"><input required className={inputClass} disabled={saving} value={values.secondVerifierUserId} onChange={(e) => update('secondVerifierUserId', e.target.value)} placeholder="ApprovLine user ID" /></Field> : null}
       {error ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">{error}</p> : null}
       <div className="flex flex-wrap justify-end gap-3">
-        {onCancel ? <button type="button" disabled={saving} onClick={onCancel} className="h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 disabled:opacity-60">Cancel</button> : null}
-        <button type="submit" disabled={saving} className="h-11 rounded-xl bg-[#2155d9] px-5 text-sm font-black text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60">{saving ? 'Saving...' : approvalId ? 'Save changes' : 'Record approval'}</button>
+        {onCancel ? <button type="button" disabled={saving} onClick={onCancel} className="h-11 rounded-xl border border-al-border bg-white px-5 text-sm font-bold text-al-text-secondary disabled:opacity-60">Cancel</button> : null}
+        <button type="submit" disabled={saving} className="h-11 rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60">{saving ? 'Saving...' : approvalId ? 'Save changes' : 'Record approval'}</button>
       </div>
     </form>
   );

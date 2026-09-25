@@ -85,17 +85,17 @@ function countBy<T>(items: T[], fn: (item: T) => string | null | undefined) {
 function CountBars({ title, items }: { title: string; items: Array<{ name: string; count: number }> }) {
   const max = Math.max(...items.map((item) => item.count), 1);
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h3 className="text-sm font-black text-slate-950">{title}</h3>
+    <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+      <h3 className="text-sm font-black text-al-text">{title}</h3>
       <div className="mt-4 grid gap-3">
-        {items.length === 0 ? <p className="text-sm font-semibold text-slate-500">No matching records.</p> : items.map((item) => (
+        {items.length === 0 ? <p className="text-sm font-semibold text-al-text-muted">No matching records.</p> : items.map((item) => (
           <div key={item.name} className="grid gap-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-bold text-slate-700">{item.name}</span>
-              <span className="font-black text-slate-950">{numberFormat(item.count)}</span>
+              <span className="font-bold text-al-text-secondary">{item.name}</span>
+              <span className="font-black text-al-text">{numberFormat(item.count)}</span>
             </div>
-            <div className="h-2 rounded-full bg-slate-100">
-              <div className="h-2 rounded-full bg-[#2155d9]" style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} />
+            <div className="h-2 rounded-full bg-al-surface-elevated">
+              <div className="h-2 rounded-full bg-al-accent" style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} />
             </div>
           </div>
         ))}
@@ -165,16 +165,16 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
   return (
     <DashboardShell>
       <section className="grid gap-6">
-        <div className="rounded-3xl border border-slate-200 bg-[#07111f] p-6 text-white shadow-sm">
+        <div className="rounded-3xl border border-al-border bg-al-bg p-6 text-white shadow-sm">
           <PendingLink href="/analytics" pendingText="Back to analytics..." className="text-xs font-black uppercase tracking-wide text-blue-200">
             &lt;- Executive ROI
           </PendingLink>
           <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-blue-200">{copy.eyebrow}</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight">{copy.title}</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">{copy.description}</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-al-text-secondary">{copy.description}</p>
         </div>
 
-        <form className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-4">
+        <form className="grid gap-4 rounded-2xl border border-al-border bg-white p-4 shadow-sm md:grid-cols-4">
           {[
             ['q', 'Search title, approver, department, source'],
             ['department', 'Department'],
@@ -183,23 +183,23 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
             ['riskLevel', 'Risk level'],
           ].map(([name, placeholder]) => (
             <label key={name} className="grid gap-1.5">
-              <span className="text-xs font-bold uppercase tracking-wide text-slate-500">{placeholder}</span>
-              <input name={name} defaultValue={filters[name as keyof typeof filters] ?? ''} placeholder={placeholder} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition placeholder:text-slate-400 focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
+              <span className="text-xs font-bold uppercase tracking-wide text-al-text-muted">{placeholder}</span>
+              <input name={name} defaultValue={filters[name as keyof typeof filters] ?? ''} placeholder={placeholder} className="h-11 rounded-lg border border-al-border bg-white px-3 text-sm font-semibold outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
             </label>
           ))}
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">From</span>
-            <input name="from" defaultValue={filters.from ?? ''} type="date" className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
+            <span className="text-xs font-bold uppercase tracking-wide text-al-text-muted">From</span>
+            <input name="from" defaultValue={filters.from ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-white px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
           </label>
           <label className="grid gap-1.5">
-            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">To</span>
-            <input name="to" defaultValue={filters.to ?? ''} type="date" className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
+            <span className="text-xs font-bold uppercase tracking-wide text-al-text-muted">To</span>
+            <input name="to" defaultValue={filters.to ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-white px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
           </label>
           <div className="flex items-end gap-2">
-            <FormSubmitButton pendingText="Filtering..." className="min-h-0 h-11 rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
+            <FormSubmitButton pendingText="Filtering..." className="min-h-0 h-11 rounded-lg bg-al-accent px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
               Apply filters
             </FormSubmitButton>
-            <PendingLink href={`/analytics/drilldown/${metric}`} pendingText="Clearing..." className="inline-flex min-h-0 h-11 items-center rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700">
+            <PendingLink href={`/analytics/drilldown/${metric}`} pendingText="Clearing..." className="inline-flex min-h-0 h-11 items-center rounded-lg border border-al-border px-4 text-sm font-bold text-al-text-secondary">
               Clear
             </PendingLink>
           </div>
@@ -212,13 +212,13 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
               ['Audit Preparation Time', `${numberFormat(report.timeSaved.auditPreparationHours)} hrs`, 'Evidence reconstruction and audit prep avoided.'],
               ['Search Time Saved', `${numberFormat(report.timeSaved.manualSearchHours)} hrs`, 'Manual search across Slack, Gmail, and tools avoided.'],
             ].map(([label, value, help]) => (
-              <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">{label}</p>
-                <p className="mt-3 text-3xl font-black text-slate-950">{value}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-500">{help}</p>
+              <div key={label} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+                <p className="text-xs font-black uppercase tracking-wide text-al-accent">{label}</p>
+                <p className="mt-3 text-3xl font-black text-al-text">{value}</p>
+                <p className="mt-2 text-sm leading-6 text-al-text-muted">{help}</p>
               </div>
             ))}
-            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm font-semibold leading-6 text-slate-700 md:col-span-3">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm font-semibold leading-6 text-al-text-secondary md:col-span-3">
               Methodology: ApprovLine estimates 4.8 minutes for approval retrieval, 6.6 minutes for manual search, and additional audit preparation effort for high-risk, conditional, and rejection records. These are conservative planning estimates for executive ROI discussions.
             </div>
           </div>
@@ -232,9 +232,9 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
               ['Source present', approvals.filter((approval) => approval.sourcePlatform).length],
               ['Evidence + audit trail', traceable],
             ].map(([label, value]) => (
-              <div key={label as string} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
-                <p className="mt-3 text-3xl font-black text-slate-950">{numberFormat(value as number)}</p>
+              <div key={label as string} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+                <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">{label}</p>
+                <p className="mt-3 text-3xl font-black text-al-text">{numberFormat(value as number)}</p>
               </div>
             ))}
           </div>
@@ -246,14 +246,14 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
           <CountBars title={metric === 'high-risk-approvals' ? 'Risk by source platform' : 'Records by source platform'} items={riskBySource} />
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 p-5">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Detailed records</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">{numberFormat(approvals.length)} records behind this number</h3>
+        <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
+          <div className="border-b border-al-border p-5">
+            <p className="text-xs font-black uppercase tracking-wide text-al-accent">Detailed records</p>
+            <h3 className="mt-1 text-lg font-black text-al-text">{numberFormat(approvals.length)} records behind this number</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-[1120px] w-full border-collapse text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
                 <tr>
                   <th className="px-4 py-3">Approval ID</th>
                   <th className="px-4 py-3">Title</th>
@@ -270,19 +270,19 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
               </thead>
               <tbody>
                 {approvals.map((approval) => (
-                  <tr key={approval.id} className="border-t border-slate-100 align-top hover:bg-slate-50/80">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-500">{approval.id.slice(0, 10)}</td>
-                    <td className="max-w-[260px] px-4 py-3 font-black text-slate-950">{approval.subject}</td>
-                    <td className="px-4 py-3 text-slate-600">{approval.category ?? 'Unassigned'}</td>
-                    <td className="px-4 py-3 capitalize text-slate-600">{approval.riskLevel ?? 'low'}</td>
-                    <td className="px-4 py-3 text-slate-600">{approval.approverName ?? 'Unknown'}</td>
-                    <td className="px-4 py-3 text-slate-600">{approval.department ?? 'Unassigned'}</td>
-                    <td className="px-4 py-3 capitalize text-slate-600">{approval.sourcePlatform ?? 'Unknown'}</td>
-                    <td className="px-4 py-3 text-slate-500">{dateText(approval.approvalTimestamp ?? approval.createdAt)}</td>
-                    <td className="px-4 py-3 font-black text-[#2155d9]">{approval.confidence}%</td>
-                    <td className="px-4 py-3 text-slate-600">{approval.status?.replaceAll('_', ' ') ?? 'Unknown'}</td>
+                  <tr key={approval.id} className="border-t border-al-border align-top hover:bg-al-surface-sunken/80">
+                    <td className="px-4 py-3 font-mono text-xs text-al-text-muted">{approval.id.slice(0, 10)}</td>
+                    <td className="max-w-[260px] px-4 py-3 font-black text-al-text">{approval.subject}</td>
+                    <td className="px-4 py-3 text-al-text-secondary">{approval.category ?? 'Unassigned'}</td>
+                    <td className="px-4 py-3 capitalize text-al-text-secondary">{approval.riskLevel ?? 'low'}</td>
+                    <td className="px-4 py-3 text-al-text-secondary">{approval.approverName ?? 'Unknown'}</td>
+                    <td className="px-4 py-3 text-al-text-secondary">{approval.department ?? 'Unassigned'}</td>
+                    <td className="px-4 py-3 capitalize text-al-text-secondary">{approval.sourcePlatform ?? 'Unknown'}</td>
+                    <td className="px-4 py-3 text-al-text-muted">{dateText(approval.approvalTimestamp ?? approval.createdAt)}</td>
+                    <td className="px-4 py-3 font-black text-al-accent">{approval.confidence}%</td>
+                    <td className="px-4 py-3 text-al-text-secondary">{approval.status?.replaceAll('_', ' ') ?? 'Unknown'}</td>
                     <td className="px-4 py-3">
-                      <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening..." className="text-xs font-black text-[#2155d9] hover:underline">
+                      <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening..." className="text-xs font-black text-al-accent hover:underline">
                         View Full Approval
                       </PendingLink>
                     </td>
@@ -292,8 +292,8 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
             </table>
             {approvals.length === 0 ? (
               <div className="p-10 text-center">
-                <p className="font-black text-slate-950">No matching records</p>
-                <p className="mt-2 text-sm text-slate-500">Adjust filters or generate demo data to inspect KPI details.</p>
+                <p className="font-black text-al-text">No matching records</p>
+                <p className="mt-2 text-sm text-al-text-muted">Adjust filters or generate demo data to inspect KPI details.</p>
               </div>
             ) : null}
           </div>

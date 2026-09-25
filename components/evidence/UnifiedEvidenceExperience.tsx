@@ -518,50 +518,50 @@ export function UnifiedEvidenceExperience({
     typeof metadata.classificationVersion === 'string' ? metadata.classificationVersion : 'Current classifier';
 
   return (
-    <div className="min-h-screen bg-[#030813] px-3 py-3 text-slate-100 sm:px-4 lg:px-5">
+    <div className="min-h-screen bg-[#030813] px-3 py-3 text-al-text sm:px-4 lg:px-5">
       <div className="mx-auto max-w-[1720px]">
         <div className="mb-3 flex min-h-12 flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+          <div className="flex items-center gap-2 text-xs font-medium text-al-text-muted">
             <Link href="/evidence" className="transition hover:text-white">
               Unified Evidence
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
-            <span className="text-slate-200">{initialData.id}</span>
+            <span className="text-al-text-secondary">{initialData.id}</span>
           </div>
 
           <div className="order-3 flex min-w-full flex-1 items-center rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 shadow-[0_0_0_1px_rgba(37,99,235,0.08)] lg:order-none lg:mx-auto lg:min-w-0 lg:max-w-xl">
-            <Search className="h-4 w-4 text-slate-500" />
+            <Search className="h-4 w-4 text-al-text-muted" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search approvals, people, decisions, tickets..."
-              className="min-w-0 flex-1 bg-transparent px-3 text-xs text-slate-200 outline-none placeholder:text-slate-500"
+              className="min-w-0 flex-1 bg-transparent px-3 text-xs text-al-text-secondary outline-none placeholder:text-al-text-muted"
               aria-label="Search unified evidence"
             />
-            <span className="rounded-md border border-white/10 bg-black/20 px-1.5 py-0.5 text-[10px] text-slate-500">K</span>
+            <span className="rounded-md border border-white/10 bg-black/20 px-1.5 py-0.5 text-[10px] text-al-text-muted">K</span>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.08] px-3 py-1.5 text-[11px] font-semibold text-emerald-300">
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.08] px-3 py-1.5 text-[11px] font-semibold text-al-success">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.8)]" />
               Live Capture
             </span>
             <button
               type="button"
               onClick={() => setToast('Notifications are routed through workspace alerts.')}
-              className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08]"
+              className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-al-text-secondary transition hover:bg-white/[0.08]"
               aria-label="Notifications"
             >
               <Activity className="h-4 w-4" />
               {newEvidenceCount > 0 ? (
-                <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 text-[9px] font-bold text-white">{newEvidenceCount}</span>
+                <span className="absolute -right-1 -top-1 rounded-full bg-al-danger px-1.5 text-[9px] font-bold text-white">{newEvidenceCount}</span>
               ) : null}
             </button>
             <div className="hidden items-center gap-2 sm:flex">
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-violet-600 text-sm font-bold text-white">D</div>
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-al-accent text-sm font-bold text-white">D</div>
               <div className="text-right">
                 <p className="text-xs font-bold text-white">Dali Narasimha</p>
-                <p className="text-[9px] font-bold uppercase tracking-wide text-violet-300">Super admin</p>
+                <p className="text-[9px] font-bold uppercase tracking-wide text-al-accent">Super admin</p>
               </div>
             </div>
           </div>
@@ -586,19 +586,19 @@ export function UnifiedEvidenceExperience({
             <section className="overflow-hidden rounded-2xl border border-blue-300/15 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.20),transparent_42%),linear-gradient(145deg,rgba(9,18,34,0.98),rgba(3,8,19,0.98))] shadow-[0_18px_80px_rgba(0,0,0,0.35)]">
               <div className="flex flex-col gap-5 p-5 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
                 <div className="flex min-w-0 gap-4">
-                  <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-emerald-300/25 bg-emerald-400/[0.08] text-emerald-300 shadow-[0_0_32px_rgba(52,211,153,0.16)]">
+                  <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-emerald-300/25 bg-emerald-400/[0.08] text-al-success shadow-[0_0_32px_rgba(52,211,153,0.16)]">
                     <ShieldCheck className="h-10 w-10" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[0.10] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-300">
+                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[0.10] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-al-success">
                         {initialData.confidence >= 90 ? 'High confidence' : 'Evidence confidence'}
                       </span>
-                      <span className="text-xs text-slate-500">ID: {initialData.id}</span>
+                      <span className="text-xs text-al-text-muted">ID: {initialData.id}</span>
                       <button
                         type="button"
                         onClick={() => void copyText(initialData.id, 'Decision ID')}
-                        className="grid h-6 w-6 place-items-center rounded-md border border-white/10 text-slate-400 transition hover:text-white"
+                        className="grid h-6 w-6 place-items-center rounded-md border border-white/10 text-al-text-muted transition hover:text-white"
                         aria-label="Copy decision ID"
                       >
                         <Copy className="h-3.5 w-3.5" />
@@ -607,7 +607,7 @@ export function UnifiedEvidenceExperience({
                     <h1 className="mt-2 truncate text-2xl font-black tracking-tight text-white sm:text-3xl">
                       {initialData.subject}
                     </h1>
-                    <p className="mt-1 text-sm font-medium text-slate-400">
+                    <p className="mt-1 text-sm font-medium text-al-text-muted">
                       {initialData.decision ?? 'Unified decision record'}
                     </p>
                   </div>
@@ -617,19 +617,19 @@ export function UnifiedEvidenceExperience({
                   <Metric label="Sources" value={String(providers.length || initialData.sourceCount)} accent="text-blue-300" />
                   <Metric label="Mentions" value={String(events.length || initialData.evidenceCount)} accent="text-blue-300" />
                   <div className="min-w-[116px]">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Confidence Score</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-al-text-muted">Confidence Score</p>
                     <div className="mt-1 flex items-center gap-3">
-                      <span className="text-2xl font-black text-emerald-300">{initialData.confidence}%</span>
+                      <span className="text-2xl font-black text-al-success">{initialData.confidence}%</span>
                       <div className="h-10 w-10 rounded-full border-[6px] border-emerald-400 border-l-emerald-400/20" />
                     </div>
-                    <p className="mt-1 text-[10px] text-slate-500">AI confidence</p>
+                    <p className="mt-1 text-[10px] text-al-text-muted">AI confidence</p>
                   </div>
                 </div>
               </div>
 
               <div className="grid border-t border-white/[0.08] bg-[#061323]/70 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                 {[
-                  ['Status', titleCase(status), 'text-emerald-300'],
+                  ['Status', titleCase(status), 'text-al-success'],
                   ['Amount', amountText(initialData.amount, initialData.currency), 'text-white'],
                   ['Decision Type', titleCase(initialData.primaryApproval?.approvalType ?? initialData.category ?? 'Approval'), 'text-white'],
                   ['Approver', primaryApprover, 'text-white'],
@@ -638,7 +638,7 @@ export function UnifiedEvidenceExperience({
                   ['Last Updated', dateTime(initialData.lastSeenAt), 'text-white'],
                 ].map(([label, value, tone]) => (
                   <div key={label} className="min-w-0 border-b border-r border-white/[0.07] px-4 py-3 last:border-r-0 lg:border-b-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-al-text-muted">{label}</p>
                     <p className={`mt-1 break-words text-sm font-bold leading-5 ${tone}`} title={value}>{value}</p>
                   </div>
                 ))}
@@ -655,7 +655,7 @@ export function UnifiedEvidenceExperience({
                     className={`shrink-0 border-b-2 px-4 py-4 text-xs font-bold transition ${
                       activeTab === tab.id
                         ? 'border-blue-400 text-white'
-                        : 'border-transparent text-slate-500 hover:text-slate-200'
+                        : 'border-transparent text-al-text-muted hover:text-al-text-secondary'
                     }`}
                   >
                     {tab.label}
@@ -668,15 +668,15 @@ export function UnifiedEvidenceExperience({
                   <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                       <h2 className="text-base font-black text-white">
-                        Complete Timeline of All Mentions <span className="font-medium text-slate-500">(Chronological)</span>
+                        Complete Timeline of All Mentions <span className="font-medium text-al-text-muted">(Chronological)</span>
                       </h2>
-                      <p className="mt-1 text-xs text-slate-500">Every source mention is immutable, searchable, and expandable.</p>
+                      <p className="mt-1 text-xs text-al-text-muted">Every source mention is immutable, searchable, and expandable.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <select
                         value={providerFilter}
                         onChange={(event) => setProviderFilter(event.target.value)}
-                        className="h-10 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-semibold text-slate-200 outline-none"
+                        className="h-10 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-semibold text-al-text-secondary outline-none"
                         aria-label="Filter by source"
                       >
                         <option value="all">All sources</option>
@@ -687,7 +687,7 @@ export function UnifiedEvidenceExperience({
                       <select
                         value={groupBy}
                         onChange={(event) => setGroupBy(event.target.value as 'none' | 'source' | 'day')}
-                        className="h-10 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-semibold text-slate-200 outline-none"
+                        className="h-10 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-semibold text-al-text-secondary outline-none"
                         aria-label="Group evidence"
                       >
                         <option value="none">Group by: None</option>
@@ -698,7 +698,7 @@ export function UnifiedEvidenceExperience({
                         type="button"
                         onClick={() => void refreshTimeline()}
                         disabled={refreshing}
-                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-slate-200 transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                         Refresh
@@ -708,7 +708,7 @@ export function UnifiedEvidenceExperience({
 
                   {loadError ? (
                     <div className="mb-4 rounded-xl border border-amber-300/25 bg-amber-300/[0.08] p-4">
-                      <p className="text-sm font-bold text-amber-200">Evidence timeline is temporarily delayed</p>
+                      <p className="text-sm font-bold text-al-warning">Evidence timeline is temporarily delayed</p>
                       <p className="mt-1 text-xs leading-5 text-amber-100/70">{loadError}</p>
                       <button
                         type="button"
@@ -730,7 +730,7 @@ export function UnifiedEvidenceExperience({
                       groupedEvents.map((group) => (
                         <div key={group.key}>
                           {groupBy !== 'none' ? (
-                            <div className="border-b border-white/[0.08] bg-white/[0.025] px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                            <div className="border-b border-white/[0.08] bg-white/[0.025] px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-al-text-muted">
                               {group.label}
                             </div>
                           ) : null}
@@ -751,25 +751,25 @@ export function UnifiedEvidenceExperience({
                                     <span className="mt-1 h-2.5 w-2.5 rounded-full" style={{ backgroundColor: info.color }} />
                                     <div>
                                       <p className="text-xs font-bold text-blue-300">{timeOnly(event.occurredAt)}</p>
-                                      <p className="text-[11px] text-slate-500">{dateOnly(event.occurredAt)}</p>
+                                      <p className="text-[11px] text-al-text-muted">{dateOnly(event.occurredAt)}</p>
                                     </div>
                                   </div>
                                   <div className="flex min-w-0 items-center gap-3">
                                     <ProviderMark providerKey={event.providerKey} />
                                     <div className="min-w-0">
                                       <p className="truncate text-sm font-bold text-white">{info.label}</p>
-                                      <p className="truncate text-[11px] text-slate-500">{event.threadId ?? event.objectType}</p>
+                                      <p className="truncate text-[11px] text-al-text-muted">{event.threadId ?? event.objectType}</p>
                                     </div>
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="line-clamp-2 text-sm font-medium leading-5 text-slate-200">{event.content ?? event.objectId ?? 'Evidence captured without body text.'}</p>
-                                    <p className="mt-1 truncate text-[11px] text-slate-500">{event.objectId ?? event.providerEventType}</p>
+                                    <p className="line-clamp-2 text-sm font-medium leading-5 text-al-text-secondary">{event.content ?? event.objectId ?? 'Evidence captured without body text.'}</p>
+                                    <p className="mt-1 truncate text-[11px] text-al-text-muted">{event.objectId ?? event.providerEventType}</p>
                                   </div>
                                   <div className="hidden min-w-0 items-center gap-2 lg:flex">
-                                    <UserRound className="h-4 w-4 shrink-0 text-slate-600" />
+                                    <UserRound className="h-4 w-4 shrink-0 text-al-text-secondary" />
                                     <div className="min-w-0">
-                                      <p className="truncate text-xs font-bold text-slate-200">{event.actorName ?? 'Unknown actor'}</p>
-                                      <p className="truncate text-[10px] text-slate-500">{event.actorEmail ?? event.actorId ?? 'Source actor'}</p>
+                                      <p className="truncate text-xs font-bold text-al-text-secondary">{event.actorName ?? 'Unknown actor'}</p>
+                                      <p className="truncate text-[10px] text-al-text-muted">{event.actorEmail ?? event.actorId ?? 'Source actor'}</p>
                                     </div>
                                   </div>
                                   <div className="hidden items-center justify-end gap-2 lg:flex">
@@ -779,15 +779,15 @@ export function UnifiedEvidenceExperience({
                                     <span className="rounded-full border border-blue-400/15 bg-blue-500/[0.12] px-2.5 py-1 text-[10px] font-bold text-blue-300">
                                       {Math.round(event.confidence)}%
                                     </span>
-                                    {expanded ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronRight className="h-4 w-4 text-slate-500" />}
+                                    {expanded ? <ChevronDown className="h-4 w-4 text-al-text-muted" /> : <ChevronRight className="h-4 w-4 text-al-text-muted" />}
                                   </div>
                                 </button>
 
                                 {expanded ? (
                                   <div className="grid gap-3 border-t border-white/[0.07] bg-[#020a15] px-4 py-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)]">
                                     <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
-                                      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Original evidence</p>
-                                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{event.content ?? 'No body text was stored for this source event.'}</p>
+                                      <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">Original evidence</p>
+                                      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-al-text-secondary">{event.content ?? 'No body text was stored for this source event.'}</p>
                                       <div className="mt-4 flex flex-wrap gap-2">
                                         {sourceUrl ? (
                                           <a
@@ -800,7 +800,7 @@ export function UnifiedEvidenceExperience({
                                             Open source
                                           </a>
                                         ) : (
-                                          <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-500">
+                                          <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-al-text-muted">
                                             <LockKeyhole className="h-4 w-4" />
                                             Source link unavailable
                                           </span>
@@ -808,7 +808,7 @@ export function UnifiedEvidenceExperience({
                                         <button
                                           type="button"
                                           onClick={() => void copyText(event.evidenceHash, 'Evidence hash')}
-                                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-slate-300"
+                                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-al-text-secondary"
                                         >
                                           <Fingerprint className="h-4 w-4" />
                                           Copy hash
@@ -841,13 +841,13 @@ export function UnifiedEvidenceExperience({
                         type="button"
                         onClick={() => void loadMore()}
                         disabled={loadingMore}
-                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/[0.08] disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-al-text-secondary transition hover:bg-white/[0.08] disabled:opacity-60"
                       >
                         {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
                         Load more evidence
                       </button>
                     ) : (
-                      <span className="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-slate-500">
+                      <span className="rounded-full border border-white/10 px-4 py-2 text-xs font-bold text-al-text-muted">
                         Complete evidence window loaded
                       </span>
                     )}
@@ -870,23 +870,23 @@ export function UnifiedEvidenceExperience({
 
             <footer className="grid overflow-hidden rounded-2xl border border-blue-300/15 bg-[#071321]/95 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
               {[
-                { icon: AlertTriangle, label: 'Decision Impact', value: initialData.primaryApproval?.businessImpact ?? 'Not assessed', helper: initialData.riskLevel === 'high' ? 'Review required' : 'Financial impact', color: 'text-rose-300' },
-                { icon: ShieldCheck, label: 'Policy Check', value: policyStatus, helper: 'Policy analysis attached', color: 'text-emerald-300' },
-                { icon: Activity, label: 'Risk Level', value: titleCase(initialData.riskLevel ?? 'low'), helper: 'Evidence-based risk', color: 'text-emerald-300' },
-                { icon: Archive, label: 'Retention', value: retention, helper: 'Workspace retention', color: 'text-amber-300' },
-                { icon: LockKeyhole, label: 'Evidence Locked', value: 'Yes', helper: 'Tamper-proof', color: 'text-emerald-300' },
-                { icon: UserRound, label: 'Created By', value: createdBy, helper: dateTime(initialData.createdAt), color: 'text-slate-200' },
-                { icon: Fingerprint, label: 'AI Model Version', value: classificationVersion, helper: 'Classification version', color: 'text-violet-300' },
+                { icon: AlertTriangle, label: 'Decision Impact', value: initialData.primaryApproval?.businessImpact ?? 'Not assessed', helper: initialData.riskLevel === 'high' ? 'Review required' : 'Financial impact', color: 'text-al-danger' },
+                { icon: ShieldCheck, label: 'Policy Check', value: policyStatus, helper: 'Policy analysis attached', color: 'text-al-success' },
+                { icon: Activity, label: 'Risk Level', value: titleCase(initialData.riskLevel ?? 'low'), helper: 'Evidence-based risk', color: 'text-al-success' },
+                { icon: Archive, label: 'Retention', value: retention, helper: 'Workspace retention', color: 'text-al-warning' },
+                { icon: LockKeyhole, label: 'Evidence Locked', value: 'Yes', helper: 'Tamper-proof', color: 'text-al-success' },
+                { icon: UserRound, label: 'Created By', value: createdBy, helper: dateTime(initialData.createdAt), color: 'text-al-text-secondary' },
+                { icon: Fingerprint, label: 'AI Model Version', value: classificationVersion, helper: 'Classification version', color: 'text-al-accent' },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
                   <div key={item.label} className="min-w-0 border-b border-r border-white/[0.07] p-4 last:border-r-0 lg:border-b-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-al-text-muted">{item.label}</p>
                     <p className={`mt-2 flex items-center gap-2 truncate text-sm font-black ${item.color}`}>
                       <Icon className="h-4 w-4 shrink-0" />
                       <span className="truncate">{item.value}</span>
                     </p>
-                    <p className="mt-1 truncate text-[11px] text-slate-500">{item.helper}</p>
+                    <p className="mt-1 truncate text-[11px] text-al-text-muted">{item.helper}</p>
                   </div>
                 );
               })}
@@ -895,11 +895,11 @@ export function UnifiedEvidenceExperience({
 
           <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
             <FlagshipSideCard title="AI Summary" action="View AI Reasoning" onAction={() => setActiveTab('analysis')}>
-              <div className="flex items-center justify-between text-[11px] text-slate-500">
+              <div className="flex items-center justify-between text-[11px] text-al-text-muted">
                 <span>Powered by Playbook AI</span>
                 <span>{initialData.confidence}% confidence</span>
               </div>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
+              <p className="mt-3 text-sm leading-6 text-al-text-secondary">
                 The system observed {events.length} mentions across {providers.length || initialData.sourceCount} tools and clustered them into one unified approval decision.
               </p>
               <div className="mt-4 space-y-2">
@@ -908,8 +908,8 @@ export function UnifiedEvidenceExperience({
                   `Same approver: ${primaryApprover}`,
                   `Same context: ${initialData.department ?? 'workspace decision'}`,
                 ]).slice(0, 5).map((reason) => (
-                  <div key={reason} className="flex gap-2 text-xs leading-5 text-slate-300">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                  <div key={reason} className="flex gap-2 text-xs leading-5 text-al-text-secondary">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-al-success" />
                     <span>{reason}</span>
                   </div>
                 ))}
@@ -939,23 +939,23 @@ export function UnifiedEvidenceExperience({
                     >
                       <span className="relative inline-flex">
                         <ProviderMark providerKey={provider.providerKey} />
-                        <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full border border-[#071321] bg-slate-700 px-1 text-[9px] font-black text-slate-100">
+                        <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full border border-[#071321] bg-slate-700 px-1 text-[9px] font-black text-al-text">
                           {provider.eventCount}
                         </span>
                       </span>
-                      <p className="mt-1 truncate text-[10px] font-semibold text-slate-400">{providerInfo(provider.providerKey).label}</p>
+                      <p className="mt-1 truncate text-[10px] font-semibold text-al-text-muted">{providerInfo(provider.providerKey).label}</p>
                     </button>
                     <button
                       type="button"
                       onClick={(event) => { event.stopPropagation(); setProviderDrawer(provider); }}
                       title="View connection health"
-                      className="absolute -left-1.5 -top-1.5 hidden h-4 w-4 place-items-center rounded-full border border-white/20 bg-[#0a1728] text-[9px] font-black text-slate-400 group-hover:grid hover:text-blue-300"
+                      className="absolute -left-1.5 -top-1.5 hidden h-4 w-4 place-items-center rounded-full border border-white/20 bg-[#0a1728] text-[9px] font-black text-al-text-muted group-hover:grid hover:text-blue-300"
                     >
                       i
                     </button>
                   </div>
                 )) : (
-                  <div className="col-span-4 rounded-xl border border-dashed border-white/10 p-4 text-xs text-slate-500">No source platforms reported yet.</div>
+                  <div className="col-span-4 rounded-xl border border-dashed border-white/10 p-4 text-xs text-al-text-muted">No source platforms reported yet.</div>
                 )}
               </div>
             </FlagshipSideCard>
@@ -965,9 +965,9 @@ export function UnifiedEvidenceExperience({
                 {attachments.length > 0 ? attachments.slice(0, 4).map((attachment) => (
                   <FlagshipAttachmentRow key={attachment.id} attachment={attachment} />
                 )) : (
-                  <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-slate-500">No supporting documents are linked yet.</p>
+                  <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-al-text-muted">No supporting documents are linked yet.</p>
                 )}
-                {attachments.length > 4 ? <p className="text-center text-xs font-semibold text-slate-500">+{attachments.length - 4} more files</p> : null}
+                {attachments.length > 4 ? <p className="text-center text-xs font-semibold text-al-text-muted">+{attachments.length - 4} more files</p> : null}
               </div>
             </FlagshipSideCard>
 
@@ -977,12 +977,12 @@ export function UnifiedEvidenceExperience({
                   <div key={item.id} className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
                     <ProviderMark providerKey={item.providerKey} size="sm" />
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-slate-200">{item.label}</p>
-                      <p className="truncate text-[11px] text-slate-500">{titleCase(item.type)} - {providerInfo(item.providerKey).label}</p>
+                      <p className="truncate text-xs font-bold text-al-text-secondary">{item.label}</p>
+                      <p className="truncate text-[11px] text-al-text-muted">{titleCase(item.type)} - {providerInfo(item.providerKey).label}</p>
                     </div>
                   </div>
                 )) : (
-                  <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-slate-500">No related records have been confirmed.</p>
+                  <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-al-text-muted">No related records have been confirmed.</p>
                 )}
               </div>
             </FlagshipSideCard>
@@ -990,13 +990,13 @@ export function UnifiedEvidenceExperience({
         </div>
 
         <div className="fixed right-4 top-16 z-40 flex flex-wrap justify-end gap-2">
-          <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-slate-200 shadow-xl transition hover:bg-white/[0.08]">
+          <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-white/[0.08]">
             <ArrowDownToLine className="h-4 w-4" /> Export
           </button>
-          <button type="button" onClick={() => void copyText(window.location.href, 'Share link')} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-slate-200 shadow-xl transition hover:bg-white/[0.08]">
+          <button type="button" onClick={() => void copyText(window.location.href, 'Share link')} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-white/[0.08]">
             <Share2 className="h-4 w-4" /> Share
           </button>
-          <Link href={`/audit-logs?evidence=${encodeURIComponent(initialData.id)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-slate-200 shadow-xl transition hover:bg-white/[0.08]">
+          <Link href={`/audit-logs?evidence=${encodeURIComponent(initialData.id)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-white/[0.08]">
             <History className="h-4 w-4" /> Audit Log
           </Link>
           <div className="relative">
@@ -1005,16 +1005,16 @@ export function UnifiedEvidenceExperience({
             </button>
             {actionsOpen ? (
               <div className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-[#081525] p-2 shadow-2xl">
-                <button type="button" onClick={() => void copyText(initialData.id, 'Decision ID')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-200 hover:bg-white/[0.06]">Copy decision ID</button>
-                <button type="button" onClick={() => void copyText(evidenceHash, 'Evidence hash')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-200 hover:bg-white/[0.06]">Copy evidence hash</button>
-                <button type="button" onClick={() => void refreshTimeline()} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-slate-200 hover:bg-white/[0.06]">Refresh timeline</button>
+                <button type="button" onClick={() => void copyText(initialData.id, 'Decision ID')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-white/[0.06]">Copy decision ID</button>
+                <button type="button" onClick={() => void copyText(evidenceHash, 'Evidence hash')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-white/[0.06]">Copy evidence hash</button>
+                <button type="button" onClick={() => void refreshTimeline()} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-white/[0.06]">Refresh timeline</button>
               </div>
             ) : null}
           </div>
         </div>
 
         {toast ? (
-          <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-[#081525] px-4 py-2 text-xs font-bold text-slate-100 shadow-2xl">
+          <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-white/10 bg-[#081525] px-4 py-2 text-xs font-bold text-al-text shadow-2xl">
             {toast}
           </div>
         ) : null}
@@ -1030,8 +1030,8 @@ export function UnifiedEvidenceExperience({
 function FlagshipMetadata({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 break-words text-xs leading-5 text-slate-300">{value}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">{label}</p>
+      <p className="mt-1 break-words text-xs leading-5 text-al-text-secondary">{value}</p>
     </div>
   );
 }
@@ -1070,15 +1070,15 @@ function FlagshipAttachmentRow({ attachment }: { attachment: AttachmentItem }) {
         <FileText className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-bold text-slate-200">{attachment.name}</p>
-        <p className="truncate text-[11px] text-slate-500">{providerInfo(attachment.providerKey).label} - {attachment.type ?? 'Evidence file'}</p>
+        <p className="truncate text-xs font-bold text-al-text-secondary">{attachment.name}</p>
+        <p className="truncate text-[11px] text-al-text-muted">{providerInfo(attachment.providerKey).label} - {attachment.type ?? 'Evidence file'}</p>
       </div>
       {url ? (
-        <a href={url} target="_blank" rel="noreferrer" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white" aria-label={`Open ${attachment.name}`}>
+        <a href={url} target="_blank" rel="noreferrer" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 text-al-text-muted transition hover:text-white" aria-label={`Open ${attachment.name}`}>
           <ExternalLink className="h-4 w-4" />
         </a>
       ) : (
-        <LockKeyhole className="h-4 w-4 text-slate-600" />
+        <LockKeyhole className="h-4 w-4 text-al-text-secondary" />
       )}
     </div>
   );
@@ -1111,7 +1111,7 @@ function FlagshipTabPanel({
       <div className="grid gap-4 p-4 lg:grid-cols-2">
         <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4 lg:col-span-2">
           <h2 className="text-lg font-black text-white">Risk Radar</h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-al-text-muted">
             {initialData.complianceEvaluation
               ? `Derived from the latest playbook compliance evaluation${initialData.complianceEvaluation.triggeredRule ? ` (${initialData.complianceEvaluation.triggeredRule})` : ''}.`
               : 'No playbook compliance evaluation has run for this record yet.'}
@@ -1122,13 +1122,13 @@ function FlagshipTabPanel({
         </section>
         <section className="rounded-xl border border-white/[0.08] bg-[#03101e] p-4">
           <h2 className="text-lg font-black text-white">AI Correlation Reasoning</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
+          <p className="mt-2 text-sm leading-6 text-al-text-muted">
             ApprovLine clustered this decision from source evidence, matching actor, subject, department, references, and time proximity. Reasoning is derived from captured evidence only.
           </p>
           <div className="mt-4 space-y-2">
             {(confidenceReasons.length ? confidenceReasons : ['No explicit matching reasons were stored for this record.']).map((reason) => (
-              <div key={reason} className="flex gap-2 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3 text-sm text-slate-300">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+              <div key={reason} className="flex gap-2 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3 text-sm text-al-text-secondary">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-al-success" />
                 {reason}
               </div>
             ))}
@@ -1144,8 +1144,8 @@ function FlagshipTabPanel({
             ['Verification status', titleCase(initialData.verificationStatus)],
           ].map(([label, value]) => (
             <div key={label} className="mt-3 flex items-center justify-between rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
-              <span className="text-xs font-semibold text-slate-500">{label}</span>
-              <span className="text-sm font-black text-slate-100">{value}</span>
+              <span className="text-xs font-semibold text-al-text-muted">{label}</span>
+              <span className="text-sm font-black text-al-text">{value}</span>
             </div>
           ))}
         </section>
@@ -1184,10 +1184,10 @@ function FlagshipTabPanel({
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-black text-white">{person.name}</p>
-                <p className="truncate text-xs text-slate-500">{person.email ?? person.role}</p>
+                <p className="truncate text-xs text-al-text-muted">{person.email ?? person.role}</p>
               </div>
             </div>
-            <p className="mt-3 text-xs font-bold text-slate-400">{person.events} evidence events</p>
+            <p className="mt-3 text-xs font-bold text-al-text-muted">{person.events} evidence events</p>
           </div>
         )) : <EmptyPanel title="No participants captured" text="Participants will appear when source events include actor metadata." />}
       </div>
@@ -1213,7 +1213,7 @@ function FlagshipTabPanel({
               <ProviderMark providerKey={item.providerKey} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-black text-white">{item.label}</p>
-                <p className="truncate text-xs text-slate-500">{titleCase(item.type)} - {providerInfo(item.providerKey).label}</p>
+                <p className="truncate text-xs text-al-text-muted">{titleCase(item.type)} - {providerInfo(item.providerKey).label}</p>
               </div>
             </div>
           </div>
@@ -1237,8 +1237,8 @@ function FlagshipTabPanel({
                 <CircleDot className="mt-1 h-4 w-4 shrink-0 text-blue-300" />
                 <div>
                   <p className="text-sm font-bold text-white">{title}</p>
-                  <p className="text-xs text-slate-500">{time}</p>
-                  <p className="mt-1 text-xs text-slate-400">{detail}</p>
+                  <p className="text-xs text-al-text-muted">{time}</p>
+                  <p className="mt-1 text-xs text-al-text-muted">{detail}</p>
                 </div>
               </div>
             ))}
@@ -1257,10 +1257,10 @@ function FlagshipTabPanel({
               <ProviderMark providerKey={provider.providerKey} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-black text-white">{providerInfo(provider.providerKey).label}</p>
-                <p className="truncate text-xs text-slate-500">{titleCase(provider.connection?.status ?? 'Evidence received')}</p>
+                <p className="truncate text-xs text-al-text-muted">{titleCase(provider.connection?.status ?? 'Evidence received')}</p>
               </div>
             </div>
-            <p className="mt-4 text-xs text-slate-400">{provider.eventCount} events. Latest: {dateTime(provider.latestEventAt)}</p>
+            <p className="mt-4 text-xs text-al-text-muted">{provider.eventCount} events. Latest: {dateTime(provider.latestEventAt)}</p>
           </button>
         ))}
       </div>
@@ -1277,10 +1277,10 @@ function FlagshipProviderDrawer({ provider, onClose }: { provider: EvidenceProvi
             <ProviderMark providerKey={provider.providerKey} size="lg" />
             <div>
               <h2 className="text-lg font-black text-white">{providerInfo(provider.providerKey).label}</h2>
-              <p className="text-xs text-slate-500">Connector diagnostics</p>
+              <p className="text-xs text-al-text-muted">Connector diagnostics</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-400 transition hover:text-white">
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-al-text-muted transition hover:text-white">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1295,20 +1295,20 @@ function FlagshipProviderDrawer({ provider, onClose }: { provider: EvidenceProvi
             ['Consecutive failures', String(provider.connection?.health?.consecutiveFailures ?? 0)],
           ].map(([label, value]) => (
             <div key={label} className="flex items-center justify-between gap-4 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
-              <span className="text-xs font-semibold text-slate-500">{label}</span>
-              <span className="text-right text-xs font-black text-slate-200">{value}</span>
+              <span className="text-xs font-semibold text-al-text-muted">{label}</span>
+              <span className="text-right text-xs font-black text-al-text-secondary">{value}</span>
             </div>
           ))}
         </div>
         {provider.connection?.health?.lastErrorMessage ? (
           <div className="mt-4 rounded-lg border border-rose-400/20 bg-rose-400/[0.07] p-3">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-rose-300">Latest connector error</p>
-            <p className="mt-2 text-xs leading-5 text-rose-200/70">{provider.connection.health.lastErrorMessage}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-al-danger">Latest connector error</p>
+            <p className="mt-2 text-xs leading-5 text-al-danger/70">{provider.connection.health.lastErrorMessage}</p>
           </div>
         ) : null}
         <div className="mt-6 rounded-lg border border-white/[0.07] bg-[#020a15] p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Security boundary</p>
-          <p className="mt-2 text-xs leading-6 text-slate-400">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">Security boundary</p>
+          <p className="mt-2 text-xs leading-6 text-al-text-muted">
             Connector diagnostics expose health and mapping metadata only. Encrypted credentials and raw source payloads are never returned to this client.
           </p>
         </div>
@@ -1490,17 +1490,17 @@ function statusTone(status: string) {
     normalized.includes('confirmed') ||
     normalized.includes('processed')
   ) {
-    return 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300';
+    return 'border-emerald-400/20 bg-emerald-400/10 text-al-success';
   }
   if (
     normalized.includes('suggest') ||
     normalized.includes('pending') ||
     normalized.includes('verbal')
   ) {
-    return 'border-amber-400/20 bg-amber-400/10 text-amber-300';
+    return 'border-amber-400/20 bg-amber-400/10 text-al-warning';
   }
   if (normalized.includes('reject') || normalized.includes('fail') || normalized.includes('dispute')) {
-    return 'border-rose-400/20 bg-rose-400/10 text-rose-300';
+    return 'border-rose-400/20 bg-rose-400/10 text-al-danger';
   }
   return 'border-blue-400/20 bg-blue-400/10 text-blue-300';
 }
@@ -1528,10 +1528,10 @@ function Metric({
   value: string | number;
   accent?: boolean | string;
 }) {
-  const accentClass = typeof accent === 'string' ? accent : accent ? 'text-emerald-300' : 'text-slate-100';
+  const accentClass = typeof accent === 'string' ? accent : accent ? 'text-al-success' : 'text-al-text';
   return (
     <div className="min-w-[88px] border-l border-white/[0.08] px-4 first:border-l-0">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-al-text-muted">{label}</p>
       <p className={`mt-1 text-lg font-bold ${accentClass}`}>
         {value}
       </p>
@@ -1583,7 +1583,7 @@ function RiskRadarChart({ dimensions }: { dimensions: RiskDimension[] }) {
 
   const overallScore = Math.round(dimensions.reduce((sum, dimension) => sum + dimension.score, 0) / dimensions.length);
   const color = overallScore >= 67 ? '#ef4444' : overallScore >= 34 ? '#f59e0b' : '#10b981';
-  const tone = overallScore >= 67 ? 'text-rose-300' : overallScore >= 34 ? 'text-amber-300' : 'text-emerald-300';
+  const tone = overallScore >= 67 ? 'text-al-danger' : overallScore >= 34 ? 'text-al-warning' : 'text-al-success';
 
   const dataPoints = dimensions.map((dimension, index) => pointFor(index, dimension.score / 100));
   const dataPath = `${dataPoints.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')} Z`;
@@ -1625,8 +1625,8 @@ function RiskRadarChart({ dimensions }: { dimensions: RiskDimension[] }) {
         <p className={`text-sm font-black ${tone}`}>Overall risk score: {overallScore} / 100</p>
         {dimensions.map((dimension) => (
           <div key={dimension.label} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2">
-            <span className="text-xs font-semibold text-slate-400">{dimension.label}</span>
-            <span className="text-xs font-black text-slate-200">{dimension.score}</span>
+            <span className="text-xs font-semibold text-al-text-muted">{dimension.label}</span>
+            <span className="text-xs font-black text-al-text-secondary">{dimension.score}</span>
           </div>
         ))}
       </div>
@@ -1652,8 +1652,8 @@ function RiskRadarEmptyState() {
         <polygon points={points} fill="none" stroke="#475569" strokeWidth={1.5} strokeDasharray="4 4" />
       </svg>
       <div>
-        <h3 className="text-sm font-bold text-slate-200">Risk analysis not yet available for this record</h3>
-        <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-slate-500">
+        <h3 className="text-sm font-bold text-al-text-secondary">Risk analysis not yet available for this record</h3>
+        <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-al-text-muted">
           Upload playbooks and run Evaluate Approvals to score this decision&apos;s compliance and risk profile.
         </p>
       </div>
@@ -1683,9 +1683,9 @@ function EmptyPanel({ title, text }: { title: string; text: string }) {
   return (
     <div className="grid min-h-[280px] place-items-center rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
       <div>
-        <Archive className="mx-auto h-8 w-8 text-slate-600" />
-        <h3 className="mt-4 text-sm font-bold text-slate-200">{title}</h3>
-        <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-slate-500">{text}</p>
+        <Archive className="mx-auto h-8 w-8 text-al-text-secondary" />
+        <h3 className="mt-4 text-sm font-bold text-al-text-secondary">{title}</h3>
+        <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-al-text-muted">{text}</p>
       </div>
     </div>
   );
@@ -1894,28 +1894,28 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
     <div className="min-h-[520px]">
       <div className="flex flex-col gap-3 border-b border-white/[0.07] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-sm font-bold text-slate-100">Complete Timeline of All Mentions</h2>
-          <p className="mt-1 text-[11px] text-slate-500">
+          <h2 className="text-sm font-bold text-al-text">Complete Timeline of All Mentions</h2>
+          <p className="mt-1 text-[11px] text-al-text-muted">
             Chronological, immutable evidence from every correlated source.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative min-w-0 flex-1 sm:w-[220px] sm:flex-none">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-al-text-muted" />
             <input
               id="evidence-search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search evidence..."
-              className="h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] pl-9 pr-3 text-xs text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-blue-500/60"
+              className="h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] pl-9 pr-3 text-xs text-al-text-secondary outline-none transition placeholder:text-al-text-secondary focus:border-blue-500/60"
             />
           </label>
           <label className="relative">
-            <Filter className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+            <Filter className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-al-text-muted" />
             <select
               value={providerFilter}
               onChange={(event) => setProviderFilter(event.target.value)}
-              className="h-9 appearance-none rounded-lg border border-white/10 bg-[#071426] pl-9 pr-8 text-xs font-semibold text-slate-300 outline-none focus:border-blue-500/60"
+              className="h-9 appearance-none rounded-lg border border-white/10 bg-[#071426] pl-9 pr-8 text-xs font-semibold text-al-text-secondary outline-none focus:border-blue-500/60"
             >
               <option value="all">All sources</option>
               {initialData.providers.map((provider) => (
@@ -1924,19 +1924,19 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-al-text-muted" />
           </label>
           <label className="relative">
             <select
               value={groupBy}
               onChange={(event) => setGroupBy(event.target.value as typeof groupBy)}
-              className="h-9 appearance-none rounded-lg border border-white/10 bg-[#071426] pl-3 pr-8 text-xs font-semibold text-slate-300 outline-none focus:border-blue-500/60"
+              className="h-9 appearance-none rounded-lg border border-white/10 bg-[#071426] pl-3 pr-8 text-xs font-semibold text-al-text-secondary outline-none focus:border-blue-500/60"
             >
               <option value="none">Group: None</option>
               <option value="source">Group: Source</option>
               <option value="day">Group: Day</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-al-text-muted" />
           </label>
         </div>
       </div>
@@ -1948,7 +1948,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             setNewEvidenceCount(0);
             document.getElementById('timeline-end')?.scrollIntoView({ behavior: 'smooth' });
           }}
-          className="mx-auto mt-3 flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-emerald-300"
+          className="mx-auto mt-3 flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-al-success"
         >
           <CircleDot className="h-3.5 w-3.5" />
           {newEvidenceCount} new evidence {newEvidenceCount === 1 ? 'event' : 'events'} detected
@@ -1960,7 +1960,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
           {groupedEvents.map((group) => (
             <div key={group.label || 'all'}>
               {group.label ? (
-                <div className="sticky top-0 z-[2] border-b border-white/[0.07] bg-[#06101f]/95 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 backdrop-blur">
+                <div className="sticky top-0 z-[2] border-b border-white/[0.07] bg-[#06101f]/95 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-al-text-muted backdrop-blur">
                   {group.label}
                 </div>
               ) : null}
@@ -1990,15 +1990,15 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                         <span className="block text-[11px] font-semibold text-blue-300">
                           {timeOnly(event.occurredAt)}
                         </span>
-                        <span className="mt-0.5 block text-[10px] text-slate-600">
+                        <span className="mt-0.5 block text-[10px] text-al-text-secondary">
                           {dateOnly(event.occurredAt)}
                         </span>
                       </span>
                       <span className="hidden min-w-0 items-center gap-3 sm:flex">
                         <ProviderMark providerKey={event.providerKey} />
                         <span className="min-w-0">
-                          <span className="block truncate text-xs font-bold text-slate-200">{provider.label}</span>
-                          <span className="mt-0.5 block truncate text-[10px] text-slate-500">
+                          <span className="block truncate text-xs font-bold text-al-text-secondary">{provider.label}</span>
+                          <span className="mt-0.5 block truncate text-[10px] text-al-text-muted">
                             {event.threadId ?? titleCase(event.providerEventType)}
                           </span>
                         </span>
@@ -2006,12 +2006,12 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                       <span className="min-w-0">
                         <span className="flex items-center gap-2 sm:hidden">
                           <ProviderMark providerKey={event.providerKey} size="sm" />
-                          <span className="truncate text-xs font-bold text-slate-200">{provider.label}</span>
+                          <span className="truncate text-xs font-bold text-al-text-secondary">{provider.label}</span>
                         </span>
-                        <span className="mt-1 block line-clamp-2 text-xs leading-5 text-slate-300 sm:mt-0">
+                        <span className="mt-1 block line-clamp-2 text-xs leading-5 text-al-text-secondary sm:mt-0">
                           {event.content || titleCase(event.providerEventType)}
                         </span>
-                        <span className="mt-1 block truncate text-[10px] text-slate-600">
+                        <span className="mt-1 block truncate text-[10px] text-al-text-secondary">
                           {event.objectType}
                           {event.objectId ? ` · ${event.objectId}` : ''}
                         </span>
@@ -2026,10 +2026,10 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                             .toUpperCase()}
                         </span>
                         <span className="min-w-0">
-                          <span className="block truncate text-[11px] font-semibold text-slate-300">
+                          <span className="block truncate text-[11px] font-semibold text-al-text-secondary">
                             {event.actorName ?? event.actorEmail ?? 'Unknown actor'}
                           </span>
-                          <span className="block truncate text-[9px] text-slate-600">
+                          <span className="block truncate text-[9px] text-al-text-secondary">
                             {typeof metadata.role === 'string' ? metadata.role : event.actorEmail ?? 'Role not captured'}
                           </span>
                         </span>
@@ -2043,24 +2043,24 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                           {eventStatus(event, membership)}
                         </span>
                         {expanded ? (
-                          <ChevronDown className="h-4 w-4 text-slate-500" />
+                          <ChevronDown className="h-4 w-4 text-al-text-muted" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 text-slate-500" />
+                          <ChevronRight className="h-4 w-4 text-al-text-muted" />
                         )}
                       </span>
                     </button>
                     {expanded ? (
                       <div className="grid gap-4 border-t border-white/[0.05] bg-black/15 p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(220px,0.6fr)]">
                         <div className="min-w-0">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-al-text-muted">
                             Original captured content
                           </p>
-                          <div className="mt-2 rounded-lg border border-white/[0.07] bg-[#020a15] p-3 text-xs leading-6 text-slate-300">
+                          <div className="mt-2 rounded-lg border border-white/[0.07] bg-[#020a15] p-3 text-xs leading-6 text-al-text-secondary">
                             {event.content || 'The source supplied metadata without a text body.'}
                           </div>
                           {membership?.matchingReasons.length ? (
                             <div className="mt-3">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-al-text-muted">
                                 AI clustering explanation
                               </p>
                               <div className="mt-2 flex flex-wrap gap-2">
@@ -2087,7 +2087,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                                 Open immutable source
                               </a>
                             ) : (
-                              <span className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 text-[10px] font-semibold text-slate-600">
+                              <span className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 text-[10px] font-semibold text-al-text-secondary">
                                 <LockKeyhole className="h-3.5 w-3.5" />
                                 Source URL unavailable
                               </span>
@@ -2098,7 +2098,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                                 void navigator.clipboard.writeText(event.evidenceHash);
                                 showToast('Evidence hash copied.');
                               }}
-                              className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-[10px] font-bold text-slate-300 hover:border-blue-500/40"
+                              className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-[10px] font-bold text-al-text-secondary hover:border-blue-500/40"
                             >
                               <Fingerprint className="h-3.5 w-3.5" />
                               Copy evidence hash
@@ -2117,8 +2117,8 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                             ['Raw payload', 'Encrypted and access-restricted'],
                           ].map(([label, value]) => (
                             <div key={label} className="grid grid-cols-[92px_1fr] gap-3 border-b border-white/[0.05] pb-2 last:border-0 last:pb-0">
-                              <dt className="font-semibold text-slate-600">{label}</dt>
-                              <dd className="min-w-0 break-all text-right font-semibold text-slate-300">{value}</dd>
+                              <dt className="font-semibold text-al-text-secondary">{label}</dt>
+                              <dd className="min-w-0 break-all text-right font-semibold text-al-text-secondary">{value}</dd>
                             </div>
                           ))}
                         </dl>
@@ -2131,19 +2131,19 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
           ))}
           <div id="timeline-end" ref={sentinelRef} className="grid min-h-14 place-items-center">
             {loadingMore ? (
-              <span className="flex items-center gap-2 text-[11px] font-semibold text-slate-500">
+              <span className="flex items-center gap-2 text-[11px] font-semibold text-al-text-muted">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading more evidence...
               </span>
             ) : loadError ? (
               <button
                 type="button"
                 onClick={() => void loadMore()}
-                className="flex items-center gap-2 rounded-lg border border-rose-400/20 bg-rose-400/[0.07] px-3 py-2 text-[11px] font-bold text-rose-300"
+                className="flex items-center gap-2 rounded-lg border border-rose-400/20 bg-rose-400/[0.07] px-3 py-2 text-[11px] font-bold text-al-danger"
               >
                 <RefreshCw className="h-3.5 w-3.5" /> {loadError} Retry
               </button>
             ) : page.hasMore ? null : (
-              <span className="text-[10px] font-semibold text-slate-700">Complete evidence history loaded</span>
+              <span className="text-[10px] font-semibold text-al-text-secondary">Complete evidence history loaded</span>
             )}
           </div>
         </div>
@@ -2164,22 +2164,22 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
       return (
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <section className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300">What AI observed</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-al-accent">What AI observed</p>
             <h2 className="mt-2 text-lg font-bold text-white">{initialData.subject}</h2>
-            <p className="mt-2 text-xs leading-6 text-slate-400">
+            <p className="mt-2 text-xs leading-6 text-al-text-muted">
               {initialData.evidenceCount} evidence events across {initialData.sourceCount} sources were correlated
               into this record with {initialData.confidence}% confidence.
             </p>
             <div className="mt-4 grid gap-2">
               {matchingReasons.length ? (
                 matchingReasons.map((reason) => (
-                  <div key={reason} className="flex items-start gap-2 rounded-lg bg-white/[0.025] p-2.5 text-xs text-slate-300">
-                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  <div key={reason} className="flex items-start gap-2 rounded-lg bg-white/[0.025] p-2.5 text-xs text-al-text-secondary">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-al-success" />
                     {reason}
                   </div>
                 ))
               ) : (
-                <p className="text-xs leading-5 text-slate-500">
+                <p className="text-xs leading-5 text-al-text-muted">
                   No classifier rationale was persisted for the loaded events. ApprovLine will not fabricate an explanation.
                 </p>
               )}
@@ -2209,8 +2209,8 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               ].map(([label, value]) => (
                 <div key={String(label)}>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-400">{label}</span>
-                    <span className="font-bold text-slate-200">{value}%</span>
+                    <span className="font-semibold text-al-text-muted">{label}</span>
+                    <span className="font-bold text-al-text-secondary">{value}%</span>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
                     <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500" style={{ width: `${value}%` }} />
@@ -2220,8 +2220,8 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             </div>
             {suggestedCount ? (
               <div className="mt-5 rounded-lg border border-amber-400/20 bg-amber-400/[0.07] p-3">
-                <p className="text-xs font-bold text-amber-300">{suggestedCount} association(s) require human review</p>
-                <p className="mt-1 text-[11px] leading-5 text-amber-200/70">
+                <p className="text-xs font-bold text-al-warning">{suggestedCount} association(s) require human review</p>
+                <p className="mt-1 text-[11px] leading-5 text-al-warning/70">
                   Suggested evidence remains distinct from verified evidence until an authorized user reviews it.
                 </p>
               </div>
@@ -2244,19 +2244,19 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             ['Risk level', initialData.riskLevel ?? 'Not assessed'],
           ].map(([label, value]) => (
             <div key={label} className="bg-[#06101f] p-4">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">{label}</dt>
-              <dd className="mt-2 break-words text-sm font-semibold text-slate-200">{value}</dd>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-al-text-secondary">{label}</dt>
+              <dd className="mt-2 break-words text-sm font-semibold text-al-text-secondary">{value}</dd>
             </div>
           ))}
           <div className="bg-[#06101f] p-4">
-            <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">Primary approval</dt>
+            <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-al-text-secondary">Primary approval</dt>
             <dd className="mt-2 break-words text-sm font-semibold">
               {initialData.primaryApproval ? (
                 <PendingLink href={`/approvals/${initialData.primaryApproval.id}`} pendingText="Opening approval..." className="text-blue-300 underline decoration-blue-300/40 underline-offset-2 hover:text-blue-200">
                   {initialData.primaryApproval.id}
                 </PendingLink>
               ) : (
-                <span className="text-slate-200">Not linked</span>
+                <span className="text-al-text-secondary">Not linked</span>
               )}
             </dd>
           </div>
@@ -2272,8 +2272,8 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                 {participant.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-xs font-bold text-slate-200">{participant.name}</span>
-                <span className="mt-0.5 block truncate text-[10px] text-slate-500">{participant.email ?? 'Email not captured'}</span>
+                <span className="block truncate text-xs font-bold text-al-text-secondary">{participant.name}</span>
+                <span className="mt-0.5 block truncate text-[10px] text-al-text-muted">{participant.email ?? 'Email not captured'}</span>
                 <span className="mt-1 block text-[9px] font-semibold text-blue-300">{participant.count} evidence events</span>
               </span>
             </div>
@@ -2288,15 +2288,15 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
         <div className="grid gap-3 p-4 sm:grid-cols-2">
           {attachments.map((attachment) => (
             <div key={attachment.id} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
-              <span className="grid h-10 w-10 place-items-center rounded-lg bg-blue-500/10 text-blue-300"><File className="h-5 w-5" /></span>
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-al-info/10 text-blue-300"><File className="h-5 w-5" /></span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-bold text-slate-200">{attachment.name}</span>
-                <span className="mt-0.5 block truncate text-[10px] text-slate-500">{providerInfo(attachment.providerKey).label} · {attachment.type ?? 'Attachment'}</span>
+                <span className="block truncate text-xs font-bold text-al-text-secondary">{attachment.name}</span>
+                <span className="mt-0.5 block truncate text-[10px] text-al-text-muted">{providerInfo(attachment.providerKey).label} · {attachment.type ?? 'Attachment'}</span>
               </span>
               {attachment.url ? (
                 <a href={attachment.url} target="_blank" rel="noreferrer" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 text-blue-300" title="Open signed source"><ExternalLink className="h-3.5 w-3.5" /></a>
               ) : (
-                <span className="grid h-8 w-8 place-items-center rounded-lg border border-white/[0.06] text-slate-700" title="Source unavailable"><LockKeyhole className="h-3.5 w-3.5" /></span>
+                <span className="grid h-8 w-8 place-items-center rounded-lg border border-white/[0.06] text-al-text-secondary" title="Source unavailable"><LockKeyhole className="h-3.5 w-3.5" /></span>
               )}
             </div>
           ))}
@@ -2312,8 +2312,8 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             <button key={item.id} type="button" onClick={() => { setActiveTab('timeline'); setExpandedId(item.eventId); }} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 text-left hover:border-blue-500/30">
               <ProviderMark providerKey={item.providerKey} />
               <span className="min-w-0">
-                <span className="block truncate text-xs font-bold text-slate-200">{item.label}</span>
-                <span className="mt-0.5 block text-[10px] text-slate-500">{titleCase(item.type)} · {providerInfo(item.providerKey).label}</span>
+                <span className="block truncate text-xs font-bold text-al-text-secondary">{item.label}</span>
+                <span className="mt-0.5 block text-[10px] text-al-text-muted">{titleCase(item.type)} · {providerInfo(item.providerKey).label}</span>
               </span>
             </button>
           ))}
@@ -2326,11 +2326,11 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
       <div className="grid gap-3 p-4">
         {events.map((event) => (
           <div key={event.id} className="grid gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:grid-cols-[160px_1fr_auto] sm:items-center">
-            <span className="text-[10px] font-semibold text-slate-500">{dateTime(event.receivedAt)}</span>
-            <span className="text-xs text-slate-300">
+            <span className="text-[10px] font-semibold text-al-text-muted">{dateTime(event.receivedAt)}</span>
+            <span className="text-xs text-al-text-secondary">
               Evidence received from <strong>{providerInfo(event.providerKey).label}</strong> and recorded as {titleCase(event.status)}.
             </span>
-            <span className="font-mono text-[9px] text-slate-600">{event.evidenceHash.slice(0, 14)}…</span>
+            <span className="font-mono text-[9px] text-al-text-secondary">{event.evidenceHash.slice(0, 14)}…</span>
           </div>
         ))}
       </div>
@@ -2338,28 +2338,28 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
   };
 
   return (
-    <div className="-m-3 min-h-[calc(100vh-76px)] bg-[#020a15] text-slate-100 sm:-m-4 xl:-m-5">
+    <div className="-m-3 min-h-[calc(100vh-76px)] bg-[#020a15] text-al-text sm:-m-4 xl:-m-5">
       {toast ? (
-        <div className="fixed right-5 top-20 z-50 flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-[#071426] px-4 py-3 text-xs font-bold text-emerald-300 shadow-2xl">
+        <div className="fixed right-5 top-20 z-50 flex items-center gap-2 rounded-lg border border-emerald-400/20 bg-[#071426] px-4 py-3 text-xs font-bold text-al-success shadow-2xl">
           <Check className="h-4 w-4" /> {toast}
         </div>
       ) : null}
 
       <div className="border-b border-white/[0.07] px-4 py-3 xl:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-slate-500">
+          <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-al-text-muted">
             <Link href="/evidence" className="hover:text-blue-300">Unified Evidence</Link>
             <ChevronRight className="h-3 w-3" />
-            <span className="truncate text-slate-300">{initialData.id}</span>
+            <span className="truncate text-al-text-secondary">{initialData.id}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[11px] font-bold text-slate-300 hover:border-blue-500/40 hover:text-white">
+            <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[11px] font-bold text-al-text-secondary hover:border-blue-500/40 hover:text-white">
               <ArrowDownToLine className="h-3.5 w-3.5" /> Export
             </button>
-            <button type="button" onClick={() => void shareRecord()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[11px] font-bold text-slate-300 hover:border-blue-500/40 hover:text-white">
+            <button type="button" onClick={() => void shareRecord()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[11px] font-bold text-al-text-secondary hover:border-blue-500/40 hover:text-white">
               <Share2 className="h-3.5 w-3.5" /> Share
             </button>
-            <button type="button" onClick={() => setActiveTab('audit')} className="hidden h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[11px] font-bold text-slate-300 hover:border-blue-500/40 hover:text-white sm:inline-flex">
+            <button type="button" onClick={() => setActiveTab('audit')} className="hidden h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[11px] font-bold text-al-text-secondary hover:border-blue-500/40 hover:text-white sm:inline-flex">
               <History className="h-3.5 w-3.5" /> Audit Log
             </button>
             <div className="relative">
@@ -2369,10 +2369,10 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               {actionsOpen ? (
                 <div className="absolute right-0 top-11 z-30 w-52 rounded-xl border border-white/10 bg-[#071426] p-1.5 shadow-2xl">
                   {initialData.primaryApproval ? (
-                    <PendingLink href={`/approvals/${initialData.primaryApproval.id}`} pendingText="Opening approval..." className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/[0.05]"><ClipboardCheck className="h-3.5 w-3.5" /> View full approval</PendingLink>
+                    <PendingLink href={`/approvals/${initialData.primaryApproval.id}`} pendingText="Opening approval..." className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-white/[0.05]"><ClipboardCheck className="h-3.5 w-3.5" /> View full approval</PendingLink>
                   ) : null}
-                  <button type="button" onClick={() => { setActiveTab('analysis'); setActionsOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-slate-300 hover:bg-white/[0.05]"><Sparkles className="h-3.5 w-3.5" /> Explain correlation</button>
-                  <Link href="/investigations" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-white/[0.05]"><AlertTriangle className="h-3.5 w-3.5" /> Open investigation center</Link>
+                  <button type="button" onClick={() => { setActiveTab('analysis'); setActionsOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-al-text-secondary hover:bg-white/[0.05]"><Sparkles className="h-3.5 w-3.5" /> Explain correlation</button>
+                  <Link href="/investigations" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-white/[0.05]"><AlertTriangle className="h-3.5 w-3.5" /> Open investigation center</Link>
                 </div>
               ) : null}
             </div>
@@ -2384,7 +2384,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
         <section className="overflow-hidden rounded-xl border border-white/[0.09] bg-gradient-to-br from-[#07192c] to-[#06101f] shadow-2xl shadow-black/20">
           <div className="grid gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="flex min-w-0 items-start gap-4">
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-300">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-emerald-400/30 bg-emerald-400/[0.08] text-al-success">
                 <ShieldCheck className="h-8 w-8" />
               </span>
               <div className="min-w-0">
@@ -2393,15 +2393,15 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                     {titleCase(initialData.verificationStatus)}
                   </span>
                   {initialData.riskLevel ? (
-                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-bold text-slate-400">
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-bold text-al-text-muted">
                       {titleCase(initialData.riskLevel)} risk
                     </span>
                   ) : null}
                 </div>
                 <h1 className="mt-2 truncate text-xl font-bold tracking-tight text-white sm:text-2xl">{initialData.subject}</h1>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-al-text-muted">
                   <span>{initialData.category ?? 'Unified decision record'}</span>
-                  <span className="text-slate-700">|</span>
+                  <span className="text-al-text-secondary">|</span>
                   <span>ID: {initialData.id}</span>
                   <button type="button" onClick={() => { void navigator.clipboard.writeText(initialData.id); showToast('Decision ID copied.'); }} title="Copy decision ID"><Copy className="h-3 w-3 hover:text-blue-300" /></button>
                 </div>
@@ -2412,7 +2412,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               <Metric label="Mentions" value={initialData.evidenceCount} />
               <Metric label="Confidence" value={`${initialData.confidence}%`} accent />
               <div className="ml-3 grid h-12 w-12 place-items-center rounded-full" style={{ background: `conic-gradient(#34d399 ${initialData.confidence}%, rgba(255,255,255,.08) 0)` }}>
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-[#071426] text-[10px] font-bold text-emerald-300">{initialData.confidence}%</span>
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-[#071426] text-[10px] font-bold text-al-success">{initialData.confidence}%</span>
               </div>
             </div>
           </div>
@@ -2427,8 +2427,8 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               ['Last updated', dateTime(initialData.lastSeenAt)],
             ].map(([label, value]) => (
               <div key={label} className="min-w-0 border-b border-r border-white/[0.07] p-3 last:border-r-0 sm:border-b-0">
-                <dt className="text-[9px] font-semibold uppercase tracking-wide text-slate-600">{label}</dt>
-                <dd className="mt-1 truncate text-[11px] font-semibold text-slate-200" title={value}>{value}</dd>
+                <dt className="text-[9px] font-semibold uppercase tracking-wide text-al-text-secondary">{label}</dt>
+                <dd className="mt-1 truncate text-[11px] font-semibold text-al-text-secondary" title={value}>{value}</dd>
               </div>
             ))}
           </dl>
@@ -2450,12 +2450,12 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
                     className={`relative flex h-11 shrink-0 items-center gap-2 px-3 text-[11px] font-semibold transition ${
-                      activeTab === tab.id ? 'text-blue-300' : 'text-slate-500 hover:text-slate-300'
+                      activeTab === tab.id ? 'text-blue-300' : 'text-al-text-muted hover:text-al-text-secondary'
                     }`}
                   >
                     <Icon className="h-3.5 w-3.5" />
                     {tab.label}
-                    {count !== null ? <span className="text-[9px] text-slate-600">({count})</span> : null}
+                    {count !== null ? <span className="text-[9px] text-al-text-secondary">({count})</span> : null}
                     {activeTab === tab.id ? <span className="absolute inset-x-2 bottom-0 h-0.5 bg-blue-500" /> : null}
                   </button>
                 );
@@ -2468,20 +2468,20 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             <section className="rounded-xl border border-white/[0.09] bg-[#06101f] p-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-bold text-white">AI Summary</h2>
-                <span className="text-[9px] text-slate-600">Live evidence</span>
+                <span className="text-[9px] text-al-text-secondary">Live evidence</span>
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-400">
+              <p className="mt-3 text-xs leading-5 text-al-text-muted">
                 ApprovLine observed {initialData.evidenceCount} mentions across {initialData.sourceCount} sources and correlated them into this decision with{' '}
-                <strong className="text-slate-200">{initialData.confidence}% confidence</strong>.
+                <strong className="text-al-text-secondary">{initialData.confidence}% confidence</strong>.
               </p>
               <div className="mt-3 grid gap-2">
                 {matchingReasons.length ? matchingReasons.slice(0, 5).map((reason) => (
-                  <div key={reason} className="flex items-start gap-2 text-[11px] leading-5 text-slate-400">
-                    <CheckCircle2 className="mt-1 h-3 w-3 shrink-0 text-emerald-400" /> {reason}
+                  <div key={reason} className="flex items-start gap-2 text-[11px] leading-5 text-al-text-muted">
+                    <CheckCircle2 className="mt-1 h-3 w-3 shrink-0 text-al-success" /> {reason}
                   </div>
                 )) : (
-                  <div className="flex items-start gap-2 text-[11px] leading-5 text-slate-500">
-                    <Bot className="mt-1 h-3 w-3 shrink-0 text-violet-400" />
+                  <div className="flex items-start gap-2 text-[11px] leading-5 text-al-text-muted">
+                    <Bot className="mt-1 h-3 w-3 shrink-0 text-al-accent" />
                     Detailed classifier reasoning was not persisted for this record.
                   </div>
                 )}
@@ -2494,7 +2494,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             <section className="rounded-xl border border-white/[0.09] bg-[#06101f] p-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-white">Source Platforms ({initialData.providers.length})</h2>
-                <Activity className="h-3.5 w-3.5 text-emerald-400" />
+                <Activity className="h-3.5 w-3.5 text-al-success" />
               </div>
               <div className="mt-3 grid grid-cols-4 gap-2">
                 {initialData.providers.map((provider) => (
@@ -2506,7 +2506,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                     title={`Open ${providerInfo(provider.providerKey).label} diagnostics`}
                   >
                     <ProviderMark providerKey={provider.providerKey} />
-                    <span className="w-full truncate text-center text-[8px] font-semibold text-slate-500 group-hover:text-slate-300">{providerInfo(provider.providerKey).label}</span>
+                    <span className="w-full truncate text-center text-[8px] font-semibold text-al-text-muted group-hover:text-al-text-secondary">{providerInfo(provider.providerKey).label}</span>
                     <span className="text-[8px] font-bold text-blue-300">{provider.eventCount}</span>
                   </button>
                 ))}
@@ -2523,13 +2523,13 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                   <div key={attachment.id} className="flex items-center gap-2 rounded-lg bg-white/[0.025] p-2">
                     <FileText className="h-4 w-4 shrink-0 text-blue-300" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[10px] font-semibold text-slate-300">{attachment.name}</span>
-                      <span className="block truncate text-[8px] text-slate-600">{providerInfo(attachment.providerKey).label} · {attachment.type ?? 'Attachment'}</span>
+                      <span className="block truncate text-[10px] font-semibold text-al-text-secondary">{attachment.name}</span>
+                      <span className="block truncate text-[8px] text-al-text-secondary">{providerInfo(attachment.providerKey).label} · {attachment.type ?? 'Attachment'}</span>
                     </span>
-                    {attachment.url ? <a href={attachment.url} target="_blank" rel="noreferrer" title="Open source"><ExternalLink className="h-3 w-3 text-slate-500 hover:text-blue-300" /></a> : <LockKeyhole className="h-3 w-3 text-slate-700" />}
+                    {attachment.url ? <a href={attachment.url} target="_blank" rel="noreferrer" title="Open source"><ExternalLink className="h-3 w-3 text-al-text-muted hover:text-blue-300" /></a> : <LockKeyhole className="h-3 w-3 text-al-text-secondary" />}
                   </div>
                 )) : (
-                  <p className="rounded-lg border border-dashed border-white/[0.07] p-3 text-[10px] leading-5 text-slate-600">No files were supplied by the loaded evidence.</p>
+                  <p className="rounded-lg border border-dashed border-white/[0.07] p-3 text-[10px] leading-5 text-al-text-secondary">No files were supplied by the loaded evidence.</p>
                 )}
               </div>
             </section>
@@ -2544,12 +2544,12 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                   <button key={item.id} type="button" onClick={() => { setActiveTab('timeline'); setExpandedId(item.eventId); }} className="flex min-w-0 items-center gap-2 rounded-lg bg-white/[0.025] p-2 text-left">
                     <ProviderMark providerKey={item.providerKey} size="sm" />
                     <span className="min-w-0">
-                      <span className="block truncate text-[10px] font-semibold text-slate-300">{item.label}</span>
-                      <span className="block truncate text-[8px] text-slate-600">{titleCase(item.type)}</span>
+                      <span className="block truncate text-[10px] font-semibold text-al-text-secondary">{item.label}</span>
+                      <span className="block truncate text-[8px] text-al-text-secondary">{titleCase(item.type)}</span>
                     </span>
                   </button>
                 )) : (
-                  <p className="rounded-lg border border-dashed border-white/[0.07] p-3 text-[10px] leading-5 text-slate-600">No related source identifiers were captured.</p>
+                  <p className="rounded-lg border border-dashed border-white/[0.07] p-3 text-[10px] leading-5 text-al-text-secondary">No related source identifiers were captured.</p>
                 )}
               </div>
             </section>
@@ -2558,19 +2558,19 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
 
         <footer className="mt-3 grid overflow-hidden rounded-xl border border-white/[0.09] bg-[#06101f] sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
           {[
-            { icon: AlertTriangle, label: 'Decision impact', value: initialData.primaryApproval?.businessImpact ?? 'Not assessed', color: 'text-amber-300' },
-            { icon: ShieldCheck, label: 'Compliance', value: initialData.metadata && typeof recordValue(initialData.metadata).complianceStatus === 'string' ? String(recordValue(initialData.metadata).complianceStatus) : 'Not assessed', color: 'text-emerald-300' },
+            { icon: AlertTriangle, label: 'Decision impact', value: initialData.primaryApproval?.businessImpact ?? 'Not assessed', color: 'text-al-warning' },
+            { icon: ShieldCheck, label: 'Compliance', value: initialData.metadata && typeof recordValue(initialData.metadata).complianceStatus === 'string' ? String(recordValue(initialData.metadata).complianceStatus) : 'Not assessed', color: 'text-al-success' },
             { icon: Activity, label: 'Risk', value: initialData.riskLevel ?? 'Not assessed', color: 'text-blue-300' },
-            { icon: CalendarClock, label: 'Retention', value: typeof recordValue(initialData.metadata).retention === 'string' ? String(recordValue(initialData.metadata).retention) : 'Workspace policy', color: 'text-amber-300' },
-            { icon: LockKeyhole, label: 'Evidence locked', value: 'Yes', color: 'text-emerald-300' },
-            { icon: UserRound, label: 'Created by', value: typeof recordValue(initialData.metadata).createdBy === 'string' ? String(recordValue(initialData.metadata).createdBy) : 'ApprovLine', color: 'text-slate-300' },
-            { icon: Clock3, label: 'Last updated', value: dateTime(initialData.updatedAt), color: 'text-slate-300' },
-            { icon: Fingerprint, label: 'Version', value: typeof recordValue(initialData.metadata).classificationVersion === 'string' ? String(recordValue(initialData.metadata).classificationVersion) : 'Current', color: 'text-violet-300' },
+            { icon: CalendarClock, label: 'Retention', value: typeof recordValue(initialData.metadata).retention === 'string' ? String(recordValue(initialData.metadata).retention) : 'Workspace policy', color: 'text-al-warning' },
+            { icon: LockKeyhole, label: 'Evidence locked', value: 'Yes', color: 'text-al-success' },
+            { icon: UserRound, label: 'Created by', value: typeof recordValue(initialData.metadata).createdBy === 'string' ? String(recordValue(initialData.metadata).createdBy) : 'ApprovLine', color: 'text-al-text-secondary' },
+            { icon: Clock3, label: 'Last updated', value: dateTime(initialData.updatedAt), color: 'text-al-text-secondary' },
+            { icon: Fingerprint, label: 'Version', value: typeof recordValue(initialData.metadata).classificationVersion === 'string' ? String(recordValue(initialData.metadata).classificationVersion) : 'Current', color: 'text-al-accent' },
           ].map((item) => {
             const Icon = item.icon;
             return (
               <div key={item.label} className="min-w-0 border-b border-r border-white/[0.07] p-3 last:border-r-0 sm:border-b-0">
-                <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-600">{item.label}</p>
+                <p className="text-[9px] font-semibold uppercase tracking-wide text-al-text-secondary">{item.label}</p>
                 <p className={`mt-1 flex min-w-0 items-center gap-1.5 truncate text-[10px] font-bold ${item.color}`} title={item.value}>
                   <Icon className="h-3 w-3 shrink-0" /> <span className="truncate">{item.value}</span>
                 </p>
@@ -2588,10 +2588,10 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                 <ProviderMark providerKey={providerDrawer.providerKey} size="lg" />
                 <div>
                   <h2 className="text-lg font-bold text-white">{providerInfo(providerDrawer.providerKey).label}</h2>
-                  <p className="text-[10px] text-slate-500">Connector diagnostics</p>
+                  <p className="text-[10px] text-al-text-muted">Connector diagnostics</p>
                 </div>
               </div>
-              <button type="button" onClick={() => setProviderDrawer(null)} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-400"><X className="h-4 w-4" /></button>
+              <button type="button" onClick={() => setProviderDrawer(null)} className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-al-text-muted"><X className="h-4 w-4" /></button>
             </div>
             <div className="mt-6 grid gap-3">
               {[
@@ -2604,20 +2604,20 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                 ['Consecutive failures', String(providerDrawer.connection?.health?.consecutiveFailures ?? 0)],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between gap-4 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
-                  <span className="text-xs font-semibold text-slate-500">{label}</span>
-                  <span className="text-right text-xs font-bold text-slate-200">{value}</span>
+                  <span className="text-xs font-semibold text-al-text-muted">{label}</span>
+                  <span className="text-right text-xs font-bold text-al-text-secondary">{value}</span>
                 </div>
               ))}
             </div>
             {providerDrawer.connection?.health?.lastErrorMessage ? (
               <div className="mt-4 rounded-lg border border-rose-400/20 bg-rose-400/[0.07] p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-rose-300">Latest connector error</p>
-                <p className="mt-2 text-xs leading-5 text-rose-200/70">{providerDrawer.connection.health.lastErrorMessage}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-al-danger">Latest connector error</p>
+                <p className="mt-2 text-xs leading-5 text-al-danger/70">{providerDrawer.connection.health.lastErrorMessage}</p>
               </div>
             ) : null}
             <div className="mt-6 rounded-lg border border-white/[0.07] bg-[#020a15] p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Security boundary</p>
-              <p className="mt-2 text-xs leading-6 text-slate-400">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">Security boundary</p>
+              <p className="mt-2 text-xs leading-6 text-al-text-muted">
                 Connector diagnostics expose health and mapping metadata only. Encrypted credentials and raw source payloads are never returned to this client.
               </p>
             </div>

@@ -19,8 +19,8 @@ function Card({ className = '', children }: { className?: string; children?: Rea
 
 export default function EvidenceDetailLoading() {
   return (
-    <div className="min-h-screen bg-[#030b18] text-slate-100">
-      <aside className="fixed inset-y-0 left-0 hidden w-[248px] flex-col gap-3 border-r border-white/[0.08] bg-[#020916] p-3 lg:flex">
+    <div className="min-h-screen bg-al-bg text-al-text">
+      <aside className="fixed inset-y-0 left-0 hidden w-[248px] flex-col gap-3 border-r border-white/[0.08] bg-al-bg-sidebar p-3 lg:flex">
         <Bar className="h-12 w-full" />
         <Bar className="h-9 w-full" />
         <div className="mt-2 space-y-1.5">
@@ -30,7 +30,7 @@ export default function EvidenceDetailLoading() {
         </div>
       </aside>
       <main className="lg:pl-[248px]">
-        <div className="border-b border-white/[0.07] bg-[#030b18]/95 px-4 py-3 sm:px-5">
+        <div className="border-b border-white/[0.07] bg-al-bg/95 px-4 py-3 sm:px-5">
           <Bar className="h-6 w-56" />
         </div>
         <div className="grid gap-4 p-3 sm:p-4 xl:p-5">

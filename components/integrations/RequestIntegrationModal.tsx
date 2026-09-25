@@ -128,19 +128,19 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
   return (
     <dialog
       ref={dialogRef}
-      className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-0 shadow-[0_20px_60px_rgba(15,23,42,0.25)] backdrop:bg-slate-950/60"
+      className="w-full max-w-xl rounded-2xl border border-al-border bg-white p-0 shadow-[0_20px_60px_rgba(15,23,42,0.25)] backdrop:bg-slate-950/60"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+      <div className="flex items-center justify-between border-b border-al-border px-6 py-5">
         <div>
-          <h2 className="text-xl font-black tracking-tight text-slate-950">Request an Integration</h2>
-          <p className="mt-0.5 text-sm font-semibold text-slate-500">
+          <h2 className="text-xl font-black tracking-tight text-al-text">Request an Integration</h2>
+          <p className="mt-0.5 text-sm font-semibold text-al-text-muted">
             Tell us what tool you need. We prioritize by customer demand.
           </p>
         </div>
         <button
           onClick={handleClose}
-          className="grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          className="grid h-9 w-9 place-items-center rounded-xl text-al-text-muted transition hover:bg-al-surface-elevated hover:text-al-text-secondary"
           aria-label="Close"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -190,8 +190,8 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
         ) : (
           <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-1.5">
-              <label className="text-sm font-black text-slate-700">
-                Tool name <span className="text-rose-500">*</span>
+              <label className="text-sm font-black text-al-text-secondary">
+                Tool name <span className="text-al-danger">*</span>
               </label>
               <input
                 type="text"
@@ -200,29 +200,29 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 required
                 maxLength={200}
                 placeholder="e.g. Salesforce, Coupa, Ironclad…"
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
               />
             </div>
 
             <div className="grid gap-1.5">
-              <label className="text-sm font-black text-slate-700">Website URL</label>
+              <label className="text-sm font-black text-al-text-secondary">Website URL</label>
               <input
                 type="url"
                 value={providerWebsite}
                 onChange={(e) => setProviderWebsite(e.target.value)}
                 maxLength={500}
                 placeholder="https://example.com"
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
-                <label className="text-sm font-black text-slate-700">Category</label>
+                <label className="text-sm font-black text-al-text-secondary">Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100"
+                  className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100"
                 >
                   <option value="">Select…</option>
                   {CATEGORIES.map((c) => (
@@ -231,11 +231,11 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 </select>
               </div>
               <div className="grid gap-1.5">
-                <label className="text-sm font-black text-slate-700">Priority</label>
+                <label className="text-sm font-black text-al-text-secondary">Priority</label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as 'LOW' | 'MEDIUM' | 'HIGH')}
-                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100"
+                  className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100"
                 >
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Medium</option>
@@ -245,11 +245,11 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
             </div>
 
             <div className="grid gap-1.5">
-              <label className="text-sm font-black text-slate-700">Type of approval evidence</label>
+              <label className="text-sm font-black text-al-text-secondary">Type of approval evidence</label>
               <select
                 value={evidenceType}
                 onChange={(e) => setEvidenceType(e.target.value)}
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100"
               >
                 <option value="">Select…</option>
                 {EVIDENCE_TYPES.map((t) => (
@@ -259,8 +259,8 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
             </div>
 
             <div className="grid gap-1.5">
-              <label className="text-sm font-black text-slate-700">
-                Why do you need this? <span className="text-rose-500">*</span>
+              <label className="text-sm font-black text-al-text-secondary">
+                Why do you need this? <span className="text-al-danger">*</span>
               </label>
               <textarea
                 value={reason}
@@ -270,12 +270,12 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 maxLength={2000}
                 rows={3}
                 placeholder="Describe your use case and what approval workflows you need to capture…"
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100 resize-none"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100 resize-none"
               />
             </div>
 
             <div className="grid gap-1.5">
-              <label className="text-sm font-black text-slate-700">Approx. affected users</label>
+              <label className="text-sm font-black text-al-text-secondary">Approx. affected users</label>
               <input
                 type="number"
                 value={userCount}
@@ -283,7 +283,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 min={1}
                 max={1_000_000}
                 placeholder="e.g. 50"
-                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
               />
             </div>
 
@@ -297,14 +297,14 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
               <button
                 type="button"
                 onClick={handleClose}
-                className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                className="rounded-xl border border-al-border px-5 py-2.5 text-sm font-black text-al-text-secondary transition hover:bg-al-surface-sunken"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={state === 'submitting' || !providerName.trim() || !reason.trim()}
-                className="rounded-xl bg-[#2155d9] px-6 py-2.5 text-sm font-black text-white transition hover:bg-[#1a44be] disabled:opacity-50"
+                className="rounded-xl bg-al-accent px-6 py-2.5 text-sm font-black text-white transition hover:bg-al-accent-hover disabled:opacity-50"
               >
                 {state === 'submitting' ? 'Submitting…' : 'Submit Request'}
               </button>

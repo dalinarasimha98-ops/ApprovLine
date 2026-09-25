@@ -78,7 +78,7 @@ function pctChange(current: number, previous: number): string | null {
 
 function DarkCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-[#1E2D4A] bg-[#0D1526] p-5 ${className}`}>
+    <div className={`rounded-2xl border border-al-border bg-[#0D1526] p-5 ${className}`}>
       {children}
     </div>
   );
@@ -110,19 +110,19 @@ function MiniDistributionBars({
       <CardTitle>{title}</CardTitle>
       <div className="mt-4 grid gap-2.5">
         {items.length === 0 ? (
-          <p className="text-[11px] text-slate-500">No data yet.</p>
+          <p className="text-[11px] text-al-text-muted">No data yet.</p>
         ) : items.map((item) => {
           const pct = Math.round((item.count / total) * 100);
           return (
             <div key={item.name} className="grid gap-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-[11px] font-semibold text-slate-300">{item.name}</span>
+                <span className="truncate text-[11px] font-semibold text-al-text-secondary">{item.name}</span>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
-                  <span className="text-[10px] text-slate-600">({numberFormat(item.count)})</span>
+                  <span className="text-[11px] font-bold text-al-text-muted">{pct}%</span>
+                  <span className="text-[10px] text-al-text-secondary">({numberFormat(item.count)})</span>
                 </div>
               </div>
-              <div className="h-1.5 rounded-full bg-[#1E2D4A]">
+              <div className="h-1.5 rounded-full bg-al-border">
                 <div
                   className="h-1.5 rounded-full"
                   style={{ backgroundColor: color, width: `${Math.max(2, (item.count / max) * 100)}%` }}
@@ -530,7 +530,7 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
       <DashboardShell>
         <div className="min-h-screen" style={{ background: '#0A0E1A' }}>
           <section className="grid gap-5 px-1 pb-10">
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
+            <div className="rounded-2xl border border-al-danger/20 bg-al-danger/10 p-6">
               <p className="text-sm font-bold text-red-300">Unable to load high-risk approval data. Please try again.</p>
             </div>
           </section>
@@ -574,7 +574,7 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
           <div className="flex flex-col gap-3 pt-1">
             <Link
               href={analyticsBack}
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-violet-400 hover:text-violet-300 transition-colors w-fit"
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-al-accent hover:text-al-accent transition-colors w-fit"
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -584,20 +584,20 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
 
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-400">High-Risk Approvals</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-al-danger">High-Risk Approvals</p>
                 <h1 className="mt-1 text-2xl font-black tracking-tight text-white">High-Risk Approval Records</h1>
-                <p className="mt-1 text-sm font-medium text-slate-400">
+                <p className="mt-1 text-sm font-medium text-al-text-muted">
                   Security, compliance, finance, legal, and procurement-sensitive approvals classified as high or critical risk.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-black text-red-300">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-al-danger/30 bg-al-danger/10 px-3 py-1 text-xs font-black text-red-300">
                   <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
                   {numberFormat(allTimeHighRiskCount)} High-Risk
                 </span>
                 <Link
                   href={`/api/export/approvals?riskLevel=high,critical`}
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 text-xs font-bold text-white hover:bg-violet-500 transition-colors"
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-al-accent px-3 text-xs font-bold text-white hover:bg-al-accent-hover transition-colors"
                 >
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -682,11 +682,11 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
 
               <DarkCard className="overflow-hidden !p-0">
                 {/* Table header */}
-                <div className="border-b border-[#1E2D4A] px-5 py-4">
+                <div className="border-b border-al-border px-5 py-4">
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <CardTitle>High-Risk Records</CardTitle>
-                      <p className="mt-0.5 text-[11px] text-slate-500">
+                      <p className="mt-0.5 text-[11px] text-al-text-muted">
                         {numberFormat(filteredTotal)} record{filteredTotal !== 1 ? 's' : ''}
                         {filteredTotal !== allTimeHighRiskCount && ` (filtered from ${numberFormat(allTimeHighRiskCount)} total)`}
                         {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
@@ -694,7 +694,7 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
                     </div>
                     <Link
                       href={buildSortUrl(query, sortBy, sortDir === 'asc' ? 'desc' : 'asc')}
-                      className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors"
+                      className="text-[10px] font-bold text-al-text-muted hover:text-al-text-muted transition-colors"
                     >
                       Sort: {sortBy} {sortDir === 'asc' ? '↑' : '↓'}
                     </Link>
@@ -705,15 +705,15 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
 
                 {/* Pagination */}
                 {filteredTotal > PAGE_SIZE && (
-                  <div className="flex items-center justify-between border-t border-[#1E2D4A] px-5 py-3">
-                    <p className="text-[11px] text-slate-500">
+                  <div className="flex items-center justify-between border-t border-al-border px-5 py-3">
+                    <p className="text-[11px] text-al-text-muted">
                       Page {page} of {totalPages}
                     </p>
                     <div className="flex items-center gap-2">
                       {page > 1 && (
                         <Link
                           href={buildPageUrl(query, page - 1)}
-                          className="inline-flex h-7 items-center justify-center rounded-lg border border-[#1E2D4A] px-3 text-[11px] font-bold text-slate-300 hover:border-[#2A3F66] hover:text-white transition-colors"
+                          className="inline-flex h-7 items-center justify-center rounded-lg border border-al-border px-3 text-[11px] font-bold text-al-text-secondary hover:border-al-border-strong hover:text-white transition-colors"
                         >
                           Prev
                         </Link>
@@ -721,7 +721,7 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
                       {page < totalPages && (
                         <Link
                           href={buildPageUrl(query, page + 1)}
-                          className="inline-flex h-7 items-center justify-center rounded-lg border border-[#1E2D4A] px-3 text-[11px] font-bold text-slate-300 hover:border-[#2A3F66] hover:text-white transition-colors"
+                          className="inline-flex h-7 items-center justify-center rounded-lg border border-al-border px-3 text-[11px] font-bold text-al-text-secondary hover:border-al-border-strong hover:text-white transition-colors"
                         >
                           Next
                         </Link>
@@ -734,15 +734,15 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
                 {filteredTotal === 0 && (
                   <div className="flex flex-col items-center justify-center gap-3 px-5 py-12 text-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800">
-                      <svg className="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="h-6 w-6 text-al-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-400">
+                      <p className="text-sm font-bold text-al-text-muted">
                         {allTimeHighRiskCount === 0 ? 'No high-risk approvals captured yet' : 'No records match your filters'}
                       </p>
-                      <p className="mt-1 text-[11px] text-slate-600">
+                      <p className="mt-1 text-[11px] text-al-text-secondary">
                         {allTimeHighRiskCount === 0
                           ? 'Connect integrations and capture approvals to see high-risk records here.'
                           : 'Try adjusting your search or filter criteria.'}
@@ -751,7 +751,7 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
                     {allTimeHighRiskCount > 0 && (
                       <Link
                         href="/analytics/drilldown/high-risk-approvals"
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600/20 px-3 py-1.5 text-xs font-bold text-violet-300 hover:bg-violet-600/30 transition-colors border border-violet-500/20"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-al-accent/20 px-3 py-1.5 text-xs font-bold text-al-accent hover:bg-al-accent/30 transition-colors border border-al-accent/20"
                       >
                         Clear all filters
                       </Link>
@@ -793,10 +793,10 @@ export default async function HighRiskApprovalsPage({ searchParams }: PageProps)
                     <Link
                       key={href}
                       href={href}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-[#1E2D4A] bg-[#0A0E1A] px-3 py-2 text-[11px] font-semibold text-slate-300 hover:border-[#2A3F66] hover:text-white transition-colors"
+                      className="flex items-center justify-between gap-2 rounded-lg border border-al-border bg-[#0A0E1A] px-3 py-2 text-[11px] font-semibold text-al-text-secondary hover:border-al-border-strong hover:text-white transition-colors"
                     >
                       {label}
-                      <svg className="h-3 w-3 text-slate-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="h-3 w-3 text-al-text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                     </Link>

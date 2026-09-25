@@ -49,23 +49,23 @@ function dateText(value: Date | null | undefined) {
 }
 
 function riskBadge(risk?: string | null) {
-  if (risk === 'critical' || risk === 'high') return 'border-rose-500/30 bg-rose-500/10 text-rose-400';
-  if (risk === 'medium') return 'border-amber-500/30 bg-amber-500/10 text-amber-400';
-  return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400';
+  if (risk === 'critical' || risk === 'high') return 'border-al-danger/30 bg-al-danger/10 text-al-danger';
+  if (risk === 'medium') return 'border-al-warning/30 bg-al-warning/10 text-al-warning';
+  return 'border-al-success/30 bg-al-success/10 text-al-success';
 }
 
 function statusBadge(status: string) {
-  if (status === 'APPROVED') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400';
-  if (status === 'REJECTED') return 'border-rose-500/30 bg-rose-500/10 text-rose-400';
-  if (status === 'PENDING_REVIEW') return 'border-amber-500/30 bg-amber-500/10 text-amber-400';
-  return 'border-[#1E2D4A] bg-[#0E1830] text-[#A8BAD8]';
+  if (status === 'APPROVED') return 'border-al-success/30 bg-al-success/10 text-al-success';
+  if (status === 'REJECTED') return 'border-al-danger/30 bg-al-danger/10 text-al-danger';
+  if (status === 'PENDING_REVIEW') return 'border-al-warning/30 bg-al-warning/10 text-al-warning';
+  return 'border-al-border bg-al-surface text-al-text-secondary';
 }
 
 function statusDot(status: string) {
   if (status === 'APPROVED') return 'bg-emerald-400';
   if (status === 'REJECTED') return 'bg-rose-400';
   if (status === 'PENDING_REVIEW') return 'bg-amber-400';
-  return 'bg-[#3D5070]';
+  return 'bg-al-border-strong';
 }
 
 function timeAgo(date: Date) {
@@ -85,18 +85,18 @@ function timeAgo(date: Date) {
 function ApprovalLoadError({ id, correlationId }: { id: string; correlationId: string }) {
   return (
     <DashboardShell>
-      <section className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-8">
-        <p className="text-xs font-bold uppercase tracking-widest text-amber-400">Temporarily unavailable</p>
-        <h2 className="mt-2 text-2xl font-bold text-[#E8EEFF]">We could not load this approval</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#A8BAD8]">
+      <section className="rounded-2xl border border-al-warning/20 bg-al-warning/10 p-8">
+        <p className="text-xs font-bold uppercase tracking-widest text-al-warning">Temporarily unavailable</p>
+        <h2 className="mt-2 text-2xl font-bold text-al-text">We could not load this approval</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-al-text-secondary">
           The approval exists in your workspace, but its evidence lookup did not complete in time. Retry without losing your place.
         </p>
-        <p className="mt-3 text-xs font-semibold text-[#6B7FA8]">Reference: {correlationId}</p>
+        <p className="mt-3 text-xs font-semibold text-al-text-muted">Reference: {correlationId}</p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <PendingLink href={`/approvals/${id}`} pendingText="Retrying..." className="inline-flex h-10 items-center rounded-xl bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500">
+          <PendingLink href={`/approvals/${id}`} pendingText="Retrying..." className="inline-flex h-10 items-center rounded-xl bg-al-accent px-5 text-sm font-bold text-white hover:bg-al-accent-hover">
             Retry approval
           </PendingLink>
-          <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="inline-flex h-10 items-center rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-5 text-sm font-bold text-[#A8BAD8] hover:bg-[#0a1524]">
+          <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="inline-flex h-10 items-center rounded-xl border border-al-border bg-al-surface px-5 text-sm font-bold text-al-text-secondary hover:bg-al-surface-sunken">
             Back to approvals
           </PendingLink>
         </div>
@@ -107,11 +107,11 @@ function ApprovalLoadError({ id, correlationId }: { id: string; correlationId: s
 
 function SectionError({ approvalId, title, message, correlationId }: { approvalId: string; title: string; message: string; correlationId: string }) {
   return (
-    <div className="m-6 rounded-xl border border-amber-500/20 bg-amber-500/10 p-5">
-      <p className="text-xs font-bold uppercase tracking-wide text-amber-400">{title}</p>
-      <p className="mt-2 text-sm text-amber-300">{message}</p>
-      <p className="mt-2 text-xs text-amber-500/80">Ref: {correlationId}</p>
-      <PendingLink href={`/approvals/${approvalId}`} pendingText="Retrying..." className="mt-4 inline-flex h-8 items-center rounded-lg border border-amber-500/20 px-4 text-xs font-bold text-amber-400 hover:bg-amber-500/10">
+    <div className="m-6 rounded-xl border border-al-warning/20 bg-al-warning/10 p-5">
+      <p className="text-xs font-bold uppercase tracking-wide text-al-warning">{title}</p>
+      <p className="mt-2 text-sm text-al-warning">{message}</p>
+      <p className="mt-2 text-xs text-al-warning/80">Ref: {correlationId}</p>
+      <PendingLink href={`/approvals/${approvalId}`} pendingText="Retrying..." className="mt-4 inline-flex h-8 items-center rounded-lg border border-al-warning/20 px-4 text-xs font-bold text-al-warning hover:bg-al-warning/10">
         Retry
       </PendingLink>
     </div>
@@ -124,7 +124,7 @@ function ContextListSkeleton() {
   return (
     <div className="grid gap-1 px-2">
       {Array.from({ length: 7 }, (_, i) => (
-        <div key={i} className="h-12 animate-pulse rounded-lg bg-[#0E1830]" />
+        <div key={i} className="h-12 animate-pulse rounded-lg bg-al-surface" />
       ))}
     </div>
   );
@@ -134,7 +134,7 @@ function TabSkeleton() {
   return (
     <div className="grid gap-4 p-6">
       {Array.from({ length: 3 }, (_, i) => (
-        <div key={i} className="h-28 animate-pulse rounded-xl bg-[#0E1830]" />
+        <div key={i} className="h-28 animate-pulse rounded-xl bg-al-surface" />
       ))}
     </div>
   );
@@ -144,9 +144,9 @@ function TabSkeleton() {
 
 function MetricTile({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-[#1E2D4A] bg-[#0a1524] p-4">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B7FA8]">{label}</p>
-      <p className="mt-2 break-all text-sm font-bold text-[#E8EEFF]">{value}</p>
+    <div className="rounded-xl border border-al-border bg-al-surface-sunken p-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-al-text-muted">{label}</p>
+      <p className="mt-2 break-all text-sm font-bold text-al-text">{value}</p>
     </div>
   );
 }
@@ -158,10 +158,10 @@ async function ApprovalContextList({ organizationId, currentId }: { organization
   try {
     approvals = await getContextApprovals(organizationId, currentId);
   } catch {
-    return <p className="px-3 py-2 text-xs text-[#6B7FA8]">Could not load list</p>;
+    return <p className="px-3 py-2 text-xs text-al-text-muted">Could not load list</p>;
   }
   if (approvals.length === 0) {
-    return <p className="px-3 py-2 text-xs text-[#6B7FA8]">No other approvals yet</p>;
+    return <p className="px-3 py-2 text-xs text-al-text-muted">No other approvals yet</p>;
   }
   return (
     <div className="grid gap-0.5">
@@ -170,12 +170,12 @@ async function ApprovalContextList({ organizationId, currentId }: { organization
           key={approval.id}
           href={`/approvals/${approval.id}`}
           pendingText="Opening..."
-          className="block rounded-lg px-3 py-2.5 transition-colors hover:bg-[#0E1830] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+          className="block rounded-lg px-3 py-2.5 transition-colors hover:bg-al-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-al-accent"
         >
-          <p className="line-clamp-2 text-xs font-semibold leading-tight text-[#A8BAD8]">{approval.subject}</p>
+          <p className="line-clamp-2 text-xs font-semibold leading-tight text-al-text-secondary">{approval.subject}</p>
           <div className="mt-1.5 flex items-center gap-1.5">
             <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDot(approval.status)}`} aria-hidden="true" />
-            <span className="truncate text-[10px] font-medium text-[#6B7FA8]">
+            <span className="truncate text-[10px] font-medium text-al-text-muted">
               {approval.approverName ?? approval.sourcePlatform ?? 'Unknown'} · {timeAgo(approval.createdAt)}
             </span>
           </div>
@@ -190,23 +190,23 @@ async function ApprovalContextList({ organizationId, currentId }: { organization
 async function ApprovalHeader({ core }: { core: ApprovalCore }) {
   try {
     return (
-      <div className="shrink-0 border-b border-[#1E2D4A] bg-[#07111f]">
+      <div className="shrink-0 border-b border-al-border bg-al-bg">
         <div className="px-6 pb-5 pt-5">
           {/* Mobile breadcrumb — left panel handles desktop navigation */}
           <div className="mb-4 flex items-center gap-1.5 xl:hidden">
-            <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="text-xs font-semibold text-[#6B7FA8] hover:text-[#A8BAD8]">
+            <PendingLink href="/dashboard/approvals" pendingText="Opening approvals..." className="text-xs font-semibold text-al-text-muted hover:text-al-text-secondary">
               Approvals
             </PendingLink>
-            <ChevronRight className="h-3 w-3 text-[#3D5070]" aria-hidden="true" />
-            <span className="truncate text-xs font-semibold text-[#A8BAD8]">Approval Detail</span>
+            <ChevronRight className="h-3 w-3 text-al-text-secondary" aria-hidden="true" />
+            <span className="truncate text-xs font-semibold text-al-text-secondary">Approval Detail</span>
           </div>
 
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
-              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#6B7FA8]">
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-al-text-muted">
                 {core.sourcePlatform ?? core.messageSource?.provider ?? 'Approval'} · Approval Record
               </p>
-              <h2 className="text-xl font-bold leading-snug text-[#E8EEFF] sm:text-2xl">{core.subject}</h2>
+              <h2 className="text-xl font-bold leading-snug text-al-text sm:text-2xl">{core.subject}</h2>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className={`rounded-full border px-3 py-1 text-xs font-bold capitalize ${riskBadge(core.riskLevel)}`}>
                   {core.riskLevel ?? 'low'} risk
@@ -214,11 +214,11 @@ async function ApprovalHeader({ core }: { core: ApprovalCore }) {
                 <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusBadge(core.status)}`}>
                   {core.status?.replaceAll('_', ' ') ?? 'Unknown'}
                 </span>
-                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-400">
+                <span className="rounded-full border border-al-accent/30 bg-al-accent-hover/10 px-3 py-1 text-xs font-bold text-al-accent">
                   {core.confidence}% confidence
                 </span>
                 {isDemoApprovalRecord(core) ? (
-                  <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-3 py-1 text-xs font-bold text-[#6B7FA8]">
+                  <span className="rounded-full border border-al-border bg-al-surface px-3 py-1 text-xs font-bold text-al-text-muted">
                     Demo data
                   </span>
                 ) : null}
@@ -230,13 +230,13 @@ async function ApprovalHeader({ core }: { core: ApprovalCore }) {
           </div>
 
           {core.status === 'PENDING_REVIEW' ? (
-            <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-al-warning/20 bg-al-warning/10 px-4 py-3">
               <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" aria-hidden="true" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-amber-300">Analyzing approval...</p>
-                <p className="text-xs text-amber-500">Classification is still processing. Refresh for the latest result.</p>
+                <p className="text-sm font-bold text-al-warning">Analyzing approval...</p>
+                <p className="text-xs text-al-warning">Classification is still processing. Refresh for the latest result.</p>
               </div>
-              <PendingLink href={`/approvals/${core.id}`} pendingText="Refreshing..." className="shrink-0 rounded-lg border border-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/10">
+              <PendingLink href={`/approvals/${core.id}`} pendingText="Refreshing..." className="shrink-0 rounded-lg border border-al-warning/20 px-3 py-1.5 text-xs font-bold text-al-warning hover:bg-al-warning/10">
                 Refresh
               </PendingLink>
             </div>
@@ -247,8 +247,8 @@ async function ApprovalHeader({ core }: { core: ApprovalCore }) {
   } catch (error) {
     console.error('[approval-detail] ApprovalHeader render error', error instanceof Error ? error.message : error);
     return (
-      <div className="shrink-0 border-b border-[#1E2D4A] bg-[#07111f] px-6 py-5">
-        <p className="text-sm font-semibold text-[#6B7FA8]">Approval header temporarily unavailable</p>
+      <div className="shrink-0 border-b border-al-border bg-al-bg px-6 py-5">
+        <p className="text-sm font-semibold text-al-text-muted">Approval header temporarily unavailable</p>
       </div>
     );
   }
@@ -262,19 +262,19 @@ async function RightPanel({ core }: { core: ApprovalCore }) {
 
   return (
     <>
-      <div className="border-b border-[#1E2D4A] px-5 py-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#3D5070]">Context</p>
-        <p className="mt-0.5 text-sm font-bold text-[#E8EEFF]">Approval Details</p>
+      <div className="border-b border-al-border px-5 py-4">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-al-text-secondary">Context</p>
+        <p className="mt-0.5 text-sm font-bold text-al-text">Approval Details</p>
       </div>
       <div className="flex-1 overflow-y-auto">
         <div className="grid gap-4 p-5">
           {/* Confidence */}
-          <div className="rounded-xl border border-[#1E2D4A] bg-[#0a1524] p-4">
+          <div className="rounded-xl border border-al-border bg-al-surface-sunken p-4">
             <div className="mb-2.5 flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B7FA8]">AI Confidence</p>
-              <span className="text-lg font-black text-violet-400">{confidencePct}%</span>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-al-text-muted">AI Confidence</p>
+              <span className="text-lg font-black text-al-accent">{confidencePct}%</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[#1E2D4A]">
+            <div className="h-1.5 overflow-hidden rounded-full bg-al-border">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-violet-600 to-violet-400 transition-all"
                 style={{ width: `${confidencePct}%` }}
@@ -283,16 +283,16 @@ async function RightPanel({ core }: { core: ApprovalCore }) {
           </div>
 
           {/* Risk level */}
-          <div className="rounded-xl border border-[#1E2D4A] bg-[#0a1524] p-4">
-            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-[#6B7FA8]">Risk Level</p>
+          <div className="rounded-xl border border-al-border bg-al-surface-sunken p-4">
+            <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-al-text-muted">Risk Level</p>
             <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold capitalize ${riskBadge(core.riskLevel)}`}>
               {core.riskLevel ?? 'low'}
             </span>
           </div>
 
           {/* Source info */}
-          <div className="rounded-xl border border-[#1E2D4A] bg-[#0a1524] p-4">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#6B7FA8]">Source</p>
+          <div className="rounded-xl border border-al-border bg-al-surface-sunken p-4">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-al-text-muted">Source</p>
             <dl className="grid gap-2.5">
               {([
                 ['Platform', core.sourcePlatform ?? core.messageSource?.provider ?? 'Unknown'],
@@ -301,21 +301,21 @@ async function RightPanel({ core }: { core: ApprovalCore }) {
                 ['Received', dateText(core.messageSource?.receivedAt ?? core.occurredAt ?? core.createdAt)],
               ] as [string, string][]).map(([label, value]) => (
                 <div key={label} className="flex flex-col gap-0.5">
-                  <dt className="text-[10px] font-semibold text-[#6B7FA8]">{label}</dt>
-                  <dd className="truncate text-xs font-semibold text-[#A8BAD8]">{value}</dd>
+                  <dt className="text-[10px] font-semibold text-al-text-muted">{label}</dt>
+                  <dd className="truncate text-xs font-semibold text-al-text-secondary">{value}</dd>
                 </div>
               ))}
             </dl>
           </div>
 
           {/* Quick links */}
-          <div className="rounded-xl border border-[#1E2D4A] bg-[#0a1524] p-4">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#6B7FA8]">Quick Links</p>
+          <div className="rounded-xl border border-al-border bg-al-surface-sunken p-4">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-al-text-muted">Quick Links</p>
             <div className="grid gap-2">
               <PendingLink
                 href={`/approvals/${core.id}/source`}
                 pendingText="Opening source..."
-                className="flex items-center justify-between gap-2 rounded-lg border border-violet-500/20 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-400 transition hover:bg-violet-500/20"
+                className="flex items-center justify-between gap-2 rounded-lg border border-al-accent/20 bg-al-accent-hover/10 px-3 py-2 text-xs font-bold text-al-accent transition hover:bg-al-accent-hover/20"
               >
                 <span>Open Source</span>
                 <ExternalLink className="h-3 w-3" aria-hidden="true" />
@@ -323,7 +323,7 @@ async function RightPanel({ core }: { core: ApprovalCore }) {
               <PendingLink
                 href={`/investigations?approvalId=${core.id}`}
                 pendingText="Opening investigations..."
-                className="flex items-center justify-between gap-2 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-3 py-2 text-xs font-bold text-[#A8BAD8] transition hover:bg-[#0a1524]"
+                className="flex items-center justify-between gap-2 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-bold text-al-text-secondary transition hover:bg-al-surface-sunken"
               >
                 <span>Investigate</span>
                 <ChevronRight className="h-3 w-3" aria-hidden="true" />
@@ -331,7 +331,7 @@ async function RightPanel({ core }: { core: ApprovalCore }) {
               <PendingLink
                 href={`/copilot?approvalId=${core.id}`}
                 pendingText="Opening copilot..."
-                className="flex items-center justify-between gap-2 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-3 py-2 text-xs font-bold text-[#A8BAD8] transition hover:bg-[#0a1524]"
+                className="flex items-center justify-between gap-2 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-bold text-al-text-secondary transition hover:bg-al-surface-sunken"
               >
                 <span>Ask AI Copilot</span>
                 <ChevronRight className="h-3 w-3" aria-hidden="true" />
@@ -363,14 +363,14 @@ async function UnifiedEvidenceLinkBanner({ organizationId, approvalId }: { organ
     <PendingLink
       href={`/evidence/${unifiedEvidenceId}`}
       pendingText="Opening unified evidence..."
-      className="flex items-center justify-between gap-3 rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-500/10 to-blue-500/10 p-5 transition hover:border-violet-500/30"
+      className="flex items-center justify-between gap-3 rounded-xl border border-al-accent/20 bg-gradient-to-r from-violet-500/10 to-blue-500/10 p-5 transition hover:border-al-accent/30"
     >
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Correlated across sources</p>
-        <p className="mt-1 text-sm font-bold text-[#E8EEFF]">This decision has a Unified Evidence record</p>
-        <p className="mt-0.5 text-xs text-[#A8BAD8]">See every correlated source, mention, and confidence score in one place.</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Correlated across sources</p>
+        <p className="mt-1 text-sm font-bold text-al-text">This decision has a Unified Evidence record</p>
+        <p className="mt-0.5 text-xs text-al-text-secondary">See every correlated source, mention, and confidence score in one place.</p>
       </div>
-      <span className="shrink-0 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white">
+      <span className="shrink-0 rounded-xl bg-al-accent px-4 py-2 text-xs font-bold text-white">
         View →
       </span>
     </PendingLink>
@@ -409,8 +409,8 @@ async function OverviewTab({
 
         <section>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Decision Metadata</p>
-            <span className="h-px flex-1 bg-[#1E2D4A]" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Decision Metadata</p>
+            <span className="h-px flex-1 bg-al-border" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             <MetricTile label="Approval ID" value={core.id} />
@@ -425,10 +425,10 @@ async function OverviewTab({
 
         <section>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Message Source</p>
-            <span className="h-px flex-1 bg-[#1E2D4A]" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Message Source</p>
+            <span className="h-px flex-1 bg-al-border" />
           </div>
-          <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
+          <div className="rounded-xl border border-al-border bg-al-surface p-5">
             <dl className="grid gap-3 sm:grid-cols-2">
               {([
                 ['Provider', core.messageSource?.provider ?? core.sourcePlatform ?? 'Unknown'],
@@ -437,9 +437,9 @@ async function OverviewTab({
                 ['Sender Email', core.messageSource?.senderEmail ?? core.approverEmail ?? 'Not recorded'],
                 ['Received At', dateText(core.messageSource?.receivedAt)],
               ] as [string, string][]).map(([label, value]) => (
-                <div key={label} className="flex flex-col gap-1 rounded-lg bg-[#0a1524] px-3 py-2.5">
-                  <dt className="text-[10px] font-semibold uppercase tracking-wide text-[#6B7FA8]">{label}</dt>
-                  <dd className="text-sm font-semibold text-[#A8BAD8]">{value}</dd>
+                <div key={label} className="flex flex-col gap-1 rounded-lg bg-al-surface-sunken px-3 py-2.5">
+                  <dt className="text-[10px] font-semibold uppercase tracking-wide text-al-text-muted">{label}</dt>
+                  <dd className="text-sm font-semibold text-al-text-secondary">{value}</dd>
                 </div>
               ))}
             </dl>
@@ -484,24 +484,24 @@ async function EvidenceTab({
 
         <section>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">AI Reasoning</p>
-            <span className="h-px flex-1 bg-[#1E2D4A]" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">AI Reasoning</p>
+            <span className="h-px flex-1 bg-al-border" />
           </div>
-          <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
-            <div className="grid gap-4 text-sm leading-relaxed text-[#A8BAD8]">
+          <div className="rounded-xl border border-al-border bg-al-surface p-5">
+            <div className="grid gap-4 text-sm leading-relaxed text-al-text-secondary">
               <p>
-                <span className="font-bold text-[#E8EEFF]">Reasoning: </span>
+                <span className="font-bold text-al-text">Reasoning: </span>
                 {core.reasoning}
               </p>
               {core.conditions ? (
                 <p>
-                  <span className="font-bold text-[#E8EEFF]">Conditions: </span>
+                  <span className="font-bold text-al-text">Conditions: </span>
                   {core.conditions}
                 </p>
               ) : null}
               {core.businessImpact ? (
                 <p>
-                  <span className="font-bold text-[#E8EEFF]">Business impact: </span>
+                  <span className="font-bold text-al-text">Business impact: </span>
                   {core.businessImpact}
                 </p>
               ) : null}
@@ -511,8 +511,8 @@ async function EvidenceTab({
 
         <section>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Source Evidence</p>
-            <span className="h-px flex-1 bg-[#1E2D4A]" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Source Evidence</p>
+            <span className="h-px flex-1 bg-al-border" />
           </div>
           {threadPayload ? (
             <ApprovalEvidencePanel
@@ -531,8 +531,8 @@ async function EvidenceTab({
               content={core.evidenceSnippet}
             />
           ) : (
-            <div className="rounded-xl border border-dashed border-[#1E2D4A] p-8 text-center">
-              <p className="text-sm font-semibold text-[#6B7FA8]">No evidence snippet captured yet</p>
+            <div className="rounded-xl border border-dashed border-al-border p-8 text-center">
+              <p className="text-sm font-semibold text-al-text-muted">No evidence snippet captured yet</p>
             </div>
           )}
         </section>
@@ -540,14 +540,14 @@ async function EvidenceTab({
         {rawPayloadText ? (
           <section>
             <div className="mb-4 flex items-center gap-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Raw Payload</p>
-              <span className="h-px flex-1 bg-[#1E2D4A]" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Raw Payload</p>
+              <span className="h-px flex-1 bg-al-border" />
             </div>
-            <details className="rounded-xl border border-[#1E2D4A] bg-[#07111f]">
-              <summary className="cursor-pointer px-5 py-4 text-xs font-bold uppercase tracking-wide text-[#6B7FA8] hover:text-[#A8BAD8]">
+            <details className="rounded-xl border border-al-border bg-al-bg">
+              <summary className="cursor-pointer px-5 py-4 text-xs font-bold uppercase tracking-wide text-al-text-muted hover:text-al-text-secondary">
                 View captured payload
               </summary>
-              <pre className="max-h-80 overflow-auto border-t border-[#1E2D4A] p-5 text-xs leading-5 text-[#A8BAD8]">
+              <pre className="max-h-80 overflow-auto border-t border-al-border p-5 text-xs leading-5 text-al-text-secondary">
                 {rawPayloadText}
               </pre>
             </details>
@@ -558,14 +558,14 @@ async function EvidenceTab({
           <PendingLink
             href={`/approvals/${core.id}/source`}
             pendingText="Opening source..."
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-al-accent px-5 text-sm font-bold text-white hover:bg-al-accent-hover"
           >
             Open Source
             <ExternalLink className="h-4 w-4" aria-hidden="true" />
           </PendingLink>
           <CopyEvidenceLinkButton
             path={`/approvals/${core.id}/source`}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-5 text-sm font-bold text-[#A8BAD8] hover:bg-[#0a1524]"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-al-border bg-al-surface px-5 text-sm font-bold text-al-text-secondary hover:bg-al-surface-sunken"
           />
         </div>
       </div>
@@ -589,37 +589,37 @@ async function TimelineTab({ organizationId, approvalId }: { organizationId: str
       <div className="p-6">
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Timeline</p>
-            <span className="h-px w-8 bg-[#1E2D4A]" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Timeline</p>
+            <span className="h-px w-8 bg-al-border" />
           </div>
-          <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-2.5 py-1 text-[10px] font-bold text-[#6B7FA8]">
+          <span className="rounded-full border border-al-border bg-al-surface px-2.5 py-1 text-[10px] font-bold text-al-text-muted">
             {sorted.length} events
           </span>
         </div>
         {sorted.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#1E2D4A] p-10 text-center">
-            <p className="text-sm font-semibold text-[#6B7FA8]">No timeline events recorded yet</p>
-            <p className="mt-1 text-xs text-[#3D5070]">Events appear here as the approval is processed</p>
+          <div className="rounded-xl border border-dashed border-al-border p-10 text-center">
+            <p className="text-sm font-semibold text-al-text-muted">No timeline events recorded yet</p>
+            <p className="mt-1 text-xs text-al-text-secondary">Events appear here as the approval is processed</p>
           </div>
         ) : (
           <div className="relative ml-3">
-            <div className="absolute inset-y-0 left-0 w-px bg-[#1E2D4A]" aria-hidden="true" />
+            <div className="absolute inset-y-0 left-0 w-px bg-al-border" aria-hidden="true" />
             <div className="grid gap-5">
               {sorted.map((event) => (
                 <div key={event.id} className="relative pl-7">
                   <div
-                    className="absolute -left-[4.5px] top-[6px] h-2.5 w-2.5 rounded-full border-2 border-violet-500/40 bg-[#030b18] ring-2 ring-[#030b18]"
+                    className="absolute -left-[4.5px] top-[6px] h-2.5 w-2.5 rounded-full border-2 border-al-accent/40 bg-al-bg ring-2 ring-[#030b18]"
                     aria-hidden="true"
                   />
-                  <div className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+                  <div className="rounded-xl border border-al-border bg-al-surface p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-bold text-[#E8EEFF]">{event.action?.replaceAll('_', ' ') ?? 'Event'}</p>
-                      <time className="text-xs font-medium text-[#6B7FA8]" dateTime={event.createdAt?.toISOString() ?? ''}>
+                      <p className="text-sm font-bold text-al-text">{event.action?.replaceAll('_', ' ') ?? 'Event'}</p>
+                      <time className="text-xs font-medium text-al-text-muted" dateTime={event.createdAt?.toISOString() ?? ''}>
                         {dateText(event.createdAt)}
                       </time>
                     </div>
                     {event.metadata ? (
-                      <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-[#07111f] p-3 text-xs text-[#6B7FA8]">
+                      <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-al-bg p-3 text-xs text-al-text-muted">
                         {JSON.stringify(event.metadata, null, 2)}
                       </pre>
                     ) : null}
@@ -651,33 +651,33 @@ async function AIAnalysisTab({ organizationId, approvalId }: { organizationId: s
   return (
     <div className="grid gap-8 p-6">
       <div className="flex items-center gap-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">AI Classification History</p>
-        <span className="h-px flex-1 bg-[#1E2D4A]" />
-        <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-2.5 py-1 text-[10px] font-bold text-[#6B7FA8]">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">AI Classification History</p>
+        <span className="h-px flex-1 bg-al-border" />
+        <span className="rounded-full border border-al-border bg-al-surface px-2.5 py-1 text-[10px] font-bold text-al-text-muted">
           {results.length} run{results.length !== 1 ? 's' : ''}
         </span>
       </div>
       {results.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#1E2D4A] p-10 text-center">
-          <p className="text-sm font-semibold text-[#6B7FA8]">No classifier snapshots attached</p>
-          <p className="mt-1 text-xs text-[#3D5070]">AI analysis results appear here after the pipeline processes this approval</p>
+        <div className="rounded-xl border border-dashed border-al-border p-10 text-center">
+          <p className="text-sm font-semibold text-al-text-muted">No classifier snapshots attached</p>
+          <p className="mt-1 text-xs text-al-text-secondary">AI analysis results appear here after the pipeline processes this approval</p>
         </div>
       ) : (
         <div className="grid gap-4">
           {results.map((result) => (
-            <div key={result.id} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
+            <div key={result.id} className="rounded-xl border border-al-border bg-al-surface p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-bold text-[#E8EEFF]">{result.model}</p>
-                  <p className="mt-0.5 text-xs text-[#6B7FA8]">
+                  <p className="text-sm font-bold text-al-text">{result.model}</p>
+                  <p className="mt-0.5 text-xs text-al-text-muted">
                     Prompt v{result.promptVersion} · {dateText(result.createdAt)}
                   </p>
                 </div>
-                <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-sm font-black text-violet-400">
+                <span className="rounded-full border border-al-accent/30 bg-al-accent-hover/10 px-3 py-1 text-sm font-black text-al-accent">
                   {result.confidence}%
                 </span>
               </div>
-              <pre className="mt-4 max-h-64 overflow-auto rounded-lg bg-[#07111f] p-4 text-xs leading-5 text-[#A8BAD8]">
+              <pre className="mt-4 max-h-64 overflow-auto rounded-lg bg-al-bg p-4 text-xs leading-5 text-al-text-secondary">
                 {JSON.stringify(result.normalizedJson, null, 2)}
               </pre>
             </div>
@@ -718,39 +718,39 @@ async function RelatedTab({
       {/* Compliance */}
       <section>
         <div className="mb-4 flex items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Playbook Compliance</p>
-          <span className="h-px flex-1 bg-[#1E2D4A]" />
-          <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-2.5 py-1 text-[10px] font-bold text-[#6B7FA8]">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Playbook Compliance</p>
+          <span className="h-px flex-1 bg-al-border" />
+          <span className="rounded-full border border-al-border bg-al-surface px-2.5 py-1 text-[10px] font-bold text-al-text-muted">
             {evaluations.length} evaluation{evaluations.length !== 1 ? 's' : ''}
           </span>
         </div>
         {evaluations.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[#1E2D4A] p-6 text-center">
-            <p className="text-sm font-semibold text-[#6B7FA8]">No compliance evaluations yet</p>
-            <p className="mt-1 text-xs text-[#3D5070]">Upload playbooks and run Evaluate Approvals to see results here</p>
+          <div className="rounded-xl border border-dashed border-al-border p-6 text-center">
+            <p className="text-sm font-semibold text-al-text-muted">No compliance evaluations yet</p>
+            <p className="mt-1 text-xs text-al-text-secondary">Upload playbooks and run Evaluate Approvals to see results here</p>
           </div>
         ) : (
           <div className="grid gap-3">
             {evaluations.map((evaluation) => (
-              <div key={evaluation.id} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-5">
+              <div key={evaluation.id} className="rounded-xl border border-al-border bg-al-surface p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm font-bold text-[#E8EEFF]">{evaluation.status}</p>
-                  <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-black text-violet-400">
+                  <p className="text-sm font-bold text-al-text">{evaluation.status}</p>
+                  <span className="rounded-full border border-al-accent/30 bg-al-accent-hover/10 px-3 py-1 text-xs font-black text-al-accent">
                     {evaluation.score}/100
                   </span>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-[#A8BAD8]">{evaluation.explanation}</p>
+                <p className="mt-2 text-sm leading-relaxed text-al-text-secondary">{evaluation.explanation}</p>
                 {evaluation.triggeredRule ? (
-                  <p className="mt-2 text-xs font-semibold text-[#6B7FA8]">Rule: {evaluation.triggeredRule}</p>
+                  <p className="mt-2 text-xs font-semibold text-al-text-muted">Rule: {evaluation.triggeredRule}</p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {evaluation.missingApprovers.map((item) => (
-                    <span key={item} className="rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400">
+                    <span key={item} className="rounded-full border border-al-danger/20 bg-al-danger/10 px-2.5 py-1 text-xs font-bold text-al-danger">
                       Missing {item}
                     </span>
                   ))}
                   {evaluation.missingEvidence.map((item) => (
-                    <span key={item} className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-400">
+                    <span key={item} className="rounded-full border border-al-warning/20 bg-al-warning/10 px-2.5 py-1 text-xs font-bold text-al-warning">
                       Need {item}
                     </span>
                   ))}
@@ -764,8 +764,8 @@ async function RelatedTab({
       {/* Investigations */}
       <section>
         <div className="mb-4 flex items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Investigations</p>
-          <span className="h-px flex-1 bg-[#1E2D4A]" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Investigations</p>
+          <span className="h-px flex-1 bg-al-border" />
         </div>
         <div className="grid gap-3">
           {investigations.length > 0 ? (
@@ -774,20 +774,20 @@ async function RelatedTab({
                 key={investigation.id}
                 href={`/investigations/${investigation.id}`}
                 pendingText="Opening investigation..."
-                className="flex items-center justify-between gap-3 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4 transition hover:border-violet-500/30 hover:bg-[#0a1524]"
+                className="flex items-center justify-between gap-3 rounded-xl border border-al-border bg-al-surface p-4 transition hover:border-al-accent/30 hover:bg-al-surface-sunken"
               >
                 <div>
-                  <p className="text-sm font-bold text-[#E8EEFF]">{investigation.title}</p>
-                  <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-[#6B7FA8]">
+                  <p className="text-sm font-bold text-al-text">{investigation.title}</p>
+                  <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-al-text-muted">
                     {investigation.status?.replaceAll('_', ' ') ?? 'Unknown'}
                   </p>
                 </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-[#3D5070]" aria-hidden="true" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-al-text-secondary" aria-hidden="true" />
               </PendingLink>
             ))
           ) : (
-            <div className="rounded-xl border border-dashed border-[#1E2D4A] p-6 text-center">
-              <p className="text-sm font-semibold text-[#6B7FA8]">No investigations reference this approval yet</p>
+            <div className="rounded-xl border border-dashed border-al-border p-6 text-center">
+              <p className="text-sm font-semibold text-al-text-muted">No investigations reference this approval yet</p>
             </div>
           )}
         </div>
@@ -796,18 +796,18 @@ async function RelatedTab({
       {/* Memory Graph */}
       <section>
         <div className="mb-4 flex items-center gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Memory Graph</p>
-          <span className="h-px flex-1 bg-[#1E2D4A]" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Memory Graph</p>
+          <span className="h-px flex-1 bg-al-border" />
         </div>
         <PendingLink
           href={memoryEntity ? `/memory/${memoryEntity.id}` : `/memory?search=${encodeURIComponent(subject)}`}
           pendingText="Opening memory graph..."
-          className="flex items-center justify-between gap-3 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4 transition hover:border-violet-500/30 hover:bg-[#0a1524]"
+          className="flex items-center justify-between gap-3 rounded-xl border border-al-border bg-al-surface p-4 transition hover:border-al-accent/30 hover:bg-al-surface-sunken"
         >
-          <p className="text-sm font-bold text-[#A8BAD8]">
+          <p className="text-sm font-bold text-al-text-secondary">
             {memoryEntity ? 'View related Memory Graph entity' : 'Search Memory Graph'}
           </p>
-          <ChevronRight className="h-4 w-4 shrink-0 text-[#3D5070]" aria-hidden="true" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-al-text-secondary" aria-hidden="true" />
         </PendingLink>
       </section>
     </div>
@@ -824,29 +824,29 @@ async function AuditTab({ organizationId, approvalId }: { organizationId: string
       <div className="p-6">
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400">Audit Trail</p>
-            <span className="h-px w-8 bg-[#1E2D4A]" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-al-accent">Audit Trail</p>
+            <span className="h-px w-8 bg-al-border" />
           </div>
-          <span className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-2.5 py-1 text-[10px] font-bold text-[#6B7FA8]">
+          <span className="rounded-full border border-al-border bg-al-surface px-2.5 py-1 text-[10px] font-bold text-al-text-muted">
             {auditLogs.length} events
           </span>
         </div>
         <div className="grid gap-2">
           {auditLogs.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[#1E2D4A] p-10 text-center">
-              <p className="text-sm font-semibold text-[#6B7FA8]">No audit events recorded yet</p>
+            <div className="rounded-xl border border-dashed border-al-border p-10 text-center">
+              <p className="text-sm font-semibold text-al-text-muted">No audit events recorded yet</p>
             </div>
           ) : (
             auditLogs.map((event) => (
-              <div key={event.id} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+              <div key={event.id} className="rounded-xl border border-al-border bg-al-surface p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-[#E8EEFF]">{event.action?.replaceAll('_', ' ') ?? 'Event'}</p>
-                  <time className="text-xs font-medium text-[#6B7FA8]" dateTime={event.createdAt?.toISOString() ?? ''}>
+                  <p className="text-sm font-bold text-al-text">{event.action?.replaceAll('_', ' ') ?? 'Event'}</p>
+                  <time className="text-xs font-medium text-al-text-muted" dateTime={event.createdAt?.toISOString() ?? ''}>
                     {dateText(event.createdAt)}
                   </time>
                 </div>
                 {event.metadata ? (
-                  <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-[#07111f] p-3 text-xs text-[#6B7FA8]">
+                  <pre className="mt-3 max-h-40 overflow-auto rounded-lg bg-al-bg p-3 text-xs text-al-text-muted">
                     {JSON.stringify(event.metadata, null, 2)}
                   </pre>
                 ) : null}
@@ -1016,22 +1016,22 @@ export default async function ApprovalDetailPage({ params, searchParams }: Appro
   return (
     <DashboardShell immersive>
       <div
-        className="flex overflow-hidden rounded-2xl border border-[#1E2D4A]"
+        className="flex overflow-hidden rounded-2xl border border-al-border"
         style={{ minHeight: 'calc(100svh - 5.5rem)' }}
       >
         {/* Left panel: approval navigation context */}
-        <aside className="hidden w-60 shrink-0 flex-col border-r border-[#1E2D4A] bg-[#07111f] xl:flex">
-          <div className="border-b border-[#1E2D4A] px-4 py-3.5">
+        <aside className="hidden w-60 shrink-0 flex-col border-r border-al-border bg-al-bg xl:flex">
+          <div className="border-b border-al-border px-4 py-3.5">
             <PendingLink
               href="/dashboard/approvals"
               pendingText="Opening approvals..."
-              className="flex items-center gap-1.5 text-xs font-bold text-[#6B7FA8] hover:text-[#A8BAD8]"
+              className="flex items-center gap-1.5 text-xs font-bold text-al-text-muted hover:text-al-text-secondary"
             >
               ← All Approvals
             </PendingLink>
           </div>
           <div className="px-4 pb-1 pt-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#3D5070]">Recent</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-al-text-secondary">Recent</p>
           </div>
           <div className="flex-1 overflow-y-auto px-2 pb-4">
             <Suspense fallback={<ContextListSkeleton />}>
@@ -1041,7 +1041,7 @@ export default async function ApprovalDetailPage({ params, searchParams }: Appro
         </aside>
 
         {/* Center: tabbed workspace */}
-        <div className="flex min-w-0 flex-1 flex-col bg-[#030b18]">
+        <div className="flex min-w-0 flex-1 flex-col bg-al-bg">
           <ApprovalHeader core={core} />
           <ApprovalDetailWorkspace
             initialTab={initialTab}
@@ -1092,7 +1092,7 @@ export default async function ApprovalDetailPage({ params, searchParams }: Appro
         </div>
 
         {/* Right panel: contextual details */}
-        <aside className="hidden w-72 shrink-0 flex-col border-l border-[#1E2D4A] bg-[#07111f] 2xl:flex">
+        <aside className="hidden w-72 shrink-0 flex-col border-l border-al-border bg-al-bg 2xl:flex">
           <RightPanel core={core} />
         </aside>
       </div>

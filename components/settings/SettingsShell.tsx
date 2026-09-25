@@ -55,7 +55,7 @@ const TABS: { id: Tab; label: string; icon: typeof Settings2 }[] = [
 
 function SectionCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>
+    <div className={`rounded-2xl border border-al-border bg-white shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -63,10 +63,10 @@ function SectionCard({ children, className = '' }: { children: React.ReactNode; 
 
 function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
+    <div className="flex items-start justify-between border-b border-al-border px-6 py-4">
       <div>
-        <h3 className="text-sm font-bold text-slate-900">{title}</h3>
-        {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+        <h3 className="text-sm font-bold text-al-text">{title}</h3>
+        {subtitle && <p className="mt-0.5 text-xs text-al-text-muted">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -87,8 +87,8 @@ function ManageLink({ href, label = 'Manage' }: { href: string; label?: string }
 function ConfigRow({ label, value, valueClass = '' }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="flex items-center justify-between py-3">
-      <span className="text-sm text-slate-500">{label}</span>
-      <span className={`text-sm font-semibold text-slate-900 ${valueClass}`}>{value}</span>
+      <span className="text-sm text-al-text-muted">{label}</span>
+      <span className={`text-sm font-semibold text-al-text ${valueClass}`}>{value}</span>
     </div>
   );
 }
@@ -96,7 +96,7 @@ function ConfigRow({ label, value, valueClass = '' }: { label: string; value: st
 function StatusBadge({ ok }: { ok: boolean }) {
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-emerald-500' : 'bg-red-500'}`} />
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-al-success' : 'bg-al-danger'}`} />
       {ok ? 'Configured' : 'Not configured'}
     </span>
   );
@@ -117,14 +117,14 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
   return (
     <div className="grid gap-4">
       {/* Compact system status row */}
-      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-3 rounded-xl border border-al-border bg-white px-4 py-3 shadow-sm">
         <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${systemOk ? 'text-emerald-600' : 'text-amber-600'}`}>
-          <span className={`h-2 w-2 rounded-full ${systemOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+          <span className={`h-2 w-2 rounded-full ${systemOk ? 'bg-al-success' : 'bg-amber-400'}`} />
           {systemOk ? 'All systems operational' : 'System degraded'}
         </span>
-        <span className="text-slate-200">|</span>
+        <span className="text-al-text-secondary">|</span>
         {systemChecks.map(({ label, ok }) => (
-          <span key={label} className={`flex items-center gap-1 text-[11px] font-semibold ${ok ? 'text-slate-500' : 'text-red-600'}`}>
+          <span key={label} className={`flex items-center gap-1 text-[11px] font-semibold ${ok ? 'text-al-text-muted' : 'text-red-600'}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-emerald-400' : 'bg-red-400'}`} />
             {label}
           </span>
@@ -172,16 +172,16 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
           <SectionHeader title="Security" action={<ManageLink href="/settings/identity" label="Configure" />} />
           <div className="divide-y divide-slate-100 px-6">
             <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-slate-500">Authentication</span>
+              <span className="text-sm text-al-text-muted">Authentication</span>
               <StatusBadge ok={true} />
             </div>
             <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-slate-500">MFA</span>
-              <span className="text-xs font-semibold text-slate-900">Enforced via Clerk</span>
+              <span className="text-sm text-al-text-muted">MFA</span>
+              <span className="text-xs font-semibold text-al-text">Enforced via Clerk</span>
             </div>
             <div className="flex items-center justify-between py-3">
-              <span className="text-sm text-slate-500">Token encryption</span>
-              <span className="text-xs font-semibold text-slate-900">AES-256-GCM</span>
+              <span className="text-sm text-al-text-muted">Token encryption</span>
+              <span className="text-xs font-semibold text-al-text">AES-256-GCM</span>
             </div>
           </div>
           <div className="px-6 pb-4">
@@ -256,13 +256,13 @@ function InputField({
 }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-700">{label}</label>
+      <label className="block text-xs font-semibold text-al-text-secondary">{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        className="mt-1.5 w-full rounded-lg border border-al-border bg-white px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
       />
     </div>
   );
@@ -331,7 +331,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
         <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
           <span className="text-sm font-semibold text-amber-800">You have unsaved changes</span>
           <div className="flex gap-2">
-            <button onClick={discard} disabled={saving} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            <button onClick={discard} disabled={saving} className="rounded-lg border border-al-border bg-white px-3 py-1.5 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">
               Discard
             </button>
             <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50">
@@ -356,11 +356,11 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
           <InputField label="Company domain" value={form.companyDomain} onChange={(v) => update('companyDomain', v)} placeholder="acme.com" />
           <InputField label="Industry" value={form.industry} onChange={(v) => update('industry', v)} placeholder="e.g. Financial Services" />
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Company size</label>
+            <label className="block text-xs font-semibold text-al-text-secondary">Company size</label>
             <select
               value={form.companySize}
               onChange={(e) => update('companySize', e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className="mt-1.5 w-full rounded-lg border border-al-border bg-white px-3 py-2 text-sm text-al-text focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             >
               <option value="">Select size…</option>
               {sizes.map((s) => <option key={s} value={s}>{s} employees</option>)}
@@ -369,8 +369,8 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
           <InputField label="Country / Region" value={form.country} onChange={(v) => update('country', v)} placeholder="e.g. United States" />
         </div>
         {!dirty && (
-          <div className="flex justify-end border-t border-slate-100 px-6 py-4">
-            <button onClick={() => setDirty(true)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          <div className="flex justify-end border-t border-al-border px-6 py-4">
+            <button onClick={() => setDirty(true)} className="rounded-lg border border-al-border bg-white px-4 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
               Edit
             </button>
           </div>
@@ -386,9 +386,9 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
         <div className="flex flex-wrap gap-2 p-6">
           {org.departments.length > 0
             ? org.departments.map((d) => (
-                <span key={d} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">{d}</span>
+                <span key={d} className="rounded-full border border-al-border bg-al-surface-sunken px-2.5 py-1 text-xs font-medium text-al-text-secondary">{d}</span>
               ))
-            : <span className="text-sm text-slate-400">No departments configured.</span>}
+            : <span className="text-sm text-al-text-muted">No departments configured.</span>}
         </div>
       </SectionCard>
 
@@ -403,7 +403,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
             ? org.approvalCategories.map((c) => (
                 <span key={c} className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{c}</span>
               ))
-            : <span className="text-sm text-slate-400">No categories configured.</span>}
+            : <span className="text-sm text-al-text-muted">No categories configured.</span>}
         </div>
       </SectionCard>
     </div>
@@ -424,7 +424,7 @@ function SecurityTab() {
           <ConfigRow label="Session management" value="Clerk-managed" />
           <ConfigRow label="OAuth connector tokens" value="AES-256-GCM encrypted at rest" />
         </div>
-        <div className="border-t border-slate-100 px-6 py-4">
+        <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/settings/identity"
             className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
@@ -449,7 +449,7 @@ function SecurityTab() {
           ].map((item) => (
             <div key={item} className="flex items-start gap-2.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-              <span className="text-xs text-slate-700">{item}</span>
+              <span className="text-xs text-al-text-secondary">{item}</span>
             </div>
           ))}
         </div>
@@ -458,10 +458,10 @@ function SecurityTab() {
       <SectionCard>
         <SectionHeader title="Trust & Compliance" />
         <div className="flex flex-wrap gap-2 p-6">
-          <Link href="/trust" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          <Link href="/trust" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Security & Trust Center <ExternalLink className="h-3 w-3" />
           </Link>
-          <Link href="/trust/compliance" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          <Link href="/trust/compliance" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Compliance Hub <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -481,7 +481,7 @@ function UsersTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="Total users" value={`${data.stats.totalUsers}`} />
           <ConfigRow label="Total teams" value={`${data.stats.totalTeams}`} />
         </div>
-        <div className="border-t border-slate-100 px-6 py-4">
+        <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/settings/users"
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
@@ -498,12 +498,12 @@ function UsersTab({ data }: { data: SettingsOverview }) {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-slate-100">
-                <th className="py-3 pl-6 text-left font-semibold text-slate-500">Role</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-500">Analytics</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-500">Settings</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-500">Investigations</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-500">Compliance</th>
+              <tr className="border-b border-al-border">
+                <th className="py-3 pl-6 text-left font-semibold text-al-text-muted">Role</th>
+                <th className="px-4 py-3 text-left font-semibold text-al-text-muted">Analytics</th>
+                <th className="px-4 py-3 text-left font-semibold text-al-text-muted">Settings</th>
+                <th className="px-4 py-3 text-left font-semibold text-al-text-muted">Investigations</th>
+                <th className="px-4 py-3 text-left font-semibold text-al-text-muted">Compliance</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -516,11 +516,11 @@ function UsersTab({ data }: { data: SettingsOverview }) {
                 { role: 'VIEWER', analytics: false, settings: false, investigations: false, compliance: false },
               ].map(({ role, analytics, settings, investigations, compliance }) => (
                 <tr key={role}>
-                  <td className="py-3 pl-6 font-bold text-slate-900">{role}</td>
-                  <td className="px-4 py-3">{analytics ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="text-slate-300">—</span>}</td>
-                  <td className="px-4 py-3">{settings ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="text-slate-300">—</span>}</td>
-                  <td className="px-4 py-3">{investigations ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="text-slate-300">—</span>}</td>
-                  <td className="px-4 py-3">{compliance ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="text-slate-300">—</span>}</td>
+                  <td className="py-3 pl-6 font-bold text-al-text">{role}</td>
+                  <td className="px-4 py-3">{analytics ? <CheckCircle2 className="h-4 w-4 text-al-success" /> : <span className="text-al-text-secondary">—</span>}</td>
+                  <td className="px-4 py-3">{settings ? <CheckCircle2 className="h-4 w-4 text-al-success" /> : <span className="text-al-text-secondary">—</span>}</td>
+                  <td className="px-4 py-3">{investigations ? <CheckCircle2 className="h-4 w-4 text-al-success" /> : <span className="text-al-text-secondary">—</span>}</td>
+                  <td className="px-4 py-3">{compliance ? <CheckCircle2 className="h-4 w-4 text-al-success" /> : <span className="text-al-text-secondary">—</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -552,8 +552,8 @@ function WorkflowTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="Configured playbooks" value={`${data.stats.totalPlaybooks}`} />
           <ConfigRow label="Evaluation" value="Per-approval compliance scoring" />
         </div>
-        <div className="border-t border-slate-100 px-6 py-4">
-          <Link href="/playbooks" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+        <div className="border-t border-al-border px-6 py-4">
+          <Link href="/playbooks" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Open Playbook AI <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -570,7 +570,7 @@ function WorkflowTab({ data }: { data: SettingsOverview }) {
             ? data.organization.approvalCategories.map((c) => (
                 <span key={c} className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{c}</span>
               ))
-            : <span className="text-sm text-slate-400">No categories configured.</span>}
+            : <span className="text-sm text-al-text-muted">No categories configured.</span>}
         </div>
       </SectionCard>
     </div>
@@ -591,11 +591,11 @@ function EvidenceTab() {
           <ConfigRow label="Memory graph" value="Entity-relationship timeline" />
           <ConfigRow label="Tenant isolation" value="Column-based (organizationId)" />
         </div>
-        <div className="flex flex-wrap gap-2 border-t border-slate-100 px-6 py-4">
-          <Link href="/evidence" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+        <div className="flex flex-wrap gap-2 border-t border-al-border px-6 py-4">
+          <Link href="/evidence" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Unified Evidence <ExternalLink className="h-3 w-3" />
           </Link>
-          <Link href="/memory" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          <Link href="/memory" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Memory Graph <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -605,7 +605,7 @@ function EvidenceTab() {
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
         <div>
           <p className="text-sm font-semibold text-amber-900">Data retention & deletion</p>
-          <p className="mt-1 text-xs text-slate-600">
+          <p className="mt-1 text-xs text-al-text-secondary">
             Bulk data deletion, retention policy changes, and export operations are high-impact. Contact your administrator or use the Founder Control Center for these operations.
           </p>
         </div>
@@ -629,7 +629,7 @@ function IntegrationsTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="OAuth scopes" value="Read-only by design" />
           <ConfigRow label="Providers" value="Slack, Gmail, Teams, Jira, ServiceNow, Zoom" />
         </div>
-        <div className="border-t border-slate-100 px-6 py-4">
+        <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/dashboard/settings/integrations"
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
@@ -647,8 +647,8 @@ function IntegrationsTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="Authentication" value="Static API key (timing-safe comparison)" />
           <ConfigRow label="Enterprise systems" value="SAP, Oracle, Coupa, Workday, Salesforce, HubSpot" />
         </div>
-        <div className="border-t border-slate-100 px-6 py-4">
-          <Link href="/dashboard/gateway" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+        <div className="border-t border-al-border px-6 py-4">
+          <Link href="/dashboard/gateway" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Universal Gateway <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -689,11 +689,11 @@ function NotificationsTab() {
         <SectionHeader title="Notification Categories" subtitle="Alert types delivered through configured channels" />
         <div className="flex flex-wrap gap-2 p-6">
           {categories.map((c) => (
-            <span key={c} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">{c}</span>
+            <span key={c} className="rounded-full border border-al-border bg-al-surface-sunken px-2.5 py-1 text-xs font-medium text-al-text-secondary">{c}</span>
           ))}
         </div>
-        <div className="border-t border-slate-100 px-6 py-4">
-          <Link href="/dashboard/alerts" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+        <div className="border-t border-al-border px-6 py-4">
+          <Link href="/dashboard/alerts" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Configure Alerts & Risks <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -718,7 +718,7 @@ function BillingTab({ data }: { data: SettingsOverview }) {
       </SectionCard>
       <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
         <p className="text-sm font-semibold text-blue-900">Billing is managed externally</p>
-        <p className="mt-1 text-xs text-slate-600">
+        <p className="mt-1 text-xs text-al-text-secondary">
           For plan changes, seat additions, or billing inquiries, contact your account representative at{' '}
           <span className="font-semibold text-blue-700">support@approvline.ai</span>
         </p>
@@ -764,7 +764,7 @@ function AuditTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="Scope" value="Organization-scoped with actor tracking" />
           <ConfigRow label="Retention" value="Full history retained" />
         </div>
-        <div className="border-t border-slate-100 px-6 py-4">
+        <div className="border-t border-al-border px-6 py-4">
           <Link href="/dashboard/audit-log" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
             <ScrollText className="h-4 w-4" />
             Open Audit Logs
@@ -776,14 +776,14 @@ function AuditTab({ data }: { data: SettingsOverview }) {
       <SectionCard>
         <SectionHeader title="Recent Configuration Events" />
         {data.recentActivity.length === 0 ? (
-          <p className="p-6 text-sm text-slate-400">No recent configuration events.</p>
+          <p className="p-6 text-sm text-al-text-muted">No recent configuration events.</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {data.recentActivity.map((ev) => (
               <li key={ev.id} className="flex items-center gap-3 px-6 py-3 text-xs">
-                <ScrollText className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                <span className="flex-1 text-slate-700">{actionLabel(ev.action)}</span>
-                <span className="shrink-0 text-slate-400">{relDate(ev.createdAt)}</span>
+                <ScrollText className="h-3.5 w-3.5 shrink-0 text-al-text-muted" />
+                <span className="flex-1 text-al-text-secondary">{actionLabel(ev.action)}</span>
+                <span className="shrink-0 text-al-text-muted">{relDate(ev.createdAt)}</span>
               </li>
             ))}
           </ul>
@@ -819,20 +819,20 @@ function SystemTab({ data }: { data: SettingsOverview }) {
           {checks.map(({ label, status, message }) => (
             <li key={label} className="flex items-center justify-between px-6 py-3">
               <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${status === 'ok' ? 'bg-emerald-500' : status === 'error' ? 'bg-red-500' : 'bg-amber-400'}`} />
-                <span className="text-sm text-slate-700">{label}</span>
+                <span className={`h-2 w-2 rounded-full ${status === 'ok' ? 'bg-al-success' : status === 'error' ? 'bg-al-danger' : 'bg-amber-400'}`} />
+                <span className="text-sm text-al-text-secondary">{label}</span>
               </div>
               <div className="text-right">
                 <span className={`text-xs font-bold ${status === 'ok' ? 'text-emerald-600' : status === 'error' ? 'text-red-600' : 'text-amber-600'}`}>
                   {status}
                 </span>
-                {message && status !== 'ok' && <p className="text-[11px] text-slate-400">{message}</p>}
+                {message && status !== 'ok' && <p className="text-[11px] text-al-text-muted">{message}</p>}
               </div>
             </li>
           ))}
         </ul>
-        <div className="border-t border-slate-100 px-6 py-4">
-          <Link href="/health" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+        <div className="border-t border-al-border px-6 py-4">
+          <Link href="/health" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Full system status <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -847,7 +847,7 @@ function SystemTab({ data }: { data: SettingsOverview }) {
             </button>
           </form>
           <form action="/api/demo/reset" method="post">
-            <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-al-border bg-white px-4 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
               Reset Demo Data
             </button>
           </form>
@@ -874,10 +874,10 @@ export function SettingsShell({ data }: { data: SettingsOverview }) {
               className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors ${
                 activeTab === id
                   ? 'bg-blue-50 text-blue-700 font-semibold'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  : 'text-al-text-secondary hover:bg-al-surface-elevated hover:text-al-text'
               }`}
             >
-              <Icon className={`h-3.5 w-3.5 shrink-0 ${activeTab === id ? 'text-blue-600' : 'text-slate-400'}`} />
+              <Icon className={`h-3.5 w-3.5 shrink-0 ${activeTab === id ? 'text-blue-600' : 'text-al-text-muted'}`} />
               <span className="truncate">{label}</span>
             </button>
           ))}
@@ -891,7 +891,7 @@ export function SettingsShell({ data }: { data: SettingsOverview }) {
             key={id}
             onClick={() => setActiveTab(id)}
             className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold whitespace-nowrap ${
-              activeTab === id ? 'border-blue-500 bg-blue-600 text-white' : 'border-slate-200 bg-white text-slate-600'
+              activeTab === id ? 'border-blue-500 bg-blue-600 text-white' : 'border-al-border bg-white text-al-text-secondary'
             }`}
           >
             <Icon className="h-3 w-3" />

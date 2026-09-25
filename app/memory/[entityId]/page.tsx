@@ -19,8 +19,8 @@ function typeClass(type: string) {
   if (type === 'RISK') return 'bg-rose-50 text-rose-700';
   if (type === 'POLICY') return 'bg-violet-50 text-violet-700';
   if (type === 'INVESTIGATION') return 'bg-amber-50 text-amber-800';
-  if (type === 'APPROVAL' || type === 'DECISION') return 'bg-blue-50 text-[#2155d9]';
-  return 'bg-slate-100 text-slate-700';
+  if (type === 'APPROVAL' || type === 'DECISION') return 'bg-blue-50 text-al-accent';
+  return 'bg-al-surface-elevated text-al-text-secondary';
 }
 
 function RelationshipCard({
@@ -37,13 +37,13 @@ function RelationshipCard({
   demo?: boolean;
 }) {
   return (
-    <PendingLink href={href} pendingText="Opening related entity..." className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200">
-      <p className="text-[10px] font-black uppercase tracking-wide text-[#2155d9]">{label?.replaceAll('_', ' ') ?? ''}</p>
-      <p className="mt-2 text-sm font-black text-slate-950">
+    <PendingLink href={href} pendingText="Opening related entity..." className="rounded-2xl border border-al-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200">
+      <p className="text-[10px] font-black uppercase tracking-wide text-al-accent">{label?.replaceAll('_', ' ') ?? ''}</p>
+      <p className="mt-2 text-sm font-black text-al-text">
         {title}
-        {demo ? <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#2155d9]">Demo</span> : null}
+        {demo ? <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-al-accent">Demo</span> : null}
       </p>
-      {subtitle ? <p className="mt-1 text-xs font-semibold text-slate-500">{subtitle}</p> : null}
+      {subtitle ? <p className="mt-1 text-xs font-semibold text-al-text-muted">{subtitle}</p> : null}
     </PendingLink>
   );
 }
@@ -68,8 +68,8 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
   return (
     <DashboardShell>
       <div className="grid gap-6">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <PendingLink href="/memory" pendingText="Opening Memory Graph..." className="text-sm font-black text-[#2155d9]">
+        <section className="rounded-3xl border border-al-border bg-white p-6 shadow-sm">
+          <PendingLink href="/memory" pendingText="Opening Memory Graph..." className="text-sm font-black text-al-accent">
             ← Memory Graph
           </PendingLink>
           <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -78,49 +78,49 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
                 {memoryEntityLabels[entity.type]}
               </span>
               {isDemoMemoryEntity(entity) ? (
-                <span className="ml-2 inline-flex rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-[#2155d9]">Demo</span>
+                <span className="ml-2 inline-flex rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-al-accent">Demo</span>
               ) : null}
-              <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950">{entity.title}</h1>
-              {entity.subtitle ? <p className="mt-2 text-lg font-semibold text-slate-600">{entity.subtitle}</p> : null}
-              <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">{entity.summary ?? 'This entity is connected to ApprovLine records, evidence, policy, risk, and timeline events.'}</p>
+              <h1 className="mt-4 text-4xl font-black tracking-tight text-al-text">{entity.title}</h1>
+              {entity.subtitle ? <p className="mt-2 text-lg font-semibold text-al-text-secondary">{entity.subtitle}</p> : null}
+              <p className="mt-4 max-w-3xl text-base leading-7 text-al-text-secondary">{entity.summary ?? 'This entity is connected to ApprovLine records, evidence, policy, risk, and timeline events.'}</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Entity Risk Score</p>
-              <p className="mt-3 text-5xl font-black tracking-tight text-slate-950">{entity.riskScore}</p>
+            <div className="rounded-2xl border border-al-border bg-al-surface-sunken p-5">
+              <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">Entity Risk Score</p>
+              <p className="mt-3 text-5xl font-black tracking-tight text-al-text">{entity.riskScore}</p>
               <div className="mt-4 h-2.5 rounded-full bg-white">
-                <div className="h-2.5 rounded-full bg-[#2155d9]" style={{ width: `${Math.min(100, Math.max(0, entity.riskScore))}%` }} />
+                <div className="h-2.5 rounded-full bg-al-accent" style={{ width: `${Math.min(100, Math.max(0, entity.riskScore))}%` }} />
               </div>
-              <p className="mt-4 text-xs font-semibold text-slate-500">Last seen {dateText(entity.lastSeenAt)}</p>
+              <p className="mt-4 text-xs font-semibold text-al-text-muted">Last seen {dateText(entity.lastSeenAt)}</p>
             </div>
           </div>
         </section>
 
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Approvals</p>
-            <p className="mt-2 text-3xl font-black text-slate-950">{relatedApprovals.length}</p>
+          <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">Approvals</p>
+            <p className="mt-2 text-3xl font-black text-al-text">{relatedApprovals.length}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Policies</p>
-            <p className="mt-2 text-3xl font-black text-slate-950">{relatedPolicies.length}</p>
+          <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">Policies</p>
+            <p className="mt-2 text-3xl font-black text-al-text">{relatedPolicies.length}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Risks</p>
-            <p className="mt-2 text-3xl font-black text-slate-950">{relatedRisks.length}</p>
+          <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">Risks</p>
+            <p className="mt-2 text-3xl font-black text-al-text">{relatedRisks.length}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Investigations</p>
-            <p className="mt-2 text-3xl font-black text-slate-950">{relatedInvestigations.length}</p>
+          <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">Investigations</p>
+            <p className="mt-2 text-3xl font-black text-al-text">{relatedInvestigations.length}</p>
           </div>
         </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-al-border bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#2155d9]">Relationship Engine</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Connected records</h2>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-al-accent">Relationship Engine</p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-al-text">Connected records</h2>
             </div>
-            <p className="text-sm font-semibold text-slate-500">{outgoing.length + incoming.length} relationships</p>
+            <p className="text-sm font-semibold text-al-text-muted">{outgoing.length + incoming.length} relationships</p>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {outgoing.map((relationship) => (
@@ -144,29 +144,29 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
               />
             ))}
             {outgoing.length + incoming.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500 md:col-span-2">No relationships have been generated for this entity yet.</p>
+              <p className="rounded-2xl border border-dashed border-al-border p-5 text-sm font-semibold text-al-text-muted md:col-span-2">No relationships have been generated for this entity yet.</p>
             ) : null}
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#2155d9]">Timeline View</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Chronological history</h2>
+        <section className="rounded-3xl border border-al-border bg-white p-6 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-al-accent">Timeline View</p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-al-text">Chronological history</h2>
           <div className="mt-6 grid gap-4">
             {entity.timelineEvents.map((event) => {
               const evidenceUrl = getSafeEvidenceUrl(event.sourceLink);
 
               return (
-              <div key={event.id} className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[160px_1fr]">
+              <div key={event.id} className="grid gap-4 rounded-2xl border border-al-border bg-al-surface-sunken p-4 sm:grid-cols-[160px_1fr]">
                 <div>
-                  <p className="text-sm font-black text-slate-950">{dateText(event.occurredAt)}</p>
-                  <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-slate-500">{event.eventType?.replaceAll('_', ' ') ?? 'Event'}</p>
+                  <p className="text-sm font-black text-al-text">{dateText(event.occurredAt)}</p>
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-wide text-al-text-muted">{event.eventType?.replaceAll('_', ' ') ?? 'Event'}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-black text-slate-950">{event.title}</p>
-                  {event.description ? <p className="mt-1 text-sm leading-6 text-slate-600">{event.description}</p> : null}
+                  <p className="text-sm font-black text-al-text">{event.title}</p>
+                  {event.description ? <p className="mt-1 text-sm leading-6 text-al-text-secondary">{event.description}</p> : null}
                   {evidenceUrl ? (
-                    <a href={evidenceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-black uppercase tracking-wide text-[#2155d9]">
+                    <a href={evidenceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-black uppercase tracking-wide text-al-accent">
                       Open evidence
                     </a>
                   ) : null}
@@ -175,7 +175,7 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
               );
             })}
             {entity.timelineEvents.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-slate-200 p-5 text-sm font-semibold text-slate-500">Timeline events will appear as approvals, investigations, policies, and evidence are linked.</p>
+              <p className="rounded-2xl border border-dashed border-al-border p-5 text-sm font-semibold text-al-text-muted">Timeline events will appear as approvals, investigations, policies, and evidence are linked.</p>
             ) : null}
           </div>
         </section>

@@ -43,7 +43,7 @@ export function ApprovalDetailWorkspace({
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
       {/* Tab bar */}
       <div
-        className="flex shrink-0 items-end overflow-x-auto border-b border-[#1E2D4A] bg-[#07111f] px-4"
+        className="flex shrink-0 items-end overflow-x-auto border-b border-al-border bg-al-bg px-4"
         style={{ scrollbarWidth: 'none' }}
         role="tablist"
         aria-label="Approval sections"
@@ -61,10 +61,10 @@ export function ApprovalDetailWorkspace({
               onClick={() => switchTab(key)}
               className={[
                 'shrink-0 whitespace-nowrap border-b-2 px-4 py-3.5 text-sm font-semibold transition-all',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-al-accent',
                 isActive
-                  ? 'border-violet-500 text-[#E8EEFF]'
-                  : 'border-transparent text-[#6B7FA8] hover:text-[#A8BAD8]',
+                  ? 'border-al-accent text-al-text'
+                  : 'border-transparent text-al-text-muted hover:text-al-text-secondary',
               ].join(' ')}
             >
               {label}

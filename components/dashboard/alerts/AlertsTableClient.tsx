@@ -46,7 +46,7 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-al-border bg-white shadow-sm">
         {/* Mobile: card stack */}
         <div className="divide-y divide-slate-100 lg:hidden">
           {alerts.map((alert) => (
@@ -54,7 +54,7 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
               key={alert.id}
               type="button"
               onClick={() => selectAlert(alert)}
-              className="w-full px-4 py-4 text-left transition hover:bg-slate-50"
+              className="w-full px-4 py-4 text-left transition hover:bg-al-surface-sunken"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -62,12 +62,12 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
                     <SeverityBadge severity={alert.severity} />
                     <OperationalStatusBadge escalated={alert.escalated} investigating={alert.investigating} acknowledged={alert.acknowledged} />
                   </div>
-                  <p className="mt-1.5 truncate text-sm font-semibold text-slate-900">{alert.subject}</p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">
+                  <p className="mt-1.5 truncate text-sm font-semibold text-al-text">{alert.subject}</p>
+                  <p className="mt-0.5 text-[11px] text-al-text-muted">
                     {alert.department ?? 'Unknown'} · {alert.sourcePlatform ?? '—'} · {relativeTime(alert.occurredAt)}
                   </p>
                 </div>
-                <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300" />
+                <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-al-text-secondary" />
               </div>
             </button>
           ))}
@@ -76,16 +76,16 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
         {/* Desktop: operational table */}
         <div className="hidden overflow-x-auto lg:block">
           <table className="w-full text-sm">
-            <thead className="border-b border-slate-100 bg-slate-50/80">
+            <thead className="border-b border-al-border bg-al-surface-sunken/80">
               <tr>
-                <th scope="col" className="w-[110px] whitespace-nowrap px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-500">Severity</th>
-                <th scope="col" className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-500">Alert</th>
-                <th scope="col" className="w-[110px] whitespace-nowrap px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-500">Type</th>
-                <th scope="col" className="w-[130px] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-500">Department</th>
-                <th scope="col" className="w-[90px] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-500">Source</th>
-                <th scope="col" className="w-[120px] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-500">Status</th>
-                <th scope="col" className="w-[80px] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-500">Detected</th>
-                <th scope="col" className="w-[120px] px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-widest text-slate-500">Actions</th>
+                <th scope="col" className="w-[110px] whitespace-nowrap px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-al-text-muted">Severity</th>
+                <th scope="col" className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-al-text-muted">Alert</th>
+                <th scope="col" className="w-[110px] whitespace-nowrap px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-al-text-muted">Type</th>
+                <th scope="col" className="w-[130px] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-al-text-muted">Department</th>
+                <th scope="col" className="w-[90px] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-al-text-muted">Source</th>
+                <th scope="col" className="w-[120px] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-al-text-muted">Status</th>
+                <th scope="col" className="w-[80px] px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-al-text-muted">Detected</th>
+                <th scope="col" className="w-[120px] px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-widest text-al-text-muted">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -94,34 +94,34 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
                 return (
                   <tr
                     key={alert.id}
-                    className={`group cursor-pointer transition ${isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'}`}
+                    className={`group cursor-pointer transition ${isSelected ? 'bg-blue-50/60' : 'hover:bg-al-surface-sunken/60'}`}
                     onClick={() => selectAlert(alert)}
                   >
                     <td className="px-4 py-3">
                       <SeverityBadge severity={alert.severity} score={alert.riskScore} />
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-900 leading-tight">{alert.subject}</p>
+                      <p className="font-semibold text-al-text leading-tight">{alert.subject}</p>
                       {alert.reasons.length > 0 ? (
-                        <p className="mt-0.5 text-[11px] text-slate-400 leading-tight">{alert.reasons[0]}</p>
+                        <p className="mt-0.5 text-[11px] text-al-text-muted leading-tight">{alert.reasons[0]}</p>
                       ) : null}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                      <span className="rounded bg-al-surface-elevated px-2 py-0.5 text-[11px] font-semibold text-al-text-secondary">
                         {approvalTypeLabel(alert.approvalType)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-[12px] text-slate-600">{alert.department ?? '—'}</td>
-                    <td className="px-4 py-3 text-[12px] text-slate-600">{alert.sourcePlatform ?? '—'}</td>
+                    <td className="px-4 py-3 text-[12px] text-al-text-secondary">{alert.department ?? '—'}</td>
+                    <td className="px-4 py-3 text-[12px] text-al-text-secondary">{alert.sourcePlatform ?? '—'}</td>
                     <td className="px-4 py-3">
                       <OperationalStatusBadge escalated={alert.escalated} investigating={alert.investigating} acknowledged={alert.acknowledged} />
                     </td>
-                    <td className="px-4 py-3 text-[11px] text-slate-400 tabular-nums">{relativeTime(alert.occurredAt)}</td>
+                    <td className="px-4 py-3 text-[11px] text-al-text-muted tabular-nums">{relativeTime(alert.occurredAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <form action={investigateAction}>
                           <input type="hidden" name="approvalId" value={alert.id} />
-                          <FormSubmitButton pendingText="…" className="min-h-0 h-7 rounded-md bg-[#2155d9] px-2.5 text-[11px] font-black text-white">
+                          <FormSubmitButton pendingText="…" className="min-h-0 h-7 rounded-md bg-al-accent px-2.5 text-[11px] font-black text-white">
                             Investigate
                           </FormSubmitButton>
                         </form>
@@ -135,7 +135,7 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
                         ) : null}
                         <form action={dismissAction}>
                           <input type="hidden" name="approvalId" value={alert.id} />
-                          <FormSubmitButton pendingText="…" className="min-h-0 h-7 rounded-md border border-slate-200 px-2.5 text-[11px] font-black text-slate-500">
+                          <FormSubmitButton pendingText="…" className="min-h-0 h-7 rounded-md border border-al-border px-2.5 text-[11px] font-black text-al-text-muted">
                             Dismiss
                           </FormSubmitButton>
                         </form>
@@ -148,7 +148,7 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
           </table>
         </div>
 
-        <p className="border-t border-slate-100 px-4 py-2.5 text-[11px] text-slate-400">
+        <p className="border-t border-al-border px-4 py-2.5 text-[11px] text-al-text-muted">
           Showing {alerts.length} alert{alerts.length === 1 ? '' : 's'} · sorted by risk score
         </p>
       </div>

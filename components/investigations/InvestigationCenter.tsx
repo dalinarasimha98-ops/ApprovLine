@@ -84,10 +84,10 @@ type Props = {
 // ─── Style helpers ────────────────────────────────────────────────────────────
 
 function riskBadge(risk?: string | null) {
-  if (risk === 'critical') return 'bg-red-500/15 text-red-400 border border-red-500/25';
-  if (risk === 'high') return 'bg-red-500/15 text-red-400 border border-red-500/25';
-  if (risk === 'medium') return 'bg-amber-500/15 text-amber-400 border border-amber-500/25';
-  return 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25';
+  if (risk === 'critical') return 'bg-al-danger/15 text-al-danger border border-al-danger/25';
+  if (risk === 'high') return 'bg-al-danger/15 text-al-danger border border-al-danger/25';
+  if (risk === 'medium') return 'bg-al-warning/15 text-al-warning border border-al-warning/25';
+  return 'bg-al-success/15 text-al-success border border-al-success/25';
 }
 
 function riskLabel(risk?: string | null) {
@@ -96,11 +96,11 @@ function riskLabel(risk?: string | null) {
 
 function statusBadge(status: InvestigationStatus) {
   switch (status) {
-    case 'IN_PROGRESS': return 'bg-blue-500/15 text-blue-400 border border-blue-500/25';
+    case 'IN_PROGRESS': return 'bg-blue-500/15 text-al-info border border-blue-500/25';
     case 'ESCALATED': return 'bg-orange-500/15 text-orange-400 border border-orange-500/25';
-    case 'RESOLVED': return 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25';
-    case 'CLOSED': return 'bg-slate-500/15 text-slate-400 border border-slate-500/25';
-    default: return 'bg-violet-500/15 text-violet-400 border border-violet-500/25';
+    case 'RESOLVED': return 'bg-al-success/15 text-al-success border border-al-success/25';
+    case 'CLOSED': return 'bg-al-text-muted/15 text-al-text-muted border border-al-text-muted/25';
+    default: return 'bg-al-accent-hover/15 text-al-accent border border-al-accent/25';
   }
 }
 
@@ -118,14 +118,14 @@ function typeBadge(type: string | null) {
   const t = type ?? 'Other';
   const map: Record<string, string> = {
     Anomaly: 'bg-purple-500/15 text-purple-400 border border-purple-500/25',
-    Compliance: 'bg-blue-500/15 text-blue-400 border border-blue-500/25',
-    Security: 'bg-red-500/15 text-red-400 border border-red-500/25',
-    Pattern: 'bg-amber-500/15 text-amber-400 border border-amber-500/25',
+    Compliance: 'bg-blue-500/15 text-al-info border border-blue-500/25',
+    Security: 'bg-al-danger/15 text-al-danger border border-al-danger/25',
+    Pattern: 'bg-al-warning/15 text-al-warning border border-al-warning/25',
     PolicyViolation: 'bg-orange-500/15 text-orange-400 border border-orange-500/25',
-    MissingEvidence: 'bg-rose-500/15 text-rose-400 border border-rose-500/25',
-    Manual: 'bg-slate-500/15 text-slate-400 border border-slate-500/25',
+    MissingEvidence: 'bg-al-danger/15 text-al-danger border border-al-danger/25',
+    Manual: 'bg-al-text-muted/15 text-al-text-muted border border-al-text-muted/25',
   };
-  return map[t] ?? 'bg-slate-500/15 text-slate-400 border border-slate-500/25';
+  return map[t] ?? 'bg-al-text-muted/15 text-al-text-muted border border-al-text-muted/25';
 }
 
 function formatDate(value: string | null | undefined) {
@@ -145,10 +145,10 @@ function initials(user: User | null) {
 
 function KpiCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
   return (
-    <div className="rounded-xl border border-[#1E2D4A] bg-[#07111f] px-5 py-4 flex flex-col gap-1 min-w-0">
-      <p className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider truncate">{label}</p>
-      <p className={`text-2xl font-black tracking-tight ${accent ?? 'text-[#E8EEFF]'}`}>{value}</p>
-      {sub && <p className="text-xs font-medium text-emerald-400 mt-0.5">{sub}</p>}
+    <div className="rounded-xl border border-al-border bg-al-bg px-5 py-4 flex flex-col gap-1 min-w-0">
+      <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider truncate">{label}</p>
+      <p className={`text-2xl font-black tracking-tight ${accent ?? 'text-al-text'}`}>{value}</p>
+      {sub && <p className="text-xs font-medium text-al-success mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -176,11 +176,11 @@ function InsightsPanel({ orgId }: { orgId?: string }) {
 
   if (loading) return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {[0,1,2,3].map((i) => <div key={i} className="rounded-xl border border-[#1E2D4A] bg-[#07111f] h-44 animate-pulse" />)}
+      {[0,1,2,3].map((i) => <div key={i} className="rounded-xl border border-al-border bg-al-bg h-44 animate-pulse" />)}
     </div>
   );
   if (!data) return (
-    <div className="rounded-xl border border-[#1E2D4A] bg-[#07111f] p-4 text-sm text-[#6B7FA8]">
+    <div className="rounded-xl border border-al-border bg-al-bg p-4 text-sm text-al-text-muted">
       AI Insights unavailable — insufficient data or insights service unreachable.
     </div>
   );
@@ -211,8 +211,8 @@ function InsightsPanel({ orgId }: { orgId?: string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {/* Risk Distribution donut */}
-      <div className="rounded-xl border border-[#1E2D4A] bg-[#07111f] p-4">
-        <p className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider mb-3">Risk Distribution</p>
+      <div className="rounded-xl border border-al-border bg-al-bg p-4">
+        <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider mb-3">Risk Distribution</p>
         <div className="flex items-center gap-3">
           <svg viewBox="0 0 112 112" className="w-20 h-20 shrink-0" style={{ transform: 'rotate(-90deg)' }}>
             {total === 1 && data.riskDistribution.high + data.riskDistribution.medium + data.riskDistribution.low === 0 ? (
@@ -236,8 +236,8 @@ function InsightsPanel({ orgId }: { orgId?: string }) {
             {donutData.map((seg) => (
               <div key={seg.label} className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: seg.color }} />
-                <span className="text-[#6B7FA8]">{seg.label}</span>
-                <span className="ml-auto font-bold text-[#E8EEFF]">{seg.value}</span>
+                <span className="text-al-text-muted">{seg.label}</span>
+                <span className="ml-auto font-bold text-al-text">{seg.value}</span>
               </div>
             ))}
           </div>
@@ -245,20 +245,20 @@ function InsightsPanel({ orgId }: { orgId?: string }) {
       </div>
 
       {/* Investigations by Type */}
-      <div className="rounded-xl border border-[#1E2D4A] bg-[#07111f] p-4">
-        <p className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider mb-3">By Type</p>
+      <div className="rounded-xl border border-al-border bg-al-bg p-4">
+        <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider mb-3">By Type</p>
         {typeEntries.length === 0 ? (
-          <p className="text-xs text-[#6B7FA8]">No type data yet.</p>
+          <p className="text-xs text-al-text-muted">No type data yet.</p>
         ) : (
           <div className="grid gap-2">
             {typeEntries.map(([type, count]) => (
               <div key={type} className="grid gap-1">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#E8EEFF] truncate">{type}</span>
-                  <span className="text-[#6B7FA8] font-bold ml-2 shrink-0">{count}</span>
+                  <span className="text-al-text truncate">{type}</span>
+                  <span className="text-al-text-muted font-bold ml-2 shrink-0">{count}</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-[#1E2D4A] overflow-hidden">
-                  <div className="h-full rounded-full bg-violet-500" style={{ width: `${(count / maxType) * 100}%` }} />
+                <div className="h-1.5 rounded-full bg-al-border overflow-hidden">
+                  <div className="h-full rounded-full bg-al-accent-hover" style={{ width: `${(count / maxType) * 100}%` }} />
                 </div>
               </div>
             ))}
@@ -267,8 +267,8 @@ function InsightsPanel({ orgId }: { orgId?: string }) {
       </div>
 
       {/* Resolution Trend */}
-      <div className="rounded-xl border border-[#1E2D4A] bg-[#07111f] p-4">
-        <p className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider mb-3">Resolution Trend</p>
+      <div className="rounded-xl border border-al-border bg-al-bg p-4">
+        <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider mb-3">Resolution Trend</p>
         <svg viewBox={`0 0 ${weeks.length * 40} 60`} className="w-full h-16">
           {weeks.map(([label, v], i) => {
             const x = i * 40 + 20;
@@ -296,20 +296,20 @@ function InsightsPanel({ orgId }: { orgId?: string }) {
           })}
         </svg>
         <div className="flex gap-3 mt-1 text-xs">
-          <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-violet-500 inline-block" /> Created</span>
-          <span className="flex items-center gap-1 text-emerald-400"><span className="w-2 h-0.5 bg-emerald-500 inline-block" /> Resolved</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-al-accent-hover inline-block" /> Created</span>
+          <span className="flex items-center gap-1 text-al-success"><span className="w-2 h-0.5 bg-al-success inline-block" /> Resolved</span>
         </div>
       </div>
 
       {/* Avg Resolution Time */}
-      <div className="rounded-xl border border-[#1E2D4A] bg-[#07111f] p-4 flex flex-col justify-between">
-        <p className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider">Avg Resolution</p>
+      <div className="rounded-xl border border-al-border bg-al-bg p-4 flex flex-col justify-between">
+        <p className="text-xs font-semibold text-al-text-muted uppercase tracking-wider">Avg Resolution</p>
         <div>
-          <p className="text-4xl font-black text-[#E8EEFF] mt-2">{data.avgResolutionDays > 0 ? `${data.avgResolutionDays}d` : '—'}</p>
-          <p className="text-xs text-[#6B7FA8] mt-1">{data.avgResolutionDays > 0 ? 'average time to resolve' : 'No resolved cases yet'}</p>
+          <p className="text-4xl font-black text-al-text mt-2">{data.avgResolutionDays > 0 ? `${data.avgResolutionDays}d` : '—'}</p>
+          <p className="text-xs text-al-text-muted mt-1">{data.avgResolutionDays > 0 ? 'average time to resolve' : 'No resolved cases yet'}</p>
         </div>
         {data.avgResolutionDays > 0 && (
-          <div className="text-xs text-emerald-400 font-medium mt-2">
+          <div className="text-xs text-al-success font-medium mt-2">
             {data.avgResolutionDays <= 3 ? '↓ Fast resolution' : data.avgResolutionDays <= 7 ? '→ Average pace' : '↑ Review escalations'}
           </div>
         )}
@@ -362,37 +362,37 @@ function NewInvestigationModal({ onClose, onCreated, riskyApprovals, users }: Ne
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl border border-[#1E2D4A] bg-[#07111f] shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1E2D4A]">
+      <div className="w-full max-w-lg rounded-2xl border border-al-border bg-al-bg shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-al-border">
           <div>
-            <p className="text-xs font-semibold text-violet-400 uppercase tracking-wider">New Investigation</p>
-            <h3 className="text-lg font-black text-[#E8EEFF] mt-0.5">Create Investigation Case</h3>
+            <p className="text-xs font-semibold text-al-accent uppercase tracking-wider">New Investigation</p>
+            <h3 className="text-lg font-black text-al-text mt-0.5">Create Investigation Case</h3>
           </div>
-          <button type="button" onClick={onClose} className="text-[#6B7FA8] hover:text-[#E8EEFF] p-1 rounded-lg transition"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="text-al-text-muted hover:text-al-text p-1 rounded-lg transition"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={submit} className="p-6 grid gap-4 overflow-y-auto max-h-[70vh]">
-          {error && <p className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">{error}</p>}
+          {error && <p className="rounded-lg bg-al-danger/10 border border-al-danger/20 px-3 py-2 text-sm text-al-danger">{error}</p>}
           <div className="grid gap-1.5">
-            <label className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider">Title *</label>
-            <input name="title" placeholder="Vendor payment evidence review" className="h-10 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-3 text-sm text-[#E8EEFF] placeholder-[#6B7FA8] outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition" />
+            <label className="text-xs font-semibold text-al-text-muted uppercase tracking-wider">Title *</label>
+            <input name="title" placeholder="Vendor payment evidence review" className="h-10 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text placeholder-[#6B7FA8] outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
-              <label className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider">Type</label>
-              <select name="type" className="h-10 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-3 text-sm text-[#E8EEFF] outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition">
+              <label className="text-xs font-semibold text-al-text-muted uppercase tracking-wider">Type</label>
+              <select name="type" className="h-10 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition">
                 <option value="">Select type...</option>
                 {INVESTIGATION_TYPES.map((t) => <option key={t} value={t}>{t.replace(/([A-Z])/g, ' $1').trim()}</option>)}
               </select>
             </div>
             <div className="grid gap-1.5">
-              <label className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider">Department</label>
-              <input name="department" placeholder="Finance" className="h-10 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-3 text-sm text-[#E8EEFF] placeholder-[#6B7FA8] outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition" />
+              <label className="text-xs font-semibold text-al-text-muted uppercase tracking-wider">Department</label>
+              <input name="department" placeholder="Finance" className="h-10 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text placeholder-[#6B7FA8] outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition" />
             </div>
           </div>
           {users.length > 0 && (
             <div className="grid gap-1.5">
-              <label className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider">Assign to</label>
-              <select name="assignedToUserId" className="h-10 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-3 text-sm text-[#E8EEFF] outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition">
+              <label className="text-xs font-semibold text-al-text-muted uppercase tracking-wider">Assign to</label>
+              <select name="assignedToUserId" className="h-10 rounded-lg border border-al-border bg-al-surface px-3 text-sm text-al-text outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition">
                 <option value="">Unassigned</option>
                 {users.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email}</option>)}
               </select>
@@ -400,14 +400,14 @@ function NewInvestigationModal({ onClose, onCreated, riskyApprovals, users }: Ne
           )}
           {riskyApprovals.length > 0 && (
             <div className="grid gap-1.5">
-              <label className="text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider">Link Approvals ({selectedApprovals.length} selected)</label>
-              <div className="rounded-lg border border-[#1E2D4A] overflow-hidden max-h-44 overflow-y-auto">
+              <label className="text-xs font-semibold text-al-text-muted uppercase tracking-wider">Link Approvals ({selectedApprovals.length} selected)</label>
+              <div className="rounded-lg border border-al-border overflow-hidden max-h-44 overflow-y-auto">
                 {riskyApprovals.map((approval) => (
-                  <label key={approval.id} className={`flex items-start gap-3 px-3 py-2 cursor-pointer transition border-b border-[#1E2D4A] last:border-0 ${selectedApprovals.includes(approval.id) ? 'bg-violet-500/10' : 'hover:bg-[#0E1830]'}`}>
+                  <label key={approval.id} className={`flex items-start gap-3 px-3 py-2 cursor-pointer transition border-b border-al-border last:border-0 ${selectedApprovals.includes(approval.id) ? 'bg-al-accent-hover/10' : 'hover:bg-al-surface'}`}>
                     <input type="checkbox" checked={selectedApprovals.includes(approval.id)} onChange={() => toggleApproval(approval.id)} className="mt-0.5 accent-violet-500" />
                     <span>
-                      <span className="block text-xs font-bold text-[#E8EEFF] truncate">{approval.subject}</span>
-                      <span className="block text-xs text-[#6B7FA8]">{approval.department ?? 'Unknown'} · {approval.sourcePlatform ?? 'Source'}</span>
+                      <span className="block text-xs font-bold text-al-text truncate">{approval.subject}</span>
+                      <span className="block text-xs text-al-text-muted">{approval.department ?? 'Unknown'} · {approval.sourcePlatform ?? 'Source'}</span>
                     </span>
                   </label>
                 ))}
@@ -415,8 +415,8 @@ function NewInvestigationModal({ onClose, onCreated, riskyApprovals, users }: Ne
             </div>
           )}
           <div className="flex gap-3 mt-2">
-            <button type="button" onClick={onClose} className="flex-1 h-10 rounded-lg border border-[#1E2D4A] text-sm font-semibold text-[#6B7FA8] hover:text-[#E8EEFF] hover:border-[#2D4F7F] transition">Cancel</button>
-            <button type="submit" disabled={isPending} className="flex-1 h-10 rounded-lg bg-violet-600 hover:bg-violet-500 text-sm font-bold text-white shadow-lg shadow-violet-900/30 transition disabled:opacity-60">
+            <button type="button" onClick={onClose} className="flex-1 h-10 rounded-lg border border-al-border text-sm font-semibold text-al-text-muted hover:text-al-text hover:border-[#2D4F7F] transition">Cancel</button>
+            <button type="submit" disabled={isPending} className="flex-1 h-10 rounded-lg bg-al-accent hover:bg-al-accent-hover text-sm font-bold text-white shadow-lg shadow-violet-900/30 transition disabled:opacity-60">
               {isPending ? 'Creating…' : 'Create Investigation'}
             </button>
           </div>
@@ -515,13 +515,13 @@ export function InvestigationCenter({
       {/* ── Page header ─────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-black tracking-tight text-[#E8EEFF]">Investigation Center</h2>
-          <p className="mt-1 text-sm text-[#6B7FA8]">Investigate high-risk approvals, anomalies and compliance issues with AI-powered intelligence.</p>
+          <h2 className="text-2xl font-black tracking-tight text-al-text">Investigation Center</h2>
+          <p className="mt-1 text-sm text-al-text-muted">Investigate high-risk approvals, anomalies and compliance issues with AI-powered intelligence.</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <a
             href="/api/export/investigations/bulk-report"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#1E2D4A] bg-[#07111f] px-3 text-sm font-semibold text-[#6B7FA8] hover:text-[#E8EEFF] hover:border-[#2D4F7F] transition"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-muted hover:text-al-text hover:border-[#2D4F7F] transition"
           >
             <Download className="w-4 h-4" /> Export
           </a>
@@ -529,7 +529,7 @@ export function InvestigationCenter({
             <button
               type="button"
               onClick={() => setShowNewModal(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 px-4 text-sm font-bold text-white shadow-lg shadow-violet-900/30 transition"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-al-accent hover:bg-al-accent-hover px-4 text-sm font-bold text-white shadow-lg shadow-violet-900/30 transition"
             >
               <Plus className="w-4 h-4" /> New Investigation
             </button>
@@ -540,32 +540,32 @@ export function InvestigationCenter({
       {/* ── KPI cards ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <KpiCard label="Total Investigations" value={metrics.totalInvestigations} />
-        <KpiCard label="High Risk" value={metrics.highRiskInvestigations} accent="text-red-400" />
-        <KpiCard label="In Progress" value={metrics.inProgressInvestigations} accent="text-blue-400" />
-        <KpiCard label="Resolved" value={metrics.resolvedInvestigations} accent="text-emerald-400" />
-        <KpiCard label="Open" value={metrics.openInvestigations} accent="text-violet-400" sub={metrics.escalatedInvestigations > 0 ? `${metrics.escalatedInvestigations} escalated` : undefined} />
+        <KpiCard label="High Risk" value={metrics.highRiskInvestigations} accent="text-al-danger" />
+        <KpiCard label="In Progress" value={metrics.inProgressInvestigations} accent="text-al-info" />
+        <KpiCard label="Resolved" value={metrics.resolvedInvestigations} accent="text-al-success" />
+        <KpiCard label="Open" value={metrics.openInvestigations} accent="text-al-accent" sub={metrics.escalatedInvestigations > 0 ? `${metrics.escalatedInvestigations} escalated` : undefined} />
       </div>
 
       {!migrationReady && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 flex items-center gap-3">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <p className="text-sm text-amber-300">Investigation tables pending migration. Run <code className="font-mono text-amber-400">npm run db:deploy</code> to unlock case management.</p>
+        <div className="rounded-xl border border-al-warning/20 bg-al-warning/5 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle className="w-4 h-4 text-al-warning shrink-0" />
+          <p className="text-sm text-al-warning">Investigation tables pending migration. Run <code className="font-mono text-al-warning">npm run db:deploy</code> to unlock case management.</p>
         </div>
       )}
 
       {/* ── Filter bar ──────────────────────────────────────────────── */}
-      <form onSubmit={applyFilters} className="rounded-xl border border-[#1E2D4A] bg-[#07111f] p-3 flex flex-wrap items-center gap-2">
+      <form onSubmit={applyFilters} className="rounded-xl border border-al-border bg-al-bg p-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[160px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7FA8]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-al-text-muted" />
           <input
             ref={searchInputRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search investigations…"
-            className="h-9 w-full rounded-lg border border-[#1E2D4A] bg-[#0E1830] pl-9 pr-3 text-sm text-[#E8EEFF] placeholder-[#6B7FA8] outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition"
+            className="h-9 w-full rounded-lg border border-al-border bg-al-surface pl-9 pr-3 text-sm text-al-text placeholder-[#6B7FA8] outline-none focus:border-al-accent focus:ring-1 focus:ring-al-accent/30 transition"
           />
         </div>
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); applyFilters(); }} className="h-9 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-2 text-sm text-[#E8EEFF] outline-none focus:border-violet-500 transition">
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); applyFilters(); }} className="h-9 rounded-lg border border-al-border bg-al-surface px-2 text-sm text-al-text outline-none focus:border-al-accent transition">
           <option value="">Status: All</option>
           <option value="OPEN">Open</option>
           <option value="IN_PROGRESS">In Progress</option>
@@ -573,37 +573,37 @@ export function InvestigationCenter({
           <option value="RESOLVED">Resolved</option>
           <option value="CLOSED">Closed</option>
         </select>
-        <select value={riskFilter} onChange={(e) => { setRiskFilter(e.target.value); applyFilters(); }} className="h-9 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-2 text-sm text-[#E8EEFF] outline-none focus:border-violet-500 transition">
+        <select value={riskFilter} onChange={(e) => { setRiskFilter(e.target.value); applyFilters(); }} className="h-9 rounded-lg border border-al-border bg-al-surface px-2 text-sm text-al-text outline-none focus:border-al-accent transition">
           <option value="">Risk: All</option>
           <option value="critical">Critical</option>
           <option value="high">High</option>
           <option value="medium">Medium</option>
           <option value="low">Low</option>
         </select>
-        <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); applyFilters(); }} className="h-9 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-2 text-sm text-[#E8EEFF] outline-none focus:border-violet-500 transition">
+        <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); applyFilters(); }} className="h-9 rounded-lg border border-al-border bg-al-surface px-2 text-sm text-al-text outline-none focus:border-al-accent transition">
           <option value="">Type: All</option>
           {INVESTIGATION_TYPES.map((t) => <option key={t} value={t}>{t.replace(/([A-Z])/g, ' $1').trim()}</option>)}
         </select>
         {users.length > 0 && (
-          <select value={ownerFilter} onChange={(e) => { setOwnerFilter(e.target.value); applyFilters(); }} className="h-9 rounded-lg border border-[#1E2D4A] bg-[#0E1830] px-2 text-sm text-[#E8EEFF] outline-none focus:border-violet-500 transition">
+          <select value={ownerFilter} onChange={(e) => { setOwnerFilter(e.target.value); applyFilters(); }} className="h-9 rounded-lg border border-al-border bg-al-surface px-2 text-sm text-al-text outline-none focus:border-al-accent transition">
             <option value="">Owner: All</option>
             <option value="unassigned">Unassigned</option>
             {users.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email}</option>)}
           </select>
         )}
         {activeFilters > 0 && (
-          <button type="button" onClick={clearFilters} className="h-9 px-3 rounded-lg border border-[#1E2D4A] text-xs font-semibold text-[#6B7FA8] hover:text-red-400 hover:border-red-500/30 transition flex items-center gap-1">
+          <button type="button" onClick={clearFilters} className="h-9 px-3 rounded-lg border border-al-border text-xs font-semibold text-al-text-muted hover:text-al-danger hover:border-al-danger/30 transition flex items-center gap-1">
             <X className="w-3.5 h-3.5" /> Clear
           </button>
         )}
-        <button type="submit" className="h-9 px-3 rounded-lg bg-violet-600 hover:bg-violet-500 text-sm font-semibold text-white transition flex items-center gap-1.5">
+        <button type="submit" className="h-9 px-3 rounded-lg bg-al-accent hover:bg-al-accent-hover text-sm font-semibold text-white transition flex items-center gap-1.5">
           <Filter className="w-3.5 h-3.5" />
           {activeFilters > 0 && <span className="bg-white/20 rounded-full px-1.5 py-0.5 text-xs">{activeFilters}</span>}
         </button>
         <button
           type="button"
           onClick={() => { setPage(1); fetchCases({ pg: 1 }); }}
-          className="h-9 w-9 rounded-lg border border-[#1E2D4A] text-[#6B7FA8] hover:text-[#E8EEFF] hover:border-[#2D4F7F] transition flex items-center justify-center"
+          className="h-9 w-9 rounded-lg border border-al-border text-al-text-muted hover:text-al-text hover:border-[#2D4F7F] transition flex items-center justify-center"
           title="Refresh"
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -613,29 +613,29 @@ export function InvestigationCenter({
       {/* ── Table + Detail panel ─────────────────────────────────────── */}
       <div className={`relative flex gap-4 ${selectedId ? 'xl:grid xl:grid-cols-[1fr_420px]' : ''}`}>
         {/* Table */}
-        <div className="min-w-0 flex-1 rounded-xl border border-[#1E2D4A] bg-[#07111f] overflow-hidden">
+        <div className="min-w-0 flex-1 rounded-xl border border-al-border bg-al-bg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[#1E2D4A]">
+                <tr className="border-b border-al-border">
                   {['Investigation', 'Type', 'Risk', 'Status', 'Owner', 'Created', 'Last Updated', ''].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-[#6B7FA8] uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-al-text-muted uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {isRefreshing ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="border-b border-[#1E2D4A]">
+                    <tr key={i} className="border-b border-al-border">
                       {Array.from({ length: 8 }).map((__, j) => (
-                        <td key={j} className="px-4 py-3"><div className="h-4 rounded bg-[#1E2D4A] animate-pulse" /></td>
+                        <td key={j} className="px-4 py-3"><div className="h-4 rounded bg-al-border animate-pulse" /></td>
                       ))}
                     </tr>
                   ))
                 ) : cases.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center">
-                      <p className="text-[#6B7FA8] text-sm">
+                      <p className="text-al-text-muted text-sm">
                         {activeFilters > 0 || search ? 'No investigations match your filters.' : 'No investigation cases yet. Create one from a high-risk approval.'}
                       </p>
                     </td>
@@ -644,13 +644,13 @@ export function InvestigationCenter({
                   <tr
                     key={row.id}
                     onClick={() => setSelectedId(selectedId === row.id ? null : row.id)}
-                    className={`border-b border-[#1E2D4A] cursor-pointer transition-colors ${selectedId === row.id ? 'bg-violet-500/10' : 'hover:bg-[#0E1830]'}`}
+                    className={`border-b border-al-border cursor-pointer transition-colors ${selectedId === row.id ? 'bg-al-accent-hover/10' : 'hover:bg-al-surface'}`}
                   >
                     <td className="px-4 py-3">
                       <div className="max-w-[260px]">
-                        <p className="text-xs font-semibold text-[#6B7FA8] mb-0.5">#{row.id.slice(-8).toUpperCase()}</p>
-                        <p className="font-bold text-[#E8EEFF] truncate">{row.title}</p>
-                        {row.department && <p className="text-xs text-[#6B7FA8] mt-0.5 truncate">{row.department}</p>}
+                        <p className="text-xs font-semibold text-al-text-muted mb-0.5">#{row.id.slice(-8).toUpperCase()}</p>
+                        <p className="font-bold text-al-text truncate">{row.title}</p>
+                        {row.department && <p className="text-xs text-al-text-muted mt-0.5 truncate">{row.department}</p>}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -658,7 +658,7 @@ export function InvestigationCenter({
                         <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-semibold ${typeBadge(row.type)}`}>
                           {row.type.replace(/([A-Z])/g, ' $1').trim()}
                         </span>
-                      ) : <span className="text-[#6B7FA8]">—</span>}
+                      ) : <span className="text-al-text-muted">—</span>}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`inline-block rounded-md px-2 py-0.5 text-xs font-semibold ${riskBadge(row.riskLevel)}`}>
@@ -673,18 +673,18 @@ export function InvestigationCenter({
                     <td className="px-4 py-3 whitespace-nowrap">
                       {row.assignedTo ? (
                         <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 flex items-center justify-center text-[10px] font-bold">{initials(row.assignedTo)}</span>
-                          <span className="text-xs text-[#E8EEFF] truncate max-w-[80px]">{row.assignedTo.name ?? row.assignedTo.email}</span>
+                          <span className="w-6 h-6 rounded-full bg-al-accent-hover/20 text-al-accent flex items-center justify-center text-[10px] font-bold">{initials(row.assignedTo)}</span>
+                          <span className="text-xs text-al-text truncate max-w-[80px]">{row.assignedTo.name ?? row.assignedTo.email}</span>
                         </div>
-                      ) : <span className="text-xs text-[#6B7FA8]">Unassigned</span>}
+                      ) : <span className="text-xs text-al-text-muted">Unassigned</span>}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-[#6B7FA8]">{formatDate(row.createdAt)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-[#6B7FA8]">{formatDate(row.updatedAt)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-al-text-muted">{formatDate(row.createdAt)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-al-text-muted">{formatDate(row.updatedAt)}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); router.push(`/investigations/${row.id}`); }}
-                        className="text-xs text-violet-400 hover:text-violet-300 font-semibold transition"
+                        className="text-xs text-al-accent hover:text-al-accent font-semibold transition"
                       >
                         View →
                       </button>
@@ -697,19 +697,19 @@ export function InvestigationCenter({
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-4 py-3 border-t border-[#1E2D4A] flex items-center justify-between gap-3">
-              <p className="text-xs text-[#6B7FA8]">Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of {total}</p>
+            <div className="px-4 py-3 border-t border-al-border flex items-center justify-between gap-3">
+              <p className="text-xs text-al-text-muted">Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, total)} of {total}</p>
               <div className="flex items-center gap-1">
-                <button type="button" onClick={() => goPage(page - 1)} disabled={page <= 1} className="w-8 h-8 rounded-lg border border-[#1E2D4A] text-[#6B7FA8] disabled:opacity-30 hover:bg-[#0E1830] flex items-center justify-center transition">
+                <button type="button" onClick={() => goPage(page - 1)} disabled={page <= 1} className="w-8 h-8 rounded-lg border border-al-border text-al-text-muted disabled:opacity-30 hover:bg-al-surface flex items-center justify-center transition">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   const p = totalPages <= 5 ? i + 1 : page <= 3 ? i + 1 : page >= totalPages - 2 ? totalPages - 4 + i : page - 2 + i;
                   return (
-                    <button key={p} type="button" onClick={() => goPage(p)} className={`w-8 h-8 rounded-lg text-xs font-bold transition ${p === page ? 'bg-violet-600 text-white' : 'border border-[#1E2D4A] text-[#6B7FA8] hover:bg-[#0E1830]'}`}>{p}</button>
+                    <button key={p} type="button" onClick={() => goPage(p)} className={`w-8 h-8 rounded-lg text-xs font-bold transition ${p === page ? 'bg-al-accent text-white' : 'border border-al-border text-al-text-muted hover:bg-al-surface'}`}>{p}</button>
                   );
                 })}
-                <button type="button" onClick={() => goPage(page + 1)} disabled={page >= totalPages} className="w-8 h-8 rounded-lg border border-[#1E2D4A] text-[#6B7FA8] disabled:opacity-30 hover:bg-[#0E1830] flex items-center justify-center transition">
+                <button type="button" onClick={() => goPage(page + 1)} disabled={page >= totalPages} className="w-8 h-8 rounded-lg border border-al-border text-al-text-muted disabled:opacity-30 hover:bg-al-surface flex items-center justify-center transition">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -734,7 +734,7 @@ export function InvestigationCenter({
 
       {/* Mobile detail panel (full-screen overlay) */}
       {selectedId && (
-        <div className="xl:hidden fixed inset-0 z-40 bg-[#030b18] overflow-y-auto">
+        <div className="xl:hidden fixed inset-0 z-40 bg-al-bg overflow-y-auto">
           <InvestigationDetailPanel
             investigationId={selectedId}
             onClose={() => setSelectedId(null)}
@@ -747,8 +747,8 @@ export function InvestigationCenter({
       )}
 
       {/* ── AI Investigation Insights ────────────────────────────────── */}
-      <div className="rounded-xl border border-[#1E2D4A] bg-[#07111f] p-4">
-        <p className="text-sm font-bold text-[#E8EEFF] mb-3">AI Investigation Insights</p>
+      <div className="rounded-xl border border-al-border bg-al-bg p-4">
+        <p className="text-sm font-bold text-al-text mb-3">AI Investigation Insights</p>
         <InsightsPanel />
       </div>
 

@@ -31,7 +31,7 @@ export function SVGLineChart({
 }: Props) {
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-[220px] items-center justify-center text-sm font-semibold text-slate-500">
+      <div className="flex h-[220px] items-center justify-center text-sm font-semibold text-al-text-muted">
         No data available for this period
       </div>
     );
@@ -168,7 +168,7 @@ export function SVGLineChart({
           {series.map((s) => (
             <div key={s.key} className="flex items-center gap-1.5">
               <div className="h-2 w-4 rounded-full" style={{ backgroundColor: s.color }} />
-              <span className="text-xs font-medium text-slate-400">{s.label}</span>
+              <span className="text-xs font-medium text-al-text-muted">{s.label}</span>
             </div>
           ))}
         </div>

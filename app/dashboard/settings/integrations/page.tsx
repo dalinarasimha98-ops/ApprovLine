@@ -206,9 +206,9 @@ function StatPill({ label, value, color }: SidebarStat) {
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${color}`} />
-        <span className="text-sm font-semibold text-slate-700">{label}</span>
+        <span className="text-sm font-semibold text-al-text-secondary">{label}</span>
       </div>
-      <span className="text-base font-black tabular-nums text-slate-950">{value}</span>
+      <span className="text-base font-black tabular-nums text-al-text">{value}</span>
     </div>
   );
 }
@@ -228,7 +228,7 @@ function requestStatusBadge(s: string): string {
     case 'UNDER_REVIEW': return 'bg-blue-50 text-blue-700 border-blue-200';
     case 'PLANNED': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
     case 'IN_DEVELOPMENT': return 'bg-violet-50 text-violet-700 border-violet-200';
-    default: return 'bg-slate-50 text-slate-500 border-slate-200';
+    default: return 'bg-al-surface-sunken text-al-text-muted border-al-border';
   }
 }
 
@@ -238,7 +238,7 @@ const GENERIC_CONNECTORS = [
   {
     slug: 'webhook', name: 'Webhook Connector',
     desc: 'POST signed JSON from any system',
-    icon: '⬡', color: 'bg-violet-50 text-violet-600',
+    icon: '⬡', color: 'bg-violet-50 text-al-accent',
     href: '/dashboard/gateway?tab=data-flow',
   },
   {
@@ -250,7 +250,7 @@ const GENERIC_CONNECTORS = [
   {
     slug: 'email', name: 'Email Ingestion',
     desc: 'Forward approval emails to capture',
-    icon: '@', color: 'bg-rose-50 text-rose-500',
+    icon: '@', color: 'bg-rose-50 text-al-danger',
     href: '/dashboard/gateway?tab=data-flow',
   },
   {
@@ -438,15 +438,15 @@ export default async function IntegrationsPage({
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-950">Integrations</h1>
-          <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+          <h1 className="text-2xl font-black tracking-tight text-al-text">Integrations</h1>
+          <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-al-text-muted">
             Connect ApprovLine to the tools where your organization works and decisions happen.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <a
             href="/dashboard/gateway?tab=data-flow"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-al-border bg-white px-4 py-2 text-sm font-black text-al-text-secondary shadow-sm transition hover:bg-al-surface-sunken"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -459,8 +459,8 @@ export default async function IntegrationsPage({
 
       {/* ── Notices ──────────────────────────────────────────────────────── */}
       {statusNotice && (
-        <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-sm">
-          <p className="font-black text-slate-950">Status refresh delayed</p>
+        <div className="mb-4 rounded-2xl border border-al-border bg-white p-4 text-sm font-semibold text-al-text-secondary shadow-sm">
+          <p className="font-black text-al-text">Status refresh delayed</p>
           <p className="mt-1">{statusNotice}</p>
         </div>
       )}
@@ -489,8 +489,8 @@ export default async function IntegrationsPage({
         <aside className="w-full shrink-0 xl:w-72 xl:sticky xl:top-6">
           <div className="flex flex-col gap-4">
             {/* Your Connections */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-sm font-black tracking-tight text-slate-950">Your Connections</h2>
+            <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-sm font-black tracking-tight text-al-text">Your Connections</h2>
               <div className="flex flex-col gap-3">
                 <StatPill label="Connected" value={connectedCount} color="bg-emerald-400" />
                 <StatPill label="Available" value={availableCount} color="bg-blue-400" />
@@ -501,10 +501,10 @@ export default async function IntegrationsPage({
 
             {/* Integration Requests */}
             {sidebarRequests.length > 0 && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-sm font-black text-slate-950">Integration Requests</h2>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-black text-slate-600">
+                  <h2 className="text-sm font-black text-al-text">Integration Requests</h2>
+                  <span className="rounded-full bg-al-surface-elevated px-2 py-0.5 text-xs font-black text-al-text-secondary">
                     {sidebarRequests.length}
                   </span>
                 </div>
@@ -512,8 +512,8 @@ export default async function IntegrationsPage({
                   {sidebarRequests.map((r) => (
                     <div key={r.id} className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-black text-slate-800">{r.providerName}</p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="truncate text-xs font-black text-al-text">{r.providerName}</p>
+                        <p className="text-[10px] text-al-text-muted">
                           Requested {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </p>
                       </div>
@@ -527,9 +527,9 @@ export default async function IntegrationsPage({
             )}
 
             {/* Generic Connectors */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-1 text-sm font-black text-slate-950">Generic Connectors</h2>
-              <p className="mb-3 text-xs font-semibold text-slate-500">
+            <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+              <h2 className="mb-1 text-sm font-black text-al-text">Generic Connectors</h2>
+              <p className="mb-3 text-xs font-semibold text-al-text-muted">
                 Connect tools using webhooks, APIs, email ingestion or data import.
               </p>
               <div className="flex flex-col gap-2">
@@ -537,15 +537,15 @@ export default async function IntegrationsPage({
                   <Link
                     key={gc.slug}
                     href={gc.href}
-                    className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs transition hover:border-slate-200 hover:bg-white"
+                    className="flex items-center justify-between gap-2 rounded-xl border border-al-border bg-al-surface-sunken px-3 py-2 text-xs transition hover:border-al-border hover:bg-white"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-black ${gc.color}`}>
                         {gc.icon}
                       </span>
-                      <span className="truncate font-black text-slate-800">{gc.name}</span>
+                      <span className="truncate font-black text-al-text">{gc.name}</span>
                     </div>
-                    <svg className="h-3.5 w-3.5 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="h-3.5 w-3.5 shrink-0 text-al-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
                     </svg>
                   </Link>
@@ -553,7 +553,7 @@ export default async function IntegrationsPage({
               </div>
               <Link
                 href="/dashboard/gateway"
-                className="mt-3 block text-center text-xs font-black text-[#2155d9] hover:underline"
+                className="mt-3 block text-center text-xs font-black text-al-accent hover:underline"
               >
                 Learn more about integrations →
               </Link>

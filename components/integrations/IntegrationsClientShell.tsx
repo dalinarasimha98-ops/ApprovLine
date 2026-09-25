@@ -113,7 +113,7 @@ function requestStatusColor(s: string): string {
     case 'IN_DEVELOPMENT': return 'bg-violet-50 text-violet-700 border-violet-200';
     case 'AVAILABLE': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     case 'REJECTED': return 'bg-rose-50 text-rose-700 border-rose-200';
-    default: return 'bg-slate-50 text-slate-600 border-slate-200';
+    default: return 'bg-al-surface-sunken text-al-text-secondary border-al-border';
   }
 }
 
@@ -123,7 +123,7 @@ function integrationHealthLabel(status: string): { label: string; cls: string } 
     case 'SYNCING': return { label: 'Syncing', cls: 'text-blue-600' };
     case 'ERROR': return { label: 'Error', cls: 'text-rose-600' };
     case 'NEEDS_REAUTH': return { label: 'Needs reconnect', cls: 'text-amber-600' };
-    default: return { label: 'Not connected', cls: 'text-slate-400' };
+    default: return { label: 'Not connected', cls: 'text-al-text-muted' };
   }
 }
 
@@ -133,7 +133,7 @@ function connectionStatusBadge(status: string): string {
     case 'SYNCING': return 'bg-blue-50 text-blue-700 border-blue-200';
     case 'ERROR': return 'bg-rose-50 text-rose-700 border-rose-200';
     case 'NEEDS_REAUTH': return 'bg-amber-50 text-amber-700 border-amber-200';
-    default: return 'bg-slate-50 text-slate-600 border-slate-200';
+    default: return 'bg-al-surface-sunken text-al-text-secondary border-al-border';
   }
 }
 
@@ -156,7 +156,7 @@ function SearchBar({ value, onChange }: { value: string; onChange: (v: string) =
   return (
     <div className="relative">
       <svg
-        className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none"
+        className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-al-text-muted pointer-events-none"
         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
       >
         <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0Z" />
@@ -166,13 +166,13 @@ function SearchBar({ value, onChange }: { value: string; onChange: (v: string) =
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search integrations (e.g. Slack, Gmail, Jira…)"
-        className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm font-semibold text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-xl border border-al-border bg-white py-3 pl-10 pr-4 text-sm font-semibold text-al-text shadow-sm outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
         aria-label="Search integrations"
       />
       {value && (
         <button
           onClick={() => onChange('')}
-          className="absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          className="absolute right-3 top-1/2 -translate-y-1/2 grid h-5 w-5 place-items-center rounded-full text-al-text-muted hover:bg-al-surface-elevated hover:text-al-text-secondary"
           aria-label="Clear search"
         >
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -207,8 +207,8 @@ function CategoryTabs({
           onClick={() => onSelect(cat)}
           className={`rounded-full border px-3.5 py-1.5 text-xs font-black transition ${
             active === cat
-              ? 'border-[#2155d9] bg-[#2155d9] text-white'
-              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+              ? 'border-al-accent bg-al-accent text-white'
+              : 'border-al-border bg-white text-al-text-secondary hover:border-al-border-strong hover:bg-al-surface-sunken'
           }`}
         >
           {cat}
@@ -217,7 +217,7 @@ function CategoryTabs({
       {hasMore && (
         <button
           onClick={() => setShowAll((p) => !p)}
-          className="rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-black text-slate-500 hover:bg-slate-50 transition"
+          className="rounded-full border border-al-border bg-white px-3.5 py-1.5 text-xs font-black text-al-text-muted hover:bg-al-surface-sunken transition"
         >
           {showAll ? 'Show less' : `More (${allCategories.length - VISIBLE})`}
         </button>
@@ -231,24 +231,24 @@ function ConnectedCard({ p }: { p: ShellProvider }) {
   const isNeedsReauth = p.integrationStatus === 'NEEDS_REAUTH' || p.integrationStatus === 'ERROR';
 
   return (
-    <div className="group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md">
+    <div className="group flex flex-col gap-4 rounded-2xl border border-al-border bg-white p-5 shadow-sm transition hover:border-al-border-strong hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <ProviderIcon slug={p.slug} name={p.displayName} size="md" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="block text-sm font-black tracking-tight text-slate-950">{p.displayName}</span>
+              <span className="block text-sm font-black tracking-tight text-al-text">{p.displayName}</span>
               <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${connectionStatusBadge(p.integrationStatus ?? 'CONNECTED')}`}>
                 {p.integrationStatus === 'SYNCING' ? 'Syncing' : p.integrationStatus === 'ERROR' ? 'Error' : p.integrationStatus === 'NEEDS_REAUTH' ? 'Needs reconnect' : 'Connected'}
               </span>
             </div>
-            <span className="block text-xs text-slate-400 mt-0.5">{p.category}</span>
+            <span className="block text-xs text-al-text-muted mt-0.5">{p.category}</span>
           </div>
         </div>
         {p.connectHref && (
           <a
             href={p.connectHref}
-            className="shrink-0 grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition"
+            className="shrink-0 grid h-8 w-8 place-items-center rounded-lg border border-al-border text-al-text-muted hover:bg-al-surface-sunken hover:text-al-text-secondary transition"
             title="Manage connection"
             aria-label={`Manage ${p.displayName} connection`}
           >
@@ -260,24 +260,24 @@ function ConnectedCard({ p }: { p: ShellProvider }) {
         )}
       </div>
 
-      <p className="text-xs font-semibold leading-5 text-slate-500 line-clamp-2">{p.description}</p>
+      <p className="text-xs font-semibold leading-5 text-al-text-muted line-clamp-2">{p.description}</p>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
-          <span className="text-slate-400">Health</span>
+          <span className="text-al-text-muted">Health</span>
           <p className={`font-black ${health.cls}`}>{health.label}</p>
         </div>
         <div>
-          <span className="text-slate-400">Last sync</span>
-          <p className="font-black text-slate-700">{relativeTime(p.lastSyncAt)}</p>
+          <span className="text-al-text-muted">Last sync</span>
+          <p className="font-black text-al-text-secondary">{relativeTime(p.lastSyncAt)}</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+      <div className="flex flex-wrap gap-2 pt-1 border-t border-al-border">
         {isNeedsReauth && p.connectHref && (
           <a
             href={p.connectHref}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2155d9] px-3 py-1.5 text-xs font-black text-white transition hover:bg-[#1a44be]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-al-accent px-3 py-1.5 text-xs font-black text-white transition hover:bg-al-accent-hover"
           >
             Reconnect
           </a>
@@ -287,7 +287,7 @@ function ConnectedCard({ p }: { p: ShellProvider }) {
             <input type="hidden" name="integrationId" value={p.integrationId} />
             <FormSubmitButton
               pendingText="Syncing…"
-              className="min-h-0 h-7 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-700 shadow-sm hover:bg-slate-50"
+              className="min-h-0 h-7 rounded-lg border border-al-border bg-white px-3 text-xs font-black text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
             >
               Sync now
             </FormSubmitButton>
@@ -314,20 +314,20 @@ function AvailableCard({ p, onRequest }: { p: ShellProvider; onRequest: (name: s
   const isComingSoon = p.status === 'COMING_SOON';
 
   return (
-    <div className="group flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md">
+    <div className="group flex flex-col gap-3 rounded-2xl border border-al-border bg-white p-4 shadow-sm transition hover:border-al-border-strong hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <ProviderIcon slug={p.slug} name={p.displayName} size="sm" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-sm font-black text-slate-950">{p.displayName}</span>
+              <span className="text-sm font-black text-al-text">{p.displayName}</span>
               {isBeta && (
-                <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-violet-600">
+                <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-al-accent">
                   Beta
                 </span>
               )}
               {isComingSoon && (
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                <span className="rounded-full border border-al-border bg-al-surface-sunken px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-al-text-muted">
                   Soon
                 </span>
               )}
@@ -337,25 +337,25 @@ function AvailableCard({ p, onRequest }: { p: ShellProvider; onRequest: (name: s
                 </span>
               )}
             </div>
-            <span className="block text-[11px] text-slate-400 mt-0.5">{p.category}</span>
+            <span className="block text-[11px] text-al-text-muted mt-0.5">{p.category}</span>
           </div>
         </div>
       </div>
 
-      <p className="text-xs font-semibold leading-5 text-slate-500 line-clamp-2 flex-1">{p.description}</p>
+      <p className="text-xs font-semibold leading-5 text-al-text-muted line-clamp-2 flex-1">{p.description}</p>
 
       <div className="pt-1">
         {p.isNative && p.connectHref && !isComingSoon ? (
           <a
             href={p.connectHref}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#2155d9] px-3 py-1.5 text-xs font-black text-[#2155d9] transition hover:bg-[#2155d9] hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-al-accent px-3 py-1.5 text-xs font-black text-al-accent transition hover:bg-al-accent hover:text-white"
           >
             Connect
           </a>
         ) : isComingSoon ? (
           <button
             onClick={() => onRequest(p.displayName, p.slug)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600 transition hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-1.5 text-xs font-black text-al-text-secondary transition hover:bg-al-surface-sunken"
           >
             Request
           </button>
@@ -376,11 +376,11 @@ function SectionHeader({ title, count, viewAllHref }: { title: string; count: nu
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <h3 className="text-base font-black tracking-tight text-slate-950">{title}</h3>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-black text-slate-600">{count}</span>
+        <h3 className="text-base font-black tracking-tight text-al-text">{title}</h3>
+        <span className="rounded-full bg-al-surface-elevated px-2 py-0.5 text-xs font-black text-al-text-secondary">{count}</span>
       </div>
       {viewAllHref && (
-        <a href={viewAllHref} className="text-xs font-black text-[#2155d9] hover:underline">
+        <a href={viewAllHref} className="text-xs font-black text-al-accent hover:underline">
           View all
         </a>
       )}
@@ -390,17 +390,17 @@ function SectionHeader({ title, count, viewAllHref }: { title: string; count: nu
 
 function EmptySearchState({ query, onRequest }: { query: string; onRequest: () => void }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-      <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-xl bg-slate-100 text-slate-400">
+    <div className="rounded-2xl border border-dashed border-al-border bg-al-surface-sunken p-8 text-center">
+      <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-xl bg-al-surface-elevated text-al-text-muted">
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0Z" />
         </svg>
       </div>
-      <p className="text-sm font-black text-slate-700">No exact integration found for &ldquo;{query}&rdquo;</p>
-      <p className="mt-1 text-xs font-semibold text-slate-500">Can&apos;t find your tool? Request it and we&apos;ll prioritize by demand.</p>
+      <p className="text-sm font-black text-al-text-secondary">No exact integration found for &ldquo;{query}&rdquo;</p>
+      <p className="mt-1 text-xs font-semibold text-al-text-muted">Can&apos;t find your tool? Request it and we&apos;ll prioritize by demand.</p>
       <button
         onClick={onRequest}
-        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#2155d9] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#1a44be]"
+        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-al-accent px-5 py-2.5 text-sm font-black text-white transition hover:bg-al-accent-hover"
       >
         Request an Integration
       </button>
@@ -504,7 +504,7 @@ export function IntegrationsClientShell({ providers, myRequests }: Props) {
       {beta.length > 0 && (
         <section className="flex flex-col gap-4">
           <SectionHeader title="Beta Integrations" count={beta.length} />
-          <p className="text-xs font-semibold text-slate-500 -mt-2">
+          <p className="text-xs font-semibold text-al-text-muted -mt-2">
             Early access — contact us to enable for your account.
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -519,7 +519,7 @@ export function IntegrationsClientShell({ providers, myRequests }: Props) {
       {comingSoon.length > 0 && !isSearching && (
         <section className="flex flex-col gap-4">
           <SectionHeader title="Coming Soon" count={comingSoon.length} />
-          <p className="text-xs font-semibold text-slate-500 -mt-2">
+          <p className="text-xs font-semibold text-al-text-muted -mt-2">
             On our roadmap — request the ones you need to help us prioritize.
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -530,7 +530,7 @@ export function IntegrationsClientShell({ providers, myRequests }: Props) {
           {comingSoon.length > COMING_SOON_VISIBLE && (
             <button
               onClick={() => setShowAllComingSoon((s) => !s)}
-              className="mx-auto flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-black text-slate-600 shadow-sm transition hover:bg-slate-50"
+              className="mx-auto flex items-center gap-2 rounded-xl border border-al-border bg-white px-6 py-2.5 text-sm font-black text-al-text-secondary shadow-sm transition hover:bg-al-surface-sunken"
             >
               {showAllComingSoon ? 'Show fewer' : `Load ${comingSoon.length - COMING_SOON_VISIBLE} more integrations`}
               <svg
@@ -550,18 +550,18 @@ export function IntegrationsClientShell({ providers, myRequests }: Props) {
           <SectionHeader title="My Requested Integrations" count={pendingRequests.length} />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {pendingRequests.map((r) => (
-              <div key={r.id} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-sm font-black text-slate-500">
+              <div key={r.id} className="flex items-start gap-3 rounded-xl border border-al-border bg-white p-4 shadow-sm">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-al-surface-elevated text-sm font-black text-al-text-muted">
                   {providerInitials(r.providerName)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-slate-950 truncate">{r.providerName}</p>
-                  {r.category && <p className="text-xs text-slate-400">{r.category}</p>}
+                  <p className="text-sm font-black text-al-text truncate">{r.providerName}</p>
+                  {r.category && <p className="text-xs text-al-text-muted">{r.category}</p>}
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase ${requestStatusColor(r.status)}`}>
                       {statusLabel(r.status)}
                     </span>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-al-text-muted">
                       Requested {new Date(r.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -574,17 +574,17 @@ export function IntegrationsClientShell({ providers, myRequests }: Props) {
 
       {/* Don't see your tool CTA */}
       {!isSearching && (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6">
+        <div className="rounded-2xl border border-dashed border-al-border-strong bg-al-surface-sunken p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-base font-black text-slate-950">Don&apos;t see your tool?</h3>
-              <p className="mt-1 max-w-lg text-sm font-semibold text-slate-500">
+              <h3 className="text-base font-black text-al-text">Don&apos;t see your tool?</h3>
+              <p className="mt-1 max-w-lg text-sm font-semibold text-al-text-muted">
                 Request any integration — enterprise ERP, niche ITSM, custom system. We prioritize by customer demand.
               </p>
             </div>
             <button
               onClick={() => openModal('')}
-              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#2155d9] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#1a44be]"
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-al-accent px-5 py-2.5 text-sm font-black text-white transition hover:bg-al-accent-hover"
             >
               Request an Integration
             </button>

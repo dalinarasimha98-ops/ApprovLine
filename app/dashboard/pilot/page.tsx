@@ -12,11 +12,11 @@ import type { Role } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-const cardClass = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm';
+const cardClass = 'rounded-2xl border border-al-border bg-white p-5 shadow-sm';
 const inputClass =
-  'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100';
+  'h-11 w-full rounded-xl border border-al-border bg-white px-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
 const textareaClass =
-  'min-h-28 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100';
+  'min-h-28 w-full rounded-xl border border-al-border bg-white px-3 py-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
 
 function cleanString(value: FormDataEntryValue | null, fallback = '') {
   return String(value ?? fallback).trim();
@@ -109,8 +109,8 @@ export default async function PilotReadinessPage({
     return (
       <section className={cardClass}>
         <p className="text-xs font-black uppercase tracking-wide text-amber-700">Pilot readiness unavailable</p>
-        <h2 className="mt-2 text-2xl font-black text-slate-950">Workspace could not load</h2>
-        <p className="mt-2 text-sm font-semibold text-slate-600">{tenant.error ?? 'Retry after the database is ready.'}</p>
+        <h2 className="mt-2 text-2xl font-black text-al-text">Workspace could not load</h2>
+        <p className="mt-2 text-sm font-semibold text-al-text-secondary">{tenant.error ?? 'Retry after the database is ready.'}</p>
       </section>
     );
   }
@@ -158,16 +158,16 @@ export default async function PilotReadinessPage({
 
   return (
     <section className="grid gap-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2155d9]">Pilot Readiness</p>
+      <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">Pilot Readiness</p>
         <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
-            <h2 className="text-3xl font-black tracking-tight text-slate-950">Beta customer command center</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            <h2 className="text-3xl font-black tracking-tight text-al-text">Beta customer command center</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-al-text-secondary">
               Prepare this workspace for real pilot users, monitor early usage, collect issues, and keep demo data separated from live customer evidence.
             </p>
           </div>
-          <PendingLink href="/dashboard/settings/integrations" pendingText="Opening connectors..." className="inline-flex h-11 items-center justify-center rounded-xl bg-[#2155d9] px-5 text-sm font-black text-white shadow-sm shadow-blue-200">
+          <PendingLink href="/dashboard/settings/integrations" pendingText="Opening connectors..." className="inline-flex h-11 items-center justify-center rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm shadow-blue-200">
             Connect integrations
           </PendingLink>
         </div>
@@ -192,7 +192,7 @@ export default async function PilotReadinessPage({
       {readiness.degraded ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-950 shadow-sm">
           <p className="text-xs font-black uppercase tracking-wide">Pilot diagnostics</p>
-          <h3 className="mt-2 text-xl font-black text-slate-950">Pilot mode is running in safe fallback</h3>
+          <h3 className="mt-2 text-xl font-black text-al-text">Pilot mode is running in safe fallback</h3>
           <p className="mt-2 text-sm font-semibold leading-6">
             The dashboard is intentionally staying online while production finishes database readiness. Safe diagnostic: {readiness.safeError ?? 'pilot readiness fallback active'}
           </p>
@@ -208,8 +208,8 @@ export default async function PilotReadinessPage({
           ['Feedback submitted', readiness.metrics.feedbackSubmitted],
         ].map(([label, value]) => (
           <div key={label} className={cardClass}>
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
-            <p className="mt-3 text-3xl font-black text-slate-950">{value}</p>
+            <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">{label}</p>
+            <p className="mt-3 text-3xl font-black text-al-text">{value}</p>
           </div>
         ))}
       </div>
@@ -218,37 +218,37 @@ export default async function PilotReadinessPage({
         <div className={cardClass}>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Pilot workspace checklist</p>
-              <h3 className="mt-1 text-xl font-black text-slate-950">{checklistComplete} of {readiness.checklist.length} complete</h3>
+              <p className="text-xs font-black uppercase tracking-wide text-al-accent">Pilot workspace checklist</p>
+              <h3 className="mt-1 text-xl font-black text-al-text">{checklistComplete} of {readiness.checklist.length} complete</h3>
             </div>
-            <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-100">
-              <span className="block h-full rounded-full bg-[#2155d9]" style={{ width: `${Math.round((checklistComplete / readiness.checklist.length) * 100)}%` }} />
+            <div className="h-2 w-32 overflow-hidden rounded-full bg-al-surface-elevated">
+              <span className="block h-full rounded-full bg-al-accent" style={{ width: `${Math.round((checklistComplete / readiness.checklist.length) * 100)}%` }} />
             </div>
           </div>
           <div className="mt-5 grid gap-3">
             {readiness.checklist.map((item) => (
-              <PendingLink key={item.key} href={item.href} pendingText="Opening..." className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-white">
+              <PendingLink key={item.key} href={item.href} pendingText="Opening..." className="flex items-center justify-between gap-3 rounded-xl border border-al-border bg-al-surface-sunken px-4 py-3 text-sm font-bold text-al-text-secondary hover:bg-white">
                 <span className="flex items-center gap-3">
-                  <span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-black ${item.complete ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-400 ring-1 ring-slate-200'}`}>
+                  <span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-black ${item.complete ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-al-text-muted ring-1 ring-slate-200'}`}>
                     {item.complete ? '✓' : '○'}
                   </span>
                   {item.label}
                 </span>
-                <span className="text-xs uppercase tracking-wide text-slate-400">{item.complete ? 'Ready' : 'Open'}</span>
+                <span className="text-xs uppercase tracking-wide text-al-text-muted">{item.complete ? 'Ready' : 'Open'}</span>
               </PendingLink>
             ))}
           </div>
         </div>
 
         <div className={cardClass}>
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Admin invite flow</p>
-          <h3 className="mt-1 text-xl font-black text-slate-950">Invite beta users</h3>
+          <p className="text-xs font-black uppercase tracking-wide text-al-accent">Admin invite flow</p>
+          <h3 className="mt-1 text-xl font-black text-al-text">Invite beta users</h3>
           <form action={invitePilotUser} className="mt-5 grid gap-3">
-            <label className="grid gap-1 text-sm font-black text-slate-700">
+            <label className="grid gap-1 text-sm font-black text-al-text-secondary">
               Work email
               <input name="email" type="email" required placeholder="customer@company.com" className={inputClass} />
             </label>
-            <label className="grid gap-1 text-sm font-black text-slate-700">
+            <label className="grid gap-1 text-sm font-black text-al-text-secondary">
               Role
               <select name="role" defaultValue="MEMBER" className={inputClass}>
                 <option value="OWNER">Owner</option>
@@ -259,31 +259,31 @@ export default async function PilotReadinessPage({
                 <option value="VIEWER">Viewer</option>
               </select>
             </label>
-            <FormSubmitButton pendingText="Saving invite..." className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#2155d9] px-5 text-sm font-black text-white shadow-sm shadow-blue-200">
+            <FormSubmitButton pendingText="Saving invite..." className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm shadow-blue-200">
               Save beta invite
             </FormSubmitButton>
           </form>
           <div className="mt-5 grid gap-2">
             {readiness.invites.length ? readiness.invites.map((invite) => (
-              <div key={invite.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm">
-                <span className="truncate font-bold text-slate-800">{invite.email}</span>
-                <span className="rounded-full bg-white px-2 py-1 text-[11px] font-black uppercase text-slate-500">{invite.status}</span>
+              <div key={invite.id} className="flex items-center justify-between gap-3 rounded-xl bg-al-surface-sunken px-3 py-2 text-sm">
+                <span className="truncate font-bold text-al-text">{invite.email}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] font-black uppercase text-al-text-muted">{invite.status}</span>
               </div>
-            )) : <p className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No beta users invited yet.</p>}
+            )) : <p className="rounded-xl bg-al-surface-sunken p-3 text-sm font-semibold text-al-text-muted">No beta users invited yet.</p>}
           </div>
         </div>
       </div>
 
       <div id="feedback" className="grid gap-6 xl:grid-cols-2">
         <div className={cardClass}>
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Feedback button destination</p>
-          <h3 className="mt-1 text-xl font-black text-slate-950">Submit pilot feedback</h3>
+          <p className="text-xs font-black uppercase tracking-wide text-al-accent">Feedback button destination</p>
+          <h3 className="mt-1 text-xl font-black text-al-text">Submit pilot feedback</h3>
           <form action={submitPilotFeedback} className="mt-5 grid gap-3">
             <input type="hidden" name="type" value="feedback" />
             <input name="title" required placeholder="Short feedback title" className={inputClass} />
             <textarea name="body" required placeholder="What should we improve before the pilot expands?" className={textareaClass} />
             <input name="pageUrl" placeholder="Page URL or workflow affected" className={inputClass} />
-            <FormSubmitButton pendingText="Submitting..." className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#2155d9] px-5 text-sm font-black text-white shadow-sm shadow-blue-200">
+            <FormSubmitButton pendingText="Submitting..." className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm shadow-blue-200">
               Submit feedback
             </FormSubmitButton>
           </form>
@@ -291,14 +291,14 @@ export default async function PilotReadinessPage({
 
         <div className={cardClass}>
           <p className="text-xs font-black uppercase tracking-wide text-rose-600">Issue reporting</p>
-          <h3 className="mt-1 text-xl font-black text-slate-950">Report an issue with screenshot</h3>
+          <h3 className="mt-1 text-xl font-black text-al-text">Report an issue with screenshot</h3>
           <form action={submitPilotFeedback} className="mt-5 grid gap-3">
             <input type="hidden" name="type" value="issue" />
             <input name="title" required placeholder="What broke?" className={inputClass} />
             <textarea name="body" required placeholder="Steps to reproduce, expected result, and actual result." className={textareaClass} />
             <input name="pageUrl" placeholder="Affected URL" className={inputClass} />
-            <input name="screenshot" type="file" accept="image/png,image/jpeg,image/webp" className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-600" />
-            <p className="text-xs font-semibold text-slate-500">For privacy, ApprovLine stores screenshot metadata in this MVP. Connect object storage before storing files.</p>
+            <input name="screenshot" type="file" accept="image/png,image/jpeg,image/webp" className="rounded-xl border border-dashed border-al-border-strong bg-al-surface-sunken px-3 py-3 text-sm font-semibold text-al-text-secondary" />
+            <p className="text-xs font-semibold text-al-text-muted">For privacy, ApprovLine stores screenshot metadata in this MVP. Connect object storage before storing files.</p>
             <FormSubmitButton pendingText="Reporting..." className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-black text-white shadow-sm shadow-rose-200">
               Report issue
             </FormSubmitButton>
@@ -308,18 +308,18 @@ export default async function PilotReadinessPage({
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <div className={cardClass}>
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Feature flags</p>
-          <h3 className="mt-1 text-xl font-black text-slate-950">Pilot controls</h3>
+          <p className="text-xs font-black uppercase tracking-wide text-al-accent">Feature flags</p>
+          <h3 className="mt-1 text-xl font-black text-al-text">Pilot controls</h3>
           <div className="mt-5 grid gap-3">
             {readiness.flags.map((flag) => (
-              <form key={flag.id} action={updateFeatureFlag} className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <form key={flag.id} action={updateFeatureFlag} className="flex items-center justify-between gap-4 rounded-xl border border-al-border bg-al-surface-sunken p-3">
                 <div>
-                  <p className="text-sm font-black text-slate-950">{flag.key.replaceAll('_', ' ')}</p>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">{flag.description}</p>
+                  <p className="text-sm font-black text-al-text">{flag.key.replaceAll('_', ' ')}</p>
+                  <p className="mt-1 text-xs font-semibold text-al-text-muted">{flag.description}</p>
                 </div>
                 <input type="hidden" name="key" value={flag.key} />
                 <input type="hidden" name="enabled" value={flag.enabled ? 'false' : 'true'} />
-                <FormSubmitButton pendingText="Saving..." className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-black ${flag.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
+                <FormSubmitButton pendingText="Saving..." className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-black ${flag.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-al-text-muted ring-1 ring-slate-200'}`}>
                   {flag.enabled ? 'Enabled' : 'Disabled'}
                 </FormSubmitButton>
               </form>
@@ -328,18 +328,18 @@ export default async function PilotReadinessPage({
         </div>
 
         <div className={cardClass}>
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Pilot activity logs</p>
-          <h3 className="mt-1 text-xl font-black text-slate-950">Recent usage signals</h3>
+          <p className="text-xs font-black uppercase tracking-wide text-al-accent">Pilot activity logs</p>
+          <h3 className="mt-1 text-xl font-black text-al-text">Recent usage signals</h3>
           <div className="mt-5 grid gap-3">
             {readiness.activityLogs.length ? readiness.activityLogs.map((log) => (
-              <div key={log.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <div key={log.id} className="rounded-xl border border-al-border bg-al-surface-sunken p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-black text-slate-950">{log.action}</p>
-                  <p className="text-xs font-bold text-slate-400">{log.createdAt.toLocaleString()}</p>
+                  <p className="text-sm font-black text-al-text">{log.action}</p>
+                  <p className="text-xs font-bold text-al-text-muted">{log.createdAt.toLocaleString()}</p>
                 </div>
-                <p className="mt-1 text-xs font-semibold text-slate-500">{log.entityType ?? 'Workspace'} {log.entityId ? `• ${log.entityId.slice(0, 8)}` : ''}</p>
+                <p className="mt-1 text-xs font-semibold text-al-text-muted">{log.entityType ?? 'Workspace'} {log.entityId ? `• ${log.entityId.slice(0, 8)}` : ''}</p>
               </div>
-            )) : <p className="rounded-xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">Pilot activity will appear as beta users submit feedback, update flags, and generate demo workspaces.</p>}
+            )) : <p className="rounded-xl bg-al-surface-sunken p-4 text-sm font-semibold text-al-text-muted">Pilot activity will appear as beta users submit feedback, update flags, and generate demo workspaces.</p>}
           </div>
         </div>
       </div>

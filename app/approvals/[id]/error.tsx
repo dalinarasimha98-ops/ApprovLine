@@ -9,27 +9,27 @@ export default function ApprovalDetailError({ error, reset }: { error: Error & {
     Sentry.captureException(error);
   }, [error]);
   return (
-    <main className="grid min-h-screen place-items-center bg-[#030b18] p-6">
-      <section className="w-full max-w-2xl rounded-2xl border border-[#1E2D4A] bg-[#0E1830] p-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-violet-400">Approval unavailable</p>
-        <h1 className="mt-2 text-2xl font-bold text-[#E8EEFF]">This approval could not be displayed</h1>
-        <p className="mt-3 text-sm leading-6 text-[#6B7FA8]">Your workspace is still available. Retry this record or return to Approval History.</p>
+    <main className="grid min-h-screen place-items-center bg-al-bg p-6">
+      <section className="w-full max-w-2xl rounded-2xl border border-al-border bg-al-surface p-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-al-accent">Approval unavailable</p>
+        <h1 className="mt-2 text-2xl font-bold text-al-text">This approval could not be displayed</h1>
+        <p className="mt-3 text-sm leading-6 text-al-text-muted">Your workspace is still available. Retry this record or return to Approval History.</p>
         {error.digest ? (
-          <div className="mt-4 rounded-lg border border-[#1E2D4A] bg-[#07111f] p-3">
-            <p className="font-mono text-[10px] text-[#3D5070]">Reference: {error.digest}</p>
+          <div className="mt-4 rounded-lg border border-al-border bg-al-bg p-3">
+            <p className="font-mono text-[10px] text-al-text-secondary">Reference: {error.digest}</p>
           </div>
         ) : null}
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"
             onClick={reset}
-            className="h-10 rounded-lg bg-violet-600 px-5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors"
+            className="h-10 rounded-lg bg-al-accent px-5 text-sm font-semibold text-white hover:bg-al-accent-hover transition-colors"
           >
             Retry
           </button>
           <a
             href="/dashboard/approvals"
-            className="inline-flex h-10 items-center rounded-lg border border-[#1E2D4A] bg-[#07111f] px-5 text-sm font-semibold text-[#A8BAD8] hover:text-[#E8EEFF] transition-colors"
+            className="inline-flex h-10 items-center rounded-lg border border-al-border bg-al-bg px-5 text-sm font-semibold text-al-text-secondary hover:text-al-text transition-colors"
           >
             Approval History
           </a>

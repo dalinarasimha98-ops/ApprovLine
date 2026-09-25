@@ -15,7 +15,7 @@ const FORMAT_COLORS: Record<string, string> = {
 const TYPE_COLORS: Record<string, string> = {
   Standard: 'bg-blue-50 text-blue-700',
   Analytics: 'bg-amber-50 text-amber-700',
-  'Per-Record': 'bg-slate-100 text-slate-600',
+  'Per-Record': 'bg-al-surface-elevated text-al-text-secondary',
 };
 const TABS = ['All Reports', 'Exports', 'Scheduled'] as const;
 type Tab = (typeof TABS)[number];
@@ -64,15 +64,15 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
       {/* Left column — tabs + content */}
       <div className="min-w-0">
         {/* Tab bar */}
-        <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-xl border border-al-border bg-white p-1 shadow-sm">
           {TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); if (tab !== 'All Reports') setSelectedId(null); }}
               className={`inline-flex h-9 shrink-0 items-center rounded-lg px-4 text-sm font-semibold transition ${
                 activeTab === tab
-                  ? 'bg-[#2155d9] text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-al-accent text-white shadow-sm'
+                  : 'text-al-text-secondary hover:bg-al-surface-elevated hover:text-al-text'
               }`}
             >
               {tab}
@@ -89,16 +89,16 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
         {activeTab === 'All Reports' && (
           <div className="grid gap-4">
             {/* Filter bar */}
-            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 rounded-xl border border-al-border bg-white p-4 shadow-sm sm:flex-row sm:items-center">
               <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-al-text-muted" />
                 <input
                   type="search"
                   aria-label="Search reports"
                   placeholder="Search reports..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-[#2155d9] focus:outline-none focus:ring-2 focus:ring-[#2155d9]/20"
+                  className="h-10 w-full rounded-lg border border-al-border bg-al-surface-sunken pl-9 pr-3 text-sm text-al-text placeholder-slate-400 focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-[#2155d9]/20"
                 />
               </div>
               <div className="flex shrink-0 gap-1">
@@ -108,8 +108,8 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
                     onClick={() => setCategory(cat)}
                     className={`h-9 rounded-lg px-3 text-xs font-semibold transition ${
                       category === cat
-                        ? 'bg-[#2155d9] text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-al-accent text-white'
+                        : 'bg-al-surface-elevated text-al-text-secondary hover:bg-slate-200'
                     }`}
                   >
                     {cat}
@@ -119,9 +119,9 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
             </div>
 
             {/* Report list */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-al-border bg-white shadow-sm">
               {/* Table header — desktop */}
-              <div className="hidden grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 border-b border-slate-100 bg-slate-50 px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-slate-500 sm:grid">
+              <div className="hidden grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 border-b border-al-border bg-al-surface-sunken px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-al-text-muted sm:grid">
                 <span>Report Name</span>
                 <span>Category</span>
                 <span>Type</span>
@@ -131,9 +131,9 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
 
               {filtered.length === 0 && (
                 <div className="px-5 py-12 text-center">
-                  <FileText className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-                  <p className="text-sm font-semibold text-slate-500">No reports match your filters.</p>
-                  <button onClick={() => { setCategory('All'); setQuery(''); }} className="mt-2 text-xs text-[#2155d9] hover:underline">
+                  <FileText className="mx-auto mb-3 h-8 w-8 text-al-text-secondary" />
+                  <p className="text-sm font-semibold text-al-text-muted">No reports match your filters.</p>
+                  <button onClick={() => { setCategory('All'); setQuery(''); }} className="mt-2 text-xs text-al-accent hover:underline">
                     Clear filters
                   </button>
                 </div>
@@ -147,21 +147,21 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
                   tabIndex={0}
                   aria-pressed={selectedId === report.id}
                   onKeyDown={(e) => e.key === 'Enter' && setSelectedId(selectedId === report.id ? null : report.id)}
-                  className={`grid cursor-pointer items-center gap-4 border-b border-slate-100 px-5 py-4 transition last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2155d9]/30 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] ${
-                    selectedId === report.id ? 'bg-blue-50' : 'hover:bg-slate-50'
+                  className={`grid cursor-pointer items-center gap-4 border-b border-al-border px-5 py-4 transition last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2155d9]/30 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] ${
+                    selectedId === report.id ? 'bg-blue-50' : 'hover:bg-al-surface-sunken'
                   }`}
                 >
                   {/* Name + description */}
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-slate-900">{report.name}</p>
-                    <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{report.description}</p>
+                    <p className="truncate text-sm font-bold text-al-text">{report.name}</p>
+                    <p className="mt-0.5 line-clamp-1 text-xs text-al-text-muted">{report.description}</p>
                   </div>
 
                   {/* Category */}
-                  <span className="hidden text-xs font-semibold text-slate-600 sm:block">{report.category}</span>
+                  <span className="hidden text-xs font-semibold text-al-text-secondary sm:block">{report.category}</span>
 
                   {/* Type badge */}
-                  <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide sm:inline-flex ${TYPE_COLORS[report.type] ?? 'bg-slate-100 text-slate-600'}`}>
+                  <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide sm:inline-flex ${TYPE_COLORS[report.type] ?? 'bg-al-surface-elevated text-al-text-secondary'}`}>
                     {report.type}
                   </span>
 
@@ -181,14 +181,14 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
                         href={Object.values(report.exportPaths)[0]}
                         onClick={(e) => e.stopPropagation()}
                         aria-label={`Export ${report.name}`}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 text-xs font-semibold text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
                       >
                         <Download className="h-3.5 w-3.5" />
                         <span className="hidden md:inline">Export</span>
                       </a>
                     )}
                     <ChevronRight
-                      className={`h-4 w-4 shrink-0 transition-transform text-slate-400 ${selectedId === report.id ? 'rotate-90 text-[#2155d9]' : ''}`}
+                      className={`h-4 w-4 shrink-0 transition-transform text-al-text-muted ${selectedId === report.id ? 'rotate-90 text-al-accent' : ''}`}
                     />
                   </div>
                 </div>
@@ -199,50 +199,50 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
 
         {/* Exports tab */}
         {activeTab === 'Exports' && (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
-              <h3 className="text-sm font-bold text-slate-900">Export History</h3>
-              <p className="mt-0.5 text-xs text-slate-500">All report exports from this workspace, newest first.</p>
+          <div className="overflow-hidden rounded-xl border border-al-border bg-white shadow-sm">
+            <div className="border-b border-al-border bg-al-surface-sunken px-5 py-3">
+              <h3 className="text-sm font-bold text-al-text">Export History</h3>
+              <p className="mt-0.5 text-xs text-al-text-muted">All report exports from this workspace, newest first.</p>
             </div>
 
             {exportHistory.length === 0 ? (
               <div className="px-5 py-14 text-center">
-                <Download className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-                <p className="text-sm font-semibold text-slate-500">No exports yet.</p>
-                <p className="mt-1 text-xs text-slate-400">Exports will appear here after running a report.</p>
-                <button onClick={() => setActiveTab('All Reports')} className="mt-3 text-xs font-semibold text-[#2155d9] hover:underline">
+                <Download className="mx-auto mb-3 h-8 w-8 text-al-text-secondary" />
+                <p className="text-sm font-semibold text-al-text-muted">No exports yet.</p>
+                <p className="mt-1 text-xs text-al-text-muted">Exports will appear here after running a report.</p>
+                <button onClick={() => setActiveTab('All Reports')} className="mt-3 text-xs font-semibold text-al-accent hover:underline">
                   View available reports
                 </button>
               </div>
             ) : (
               <>
-                <div className="hidden grid-cols-[2fr_1fr_1fr_1fr] gap-4 border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 sm:grid">
+                <div className="hidden grid-cols-[2fr_1fr_1fr_1fr] gap-4 border-b border-al-border bg-al-surface-sunken px-5 py-2.5 text-[11px] font-bold uppercase tracking-wide text-al-text-muted sm:grid">
                   <span>Report</span>
                   <span>Format</span>
                   <span>Requested By</span>
                   <span>Date</span>
                 </div>
                 {exportHistory.map((entry) => (
-                  <div key={entry.id} className="grid items-center gap-4 border-b border-slate-100 px-5 py-3.5 last:border-0 sm:grid-cols-[2fr_1fr_1fr_1fr]">
+                  <div key={entry.id} className="grid items-center gap-4 border-b border-al-border px-5 py-3.5 last:border-0 sm:grid-cols-[2fr_1fr_1fr_1fr]">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">
+                      <p className="truncate text-sm font-semibold text-al-text">
                         {extractMetaString(entry.metadata, 'reportName') !== '—'
                           ? extractMetaString(entry.metadata, 'reportName')
                           : 'Report Export'}
                       </p>
                       {extractMetaString(entry.metadata, 'recordCount') !== '—' && (
-                        <p className="mt-0.5 text-xs text-slate-500">
+                        <p className="mt-0.5 text-xs text-al-text-muted">
                           {extractMetaString(entry.metadata, 'recordCount')} records
                         </p>
                       )}
                     </div>
-                    <span className={`inline-flex w-fit rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase ${FORMAT_COLORS[extractMetaString(entry.metadata, 'format')] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                    <span className={`inline-flex w-fit rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase ${FORMAT_COLORS[extractMetaString(entry.metadata, 'format')] ?? 'bg-al-surface-elevated text-al-text-secondary border-al-border'}`}>
                       {extractMetaString(entry.metadata, 'format')}
                     </span>
-                    <span className="truncate text-xs text-slate-600">
+                    <span className="truncate text-xs text-al-text-secondary">
                       {entry.actorUserId ? entry.actorUserId.slice(0, 12) + '…' : 'System'}
                     </span>
-                    <span className="text-xs text-slate-500">{formatDate(entry.createdAt)}</span>
+                    <span className="text-xs text-al-text-muted">{formatDate(entry.createdAt)}</span>
                   </div>
                 ))}
               </>
@@ -252,20 +252,20 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
 
         {/* Scheduled tab — coming soon */}
         {activeTab === 'Scheduled' && (
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="rounded-xl border border-al-border bg-white shadow-sm">
             <div className="flex flex-col items-center px-6 py-16 text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
-                <CalendarOff className="h-6 w-6 text-slate-400" />
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-al-border bg-al-surface-sunken">
+                <CalendarOff className="h-6 w-6 text-al-text-muted" />
               </div>
-              <h3 className="text-base font-black text-slate-900">Scheduled Reports Coming Soon</h3>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
+              <h3 className="text-base font-black text-al-text">Scheduled Reports Coming Soon</h3>
+              <p className="mt-2 max-w-sm text-sm leading-6 text-al-text-muted">
                 Scheduled report delivery requires an active async export queue. This feature is registered in
                 the job registry but not yet operational. Exports are currently available on demand.
               </p>
               <div className="mt-4 flex items-center gap-3">
                 <button
                   onClick={() => setActiveTab('All Reports')}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]"
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-al-accent px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]"
                 >
                   <Clock className="h-4 w-4" /> View On-Demand Reports
                 </button>
@@ -297,15 +297,15 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
 
 export function ReportsCenterEmpty() {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
-      <FileText className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-      <h3 className="text-base font-black text-slate-900">No reports available yet.</h3>
-      <p className="mt-2 max-w-sm mx-auto text-sm text-slate-500">
+    <div className="rounded-xl border border-al-border bg-white px-6 py-16 text-center shadow-sm">
+      <FileText className="mx-auto mb-3 h-10 w-10 text-al-text-secondary" />
+      <h3 className="text-base font-black text-al-text">No reports available yet.</h3>
+      <p className="mt-2 max-w-sm mx-auto text-sm text-al-text-muted">
         Report data will appear here once approval records and analytics are available in your workspace.
       </p>
       <Link
         href="/dashboard/settings/integrations"
-        className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]"
+        className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-al-accent px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]"
       >
         Connect integrations
       </Link>

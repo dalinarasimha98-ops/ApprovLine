@@ -148,7 +148,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
   return (
     <DashboardShell>
       <section className="grid gap-6">
-        <div className="rounded-3xl border border-slate-200 bg-[#07111f] p-6 text-white shadow-sm">
+        <div className="rounded-3xl border border-al-border bg-al-bg p-6 text-white shadow-sm">
           <PendingLink href="/investigations" pendingText="Back to investigations..." className="text-xs font-black uppercase tracking-wide text-blue-200">
             &lt;- Investigation Center
           </PendingLink>
@@ -156,16 +156,16 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Investigation Case</p>
               <h2 className="mt-2 text-3xl font-black tracking-tight">{investigation.title}</h2>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-300">{investigation.summary ?? summary.whatHappened}</p>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-al-text-secondary">{investigation.summary ?? summary.whatHappened}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase ${investigation.status === 'OPEN' ? 'border-blue-100 bg-blue-50 text-[#2155d9]' : 'border-emerald-100 bg-emerald-50 text-emerald-700'}`}>{investigation.status}</span>
+              <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase ${investigation.status === 'OPEN' ? 'border-blue-100 bg-blue-50 text-al-accent' : 'border-emerald-100 bg-emerald-50 text-emerald-700'}`}>{investigation.status}</span>
               <span className={`rounded-full border px-3 py-1 text-xs font-black capitalize ${riskClass(investigation.riskLevel)}`}>{summary.riskLevel} risk</span>
               {metadata.demo ? <span className="rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-black text-blue-100">Demo</span> : null}
             </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
-            <PendingLink href={`/api/export/investigations/${investigation.id}/report`} pendingText="Preparing report..." className="inline-flex h-11 items-center rounded-xl bg-[#2155d9] px-5 text-sm font-black text-white shadow-sm shadow-blue-950/30">
+            <PendingLink href={`/api/export/investigations/${investigation.id}/report`} pendingText="Preparing report..." className="inline-flex h-11 items-center rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm shadow-blue-950/30">
               Export PDF Report
             </PendingLink>
             <form action={updateStatusAction}>
@@ -186,26 +186,26 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
             ['Policy Checks', policyChecks.length],
             ['Notes', investigation.notes.length],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">{label}</p>
-              <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
+            <div key={label} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">{label}</p>
+              <p className="mt-2 text-3xl font-black text-al-text">{value}</p>
             </div>
           ))}
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">AI Investigation Summary</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">What happened, why it matters, and what is missing</h3>
-            <div className="mt-5 grid gap-4 text-sm leading-6 text-slate-600">
-              <p><span className="font-black text-slate-950">What happened:</span> {summary.whatHappened}</p>
-              <p><span className="font-black text-slate-950">Who approved:</span> {summary.whoApproved}</p>
-              <p><span className="font-black text-slate-950">Why risky:</span> {summary.whyRisky}</p>
+          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-wide text-al-accent">AI Investigation Summary</p>
+            <h3 className="mt-1 text-lg font-black text-al-text">What happened, why it matters, and what is missing</h3>
+            <div className="mt-5 grid gap-4 text-sm leading-6 text-al-text-secondary">
+              <p><span className="font-black text-al-text">What happened:</span> {summary.whatHappened}</p>
+              <p><span className="font-black text-al-text">Who approved:</span> {summary.whoApproved}</p>
+              <p><span className="font-black text-al-text">Why risky:</span> {summary.whyRisky}</p>
               <div>
-                <p className="font-black text-slate-950">Policy applies:</p>
+                <p className="font-black text-al-text">Policy applies:</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {summary.policyApplies.map((policy) => (
-                    <span key={policy} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-[#2155d9]">{policy}</span>
+                    <span key={policy} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-al-accent">{policy}</span>
                   ))}
                 </div>
               </div>
@@ -226,29 +226,29 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Playbook AI Integration</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">Policy compliance checks</h3>
+          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-wide text-al-accent">Playbook AI Integration</p>
+            <h3 className="mt-1 text-lg font-black text-al-text">Policy compliance checks</h3>
             <div className="mt-5 grid gap-3">
               {complianceEvaluations.length ? complianceEvaluations.map((evaluation) => (
-                <div key={evaluation.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                <div key={evaluation.id} className="rounded-xl border border-al-border bg-al-surface-sunken p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-black text-slate-950">{evaluation.triggeredRule ?? evaluation.rule?.title ?? 'Playbook rule'}</p>
+                    <p className="font-black text-al-text">{evaluation.triggeredRule ?? evaluation.rule?.title ?? 'Playbook rule'}</p>
                     <span className={`rounded-full px-2.5 py-1 text-xs font-black ${policyClass(evaluation.status)}`}>{evaluation.status} · {evaluation.score}</span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{evaluation.explanation}</p>
+                  <p className="mt-2 text-sm leading-6 text-al-text-secondary">{evaluation.explanation}</p>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
                     {evaluation.missingApprovers.map((item) => <span key={item} className="rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">Missing {item}</span>)}
                     {evaluation.missingEvidence.map((item) => <span key={item} className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">Need {item}</span>)}
                   </div>
                 </div>
               )) : policyChecks.map((check) => (
-                <div key={check.policy} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                <div key={check.policy} className="rounded-xl border border-al-border bg-al-surface-sunken p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-black text-slate-950">{check.policy}</p>
+                    <p className="font-black text-al-text">{check.policy}</p>
                     <span className={`rounded-full px-2.5 py-1 text-xs font-black ${policyClass(check.status)}`}>{check.status}</span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{check.finding}</p>
+                  <p className="mt-2 text-sm leading-6 text-al-text-secondary">{check.finding}</p>
                 </div>
               ))}
             </div>
@@ -256,47 +256,47 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Evidence Timeline</p>
-            <h3 className="mt-1 text-lg font-black text-slate-950">Chronological source, decision, policy, and audit events</h3>
+          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-wide text-al-accent">Evidence Timeline</p>
+            <h3 className="mt-1 text-lg font-black text-al-text">Chronological source, decision, policy, and audit events</h3>
             <div className="mt-6 grid gap-4">
               {timeline.map((event, index) => (
                 <div key={`${event.type}-${event.at.toISOString()}-${index}`} className="grid gap-3 border-l-2 border-blue-100 pl-4">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="rounded-2xl border border-al-border bg-al-surface-sunken p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">{event.type}</p>
-                        <p className="mt-1 font-black text-slate-950">{event.title}</p>
+                        <p className="text-xs font-black uppercase tracking-wide text-al-accent">{event.type}</p>
+                        <p className="mt-1 font-black text-al-text">{event.title}</p>
                       </div>
-                      <p className="text-xs font-bold text-slate-500">{dateText(event.at)}</p>
+                      <p className="text-xs font-bold text-al-text-muted">{dateText(event.at)}</p>
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{event.body}</p>
+                    <p className="mt-2 text-sm leading-6 text-al-text-secondary">{event.body}</p>
                   </div>
                 </div>
               ))}
-              {timeline.length === 0 ? <p className="rounded-xl border border-dashed border-slate-200 p-4 text-sm font-semibold text-slate-500">No timeline evidence attached.</p> : null}
+              {timeline.length === 0 ? <p className="rounded-xl border border-dashed border-al-border p-4 text-sm font-semibold text-al-text-muted">No timeline evidence attached.</p> : null}
             </div>
           </div>
 
           <div className="grid gap-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Approval Details</p>
+            <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-wide text-al-accent">Approval Details</p>
               <div className="mt-5 grid gap-3">
                 {approvals.map((approval) => (
-                  <div key={approval.id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  <div key={approval.id} className="rounded-xl border border-al-border bg-al-surface-sunken p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="font-black text-slate-950">{approval.subject}</p>
-                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                        <p className="font-black text-al-text">{approval.subject}</p>
+                        <p className="mt-1 text-xs font-semibold text-al-text-muted">
                           {approval.approverName ?? 'Unknown'} · {approval.department ?? 'Unassigned'} · {approval.sourcePlatform ?? 'unknown'} · {dateText(approval.approvalTimestamp ?? approval.occurredAt)}
                         </p>
                       </div>
                       <span className={`rounded-full border px-2.5 py-1 text-xs font-black capitalize ${riskClass(approval.riskLevel)}`}>{approval.riskLevel ?? 'low'}</span>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
-                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[#2155d9]">{approval.confidence}% confidence</span>
-                      <span className="rounded-full bg-white px-2.5 py-1 text-slate-600">{approval.status?.replaceAll('_', ' ') ?? 'Unknown'}</span>
-                      <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening approval..." className="rounded-full bg-white px-2.5 py-1 text-[#2155d9]">
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-al-accent">{approval.confidence}% confidence</span>
+                      <span className="rounded-full bg-white px-2.5 py-1 text-al-text-secondary">{approval.status?.replaceAll('_', ' ') ?? 'Unknown'}</span>
+                      <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening approval..." className="rounded-full bg-white px-2.5 py-1 text-al-accent">
                         View Full Approval
                       </PendingLink>
                     </div>
@@ -305,22 +305,22 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
               </div>
             </div>
 
-            <form action={addNoteAction} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <form action={addNoteAction} className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
               <input type="hidden" name="investigationId" value={investigation.id} />
-              <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Investigation Notes</p>
-              <h3 className="mt-1 text-lg font-black text-slate-950">Legal, compliance, and audit notes</h3>
-              <textarea name="body" rows={4} placeholder="Add finding, follow-up, or reviewer note..." className="mt-5 w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold outline-none focus:border-[#2155d9] focus:ring-4 focus:ring-blue-100" />
-              <FormSubmitButton pendingText="Adding note..." className="mt-3 min-h-0 h-10 rounded-lg bg-[#2155d9] px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
+              <p className="text-xs font-black uppercase tracking-wide text-al-accent">Investigation Notes</p>
+              <h3 className="mt-1 text-lg font-black text-al-text">Legal, compliance, and audit notes</h3>
+              <textarea name="body" rows={4} placeholder="Add finding, follow-up, or reviewer note..." className="mt-5 w-full rounded-xl border border-al-border p-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+              <FormSubmitButton pendingText="Adding note..." className="mt-3 min-h-0 h-10 rounded-lg bg-al-accent px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
                 Add Note
               </FormSubmitButton>
               <div className="mt-5 grid gap-3">
                 {investigation.notes.map((note) => (
-                  <div key={note.id} className="rounded-xl bg-slate-50 p-4">
-                    <p className="text-sm font-semibold leading-6 text-slate-700">{note.body}</p>
-                    <p className="mt-2 text-xs font-bold text-slate-500">{note.authorUser?.name ?? note.authorUser?.email ?? 'Reviewer'} · {dateText(note.createdAt)}</p>
+                  <div key={note.id} className="rounded-xl bg-al-surface-sunken p-4">
+                    <p className="text-sm font-semibold leading-6 text-al-text-secondary">{note.body}</p>
+                    <p className="mt-2 text-xs font-bold text-al-text-muted">{note.authorUser?.name ?? note.authorUser?.email ?? 'Reviewer'} · {dateText(note.createdAt)}</p>
                   </div>
                 ))}
-                {investigation.notes.length === 0 ? <p className="rounded-xl border border-dashed border-slate-200 p-4 text-sm font-semibold text-slate-500">No notes yet.</p> : null}
+                {investigation.notes.length === 0 ? <p className="rounded-xl border border-dashed border-al-border p-4 text-sm font-semibold text-al-text-muted">No notes yet.</p> : null}
               </div>
             </form>
           </div>

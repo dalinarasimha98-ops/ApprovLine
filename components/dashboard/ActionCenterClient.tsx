@@ -30,12 +30,12 @@ function ProviderIcon({ platform, className }: { platform: string | null; classN
 }
 
 const STATUS_BADGE_CLASSES: Record<ActionStatus, string> = {
-  PENDING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  DUE_TODAY: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  OVERDUE: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-  RESOLVED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  DISPUTED: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-  SUPERSEDED: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  PENDING: 'bg-al-warning/10 text-al-warning border-al-warning/20',
+  DUE_TODAY: 'bg-al-info/10 text-al-info border-al-info/20',
+  OVERDUE: 'bg-al-danger/10 text-al-danger border-al-danger/20',
+  RESOLVED: 'bg-al-success/10 text-al-success border-al-success/20',
+  DISPUTED: 'bg-al-danger/10 text-al-danger border-al-danger/20',
+  SUPERSEDED: 'bg-al-text-muted/10 text-al-text-muted border-al-text-muted/20',
 };
 
 function StatusBadge({ status }: { status: ActionStatus }) {
@@ -48,10 +48,10 @@ function StatusBadge({ status }: { status: ActionStatus }) {
 }
 
 const PRIORITY_BADGE_CLASSES: Record<ActionPriority, string> = {
-  low: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  medium: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  low: 'bg-al-success/10 text-al-success border-al-success/20',
+  medium: 'bg-al-warning/10 text-al-warning border-al-warning/20',
   high: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-  critical: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+  critical: 'bg-al-danger/10 text-al-danger border-al-danger/20',
 };
 
 function PriorityBadge({ priority }: { priority: ActionPriority }) {
@@ -120,8 +120,8 @@ function fmtExactTimestamp(date: Date): string {
 function detailField(label: string, value: React.ReactNode) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</dt>
-      <dd className="mt-0.5 text-sm font-semibold text-slate-800">{value}</dd>
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-al-text-muted">{label}</dt>
+      <dd className="mt-0.5 text-sm font-semibold text-al-text">{value}</dd>
     </div>
   );
 }
@@ -206,20 +206,20 @@ export function ActionCenterClient(props: ActionCenterProps) {
   ] as const;
 
   const iconBg: Record<string, string> = {
-    blue: 'bg-blue-500/10 text-blue-400',
-    amber: 'bg-amber-500/10 text-amber-400',
-    rose: 'bg-rose-500/10 text-rose-400',
+    blue: 'bg-al-info/10 text-al-info',
+    amber: 'bg-al-warning/10 text-al-warning',
+    rose: 'bg-al-danger/10 text-al-danger',
     orange: 'bg-orange-500/10 text-orange-400',
-    emerald: 'bg-emerald-500/10 text-emerald-400',
+    emerald: 'bg-al-success/10 text-al-success',
   };
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
       {/* Header */}
-      <div className="overflow-hidden rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-5 py-4">
-        <p className="text-[10.5px] font-black uppercase tracking-[0.18em] text-violet-400">Action Center</p>
-        <h1 className="mt-1 text-2xl font-black tracking-tight text-[#E8EEFF] sm:text-3xl">Pending Actions</h1>
-        <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-[#6B7FA8]">
+      <div className="overflow-hidden rounded-xl border border-al-border bg-al-surface px-5 py-4">
+        <p className="text-[10.5px] font-black uppercase tracking-[0.18em] text-al-accent">Action Center</p>
+        <h1 className="mt-1 text-2xl font-black tracking-tight text-al-text sm:text-3xl">Pending Actions</h1>
+        <p className="mt-1 max-w-2xl text-sm font-semibold leading-6 text-al-text-muted">
           Review approval requests, decisions, and other actions that require your attention.
         </p>
       </div>
@@ -227,13 +227,13 @@ export function ActionCenterClient(props: ActionCenterProps) {
       {/* KPI strip */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Action Center summary">
         {kpiCards.map((kpi) => (
-          <div key={kpi.label} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+          <div key={kpi.label} className="rounded-xl border border-al-border bg-al-surface p-4">
             <div className="flex items-start gap-3">
               <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold ${iconBg[kpi.color]}`}>{kpi.icon}</div>
               <div className="min-w-0">
-                <p className="font-mono text-2xl font-black tracking-tight text-[#E8EEFF]">{kpi.value.toLocaleString()}</p>
-                <p className="mt-0.5 text-[11px] font-bold text-[#E8EEFF]">{kpi.label}</p>
-                <p className="text-[10.5px] font-semibold text-[#6B7FA8]">{kpi.detail}</p>
+                <p className="font-mono text-2xl font-black tracking-tight text-al-text">{kpi.value.toLocaleString()}</p>
+                <p className="mt-0.5 text-[11px] font-bold text-al-text">{kpi.label}</p>
+                <p className="text-[10.5px] font-semibold text-al-text-muted">{kpi.detail}</p>
               </div>
             </div>
           </div>
@@ -241,20 +241,20 @@ export function ActionCenterClient(props: ActionCenterProps) {
       </div>
 
       {/* Filters */}
-      <form onSubmit={submitSearch} className="flex flex-col gap-3 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4 sm:flex-row sm:flex-wrap sm:items-center">
+      <form onSubmit={submitSearch} className="flex flex-col gap-3 rounded-xl border border-al-border bg-al-surface p-4 sm:flex-row sm:flex-wrap sm:items-center">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           type="search"
           placeholder="Search actions, people, or keywords..."
           aria-label="Search actions, people, or keywords"
-          className="h-9 min-w-[220px] flex-1 rounded-lg border border-[#1E2D4A] bg-[#152040] px-3 text-sm font-semibold text-[#E8EEFF] placeholder:text-[#3D5070] outline-none focus:border-violet-500/60"
+          className="h-9 min-w-[220px] flex-1 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text placeholder:text-al-text-secondary outline-none focus:border-al-accent/60"
         />
         <select
           value={props.filters.source}
           onChange={(e) => pushParams({ source: e.target.value, page: 1 })}
           aria-label="Filter by source"
-          className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-2.5 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+          className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-2.5 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
         >
           {SOURCE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -262,7 +262,7 @@ export function ActionCenterClient(props: ActionCenterProps) {
           value={props.filters.actionType}
           onChange={(e) => pushParams({ actionType: e.target.value, page: 1 })}
           aria-label="Filter by action type"
-          className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-2.5 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+          className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-2.5 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
         >
           {ACTION_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -270,7 +270,7 @@ export function ActionCenterClient(props: ActionCenterProps) {
           value={props.filters.priority}
           onChange={(e) => pushParams({ priority: e.target.value, page: 1 })}
           aria-label="Filter by priority"
-          className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-2.5 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+          className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-2.5 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
         >
           {PRIORITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -278,52 +278,52 @@ export function ActionCenterClient(props: ActionCenterProps) {
           value={props.filters.status || 'OPEN'}
           onChange={(e) => pushParams({ status: e.target.value, page: 1 })}
           aria-label="Filter by status"
-          className="h-9 rounded-lg border border-[#1E2D4A] bg-[#152040] px-2.5 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/60"
+          className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-2.5 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
         >
           {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <button type="submit" className="h-9 rounded-lg bg-violet-600 px-4 text-sm font-bold text-white hover:bg-violet-500">
+        <button type="submit" className="h-9 rounded-lg bg-al-accent px-4 text-sm font-bold text-white hover:bg-al-accent-hover">
           Search
         </button>
         {hasActiveFilters ? (
-          <button type="button" onClick={clearFilters} className="h-9 rounded-lg border border-[#1E2D4A] px-3 text-sm font-bold text-[#A8BAD8] hover:border-violet-500/40">
+          <button type="button" onClick={clearFilters} className="h-9 rounded-lg border border-al-border px-3 text-sm font-bold text-al-text-secondary hover:border-al-accent/40">
             Clear filters
           </button>
         ) : null}
-        {pending ? <span className="text-xs font-semibold text-[#6B7FA8]" aria-live="polite">Updating…</span> : null}
+        {pending ? <span className="text-xs font-semibold text-al-text-muted" aria-live="polite">Updating…</span> : null}
       </form>
 
       {/* Empty state */}
       {props.rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[#1E2D4A] bg-[#0E1830]/50 p-12 text-center">
+        <div className="rounded-xl border border-dashed border-al-border bg-al-surface/50 p-12 text-center">
           {hasActiveFilters ? (
             <>
-              <h3 className="text-xl font-black text-[#E8EEFF]">No actions match your filters</h3>
-              <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-[#6B7FA8]">
+              <h3 className="text-xl font-black text-al-text">No actions match your filters</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-al-text-muted">
                 Try a different search term or clear filters to see everything that needs attention.
               </p>
               <div className="mt-5 flex justify-center">
-                <button type="button" onClick={clearFilters} className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-bold text-white hover:bg-violet-500">
+                <button type="button" onClick={clearFilters} className="rounded-lg bg-al-accent px-5 py-2 text-sm font-bold text-white hover:bg-al-accent-hover">
                   Clear filters
                 </button>
               </div>
             </>
           ) : props.filters.status === 'RESOLVED' ? (
             <>
-              <h3 className="text-xl font-black text-[#E8EEFF]">No resolved actions yet</h3>
-              <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-[#6B7FA8]">
+              <h3 className="text-xl font-black text-al-text">No resolved actions yet</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-al-text-muted">
                 Confirmed or disputed manual approvals will appear here once a response is recorded.
               </p>
             </>
           ) : (
             <>
-              <p className="text-xs font-black uppercase tracking-widest text-violet-400">All caught up</p>
-              <h3 className="mt-3 text-xl font-black text-[#E8EEFF]">You&apos;re all caught up</h3>
-              <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-[#6B7FA8]">
+              <p className="text-xs font-black uppercase tracking-widest text-al-accent">All caught up</p>
+              <h3 className="mt-3 text-xl font-black text-al-text">You&apos;re all caught up</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-al-text-muted">
                 New approval and review requests will appear here when they require your attention.
               </p>
               <div className="mt-5 flex justify-center">
-                <PendingLink href={props.approvalsHref} pendingText="Opening…" className="rounded-lg border border-[#1E2D4A] bg-[#152040] px-5 py-2 text-sm font-bold text-violet-400 hover:border-violet-500/40">
+                <PendingLink href={props.approvalsHref} pendingText="Opening…" className="rounded-lg border border-al-border bg-al-surface-elevated px-5 py-2 text-sm font-bold text-al-accent hover:border-al-accent/40">
                   View Approvals
                 </PendingLink>
               </div>
@@ -333,10 +333,10 @@ export function ActionCenterClient(props: ActionCenterProps) {
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden min-w-0 overflow-hidden rounded-2xl border border-[#1E2D4A] bg-[#0E1830] md:block">
+          <div className="hidden min-w-0 overflow-hidden rounded-2xl border border-al-border bg-al-surface md:block">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] table-fixed border-collapse text-left text-sm">
-                <thead className="bg-[#0a1524] text-xs uppercase tracking-wide text-[#6B7FA8]">
+                <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
                   <tr>
                     <th scope="col" className="w-[24%] px-4 py-3 font-semibold">Action</th>
                     <th scope="col" className="w-[13%] px-4 py-3 font-semibold">Requested By</th>
@@ -350,33 +350,33 @@ export function ActionCenterClient(props: ActionCenterProps) {
                 </thead>
                 <tbody>
                   {props.rows.map((row) => (
-                    <tr key={row.id} className="border-t border-[#1E2D4A] align-top transition hover:bg-[#152040]">
+                    <tr key={row.id} className="border-t border-al-border align-top transition hover:bg-al-surface-elevated">
                       <td className="px-4 py-4">
-                        <button type="button" onClick={() => openAction(row.id)} title={row.title} className="block w-full text-left font-bold text-[#E8EEFF] hover:text-violet-300">
+                        <button type="button" onClick={() => openAction(row.id)} title={row.title} className="block w-full text-left font-bold text-al-text hover:text-al-accent">
                           <span className="block truncate">{row.title}</span>
                         </button>
-                        <p className="mt-0.5 truncate text-xs font-semibold text-[#6B7FA8]">{ACTION_TYPE_LABELS[row.actionType]}</p>
+                        <p className="mt-0.5 truncate text-xs font-semibold text-al-text-muted">{ACTION_TYPE_LABELS[row.actionType]}</p>
                       </td>
-                      <td className="px-4 py-3 text-[#A8BAD8]">
+                      <td className="px-4 py-3 text-al-text-secondary">
                         <span title={row.requestedByName ?? 'Unknown'} className="block truncate font-semibold">{row.requestedByName ?? 'Unknown'}</span>
-                        {row.requestedByEmail ? <span title={row.requestedByEmail} className="block truncate text-xs text-[#3D5070]">{row.requestedByEmail}</span> : null}
+                        {row.requestedByEmail ? <span title={row.requestedByEmail} className="block truncate text-xs text-al-text-secondary">{row.requestedByEmail}</span> : null}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-400">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-al-info/10 px-2.5 py-1 text-xs font-bold text-al-info">
                           <ProviderIcon platform={row.sourcePlatformRaw} />
                           {SOURCE_PLATFORM_LABELS[normalizeSourcePlatform(row.sourcePlatformRaw)]}
                         </span>
-                        {row.sourceChannel ? <p title={row.sourceChannel} className="mt-1 truncate text-xs text-[#3D5070]">{row.sourceChannel}</p> : null}
+                        {row.sourceChannel ? <p title={row.sourceChannel} className="mt-1 truncate text-xs text-al-text-secondary">{row.sourceChannel}</p> : null}
                       </td>
                       <td className="px-4 py-3"><PriorityBadge priority={row.priority} /></td>
-                      <td className="px-4 py-3 text-[#6B7FA8]">
+                      <td className="px-4 py-3 text-al-text-muted">
                         <span className="block whitespace-nowrap">{fmtRelativeTime(row.requestedAt)}</span>
-                        <span className="block whitespace-nowrap text-xs text-[#3D5070]">{row.requestedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                        <span className="block whitespace-nowrap text-xs text-al-text-secondary">{row.requestedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
                       </td>
-                      <td className="px-4 py-3 text-[#6B7FA8]">{fmtDueDate(row.dueAt)}</td>
+                      <td className="px-4 py-3 text-al-text-muted">{fmtDueDate(row.dueAt)}</td>
                       <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                       <td className="px-4 py-3 text-right">
-                        <button type="button" onClick={() => openAction(row.id)} className="text-xs font-bold text-violet-400 hover:text-violet-300 hover:underline">
+                        <button type="button" onClick={() => openAction(row.id)} className="text-xs font-bold text-al-accent hover:text-al-accent hover:underline">
                           View →
                         </button>
                       </td>
@@ -394,25 +394,25 @@ export function ActionCenterClient(props: ActionCenterProps) {
                 key={row.id}
                 type="button"
                 onClick={() => openAction(row.id)}
-                className="flex w-full flex-col items-stretch whitespace-normal rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4 text-left transition hover:border-violet-500/30"
+                className="flex w-full flex-col items-stretch whitespace-normal rounded-xl border border-al-border bg-al-surface p-4 text-left transition hover:border-al-accent/30"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p title={row.title} className="min-w-0 flex-1 truncate font-bold text-[#E8EEFF]">{row.title}</p>
+                  <p title={row.title} className="min-w-0 flex-1 truncate font-bold text-al-text">{row.title}</p>
                   <StatusBadge status={row.status} />
                 </div>
-                <p className="mt-1 text-xs font-semibold text-[#6B7FA8]">{ACTION_TYPE_LABELS[row.actionType]} &middot; {SOURCE_PLATFORM_LABELS[normalizeSourcePlatform(row.sourcePlatformRaw)]}</p>
+                <p className="mt-1 text-xs font-semibold text-al-text-muted">{ACTION_TYPE_LABELS[row.actionType]} &middot; {SOURCE_PLATFORM_LABELS[normalizeSourcePlatform(row.sourcePlatformRaw)]}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <PriorityBadge priority={row.priority} />
-                  <span className="text-xs font-semibold text-[#6B7FA8]">{fmtRelativeTime(row.requestedAt)}</span>
-                  <span className="text-xs font-semibold text-[#3D5070]">{row.dueAt ? `Due ${fmtDueDate(row.dueAt)}` : fmtDueDate(row.dueAt)}</span>
+                  <span className="text-xs font-semibold text-al-text-muted">{fmtRelativeTime(row.requestedAt)}</span>
+                  <span className="text-xs font-semibold text-al-text-secondary">{row.dueAt ? `Due ${fmtDueDate(row.dueAt)}` : fmtDueDate(row.dueAt)}</span>
                 </div>
               </button>
             ))}
           </div>
 
           {/* Pagination */}
-          <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-4 py-3 sm:flex-row">
-            <p className="text-xs font-semibold text-[#6B7FA8]">
+          <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-al-border bg-al-surface px-4 py-3 sm:flex-row">
+            <p className="text-xs font-semibold text-al-text-muted">
               Showing {(props.page - 1) * 10 + 1}–{Math.min(props.page * 10, props.totalCount)} of {props.totalCount} actions
             </p>
             <div className="flex items-center gap-2">
@@ -420,16 +420,16 @@ export function ActionCenterClient(props: ActionCenterProps) {
                 type="button"
                 disabled={props.page <= 1}
                 onClick={() => pushParams({ page: props.page - 1 })}
-                className="h-8 rounded-lg border border-[#1E2D4A] px-3 text-xs font-bold text-[#A8BAD8] hover:border-violet-500/40 disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-8 rounded-lg border border-al-border px-3 text-xs font-bold text-al-text-secondary hover:border-al-accent/40 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
-              <span className="text-xs font-bold text-[#E8EEFF]">{props.page} / {props.totalPages}</span>
+              <span className="text-xs font-bold text-al-text">{props.page} / {props.totalPages}</span>
               <button
                 type="button"
                 disabled={props.page >= props.totalPages}
                 onClick={() => pushParams({ page: props.page + 1 })}
-                className="h-8 rounded-lg border border-[#1E2D4A] px-3 text-xs font-bold text-[#A8BAD8] hover:border-violet-500/40 disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-8 rounded-lg border border-al-border px-3 text-xs font-bold text-al-text-secondary hover:border-al-accent/40 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>
@@ -441,7 +441,7 @@ export function ActionCenterClient(props: ActionCenterProps) {
       {/* Detail drawer */}
       {selected ? (
         <DetailDrawer onClose={closeDrawer} titleId="action-detail-title" descriptionId="action-detail-subject">
-          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4">
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-al-border bg-al-surface-sunken px-5 py-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
@@ -450,10 +450,10 @@ export function ActionCenterClient(props: ActionCenterProps) {
                 </span>
                 <StatusBadge status={selected.status} />
               </div>
-              <h2 id="action-detail-title" className="mt-2 text-base font-black leading-snug text-slate-950">{selected.title}</h2>
-              <p id="action-detail-subject" className="mt-0.5 text-xs font-semibold text-slate-500">{ACTION_TYPE_LABELS[selected.actionType]}</p>
+              <h2 id="action-detail-title" className="mt-2 text-base font-black leading-snug text-al-text">{selected.title}</h2>
+              <p id="action-detail-subject" className="mt-0.5 text-xs font-semibold text-al-text-muted">{ACTION_TYPE_LABELS[selected.actionType]}</p>
             </div>
-            <button type="button" onClick={closeDrawer} aria-label="Close action detail" className="mt-0.5 shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+            <button type="button" onClick={closeDrawer} aria-label="Close action detail" className="mt-0.5 shrink-0 rounded-lg p-1.5 text-al-text-muted hover:bg-al-surface-elevated hover:text-al-text-secondary">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -461,35 +461,35 @@ export function ActionCenterClient(props: ActionCenterProps) {
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             <div className="grid gap-5">
               <section>
-                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Requested By</h3>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                  <p className="text-sm font-bold text-slate-900">{selected.requestedByName ?? 'Unknown'}</p>
-                  {selected.requestedByEmail ? <p className="text-xs text-slate-500">{selected.requestedByEmail}</p> : null}
+                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Requested By</h3>
+                <div className="rounded-xl border border-al-border bg-al-surface-sunken p-3">
+                  <p className="text-sm font-bold text-al-text">{selected.requestedByName ?? 'Unknown'}</p>
+                  {selected.requestedByEmail ? <p className="text-xs text-al-text-muted">{selected.requestedByEmail}</p> : null}
                 </div>
               </section>
 
               <section>
-                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Requested For</h3>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Requested For</h3>
+                <div className="rounded-xl border border-al-border bg-al-surface-sunken p-3">
                   {selected.requestedForName || selected.requestedForEmail ? (
                     <>
-                      <p className="text-sm font-bold text-slate-900">{selected.requestedForName ?? 'Unknown'}</p>
-                      {selected.requestedForEmail ? <p className="text-xs text-slate-500">{selected.requestedForEmail}</p> : null}
+                      <p className="text-sm font-bold text-al-text">{selected.requestedForName ?? 'Unknown'}</p>
+                      {selected.requestedForEmail ? <p className="text-xs text-al-text-muted">{selected.requestedForEmail}</p> : null}
                     </>
                   ) : (
-                    <p className="text-sm font-semibold text-slate-500">Unassigned</p>
+                    <p className="text-sm font-semibold text-al-text-muted">Unassigned</p>
                   )}
                 </div>
               </section>
 
               <section>
-                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Details</h3>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Details</h3>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-al-border bg-al-surface-sunken p-3">
                   {detailField(
                     'Requested',
                     <>
                       {fmtExactTimestamp(selected.requestedAt)}
-                      <span className="block font-semibold text-slate-500">{fmtRelativeTime(selected.requestedAt)}</span>
+                      <span className="block font-semibold text-al-text-muted">{fmtRelativeTime(selected.requestedAt)}</span>
                     </>,
                   )}
                   {detailField('Due date', fmtDueDate(selected.dueAt))}
@@ -502,7 +502,7 @@ export function ActionCenterClient(props: ActionCenterProps) {
 
               {selected.context ? (
                 <section>
-                  <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Context</h3>
+                  <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Context</h3>
                   <p className="max-h-40 overflow-y-auto rounded-xl border border-blue-100 bg-blue-50 p-3 text-[13px] leading-5 text-blue-900">
                     {selected.context}
                   </p>
@@ -510,42 +510,42 @@ export function ActionCenterClient(props: ActionCenterProps) {
               ) : null}
 
               <section>
-                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Evidence</h3>
+                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Evidence</h3>
                 {selected.evidenceRecordId ? (
                   <a href={`/evidence/${selected.evidenceRecordId}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-violet-700 hover:text-violet-900">
                     View Evidence <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 ) : (
-                  <p className="text-sm font-semibold text-slate-500">Evidence not available yet.</p>
+                  <p className="text-sm font-semibold text-al-text-muted">Evidence not available yet.</p>
                 )}
               </section>
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-4">
+          <div className="shrink-0 border-t border-al-border bg-white px-5 py-4">
             <div className="grid gap-2">
               {selected.sourceExternalUrl ? (
                 <a
                   href={selected.sourceExternalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-violet-600 text-sm font-black text-white hover:bg-violet-500"
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-al-accent text-sm font-black text-white hover:bg-al-accent-hover"
                 >
                   Open in {SOURCE_PLATFORM_LABELS[normalizeSourcePlatform(selected.sourcePlatformRaw)]} <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               ) : null}
               <div className="grid grid-cols-2 gap-2">
-                <a href={`/approvals/${selected.id}`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-50">
+                <a href={`/approvals/${selected.id}`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-al-border text-xs font-black text-al-text-secondary hover:bg-al-surface-sunken">
                   View Approval
                 </a>
-                <a href={`/approvals/${selected.id}/source`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-50">
+                <a href={`/approvals/${selected.id}/source`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-al-border text-xs font-black text-al-text-secondary hover:bg-al-surface-sunken">
                   View in ApprovLine
                 </a>
               </div>
               <button
                 type="button"
                 onClick={() => copyLink(selected.id)}
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-50"
+                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-al-border text-xs font-black text-al-text-secondary hover:bg-al-surface-sunken"
               >
                 <Copy className="h-3.5 w-3.5" /> {copied ? 'Link copied' : 'Copy link'}
               </button>

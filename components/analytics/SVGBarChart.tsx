@@ -24,7 +24,7 @@ export function SVGBarChart({
 }: Props) {
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-[200px] items-center justify-center text-sm font-semibold text-slate-500">
+      <div className="flex h-[200px] items-center justify-center text-sm font-semibold text-al-text-muted">
         No data available
       </div>
     );

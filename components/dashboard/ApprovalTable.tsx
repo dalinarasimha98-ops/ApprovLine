@@ -41,9 +41,9 @@ export type ApprovalTableRecord = {
 };
 
 function statusClass(status: string) {
-  if (status === 'REJECTED') return 'bg-rose-500/10 text-rose-400';
-  if (status === 'PENDING_REVIEW') return 'bg-amber-500/10 text-amber-400';
-  return 'bg-emerald-500/10 text-emerald-400';
+  if (status === 'REJECTED') return 'bg-al-danger/10 text-al-danger';
+  if (status === 'PENDING_REVIEW') return 'bg-al-warning/10 text-al-warning';
+  return 'bg-al-success/10 text-al-success';
 }
 
 function approverDisplay(approval: Pick<ApprovalTableRecord, 'approverName' | 'approverEmail'>) {
@@ -71,15 +71,15 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
 
   if (approvals.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-[#1E2D4A] bg-[#0E1830] p-10 text-center">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-violet-500/10 text-violet-400">
+      <div className="rounded-2xl border border-dashed border-al-border bg-al-surface p-10 text-center">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-al-accent-hover/10 text-al-accent">
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
             <path d="M12 3.2 19 6v5.2c0 4.5-2.9 7.9-7 9.6-4.1-1.7-7-5.1-7-9.6V6l7-2.8Z" stroke="currentColor" strokeWidth="1.8" />
             <path d="m9 12 2 2 4-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h3 className="mt-4 text-lg font-black text-[#E8EEFF]">No approvals yet</h3>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#6B7FA8]">
+        <h3 className="mt-4 text-lg font-black text-al-text">No approvals yet</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-al-text-muted">
           Connect Slack or Gmail, run demo ingestion, or adjust the filters to reveal captured approval records.
         </p>
       </div>
@@ -88,7 +88,7 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
 
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-[#1E2D4A] bg-[#0E1830]">
+      <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-sm">
             <colgroup>
@@ -98,7 +98,7 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
               <col className="w-28" />
               <col className="w-32" />
             </colgroup>
-            <thead className="bg-[#0a1524] text-xs uppercase tracking-wide text-[#6B7FA8]">
+            <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
               <tr>
                 <th className="px-4 py-3 font-semibold">Decision</th>
                 <th className="px-4 py-3 font-semibold">Risk</th>
@@ -126,8 +126,8 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
                       if (event.target instanceof HTMLElement && event.target.closest('button')) return;
                       if (isPlainLeftClick(event)) openPreview();
                     }}
-                    className={`h-16 cursor-pointer border-t border-[#1E2D4A] align-middle transition hover:bg-[#152040] ${
-                      isSelected ? 'bg-[#152040] ring-1 ring-inset ring-violet-500/40' : ''
+                    className={`h-16 cursor-pointer border-t border-al-border align-middle transition hover:bg-al-surface-elevated ${
+                      isSelected ? 'bg-al-surface-elevated ring-1 ring-inset ring-al-accent/40' : ''
                     }`}
                   >
                     <td className="max-w-0 px-4 py-3">
@@ -135,14 +135,14 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
                         type="button"
                         onClick={openPreview}
                         title={approval.subject}
-                        className="block w-full truncate text-left font-bold text-[#E8EEFF] hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                        className="block w-full truncate text-left font-bold text-al-text hover:text-al-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-al-accent"
                       >
                         {title}
                         {isDemoApprovalRecord(approval) ? (
-                          <span className="ml-2 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-400">Demo</span>
+                          <span className="ml-2 rounded-full bg-al-accent-hover/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-al-accent">Demo</span>
                         ) : null}
                       </button>
-                      <p className="mt-0.5 truncate text-xs font-semibold text-[#6B7FA8]" title={metaParts.join(' · ')}>
+                      <p className="mt-0.5 truncate text-xs font-semibold text-al-text-muted" title={metaParts.join(' · ')}>
                         {metaParts.join(' · ')}
                       </p>
                     </td>
@@ -160,7 +160,7 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
                               key={`${provider}-${index}`}
                               title={meta.label}
                               style={{ backgroundColor: meta.color, zIndex: visibleProviders.length - index, marginLeft: index === 0 ? 0 : -5 }}
-                              className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-[#0E1830] text-[9px] font-black text-white"
+                              className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-al-surface text-[9px] font-black text-white"
                             >
                               {meta.initials}
                             </span>
@@ -170,14 +170,14 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
                           <span
                             title={`${overflowCount} more source${overflowCount === 1 ? '' : 's'}`}
                             style={{ marginLeft: -5 }}
-                            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-[#0E1830] bg-[#243350] text-[9px] font-black text-[#A8BAD8]"
+                            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-al-surface bg-al-border-strong text-[9px] font-black text-al-text-secondary"
                           >
                             +{overflowCount}
                           </span>
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-[#A8BAD8]">
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-al-text-secondary">
                       {formatAmount(amount, currency)}
                     </td>
                     <td className="px-4 py-3">

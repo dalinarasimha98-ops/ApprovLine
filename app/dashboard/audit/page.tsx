@@ -21,14 +21,14 @@ function SummaryCard({
   colorClass: string;
 }) {
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="flex items-start gap-4 rounded-xl border border-al-border bg-white p-5 shadow-sm">
       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${colorClass}`}>
         <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-        <p className="mt-0.5 text-2xl font-black tabular-nums text-slate-950">{value}</p>
-        {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
+        <p className="text-xs font-semibold uppercase tracking-wide text-al-text-muted">{label}</p>
+        <p className="mt-0.5 text-2xl font-black tabular-nums text-al-text">{value}</p>
+        {sub && <p className="mt-0.5 text-xs text-al-text-muted">{sub}</p>}
       </div>
     </div>
   );
@@ -50,18 +50,18 @@ export default async function ReportsAndExportsPage() {
   return (
     <section className="grid gap-6">
       {/* Header */}
-      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-end">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-al-border bg-white p-6 shadow-sm sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-[#2155d9]">Governance &amp; Risk</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Reports &amp; Exports</h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+          <p className="text-xs font-bold uppercase tracking-wide text-al-accent">Governance &amp; Risk</p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-al-text">Reports &amp; Exports</h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-al-text-secondary">
             Generate insightful reports and export ApprovLine data for compliance, audits, investigations, and business analysis.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <a
             href="/api/export/approvals?format=csv"
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-al-border bg-white px-4 text-sm font-bold text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
           >
             <Download className="h-4 w-4" />
             Quick CSV Export
@@ -83,7 +83,7 @@ export default async function ReportsAndExportsPage() {
           label="Approval Records"
           value={summary.approvalRecordCount.toLocaleString()}
           sub="Total records available to report on"
-          colorClass="border-violet-200 bg-violet-50 text-violet-600"
+          colorClass="border-violet-200 bg-violet-50 text-al-accent"
         />
         <SummaryCard
           icon={BarChart3}

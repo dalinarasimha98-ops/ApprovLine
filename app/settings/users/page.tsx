@@ -25,8 +25,8 @@ export default async function UsersTeamsPage() {
     console.error('[users-teams] data fetch failed', err);
     return (
       <DashboardShell>
-        <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="bg-[#07111f] px-6 py-7 text-white">
+        <div className="mb-6 overflow-hidden rounded-3xl border border-al-border bg-white shadow-sm">
+          <div className="bg-al-bg px-6 py-7 text-white">
             <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Users & Teams</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{tenant.organization.name}</h1>
           </div>
@@ -42,11 +42,11 @@ export default async function UsersTeamsPage() {
   return (
     <DashboardShell>
       {/* Page header */}
-      <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="bg-[#07111f] px-6 py-7 text-white">
+      <div className="mb-6 overflow-hidden rounded-3xl border border-al-border bg-white shadow-sm">
+        <div className="bg-al-bg px-6 py-7 text-white">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Users & Teams</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{tenant.organization.name}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-al-text-secondary">
             Manage workspace members, teams, roles, and permissions across your organization.
           </p>
         </div>

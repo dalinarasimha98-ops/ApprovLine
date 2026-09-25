@@ -314,10 +314,10 @@ function RiskBar({ score }: { score: number }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[11px] font-semibold text-[#6B7FA8] uppercase tracking-wide">Risk Score</span>
+        <span className="text-[11px] font-semibold text-al-text-muted uppercase tracking-wide">Risk Score</span>
         <span className="text-xs font-bold" style={{ color }}>{label} · {score}</span>
       </div>
-      <div className="h-1.5 rounded-full bg-[#1E2D4A] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-al-border overflow-hidden">
         <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, background: color }} />
       </div>
     </div>
@@ -330,11 +330,11 @@ function RelatedEntityRow({ id, type, title, riskScore, relType, onSelect }: {
   const c = entityColor(type);
   const { color } = riskLabel(riskScore);
   return (
-    <button onClick={() => onSelect(id)} className="w-full text-left flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-[#0E1830] transition group">
+    <button onClick={() => onSelect(id)} className="w-full text-left flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-al-surface transition group">
       <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full" style={{ background: c }} />
       <span className="flex-1 min-w-0">
-        <span className="block text-xs font-semibold text-[#E8EEFF] truncate group-hover:text-violet-300">{title}</span>
-        <span className="block text-[10px] text-[#6B7FA8]">{relLabel(relType)} · {ENTITY_LABELS[type] ?? type}</span>
+        <span className="block text-xs font-semibold text-al-text truncate group-hover:text-al-accent">{title}</span>
+        <span className="block text-[10px] text-al-text-muted">{relLabel(relType)} · {ENTITY_LABELS[type] ?? type}</span>
       </span>
       <span className="flex-shrink-0 text-[10px] font-bold" style={{ color }}>{riskScore}</span>
     </button>
@@ -358,24 +358,24 @@ function NodeDetailPanel({
   ];
 
   return (
-    <div className="absolute right-0 top-0 h-full w-80 xl:w-96 flex flex-col bg-[#07111f] border-l border-[#1E2D4A] z-10 shadow-2xl">
+    <div className="absolute right-0 top-0 h-full w-80 xl:w-96 flex flex-col bg-al-bg border-l border-al-border z-10 shadow-2xl">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#1E2D4A] flex-shrink-0">
-        <span className="text-xs font-bold text-[#6B7FA8] uppercase tracking-wider">Entity Detail</span>
-        <button onClick={onClose} className="text-[#6B7FA8] hover:text-[#E8EEFF] transition text-lg leading-none">×</button>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-al-border flex-shrink-0">
+        <span className="text-xs font-bold text-al-text-muted uppercase tracking-wider">Entity Detail</span>
+        <button onClick={onClose} className="text-al-text-muted hover:text-al-text transition text-lg leading-none">×</button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
         {loading && (
           <div className="space-y-3">
             {[80, 50, 100, 60].map((w, i) => (
-              <div key={i} className="h-4 rounded bg-[#1E2D4A] animate-pulse" style={{ width: `${w}%` }} />
+              <div key={i} className="h-4 rounded bg-al-border animate-pulse" style={{ width: `${w}%` }} />
             ))}
           </div>
         )}
 
         {!loading && !detail && (
-          <p className="text-sm text-[#6B7FA8]">Entity data unavailable.</p>
+          <p className="text-sm text-al-text-muted">Entity data unavailable.</p>
         )}
 
         {!loading && detail && (
@@ -383,8 +383,8 @@ function NodeDetailPanel({
             {/* Type + title */}
             <div>
               <TypeBadge type={detail.type} />
-              <h3 className="mt-2 text-base font-bold text-[#E8EEFF] leading-snug">{detail.title}</h3>
-              {detail.subtitle && <p className="mt-1 text-xs text-[#6B7FA8]">{detail.subtitle}</p>}
+              <h3 className="mt-2 text-base font-bold text-al-text leading-snug">{detail.title}</h3>
+              {detail.subtitle && <p className="mt-1 text-xs text-al-text-muted">{detail.subtitle}</p>}
             </div>
 
             {/* Risk */}
@@ -393,13 +393,13 @@ function NodeDetailPanel({
             {/* Summary */}
             {detail.summary && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7FA8] mb-1">Summary</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-al-text-muted mb-1">Summary</p>
                 <p className="text-xs text-[#CBD5E1] leading-relaxed">{detail.summary}</p>
               </div>
             )}
 
             {/* Key fields */}
-            <div className="rounded-lg bg-[#0E1830] border border-[#1E2D4A] divide-y divide-[#1E2D4A]">
+            <div className="rounded-lg bg-al-surface border border-al-border divide-y divide-[#1E2D4A]">
               {[
                 { label: 'First Seen', value: fmtDate(detail.firstSeenAt) },
                 { label: 'Last Seen', value: fmtDate(detail.lastSeenAt) },
@@ -407,8 +407,8 @@ function NodeDetailPanel({
                 detail.externalId && { label: 'External ID', value: detail.externalId },
               ].filter(Boolean).map((row, i) => row && (
                 <div key={i} className="flex items-center justify-between px-3 py-2">
-                  <span className="text-[10px] font-semibold text-[#6B7FA8] uppercase tracking-wide">{row.label}</span>
-                  <span className="text-xs font-medium text-[#E8EEFF] truncate max-w-[56%] text-right">{row.value}</span>
+                  <span className="text-[10px] font-semibold text-al-text-muted uppercase tracking-wide">{row.label}</span>
+                  <span className="text-xs font-medium text-al-text truncate max-w-[56%] text-right">{row.value}</span>
                 </div>
               ))}
             </div>
@@ -416,8 +416,8 @@ function NodeDetailPanel({
             {/* Connected entities */}
             {allRelated.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7FA8] mb-2">
-                  Connected Entities <span className="text-violet-400">({allRelated.length})</span>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-al-text-muted mb-2">
+                  Connected Entities <span className="text-al-accent">({allRelated.length})</span>
                 </p>
                 <div className="space-y-1">
                   {allRelated.slice(0, 12).map((r, i) => (
@@ -432,7 +432,7 @@ function NodeDetailPanel({
                     />
                   ))}
                   {allRelated.length > 12 && (
-                    <p className="text-[10px] text-[#6B7FA8] px-3 pt-1">+{allRelated.length - 12} more</p>
+                    <p className="text-[10px] text-al-text-muted px-3 pt-1">+{allRelated.length - 12} more</p>
                   )}
                 </div>
               </div>
@@ -441,14 +441,14 @@ function NodeDetailPanel({
             {/* Timeline */}
             {detail.timelineEvents.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7FA8] mb-2">Timeline</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-al-text-muted mb-2">Timeline</p>
                 <div className="space-y-2">
                   {detail.timelineEvents.slice(0, 6).map((ev) => (
-                    <div key={ev.id} className="relative pl-4 border-l border-[#1E2D4A]">
-                      <span className="absolute -left-[3px] top-1.5 w-1.5 h-1.5 rounded-full bg-violet-500" />
-                      <p className="text-xs font-semibold text-[#E8EEFF]">{ev.title}</p>
-                      <p className="text-[10px] text-[#6B7FA8]">{fmtDate(ev.occurredAt)} · {ev.eventType}</p>
-                      {ev.description && <p className="mt-0.5 text-[10px] text-[#6B7FA8]">{ev.description}</p>}
+                    <div key={ev.id} className="relative pl-4 border-l border-al-border">
+                      <span className="absolute -left-[3px] top-1.5 w-1.5 h-1.5 rounded-full bg-al-accent-hover" />
+                      <p className="text-xs font-semibold text-al-text">{ev.title}</p>
+                      <p className="text-[10px] text-al-text-muted">{fmtDate(ev.occurredAt)} · {ev.eventType}</p>
+                      {ev.description && <p className="mt-0.5 text-[10px] text-al-text-muted">{ev.description}</p>}
                     </div>
                   ))}
                 </div>
@@ -458,11 +458,11 @@ function NodeDetailPanel({
             {/* Quick actions */}
             <div className="grid grid-cols-1 gap-2">
               {detail.type === 'INVESTIGATION' && (
-                <Link href="/investigations" className="flex items-center gap-2 rounded-lg bg-[#0E1830] border border-[#1E2D4A] px-3 py-2 text-xs font-semibold text-violet-300 hover:border-violet-500/50 hover:text-violet-200 transition">
+                <Link href="/investigations" className="flex items-center gap-2 rounded-lg bg-al-surface border border-al-border px-3 py-2 text-xs font-semibold text-al-accent hover:border-al-accent/50 hover:text-al-accent transition">
                   <span>↗</span> Open Investigation Center
                 </Link>
               )}
-              <Link href="/approvals" className="flex items-center gap-2 rounded-lg bg-[#0E1830] border border-[#1E2D4A] px-3 py-2 text-xs font-semibold text-blue-300 hover:border-blue-500/50 hover:text-blue-200 transition">
+              <Link href="/approvals" className="flex items-center gap-2 rounded-lg bg-al-surface border border-al-border px-3 py-2 text-xs font-semibold text-blue-300 hover:border-blue-500/50 hover:text-blue-200 transition">
                 <span>↗</span> View Approval Records
               </Link>
             </div>
@@ -479,11 +479,11 @@ function ListView({ entities, onSelect }: { entities: GraphEntity[]; onSelect: (
   if (entities.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <div className="w-12 h-12 rounded-full bg-[#0E1830] flex items-center justify-center mb-3">
+        <div className="w-12 h-12 rounded-full bg-al-surface flex items-center justify-center mb-3">
           <span className="text-2xl opacity-50">🔭</span>
         </div>
-        <p className="text-sm font-semibold text-[#6B7FA8]">No entities match your filters.</p>
-        <p className="text-xs text-[#6B7FA8] mt-1">Adjust filters or clear search to explore the graph.</p>
+        <p className="text-sm font-semibold text-al-text-muted">No entities match your filters.</p>
+        <p className="text-xs text-al-text-muted mt-1">Adjust filters or clear search to explore the graph.</p>
       </div>
     );
   }
@@ -491,9 +491,9 @@ function ListView({ entities, onSelect }: { entities: GraphEntity[]; onSelect: (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[#1E2D4A]">
+          <tr className="border-b border-al-border">
             {['Type', 'Title', 'Risk', 'Source', 'Connections', 'Last Seen'].map((h) => (
-              <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[#6B7FA8]">{h}</th>
+              <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-al-text-muted">{h}</th>
             ))}
           </tr>
         </thead>
@@ -501,22 +501,22 @@ function ListView({ entities, onSelect }: { entities: GraphEntity[]; onSelect: (
           {entities.map((e) => {
             const { label: rl, color: rc } = riskLabel(e.riskScore);
             return (
-              <tr key={e.id} onClick={() => onSelect(e.id)} className="cursor-pointer hover:bg-[#0E1830] transition group">
+              <tr key={e.id} onClick={() => onSelect(e.id)} className="cursor-pointer hover:bg-al-surface transition group">
                 <td className="px-4 py-3">
                   <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: entityColor(e.type) + '25', color: entityColor(e.type) }}>
                     {ENTITY_LABELS[e.type] ?? e.type}
                   </span>
                 </td>
                 <td className="px-4 py-3 max-w-xs">
-                  <p className="font-semibold text-[#E8EEFF] truncate group-hover:text-violet-300">{e.title}</p>
-                  {e.subtitle && <p className="text-[10px] text-[#6B7FA8] truncate">{e.subtitle}</p>}
+                  <p className="font-semibold text-al-text truncate group-hover:text-al-accent">{e.title}</p>
+                  {e.subtitle && <p className="text-[10px] text-al-text-muted truncate">{e.subtitle}</p>}
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-xs font-bold" style={{ color: rc }}>{rl} · {e.riskScore}</span>
                 </td>
-                <td className="px-4 py-3 text-xs text-[#6B7FA8]">{e.sourceSystem ?? '—'}</td>
-                <td className="px-4 py-3 text-xs text-[#6B7FA8]">{e.connectionCount}</td>
-                <td className="px-4 py-3 text-xs text-[#6B7FA8]">{fmtDate(e.lastSeenAt)}</td>
+                <td className="px-4 py-3 text-xs text-al-text-muted">{e.sourceSystem ?? '—'}</td>
+                <td className="px-4 py-3 text-xs text-al-text-muted">{e.connectionCount}</td>
+                <td className="px-4 py-3 text-xs text-al-text-muted">{fmtDate(e.lastSeenAt)}</td>
               </tr>
             );
           })}
@@ -770,11 +770,11 @@ export function MemoryGraphWorkspace({ initialEntities, initialRelationships, in
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-[#1E2D4A] flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-al-border flex-shrink-0">
         {/* Mode toggle */}
-        <div className="flex rounded-lg overflow-hidden border border-[#1E2D4A]">
+        <div className="flex rounded-lg overflow-hidden border border-al-border">
           {(['explore', 'list'] as const).map((m) => (
-            <button key={m} onClick={() => setMode(m)} className={`px-3 py-1.5 text-xs font-semibold transition ${mode === m ? 'bg-violet-600 text-white' : 'text-[#6B7FA8] hover:text-[#E8EEFF] hover:bg-[#0E1830]'}`}>
+            <button key={m} onClick={() => setMode(m)} className={`px-3 py-1.5 text-xs font-semibold transition ${mode === m ? 'bg-al-accent text-white' : 'text-al-text-muted hover:text-al-text hover:bg-al-surface'}`}>
               {m === 'explore' ? '⬡ Explore' : '☰ List'}
             </button>
           ))}
@@ -782,51 +782,51 @@ export function MemoryGraphWorkspace({ initialEntities, initialRelationships, in
 
         {/* Search */}
         <form onSubmit={(e) => { e.preventDefault(); applyFilter('q', draftQ); }} className="flex gap-1.5 flex-1 min-w-0 max-w-sm">
-          <input value={draftQ} onChange={(e) => setDraftQ(e.target.value)} placeholder="Search entities…" className="flex-1 min-w-0 rounded-lg bg-[#0E1830] border border-[#1E2D4A] px-3 py-1.5 text-xs text-[#E8EEFF] placeholder:text-[#6B7FA8] focus:outline-none focus:border-violet-500/50" />
-          <button type="submit" className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white transition">Search</button>
-          {filters.q && <button type="button" onClick={() => { setDraftQ(''); applyFilter('q', ''); }} className="px-2 py-1.5 rounded-lg border border-[#1E2D4A] text-xs text-[#6B7FA8] hover:text-[#E8EEFF] transition">✕</button>}
+          <input value={draftQ} onChange={(e) => setDraftQ(e.target.value)} placeholder="Search entities…" className="flex-1 min-w-0 rounded-lg bg-al-surface border border-al-border px-3 py-1.5 text-xs text-al-text placeholder:text-al-text-muted focus:outline-none focus:border-al-accent/50" />
+          <button type="submit" className="px-3 py-1.5 rounded-lg bg-al-accent hover:bg-al-accent-hover text-xs font-semibold text-white transition">Search</button>
+          {filters.q && <button type="button" onClick={() => { setDraftQ(''); applyFilter('q', ''); }} className="px-2 py-1.5 rounded-lg border border-al-border text-xs text-al-text-muted hover:text-al-text transition">✕</button>}
         </form>
 
         {/* Filters toggle */}
-        <button onClick={() => setShowFilters((v) => !v)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition ${showFilters ? 'border-violet-500/50 text-violet-300 bg-violet-600/10' : 'border-[#1E2D4A] text-[#6B7FA8] hover:text-[#E8EEFF]'}`}>
-          ⚙ Filters {activeFiltersCount > 0 && <span className="rounded-full bg-violet-600 text-white text-[9px] w-4 h-4 flex items-center justify-center">{activeFiltersCount}</span>}
+        <button onClick={() => setShowFilters((v) => !v)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition ${showFilters ? 'border-al-accent/50 text-al-accent bg-al-accent/10' : 'border-al-border text-al-text-muted hover:text-al-text'}`}>
+          ⚙ Filters {activeFiltersCount > 0 && <span className="rounded-full bg-al-accent text-white text-[9px] w-4 h-4 flex items-center justify-center">{activeFiltersCount}</span>}
         </button>
 
         {/* Graph controls (explore mode only) */}
         {mode === 'explore' && (
           <>
-            <button onClick={fitGraph} title="Fit graph to screen" className="px-2.5 py-1.5 rounded-lg border border-[#1E2D4A] text-xs text-[#6B7FA8] hover:text-[#E8EEFF] transition">⊞ Fit</button>
-            <button onClick={resetView} title="Reset zoom and pan" className="px-2.5 py-1.5 rounded-lg border border-[#1E2D4A] text-xs text-[#6B7FA8] hover:text-[#E8EEFF] transition">↺ Reset</button>
+            <button onClick={fitGraph} title="Fit graph to screen" className="px-2.5 py-1.5 rounded-lg border border-al-border text-xs text-al-text-muted hover:text-al-text transition">⊞ Fit</button>
+            <button onClick={resetView} title="Reset zoom and pan" className="px-2.5 py-1.5 rounded-lg border border-al-border text-xs text-al-text-muted hover:text-al-text transition">↺ Reset</button>
           </>
         )}
 
         {/* Stats */}
-        <div className="ml-auto text-[10px] text-[#6B7FA8] tabular-nums">
-          {graphLoading ? <span className="text-violet-400">Loading…</span> : <span>{entities.length} / {total} entities</span>}
+        <div className="ml-auto text-[10px] text-al-text-muted tabular-nums">
+          {graphLoading ? <span className="text-al-accent">Loading…</span> : <span>{entities.length} / {total} entities</span>}
         </div>
       </div>
 
       {/* Filters bar */}
       {showFilters && (
-        <div className="flex flex-wrap gap-3 px-4 py-3 border-b border-[#1E2D4A] bg-[#07111f] flex-shrink-0">
-          <select value={filters.type} onChange={(e) => applyFilter('type', e.target.value)} className="rounded-lg bg-[#0E1830] border border-[#1E2D4A] px-3 py-1.5 text-xs text-[#E8EEFF] focus:outline-none focus:border-violet-500/50">
+        <div className="flex flex-wrap gap-3 px-4 py-3 border-b border-al-border bg-al-bg flex-shrink-0">
+          <select value={filters.type} onChange={(e) => applyFilter('type', e.target.value)} className="rounded-lg bg-al-surface border border-al-border px-3 py-1.5 text-xs text-al-text focus:outline-none focus:border-al-accent/50">
             {TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <select value={filters.risk} onChange={(e) => applyFilter('risk', e.target.value)} className="rounded-lg bg-[#0E1830] border border-[#1E2D4A] px-3 py-1.5 text-xs text-[#E8EEFF] focus:outline-none focus:border-violet-500/50">
+          <select value={filters.risk} onChange={(e) => applyFilter('risk', e.target.value)} className="rounded-lg bg-al-surface border border-al-border px-3 py-1.5 text-xs text-al-text focus:outline-none focus:border-al-accent/50">
             {RISK_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <input value={filters.source} onChange={(e) => applyFilter('source', e.target.value)} placeholder="Source system…" className="rounded-lg bg-[#0E1830] border border-[#1E2D4A] px-3 py-1.5 text-xs text-[#E8EEFF] placeholder:text-[#6B7FA8] focus:outline-none focus:border-violet-500/50 w-36" />
+          <input value={filters.source} onChange={(e) => applyFilter('source', e.target.value)} placeholder="Source system…" className="rounded-lg bg-al-surface border border-al-border px-3 py-1.5 text-xs text-al-text placeholder:text-al-text-muted focus:outline-none focus:border-al-accent/50 w-36" />
           {(filters.type || filters.risk || filters.source) && (
-            <button onClick={() => setFilters((f) => ({ ...f, type: '', risk: '', source: '' }))} className="text-[10px] text-[#6B7FA8] hover:text-rose-400 transition underline">Clear filters</button>
+            <button onClick={() => setFilters((f) => ({ ...f, type: '', risk: '', source: '' }))} className="text-[10px] text-al-text-muted hover:text-al-danger transition underline">Clear filters</button>
           )}
         </div>
       )}
 
       {/* Error state */}
       {graphError && (
-        <div className="mx-4 mt-3 rounded-lg bg-rose-950/40 border border-rose-900/50 px-4 py-3 text-xs text-rose-300 flex items-center justify-between flex-shrink-0">
+        <div className="mx-4 mt-3 rounded-lg bg-rose-950/40 border border-rose-900/50 px-4 py-3 text-xs text-al-danger flex items-center justify-between flex-shrink-0">
           <span>{graphError}</span>
-          <button onClick={() => fetchGraph(filters)} className="ml-3 text-rose-200 underline">Retry</button>
+          <button onClick={() => fetchGraph(filters)} className="ml-3 text-al-danger underline">Retry</button>
         </div>
       )}
 
@@ -842,25 +842,25 @@ export function MemoryGraphWorkspace({ initialEntities, initialRelationships, in
               style={{ cursor: 'grab', touchAction: 'none' }}
             />
             {/* Legend */}
-            <div className="absolute bottom-4 left-4 rounded-lg bg-[#07111f]/90 border border-[#1E2D4A] p-3 backdrop-blur text-[10px] pointer-events-none">
-              <p className="font-bold text-[#6B7FA8] uppercase tracking-wide mb-2">Legend</p>
+            <div className="absolute bottom-4 left-4 rounded-lg bg-al-bg/90 border border-al-border p-3 backdrop-blur text-[10px] pointer-events-none">
+              <p className="font-bold text-al-text-muted uppercase tracking-wide mb-2">Legend</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                 {[['Approval', '#3B82F6'], ['Vendor', '#F59E0B'], ['Policy', '#8B5CF6'], ['Risk', '#EF4444'], ['Investigation', '#F97316'], ['Approver', '#10B981']].map(([l, c]) => (
                   <div key={l} className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: c }} />
-                    <span className="text-[#6B7FA8]">{l}</span>
+                    <span className="text-al-text-muted">{l}</span>
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-[#6B7FA8] opacity-60">Click to select · Drag to move · Scroll to zoom</p>
+              <p className="mt-2 text-al-text-muted opacity-60">Click to select · Drag to move · Scroll to zoom</p>
             </div>
 
             {/* Loading overlay */}
             {graphLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[#030b18]/60 backdrop-blur-sm">
+              <div className="absolute inset-0 flex items-center justify-center bg-al-bg/60 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
-                  <p className="text-xs font-semibold text-[#E8EEFF]">Loading graph…</p>
+                  <div className="w-8 h-8 rounded-full border-2 border-al-accent border-t-transparent animate-spin" />
+                  <p className="text-xs font-semibold text-al-text">Loading graph…</p>
                 </div>
               </div>
             )}
@@ -879,7 +879,7 @@ export function MemoryGraphWorkspace({ initialEntities, initialRelationships, in
           <div className="h-full overflow-y-auto">
             {graphLoading ? (
               <div className="flex items-center justify-center h-32">
-                <div className="w-6 h-6 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+                <div className="w-6 h-6 rounded-full border-2 border-al-accent border-t-transparent animate-spin" />
               </div>
             ) : (
               <ListView entities={entities} onSelect={(id) => { setSelectedId(id); setMode('explore'); }} />

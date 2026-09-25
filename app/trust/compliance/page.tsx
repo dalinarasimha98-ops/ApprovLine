@@ -91,15 +91,15 @@ export default async function ComplianceHubPage() {
   return (
     <DashboardShell>
       {/* Page header */}
-      <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="bg-[#07111f] px-6 py-7 text-white">
+      <div className="mb-6 overflow-hidden rounded-3xl border border-al-border bg-white shadow-sm">
+        <div className="bg-al-bg px-6 py-7 text-white">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">
             Compliance Hub
           </p>
           <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
             {tenant.organization.name}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-al-text-secondary">
             Monitor compliance posture, track approval compliance, evidence completeness, audit
             readiness, and remediation across every active framework.
           </p>

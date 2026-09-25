@@ -9,7 +9,7 @@ type ApprovalActionsProps = {
   memoryEntityId?: string | null;
 };
 
-const actionClass = 'inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-[#2155d9]';
+const actionClass = 'inline-flex h-10 items-center justify-center rounded-xl border border-al-border bg-white px-3.5 text-xs font-black text-al-text-secondary shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-al-accent';
 
 type DownloadKind = 'evidence' | 'pdf' | 'json' | 'csv';
 
@@ -93,11 +93,11 @@ export function ApprovalActions({ approvalId, subject, memoryEntityId }: Approva
   }
 
   return (
-    <section aria-label="Approval actions" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section aria-label="Approval actions" className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-wide text-[#2155d9]">Actions</p>
-          <h3 className="mt-1 text-lg font-black text-slate-950">Continue the investigation</h3>
+          <p className="text-xs font-black uppercase tracking-wide text-al-accent">Actions</p>
+          <h3 className="mt-1 text-lg font-black text-al-text">Continue the investigation</h3>
         </div>
         {!online ? (
           <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">Offline - reconnect to continue</span>

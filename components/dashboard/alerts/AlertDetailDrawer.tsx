@@ -58,23 +58,23 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
         role="dialog"
         aria-modal="true"
         aria-label="Alert detail"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col overflow-hidden border-l border-slate-200 bg-white shadow-2xl lg:max-w-lg"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col overflow-hidden border-l border-al-border bg-white shadow-2xl lg:max-w-lg"
       >
         {/* header */}
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-al-border bg-al-surface-sunken px-5 py-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <SeverityBadge severity={alert.severity} score={alert.riskScore} />
               <OperationalStatusBadge escalated={alert.escalated} investigating={alert.investigating} acknowledged={alert.acknowledged} />
             </div>
-            <h2 className="mt-2 text-sm font-black leading-snug text-slate-950">{alert.subject}</h2>
-            <p className="mt-0.5 text-[11px] text-slate-500">{dateStr(alert.occurredAt)}</p>
+            <h2 className="mt-2 text-sm font-black leading-snug text-al-text">{alert.subject}</h2>
+            <p className="mt-0.5 text-[11px] text-al-text-muted">{dateStr(alert.occurredAt)}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close detail panel"
-            className="mt-0.5 shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="mt-0.5 shrink-0 rounded-lg p-1.5 text-al-text-muted hover:bg-al-surface-elevated hover:text-al-text-secondary"
           >
             <X className="h-4 w-4" />
           </button>
@@ -86,8 +86,8 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
 
             {/* Risk details */}
             <section>
-              <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Risk details</h3>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-xl border border-slate-100 bg-slate-50 p-3 text-[12px]">
+              <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Risk details</h3>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-xl border border-al-border bg-al-surface-sunken p-3 text-[12px]">
                 {[
                   ['Category', alert.category ?? '—'],
                   ['Risk level', alert.riskLevel ?? '—'],
@@ -98,8 +98,8 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
                   ['Source', alert.sourcePlatform ?? '—'],
                 ].map(([label, value]) => (
                   <div key={label}>
-                    <dt className="text-slate-500">{label}</dt>
-                    <dd className="mt-0.5 font-semibold text-slate-900">{value}</dd>
+                    <dt className="text-al-text-muted">{label}</dt>
+                    <dd className="mt-0.5 font-semibold text-al-text">{value}</dd>
                   </div>
                 ))}
               </dl>
@@ -107,14 +107,14 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
 
             {/* Why this alert */}
             <section>
-              <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-slate-400">
+              <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-al-text-muted">
                 <AlertTriangle className="h-3 w-3" />
                 Why this alert was raised
               </h3>
               <ul className="grid gap-1.5">
                 {alert.reasons.map((r) => (
                   <li key={r} className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-900">
-                    <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                    <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-al-warning" />
                     {r}
                   </li>
                 ))}
@@ -124,14 +124,14 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
             {/* Playbook / AI analysis */}
             {alert.complianceExplanation ? (
               <section>
-                <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-slate-400">
+                <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-al-text-muted">
                   <Brain className="h-3 w-3" />
                   Playbook finding
                   {alert.complianceSeverity ? (
-                    <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-slate-600">{alert.complianceSeverity}</span>
+                    <span className="ml-1 rounded bg-al-surface-elevated px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-al-text-secondary">{alert.complianceSeverity}</span>
                   ) : null}
                 </h3>
-                <p className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-[12px] leading-5 text-slate-700">
+                <p className="rounded-xl border border-al-border bg-al-surface-sunken p-3 text-[12px] leading-5 text-al-text-secondary">
                   {alert.complianceExplanation}
                 </p>
               </section>
@@ -140,7 +140,7 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
             {/* Evidence snippet */}
             {alert.evidenceSnippet ? (
               <section>
-                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-400">Evidence snippet</h3>
+                <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Evidence snippet</h3>
                 <p className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-[12px] leading-5 text-blue-900">
                   {alert.evidenceSnippet}
                 </p>
@@ -159,14 +159,14 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
 
             {/* Recommended actions */}
             <section>
-              <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-slate-400">
+              <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-al-text-muted">
                 <Zap className="h-3 w-3" />
                 Recommended actions
               </h3>
               <ol className="grid gap-1.5">
                 {recommendedActions(alert).map((action, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[12px] text-slate-700">
-                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-black text-slate-600">{i + 1}</span>
+                  <li key={i} className="flex items-start gap-2 text-[12px] text-al-text-secondary">
+                    <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-al-surface-elevated text-[9px] font-black text-al-text-secondary">{i + 1}</span>
                     {action}
                   </li>
                 ))}
@@ -177,11 +177,11 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
         </div>
 
         {/* sticky footer with actions */}
-        <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-4">
+        <div className="shrink-0 border-t border-al-border bg-white px-5 py-4">
           <div className="grid gap-2">
             <form action={investigateAction}>
               <input type="hidden" name="approvalId" value={alert.id} />
-              <FormSubmitButton pendingText="Opening case…" className="min-h-0 h-10 w-full rounded-lg bg-[#2155d9] text-sm font-black text-white shadow-sm shadow-blue-200">
+              <FormSubmitButton pendingText="Opening case…" className="min-h-0 h-10 w-full rounded-lg bg-al-accent text-sm font-black text-white shadow-sm shadow-blue-200">
                 Open Investigation Case
               </FormSubmitButton>
             </form>
@@ -189,7 +189,7 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
               {!alert.acknowledged && !alert.escalated ? (
                 <form action={acknowledgeAction}>
                   <input type="hidden" name="approvalId" value={alert.id} />
-                  <FormSubmitButton pendingText="…" className="min-h-0 h-9 w-full rounded-lg border border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-50">
+                  <FormSubmitButton pendingText="…" className="min-h-0 h-9 w-full rounded-lg border border-al-border text-xs font-black text-al-text-secondary hover:bg-al-surface-sunken">
                     Acknowledge
                   </FormSubmitButton>
                 </form>
@@ -204,14 +204,14 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
               ) : null}
               <form action={dismissAction} className="col-start-3">
                 <input type="hidden" name="approvalId" value={alert.id} />
-                <FormSubmitButton pendingText="…" className="min-h-0 h-9 w-full rounded-lg border border-slate-200 text-xs font-black text-slate-500 hover:bg-slate-50">
+                <FormSubmitButton pendingText="…" className="min-h-0 h-9 w-full rounded-lg border border-al-border text-xs font-black text-al-text-muted hover:bg-al-surface-sunken">
                   Dismiss
                 </FormSubmitButton>
               </form>
             </div>
             <a
               href={`/approvals/${alert.id}`}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 text-xs font-black text-slate-700 hover:bg-slate-50"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-al-border text-xs font-black text-al-text-secondary hover:bg-al-surface-sunken"
             >
               View Approval Record <ExternalLink className="h-3 w-3" />
             </a>

@@ -154,23 +154,23 @@ function fmtTime(d: string | Date) {
 }
 
 function complianceColor(score: number) {
-  if (score >= 80) return 'text-emerald-400';
-  if (score >= 60) return 'text-amber-400';
-  return 'text-rose-400';
+  if (score >= 80) return 'text-al-success';
+  if (score >= 60) return 'text-al-warning';
+  return 'text-al-danger';
 }
 
 function complianceBg(score: number) {
-  if (score >= 80) return 'bg-emerald-500';
-  if (score >= 60) return 'bg-amber-500';
-  return 'bg-rose-500';
+  if (score >= 80) return 'bg-al-success';
+  if (score >= 60) return 'bg-al-warning';
+  return 'bg-al-danger';
 }
 
 function statusBadge(status: string) {
-  if (status === 'READY') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-  if (status === 'ERROR') return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-  if (status === 'ARCHIVED') return 'bg-[#1E2D4A] text-[#3D5070] border-[#1E2D4A]';
-  if (status === 'SUPERSEDED') return 'bg-[#1E2D4A] text-[#6B7FA8] border-[#1E2D4A]';
-  return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+  if (status === 'READY') return 'bg-al-success/10 text-al-success border-al-success/20';
+  if (status === 'ERROR') return 'bg-al-danger/10 text-al-danger border-al-danger/20';
+  if (status === 'ARCHIVED') return 'bg-al-border text-al-text-secondary border-al-border';
+  if (status === 'SUPERSEDED') return 'bg-al-border text-al-text-muted border-al-border';
+  return 'bg-al-warning/10 text-al-warning border-al-warning/20';
 }
 
 function statusLabel(status: string) {
@@ -190,9 +190,9 @@ function likelihoodLabel(confidence: number) {
 }
 
 function complianceLabel(compliant: string) {
-  if (compliant === 'yes') return { label: 'Compliant', cls: 'text-emerald-400' };
-  if (compliant === 'no') return { label: 'Non-compliant', cls: 'text-rose-400' };
-  return { label: 'Needs review', cls: 'text-amber-400' };
+  if (compliant === 'yes') return { label: 'Compliant', cls: 'text-al-success' };
+  if (compliant === 'no') return { label: 'Non-compliant', cls: 'text-al-danger' };
+  return { label: 'Needs review', cls: 'text-al-warning' };
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
@@ -211,17 +211,17 @@ function StatTile({
   icon: React.ElementType;
 }) {
   return (
-    <div className="rounded-2xl border border-[#1E2D4A] bg-[#07111f] p-5">
+    <div className="rounded-2xl border border-al-border bg-al-bg p-5">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#6B7FA8]">{label}</p>
-        <span className="rounded-lg bg-violet-500/10 p-1.5 text-violet-400">
+        <p className="text-xs font-semibold uppercase tracking-wide text-al-text-muted">{label}</p>
+        <span className="rounded-lg bg-al-accent-hover/10 p-1.5 text-al-accent">
           <Icon className="h-3.5 w-3.5" />
         </span>
       </div>
-      <p className="mt-3 text-2xl font-black text-[#E8EEFF]">{value}</p>
+      <p className="mt-3 text-2xl font-black text-al-text">{value}</p>
       {(sub ?? trend) ? (
-        <p className="mt-1 text-xs font-medium text-[#6B7FA8]">
-          {trend ? <span className="mr-1 text-emerald-400">↑ {trend}</span> : null}
+        <p className="mt-1 text-xs font-medium text-al-text-muted">
+          {trend ? <span className="mr-1 text-al-success">↑ {trend}</span> : null}
           {sub}
         </p>
       ) : null}
@@ -233,14 +233,14 @@ function ApprovalPathStep({ step, index, total }: { step: { label: string; detai
   return (
     <div className="flex gap-3">
       <div className="flex flex-col items-center">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-black text-white">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-al-accent text-xs font-black text-white">
           {index + 1}
         </div>
-        {index < total - 1 ? <div className="mt-1 w-px flex-1 bg-[#1E2D4A]" /> : null}
+        {index < total - 1 ? <div className="mt-1 w-px flex-1 bg-al-border" /> : null}
       </div>
       <div className="min-w-0 pb-4">
-        <p className="text-sm font-bold text-[#E8EEFF]">{step.label}</p>
-        <p className="mt-0.5 text-xs leading-5 text-[#6B7FA8]">{step.detail}</p>
+        <p className="text-sm font-bold text-al-text">{step.label}</p>
+        <p className="mt-0.5 text-xs leading-5 text-al-text-muted">{step.detail}</p>
       </div>
     </div>
   );
@@ -262,30 +262,30 @@ function InsightCard({
   onAction?: () => void;
 }) {
   const colors: Record<InsightVariant, { border: string; icon: string; ring: string; iconEl: React.ElementType }> = {
-    gap: { border: 'border-amber-500/20', icon: 'bg-amber-500/10 text-amber-400', ring: '', iconEl: Shield },
-    bottleneck: { border: 'border-rose-500/20', icon: 'bg-rose-500/10 text-rose-400', ring: '', iconEl: Clock },
-    alert: { border: 'border-rose-500/20', icon: 'bg-rose-500/10 text-rose-400', ring: '', iconEl: AlertTriangle },
-    optimize: { border: 'border-violet-500/20', icon: 'bg-violet-500/10 text-violet-400', ring: '', iconEl: TrendingUp },
+    gap: { border: 'border-al-warning/20', icon: 'bg-al-warning/10 text-al-warning', ring: '', iconEl: Shield },
+    bottleneck: { border: 'border-al-danger/20', icon: 'bg-al-danger/10 text-al-danger', ring: '', iconEl: Clock },
+    alert: { border: 'border-al-danger/20', icon: 'bg-al-danger/10 text-al-danger', ring: '', iconEl: AlertTriangle },
+    optimize: { border: 'border-al-accent/20', icon: 'bg-al-accent-hover/10 text-al-accent', ring: '', iconEl: TrendingUp },
   };
   const c = colors[variant];
   const IconEl = c.iconEl;
   return (
-    <div className={`rounded-2xl border ${c.border} bg-[#07111f] p-5`}>
+    <div className={`rounded-2xl border ${c.border} bg-al-bg p-5`}>
       <div className={`inline-flex rounded-xl p-2.5 ${c.icon}`}>
         <IconEl className="h-5 w-5" />
       </div>
-      <p className="mt-3 text-sm font-black text-[#E8EEFF]">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-[#6B7FA8]">{body}</p>
+      <p className="mt-3 text-sm font-black text-al-text">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-al-text-muted">{body}</p>
       {onAction ? (
         <button
           type="button"
           onClick={onAction}
-          className="mt-4 text-xs font-black text-violet-400 hover:text-violet-300"
+          className="mt-4 text-xs font-black text-al-accent hover:text-al-accent"
         >
           {action} →
         </button>
       ) : (
-        <span className="mt-4 block text-xs font-black text-[#3D5070]">{action}</span>
+        <span className="mt-4 block text-xs font-black text-al-text-secondary">{action}</span>
       )}
     </div>
   );
@@ -527,16 +527,16 @@ export function PlaybookClient({
     <section className="grid gap-6">
 
       {/* ── Header ── */}
-      <div className="overflow-hidden rounded-3xl border border-[#1E2D4A] bg-[#07111f] px-7 py-6 shadow-sm">
+      <div className="overflow-hidden rounded-3xl border border-al-border bg-al-bg px-7 py-6 shadow-sm">
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-black tracking-tight text-[#E8EEFF]">Playbook AI Advisory</h2>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/15 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-violet-400">
+              <h2 className="text-2xl font-black tracking-tight text-al-text">Playbook AI Advisory</h2>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-al-accent-hover/15 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-al-accent">
                 <Sparkles className="h-3 w-3" /> AI-Powered
               </span>
             </div>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6B7FA8]">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-al-text-muted">
               AI-powered guidance to help you follow the right approval process, every time.
             </p>
           </div>
@@ -546,7 +546,7 @@ export function PlaybookClient({
                 type="button"
                 onClick={() => setUploadOpen(true)}
                 disabled={busy !== null}
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-4 text-sm font-bold text-[#A8BAD8] hover:border-violet-500/30 hover:text-[#E8EEFF] disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary hover:border-al-accent/30 hover:text-al-text disabled:cursor-wait disabled:opacity-60"
               >
                 <Upload className="h-4 w-4" /> Upload Playbook
               </button>
@@ -554,7 +554,7 @@ export function PlaybookClient({
             <button
               type="button"
               onClick={() => document.getElementById('advisory-input')?.focus()}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-bold text-white hover:bg-violet-500"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-al-accent px-4 text-sm font-bold text-white hover:bg-al-accent-hover"
             >
               <Brain className="h-4 w-4" /> Ask AI Advisor
             </button>
@@ -564,10 +564,10 @@ export function PlaybookClient({
 
       {/* ── Error banner ── */}
       {error ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
-          <p className="text-sm font-semibold text-rose-300">{error}</p>
-          <button type="button" onClick={() => setError(null)} className="ml-auto text-rose-400 hover:text-rose-300">
+        <div className="flex items-center gap-3 rounded-2xl border border-al-danger/20 bg-al-danger/5 p-4">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-al-danger" />
+          <p className="text-sm font-semibold text-al-danger">{error}</p>
+          <button type="button" onClick={() => setError(null)} className="ml-auto text-al-danger hover:text-al-danger">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -589,10 +589,10 @@ export function PlaybookClient({
         <div className="grid gap-6">
 
           {/* Get AI Guidance */}
-          <div className="relative overflow-hidden rounded-2xl border border-[#1E2D4A] bg-[#07111f] p-6">
+          <div className="relative overflow-hidden rounded-2xl border border-al-border bg-al-bg p-6">
             <div className="relative z-10 max-w-2xl">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-400">Get AI Guidance</p>
-              <h3 className="mt-1 text-lg font-black text-[#E8EEFF]">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-al-accent">Get AI Guidance</p>
+              <h3 className="mt-1 text-lg font-black text-al-text">
                 Describe what you are trying to accomplish and AI will guide you through the right approval process.
               </h3>
               <div className="mt-5 flex gap-2">
@@ -602,26 +602,26 @@ export function PlaybookClient({
                   onChange={(e) => setQuestion(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(question); } }}
                   placeholder="e.g. I need to onboard a new vendor for SaaS tool costing $75,000 annually."
-                  className="flex-1 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-4 py-3 text-sm font-medium text-[#E8EEFF] outline-none transition placeholder:text-[#3D5070] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
+                  className="flex-1 rounded-xl border border-al-border bg-al-surface px-4 py-3 text-sm font-medium text-al-text outline-none transition placeholder:text-al-text-secondary focus:border-al-accent/50 focus:ring-2 focus:ring-al-accent/20"
                 />
                 <button
                   type="button"
                   onClick={() => ask(question)}
                   disabled={busy === 'query' || question.trim().length < 5}
-                  className="inline-flex h-12 items-center gap-2 rounded-xl bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60"
+                  className="inline-flex h-12 items-center gap-2 rounded-xl bg-al-accent px-5 text-sm font-bold text-white hover:bg-al-accent-hover disabled:cursor-wait disabled:opacity-60"
                 >
                   <Sparkles className="h-4 w-4" />
                   {busy === 'query' ? 'Analyzing...' : 'Get Advisory'}
                 </button>
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold text-[#3D5070]">Popular suggestions</span>
+                <span className="text-xs font-semibold text-al-text-secondary">Popular suggestions</span>
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => { setQuestion(s); document.getElementById('advisory-input')?.focus(); }}
-                    className="rounded-full border border-[#1E2D4A] bg-[#0E1830] px-3 py-1 text-xs font-semibold text-[#6B7FA8] transition hover:border-violet-500/40 hover:text-[#E8EEFF]"
+                    className="rounded-full border border-al-border bg-al-surface px-3 py-1 text-xs font-semibold text-al-text-muted transition hover:border-al-accent/40 hover:text-al-text"
                   >
                     {s}
                   </button>
@@ -631,7 +631,7 @@ export function PlaybookClient({
                     type="button"
                     onClick={seedDemo}
                     disabled={busy !== null}
-                    className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-400 transition hover:bg-violet-500/20"
+                    className="rounded-full border border-al-accent/30 bg-al-accent-hover/10 px-3 py-1 text-xs font-semibold text-al-accent transition hover:bg-al-accent-hover/20"
                   >
                     {busy === 'demo' ? 'Creating...' : '+ Add demo playbooks'}
                   </button>
@@ -640,21 +640,21 @@ export function PlaybookClient({
             </div>
             {/* decorative icon */}
             <div className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 opacity-10 xl:opacity-20">
-              <Brain className="h-32 w-32 text-violet-400" />
+              <Brain className="h-32 w-32 text-al-accent" />
             </div>
           </div>
 
           {/* Playbooks & Policies table */}
-          <div className="rounded-2xl border border-[#1E2D4A] bg-[#07111f] p-6">
+          <div className="rounded-2xl border border-al-border bg-al-bg p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-400">Playbooks &amp; Policies</p>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-al-accent">Playbooks &amp; Policies</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => setShowArchived((v) => !v)}
-                  className={`h-9 rounded-xl border px-4 text-xs font-bold transition ${showArchived ? 'border-violet-500/40 bg-violet-500/10 text-violet-400' : 'border-[#1E2D4A] bg-[#0E1830] text-[#6B7FA8] hover:text-[#E8EEFF]'}`}
+                  className={`h-9 rounded-xl border px-4 text-xs font-bold transition ${showArchived ? 'border-al-accent/40 bg-al-accent-hover/10 text-al-accent' : 'border-al-border bg-al-surface text-al-text-muted hover:text-al-text'}`}
                 >
                   {showArchived ? 'Hide Archived' : 'Show Archived'}
                 </button>
@@ -663,7 +663,7 @@ export function PlaybookClient({
                     type="button"
                     onClick={evaluateApprovals}
                     disabled={busy !== null || readyDocs === 0}
-                    className="h-9 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-4 text-xs font-bold text-[#6B7FA8] hover:border-violet-500/30 hover:text-[#E8EEFF] disabled:cursor-wait disabled:opacity-50"
+                    className="h-9 rounded-xl border border-al-border bg-al-surface px-4 text-xs font-bold text-al-text-muted hover:border-al-accent/30 hover:text-al-text disabled:cursor-wait disabled:opacity-50"
                   >
                     {busy === 'evaluate' ? 'Evaluating...' : 'Evaluate Approvals'}
                   </button>
@@ -672,7 +672,7 @@ export function PlaybookClient({
             </div>
 
             {/* Tabs */}
-            <div className="mt-5 flex gap-1 overflow-x-auto border-b border-[#1E2D4A] pb-0">
+            <div className="mt-5 flex gap-1 overflow-x-auto border-b border-al-border pb-0">
               {TABS.map((tab) => (
                 <button
                   key={tab.key}
@@ -680,8 +680,8 @@ export function PlaybookClient({
                   onClick={() => setActiveTab(tab.key)}
                   className={`shrink-0 rounded-t-lg px-4 py-2.5 text-xs font-bold transition ${
                     activeTab === tab.key
-                      ? 'border-b-2 border-violet-500 text-violet-400'
-                      : 'text-[#6B7FA8] hover:text-[#E8EEFF]'
+                      ? 'border-b-2 border-al-accent text-al-accent'
+                      : 'text-al-text-muted hover:text-al-text'
                   }`}
                 >
                   {tab.label}
@@ -692,12 +692,12 @@ export function PlaybookClient({
             {/* Table */}
             <div className="mt-4 overflow-x-auto">
               {filteredDocs.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[#1E2D4A] p-8 text-center">
-                  <FileText className="mx-auto h-8 w-8 text-[#3D5070]" />
-                  <p className="mt-3 font-black text-[#E8EEFF]">
+                <div className="rounded-xl border border-dashed border-al-border p-8 text-center">
+                  <FileText className="mx-auto h-8 w-8 text-al-text-secondary" />
+                  <p className="mt-3 font-black text-al-text">
                     {documents.length === 0 ? 'No playbooks yet' : 'No playbooks in this view'}
                   </p>
-                  <p className="mt-1 text-sm text-[#6B7FA8]">
+                  <p className="mt-1 text-sm text-al-text-muted">
                     {documents.length === 0
                       ? canManage
                         ? 'Upload a policy document or add demo playbooks to get started.'
@@ -709,7 +709,7 @@ export function PlaybookClient({
                       <button
                         type="button"
                         onClick={() => setUploadOpen(true)}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white hover:bg-violet-500"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-al-accent px-4 text-xs font-bold text-white hover:bg-al-accent-hover"
                       >
                         <Upload className="h-3.5 w-3.5" /> Upload Playbook
                       </button>
@@ -717,7 +717,7 @@ export function PlaybookClient({
                         type="button"
                         onClick={seedDemo}
                         disabled={busy !== null}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-4 text-xs font-bold text-[#6B7FA8] hover:text-[#E8EEFF]"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-al-border bg-al-surface px-4 text-xs font-bold text-al-text-muted hover:text-al-text"
                       >
                         {busy === 'demo' ? 'Creating...' : 'Add Demo Playbooks'}
                       </button>
@@ -727,9 +727,9 @@ export function PlaybookClient({
               ) : (
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[#1E2D4A]">
+                    <tr className="border-b border-al-border">
                       {['Playbook Name', 'Category', 'Version', 'Last Updated', 'Compliance Score', 'Status', 'Actions'].map((col) => (
-                        <th key={col} className="pb-3 pr-4 text-[10px] font-black uppercase tracking-wide text-[#3D5070] last:pr-0">
+                        <th key={col} className="pb-3 pr-4 text-[10px] font-black uppercase tracking-wide text-al-text-secondary last:pr-0">
                           {col}
                         </th>
                       ))}
@@ -740,32 +740,32 @@ export function PlaybookClient({
                       const cat = docCategory(doc.metadata);
                       const score = doc.status === 'READY' ? complianceScore : null;
                       return (
-                        <tr key={doc.id} className="group border-b border-[#1E2D4A]/50 last:border-0">
+                        <tr key={doc.id} className="group border-b border-al-border/50 last:border-0">
                           <td className="py-4 pr-4">
                             <div className="flex items-start gap-2">
-                              <div className="mt-0.5 rounded-lg bg-violet-500/10 p-1.5">
-                                <FileText className="h-3.5 w-3.5 text-violet-400" />
+                              <div className="mt-0.5 rounded-lg bg-al-accent-hover/10 p-1.5">
+                                <FileText className="h-3.5 w-3.5 text-al-accent" />
                               </div>
                               <div>
-                                <p className="font-bold text-[#E8EEFF]">
+                                <p className="font-bold text-al-text">
                                   {doc.name}
                                   {isDemo(doc.metadata) ? (
-                                    <span className="ml-2 rounded-full bg-[#0E1830] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#6B7FA8]">Demo</span>
+                                    <span className="ml-2 rounded-full bg-al-surface px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-al-text-muted">Demo</span>
                                   ) : null}
                                 </p>
-                                <p className="text-[11px] text-[#3D5070]">
+                                <p className="text-[11px] text-al-text-secondary">
                                   {doc._count.rules} rules · {doc._count.chunks} sections
                                 </p>
                               </div>
                             </div>
                           </td>
-                          <td className="py-4 pr-4 text-xs font-semibold text-[#6B7FA8]">{cat}</td>
-                          <td className="py-4 pr-4 text-xs font-mono text-[#6B7FA8]">v{doc.versionNumber ?? 1}.0</td>
-                          <td className="py-4 pr-4 text-xs text-[#6B7FA8]">{fmtDate(doc.status === 'ARCHIVED' ? (doc.archivedAt ?? doc.uploadedAt) : (doc.lastIndexedAt ?? doc.uploadedAt))}</td>
+                          <td className="py-4 pr-4 text-xs font-semibold text-al-text-muted">{cat}</td>
+                          <td className="py-4 pr-4 text-xs font-mono text-al-text-muted">v{doc.versionNumber ?? 1}.0</td>
+                          <td className="py-4 pr-4 text-xs text-al-text-muted">{fmtDate(doc.status === 'ARCHIVED' ? (doc.archivedAt ?? doc.uploadedAt) : (doc.lastIndexedAt ?? doc.uploadedAt))}</td>
                           <td className="py-4 pr-4">
                             {score !== null ? (
                               <div className="flex items-center gap-2">
-                                <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[#1E2D4A]">
+                                <div className="h-1.5 w-16 overflow-hidden rounded-full bg-al-border">
                                   <div
                                     className={`h-full rounded-full ${complianceBg(score)}`}
                                     style={{ width: `${score}%` }}
@@ -774,7 +774,7 @@ export function PlaybookClient({
                                 <span className={`text-xs font-bold ${complianceColor(score)}`}>{score}%</span>
                               </div>
                             ) : (
-                              <span className="text-xs text-[#3D5070]">—</span>
+                              <span className="text-xs text-al-text-secondary">—</span>
                             )}
                           </td>
                           <td className="py-4 pr-4">
@@ -792,7 +792,7 @@ export function PlaybookClient({
                                     setReplaceCategory(docCategory(doc.metadata) !== 'General' ? docCategory(doc.metadata) : 'Procurement');
                                   }}
                                   disabled={busy !== null}
-                                  className="text-[11px] font-black text-[#6B7FA8] hover:text-violet-400 disabled:cursor-wait"
+                                  className="text-[11px] font-black text-al-text-muted hover:text-al-accent disabled:cursor-wait"
                                 >
                                   Replace
                                 </button>
@@ -800,7 +800,7 @@ export function PlaybookClient({
                                   type="button"
                                   onClick={() => archiveDocument(doc.id)}
                                   disabled={busy !== null}
-                                  className="text-[11px] font-black text-[#3D5070] hover:text-amber-400 disabled:cursor-wait"
+                                  className="text-[11px] font-black text-al-text-secondary hover:text-al-warning disabled:cursor-wait"
                                 >
                                   {busy === `archive-${doc.id}` ? 'Archiving...' : 'Archive'}
                                 </button>
@@ -808,13 +808,13 @@ export function PlaybookClient({
                                   type="button"
                                   onClick={() => deleteDocument(doc.id)}
                                   disabled={busy !== null}
-                                  className="text-[11px] font-black text-[#3D5070] hover:text-rose-400 disabled:cursor-wait"
+                                  className="text-[11px] font-black text-al-text-secondary hover:text-al-danger disabled:cursor-wait"
                                 >
                                   {busy === doc.id ? 'Deleting...' : 'Delete'}
                                 </button>
                               </div>
                             ) : (
-                              <span className="text-[11px] text-[#3D5070]">
+                              <span className="text-[11px] text-al-text-secondary">
                                 {doc.status === 'ARCHIVED' ? 'Archived' : doc.status === 'SUPERSEDED' ? 'Superseded' : '—'}
                               </span>
                             )}
@@ -832,7 +832,7 @@ export function PlaybookClient({
           <div>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-violet-400">AI Insights &amp; Recommendations</p>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-al-accent">AI Insights &amp; Recommendations</p>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -886,19 +886,19 @@ export function PlaybookClient({
 
         {/* ── Right column: AI Advisor panel ── */}
         <div className="xl:sticky xl:top-6 xl:self-start">
-          <div className="rounded-2xl border border-[#1E2D4A] bg-[#07111f]">
+          <div className="rounded-2xl border border-al-border bg-al-bg">
             {/* Panel header */}
-            <div className="flex items-center justify-between border-b border-[#1E2D4A] px-5 py-4">
+            <div className="flex items-center justify-between border-b border-al-border px-5 py-4">
               <div className="flex items-center gap-2">
-                <Brain className="h-4 w-4 text-violet-400" />
-                <p className="text-sm font-black text-[#E8EEFF]">AI Advisor</p>
+                <Brain className="h-4 w-4 text-al-accent" />
+                <p className="text-sm font-black text-al-text">AI Advisor</p>
               </div>
               <div className="flex gap-1.5">
                 {activeAdvisory ? (
                   <button
                     type="button"
                     onClick={() => setActiveAdvisory(null)}
-                    className="rounded-lg p-1.5 text-[#3D5070] hover:bg-[#0E1830] hover:text-[#6B7FA8]"
+                    className="rounded-lg p-1.5 text-al-text-secondary hover:bg-al-surface hover:text-al-text-muted"
                     title="Clear advisory"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -912,16 +912,16 @@ export function PlaybookClient({
                 <div className="grid gap-0 p-5">
                   {/* User message */}
                   <div className="mb-4 flex justify-end">
-                    <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-violet-600/20 px-4 py-3">
-                      <p className="text-sm font-semibold text-[#E8EEFF]">{activeAdvisory.question}</p>
+                    <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-al-accent/20 px-4 py-3">
+                      <p className="text-sm font-semibold text-al-text">{activeAdvisory.question}</p>
                     </div>
                   </div>
 
                   {/* AI preamble */}
-                  <div className="mb-5 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-4">
+                  <div className="mb-5 rounded-xl border border-al-border bg-al-surface p-4">
                     <div className="flex gap-2">
-                      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6B7FA8]" />
-                      <p className="text-xs leading-5 text-[#6B7FA8]">
+                      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-al-text-muted" />
+                      <p className="text-xs leading-5 text-al-text-muted">
                         Based on your request, here is the recommended approval process.
                       </p>
                     </div>
@@ -929,7 +929,7 @@ export function PlaybookClient({
 
                   {/* AI answer summary */}
                   {activeAdvisory.answer ? (
-                    <div className="mb-5 text-sm leading-6 text-[#6B7FA8]">
+                    <div className="mb-5 text-sm leading-6 text-al-text-muted">
                       {activeAdvisory.answer.slice(0, 200)}{activeAdvisory.answer.length > 200 ? '…' : ''}
                     </div>
                   ) : null}
@@ -937,7 +937,7 @@ export function PlaybookClient({
                   {/* Recommended Path */}
                   {approvalPath.length > 0 ? (
                     <div className="mb-5">
-                      <p className="mb-4 text-xs font-black uppercase tracking-[0.16em] text-[#3D5070]">Recommended Path</p>
+                      <p className="mb-4 text-xs font-black uppercase tracking-[0.16em] text-al-text-secondary">Recommended Path</p>
                       <div className="grid">
                         {approvalPath.map((step, i) => (
                           <ApprovalPathStep key={step.label} step={step} index={i} total={approvalPath.length} />
@@ -950,7 +950,7 @@ export function PlaybookClient({
                   {activeAdvisory.compliant ? (() => {
                     const cl = complianceLabel(activeAdvisory.compliant);
                     return (
-                      <div className="mb-5 flex items-center gap-2 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-4 py-3">
+                      <div className="mb-5 flex items-center gap-2 rounded-xl border border-al-border bg-al-surface px-4 py-3">
                         <CheckCircle2 className={`h-3.5 w-3.5 shrink-0 ${cl.cls}`} />
                         <span className={`text-xs font-bold ${cl.cls}`}>Compliance: {cl.label}</span>
                       </div>
@@ -958,24 +958,24 @@ export function PlaybookClient({
                   })() : null}
 
                   {/* Likely Outcome */}
-                  <div className="mb-5 overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-                    <div className="border-b border-emerald-500/20 px-4 py-2">
-                      <p className="text-xs font-black text-emerald-400">Likely Outcome</p>
+                  <div className="mb-5 overflow-hidden rounded-xl border border-al-success/20 bg-al-success/5">
+                    <div className="border-b border-al-success/20 px-4 py-2">
+                      <p className="text-xs font-black text-al-success">Likely Outcome</p>
                     </div>
                     <div className="flex items-center justify-between gap-4 px-4 py-4">
                       <div>
-                        <p className="text-sm font-black text-[#E8EEFF]">{likelihoodLabel(activeAdvisory.confidence)}</p>
-                        <p className="mt-1 text-xs text-[#6B7FA8]">
+                        <p className="text-sm font-black text-al-text">{likelihoodLabel(activeAdvisory.confidence)}</p>
+                        <p className="mt-1 text-xs text-al-text-muted">
                           Est. time: 2–3 days &nbsp;|&nbsp;
                           Risk: {activeAdvisory.requiredApprovers.length > 3 ? 'Medium' : 'Low'}
                         </p>
                       </div>
-                      <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-emerald-500/30">
+                      <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-al-success/30">
                         <div
-                          className="absolute inset-0 rounded-full border-4 border-emerald-500"
+                          className="absolute inset-0 rounded-full border-4 border-al-success"
                           style={{ clipPath: `inset(0 ${100 - activeAdvisory.confidence}% 0 0 round 999px)` }}
                         />
-                        <span className="text-sm font-black text-emerald-400">{activeAdvisory.confidence}%</span>
+                        <span className="text-sm font-black text-al-success">{activeAdvisory.confidence}%</span>
                       </div>
                     </div>
                   </div>
@@ -983,13 +983,13 @@ export function PlaybookClient({
                   {/* Policy sources */}
                   {activeAdvisory.policySections.length > 0 ? (
                     <div className="mb-5">
-                      <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-[#3D5070]">Policy References</p>
+                      <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-al-text-secondary">Policy References</p>
                       <div className="grid gap-2">
                         {activeAdvisory.policySections.slice(0, 3).map((src) => (
-                          <div key={`${src.document}-${src.section}`} className="rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-3">
-                            <p className="text-[11px] font-bold text-[#E8EEFF]">{src.document}</p>
-                            <p className="text-[10px] text-[#3D5070]">{src.section}</p>
-                            {src.excerpt ? <p className="mt-1 text-[11px] leading-4 text-[#6B7FA8]">{src.excerpt.slice(0, 120)}{src.excerpt.length > 120 ? '…' : ''}</p> : null}
+                          <div key={`${src.document}-${src.section}`} className="rounded-xl border border-al-border bg-al-surface p-3">
+                            <p className="text-[11px] font-bold text-al-text">{src.document}</p>
+                            <p className="text-[10px] text-al-text-secondary">{src.section}</p>
+                            {src.excerpt ? <p className="mt-1 text-[11px] leading-4 text-al-text-muted">{src.excerpt.slice(0, 120)}{src.excerpt.length > 120 ? '…' : ''}</p> : null}
                           </div>
                         ))}
                       </div>
@@ -998,13 +998,13 @@ export function PlaybookClient({
 
                   {/* Evidence missing */}
                   {activeAdvisory.evidenceMissing.length > 0 ? (
-                    <div className="mb-5 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-                      <p className="text-xs font-black text-amber-400">Missing Information</p>
+                    <div className="mb-5 rounded-xl border border-al-warning/20 bg-al-warning/5 p-4">
+                      <p className="text-xs font-black text-al-warning">Missing Information</p>
                       <ul className="mt-2 grid gap-1">
                         {activeAdvisory.evidenceMissing.map((item) => (
                           <li key={item} className="flex items-start gap-1.5">
-                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-400" />
-                            <span className="text-xs text-[#6B7FA8]">{item}</span>
+                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-al-warning" />
+                            <span className="text-xs text-al-text-muted">{item}</span>
                           </li>
                         ))}
                       </ul>
@@ -1015,22 +1015,22 @@ export function PlaybookClient({
                   <PendingLink
                     href="/approvals"
                     pendingText="Opening..."
-                    className="mb-5 flex w-full items-center justify-between rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-4 py-3 text-sm font-bold text-[#6B7FA8] hover:border-violet-500/30 hover:text-[#E8EEFF]"
+                    className="mb-5 flex w-full items-center justify-between rounded-xl border border-al-border bg-al-surface px-4 py-3 text-sm font-bold text-al-text-muted hover:border-al-accent/30 hover:text-al-text"
                   >
                     View Similar Past Approvals <ChevronRight className="h-4 w-4" />
                   </PendingLink>
                 </div>
               ) : (
                 <div className="p-6 text-center">
-                  <Brain className="mx-auto h-10 w-10 text-[#1E2D4A]" />
-                  <p className="mt-4 font-black text-[#E8EEFF]">Ask about your approval process</p>
-                  <p className="mt-2 text-sm leading-6 text-[#6B7FA8]">
+                  <Brain className="mx-auto h-10 w-10 text-al-border" />
+                  <p className="mt-4 font-black text-al-text">Ask about your approval process</p>
+                  <p className="mt-2 text-sm leading-6 text-al-text-muted">
                     Describe a request — vendor onboarding, contract approval, hiring — and AI will analyze your playbooks and recommend the right path.
                   </p>
                   {documents.filter((d) => d.status === 'READY').length === 0 ? (
-                    <div className="mt-5 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-left">
-                      <p className="text-xs font-bold text-amber-400">No playbooks indexed yet</p>
-                      <p className="mt-1 text-xs text-[#6B7FA8]">
+                    <div className="mt-5 rounded-xl border border-al-warning/20 bg-al-warning/5 p-4 text-left">
+                      <p className="text-xs font-bold text-al-warning">No playbooks indexed yet</p>
+                      <p className="mt-1 text-xs text-al-text-muted">
                         {canManage
                           ? 'Upload policy documents first, then ask a question to receive guided recommendations.'
                           : 'Contact an admin to upload policy documents before using advisory.'}
@@ -1042,8 +1042,8 @@ export function PlaybookClient({
 
               {/* Recent AI Advisories */}
               {queries.length > 0 ? (
-                <div className="border-t border-[#1E2D4A] px-5 py-4">
-                  <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-[#3D5070]">Recent AI Advisories</p>
+                <div className="border-t border-al-border px-5 py-4">
+                  <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-al-text-secondary">Recent AI Advisories</p>
                   <div className="grid gap-2">
                     {queries.slice(0, 5).map((q) => {
                       const parsed = parseAdvisoryAnswer(q.answer);
@@ -1054,25 +1054,25 @@ export function PlaybookClient({
                           onClick={() => {
                             if (parsed) setActiveAdvisory({ ...parsed, queryId: q.id, question: q.question });
                           }}
-                          className={`w-full rounded-xl border px-3 py-3 text-left transition hover:border-violet-500/30 ${
+                          className={`w-full rounded-xl border px-3 py-3 text-left transition hover:border-al-accent/30 ${
                             activeAdvisory?.queryId === q.id
-                              ? 'border-violet-500/40 bg-violet-500/10'
-                              : 'border-[#1E2D4A] bg-[#0E1830]'
+                              ? 'border-al-accent/40 bg-al-accent-hover/10'
+                              : 'border-al-border bg-al-surface'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <p className="line-clamp-1 text-xs font-bold text-[#E8EEFF]">{q.question}</p>
+                            <p className="line-clamp-1 text-xs font-bold text-al-text">{q.question}</p>
                             <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${
                               parsed?.compliant === 'yes'
-                                ? 'bg-emerald-500/10 text-emerald-400'
+                                ? 'bg-al-success/10 text-al-success'
                                 : parsed?.compliant === 'no'
-                                  ? 'bg-rose-500/10 text-rose-400'
-                                  : 'bg-amber-500/10 text-amber-400'
+                                  ? 'bg-al-danger/10 text-al-danger'
+                                  : 'bg-al-warning/10 text-al-warning'
                             }`}>
                               {parsed?.compliant === 'yes' ? 'Compliant' : parsed?.compliant === 'no' ? 'Non-compliant' : 'Review'}
                             </span>
                           </div>
-                          <p className="mt-1 text-[10px] text-[#3D5070]">{fmtTime(q.createdAt)}</p>
+                          <p className="mt-1 text-[10px] text-al-text-secondary">{fmtTime(q.createdAt)}</p>
                         </button>
                       );
                     })}
@@ -1081,9 +1081,9 @@ export function PlaybookClient({
               ) : null}
 
               {/* Panel input */}
-              <div className="border-t border-[#1E2D4A] p-4">
+              <div className="border-t border-al-border p-4">
                 {documents.filter((d) => d.status === 'READY').length === 0 ? (
-                  <p className="text-center text-[11px] text-[#3D5070]">Upload and index a playbook to enable advisory.</p>
+                  <p className="text-center text-[11px] text-al-text-secondary">Upload and index a playbook to enable advisory.</p>
                 ) : (
                   <div className="flex gap-2">
                     <input
@@ -1096,19 +1096,19 @@ export function PlaybookClient({
                         }
                       }}
                       placeholder="Ask anything about approvals, policies..."
-                      className="flex-1 rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-3 py-2.5 text-xs font-medium text-[#E8EEFF] outline-none placeholder:text-[#3D5070] focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
+                      className="flex-1 rounded-xl border border-al-border bg-al-surface px-3 py-2.5 text-xs font-medium text-al-text outline-none placeholder:text-al-text-secondary focus:border-al-accent/50 focus:ring-2 focus:ring-al-accent/20"
                     />
                     <button
                       type="button"
                       onClick={() => ask(panelQuestion)}
                       disabled={busy === 'query' || panelQuestion.trim().length < 5}
-                      className="rounded-xl bg-violet-600 p-2.5 text-white hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60"
+                      className="rounded-xl bg-al-accent p-2.5 text-white hover:bg-al-accent-hover disabled:cursor-wait disabled:opacity-60"
                     >
                       {busy === 'query' ? <RotateCcw className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
                   </div>
                 )}
-                <p className="mt-2 text-center text-[10px] text-[#3D5070]">AI responses may be inaccurate. Verify important information.</p>
+                <p className="mt-2 text-center text-[10px] text-al-text-secondary">AI responses may be inaccurate. Verify important information.</p>
               </div>
             </div>
           </div>
@@ -1119,51 +1119,51 @@ export function PlaybookClient({
       {replaceTarget ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setReplaceTarget(null)} />
-          <div className="relative w-full max-w-md rounded-2xl border border-[#1E2D4A] bg-[#07111f] p-6 shadow-2xl">
+          <div className="relative w-full max-w-md rounded-2xl border border-al-border bg-al-bg p-6 shadow-2xl">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-black text-[#E8EEFF]">Replace Document</h3>
-                <p className="mt-1 text-xs text-[#6B7FA8]">
+                <h3 className="text-lg font-black text-al-text">Replace Document</h3>
+                <p className="mt-1 text-xs text-al-text-muted">
                   Uploading a new version will archive the current file and make the new one active.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setReplaceTarget(null)}
-                className="rounded-lg p-1.5 text-[#3D5070] hover:bg-[#0E1830] hover:text-[#6B7FA8]"
+                className="rounded-lg p-1.5 text-al-text-secondary hover:bg-al-surface hover:text-al-text-muted"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="mt-4 rounded-xl border border-[#1E2D4A] bg-[#0E1830] p-3">
-              <p className="text-[11px] font-black uppercase tracking-wide text-[#3D5070]">Current Version</p>
-              <p className="mt-1 text-sm font-bold text-[#E8EEFF]">{replaceTarget.name}</p>
-              <p className="text-xs text-[#6B7FA8]">v{replaceTarget.versionNumber ?? 1}.0 · {docCategory(replaceTarget.metadata)} · Uploaded {fmtDate(replaceTarget.uploadedAt)}</p>
+            <div className="mt-4 rounded-xl border border-al-border bg-al-surface p-3">
+              <p className="text-[11px] font-black uppercase tracking-wide text-al-text-secondary">Current Version</p>
+              <p className="mt-1 text-sm font-bold text-al-text">{replaceTarget.name}</p>
+              <p className="text-xs text-al-text-muted">v{replaceTarget.versionNumber ?? 1}.0 · {docCategory(replaceTarget.metadata)} · Uploaded {fmtDate(replaceTarget.uploadedAt)}</p>
             </div>
 
             <div className="mt-5 grid gap-4">
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#6B7FA8]">Category</label>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-al-text-muted">Category</label>
                 <select
                   value={replaceCategory}
                   onChange={(e) => setReplaceCategory(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
+                  className="h-11 w-full rounded-xl border border-al-border bg-al-surface px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/50 focus:ring-2 focus:ring-al-accent/20"
                 >
                   {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#6B7FA8]">New Document</label>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-al-text-muted">New Document</label>
                 <input
                   ref={replaceFileRef}
                   type="file"
                   accept=".pdf,.docx,.txt,.md,.markdown"
-                  className="block w-full rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-3 py-3 text-sm font-semibold text-[#E8EEFF] file:mr-3 file:rounded-lg file:border-0 file:bg-violet-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
+                  className="block w-full rounded-xl border border-al-border bg-al-surface px-3 py-3 text-sm font-semibold text-al-text file:mr-3 file:rounded-lg file:border-0 file:bg-al-accent file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
                 />
               </div>
               {error ? (
-                <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 text-xs font-semibold text-rose-300">{error}</p>
+                <p className="rounded-xl border border-al-danger/20 bg-al-danger/5 p-3 text-xs font-semibold text-al-danger">{error}</p>
               ) : null}
             </div>
 
@@ -1171,7 +1171,7 @@ export function PlaybookClient({
               <button
                 type="button"
                 onClick={() => setReplaceTarget(null)}
-                className="flex-1 rounded-xl border border-[#1E2D4A] py-2.5 text-sm font-bold text-[#6B7FA8] hover:text-[#E8EEFF]"
+                className="flex-1 rounded-xl border border-al-border py-2.5 text-sm font-bold text-al-text-muted hover:text-al-text"
               >
                 Cancel
               </button>
@@ -1179,7 +1179,7 @@ export function PlaybookClient({
                 type="button"
                 onClick={replaceDocument}
                 disabled={busy === 'replace'}
-                className="flex-1 rounded-xl bg-violet-600 py-2.5 text-sm font-bold text-white hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60"
+                className="flex-1 rounded-xl bg-al-accent py-2.5 text-sm font-bold text-white hover:bg-al-accent-hover disabled:cursor-wait disabled:opacity-60"
               >
                 {busy === 'replace' ? 'Uploading...' : 'Upload New Version'}
               </button>
@@ -1192,16 +1192,16 @@ export function PlaybookClient({
       {uploadOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setUploadOpen(false)} />
-          <div className="relative w-full max-w-md rounded-2xl border border-[#1E2D4A] bg-[#07111f] p-6 shadow-2xl">
+          <div className="relative w-full max-w-md rounded-2xl border border-al-border bg-al-bg p-6 shadow-2xl">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-black text-[#E8EEFF]">Upload Playbook</h3>
-                <p className="mt-1 text-xs text-[#6B7FA8]">Supports PDF, DOCX, TXT, and Markdown. Max 10 MB.</p>
+                <h3 className="text-lg font-black text-al-text">Upload Playbook</h3>
+                <p className="mt-1 text-xs text-al-text-muted">Supports PDF, DOCX, TXT, and Markdown. Max 10 MB.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setUploadOpen(false)}
-                className="rounded-lg p-1.5 text-[#3D5070] hover:bg-[#0E1830] hover:text-[#6B7FA8]"
+                className="rounded-lg p-1.5 text-al-text-secondary hover:bg-al-surface hover:text-al-text-muted"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1209,26 +1209,26 @@ export function PlaybookClient({
 
             <div className="mt-5 grid gap-4">
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#6B7FA8]">Category</label>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-al-text-muted">Category</label>
                 <select
                   value={uploadCategory}
                   onChange={(e) => setUploadCategory(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-3 text-sm font-semibold text-[#E8EEFF] outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20"
+                  className="h-11 w-full rounded-xl border border-al-border bg-al-surface px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/50 focus:ring-2 focus:ring-al-accent/20"
                 >
                   {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#6B7FA8]">Policy Document</label>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-al-text-muted">Policy Document</label>
                 <input
                   ref={fileRef}
                   type="file"
                   accept=".pdf,.docx,.txt,.md,.markdown"
-                  className="block w-full rounded-xl border border-[#1E2D4A] bg-[#0E1830] px-3 py-3 text-sm font-semibold text-[#E8EEFF] file:mr-3 file:rounded-lg file:border-0 file:bg-violet-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
+                  className="block w-full rounded-xl border border-al-border bg-al-surface px-3 py-3 text-sm font-semibold text-al-text file:mr-3 file:rounded-lg file:border-0 file:bg-al-accent file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white"
                 />
               </div>
               {error ? (
-                <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 text-xs font-semibold text-rose-300">{error}</p>
+                <p className="rounded-xl border border-al-danger/20 bg-al-danger/5 p-3 text-xs font-semibold text-al-danger">{error}</p>
               ) : null}
             </div>
 
@@ -1236,7 +1236,7 @@ export function PlaybookClient({
               <button
                 type="button"
                 onClick={() => setUploadOpen(false)}
-                className="flex-1 rounded-xl border border-[#1E2D4A] py-2.5 text-sm font-bold text-[#6B7FA8] hover:text-[#E8EEFF]"
+                className="flex-1 rounded-xl border border-al-border py-2.5 text-sm font-bold text-al-text-muted hover:text-al-text"
               >
                 Cancel
               </button>
@@ -1244,7 +1244,7 @@ export function PlaybookClient({
                 type="button"
                 onClick={upload}
                 disabled={busy === 'upload'}
-                className="flex-1 rounded-xl bg-violet-600 py-2.5 text-sm font-bold text-white hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60"
+                className="flex-1 rounded-xl bg-al-accent py-2.5 text-sm font-bold text-white hover:bg-al-accent-hover disabled:cursor-wait disabled:opacity-60"
               >
                 {busy === 'upload' ? 'Indexing...' : 'Upload & Index'}
               </button>
