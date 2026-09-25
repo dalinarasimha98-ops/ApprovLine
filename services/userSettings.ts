@@ -19,9 +19,12 @@ import { revalidateTag } from 'next/cache';
  *
  * Identity fields (name, email, avatar, password/2FA status, sessions) are
  * owned by Clerk - this file reads and writes them through the Clerk
- * Backend API rather than duplicating identity storage. Only `role` and
- * `organization` membership are ApprovLine's own, read from the existing
- * User/Organization tables.
+ * Backend API rather than duplicating identity storage. `role`,
+ * `organization` membership, and the self-reported profile fields below
+ * (jobTitle/department/phone/location/timezone) are ApprovLine's own, on
+ * the User table - there is no Clerk or other existing equivalent for
+ * them (verified before adding the migration), so this is new data, not a
+ * duplicate store.
  */
 
 export type UserSecurityStatus = {
@@ -30,6 +33,11 @@ export type UserSecurityStatus = {
   totpEnabled: boolean;
   backupCodeEnabled: boolean;
   lastSignInAt: Date | null;
+  /** Real Clerk account-standing flags - used for the Profile card's status
+   *  badge ("Active"/"Locked"/"Suspended") instead of an always-"Active"
+   *  fabrication. */
+  banned: boolean;
+  locked: boolean;
 };
 
 export type UserSession = {
@@ -60,6 +68,30 @@ export type UserSettingsProfile = {
   memberSince: Date;
   organizationName: string;
   organizationSlug: string;
+  jobTitle: string | null;
+  department: string | null;
+  phone: string | null;
+  location: string | null;
+  timezone: string | null;
+  /** Name of this user's manager, if the relationship has ever been set.
+   *  No admin UI sets managerId yet, so this is null for every user today -
+   *  a real, correctly-modeled relationship rendered honestly as "Not set"
+   *  rather than a fabricated manager. */
+  managerName: string | null;
+  /** The organization's own configured department list (Organization.departments) -
+   *  the same list Users & Teams already treats as authoritative - so the
+   *  Edit Profile department picker only ever offers real options. */
+  organizationDepartments: string[];
+};
+
+export type UserNotificationSettings = {
+  emailEnabled: boolean;
+};
+
+export type SecurityActivityEvent = {
+  id: string;
+  action: string;
+  createdAt: Date;
 };
 
 export type UserSettingsData = {
@@ -67,7 +99,13 @@ export type UserSettingsData = {
   security: { status: UserSecurityStatus | null; error: string | null };
   sessions: { list: UserSession[]; error: string | null };
   connectedSources: { list: ConnectedSource[]; error: string | null };
+  notifications: { settings: UserNotificationSettings; error: string | null };
+  /** This user's own recent security/profile-relevant audit events (real
+   *  AuditLog rows, filtered to actorUserId - not a separate activity log). */
+  securityActivity: { list: SecurityActivityEvent[]; error: string | null };
 };
+
+const SECURITY_ACTIVITY_ACTIONS = ['PROFILE_UPDATED', 'SECURITY_SESSION_REVOKED', 'NOTIFICATION_PREFERENCES_UPDATED'];
 
 function toSecurityStatus(clerkUser: ClerkUser): UserSecurityStatus {
   return {
@@ -76,14 +114,16 @@ function toSecurityStatus(clerkUser: ClerkUser): UserSecurityStatus {
     totpEnabled: clerkUser.totpEnabled,
     backupCodeEnabled: clerkUser.backupCodeEnabled,
     lastSignInAt: clerkUser.lastSignInAt ? new Date(clerkUser.lastSignInAt) : null,
+    banned: clerkUser.banned,
+    locked: clerkUser.locked,
   };
 }
 
 /**
  * Fetches everything the User Settings page renders in one pass. Each
- * section (security status, sessions, connected sources) fails
- * independently - a Clerk API hiccup on the sessions list must never take
- * down the rest of an otherwise-working settings page, matching the
+ * section (security status, sessions, connected sources, notifications)
+ * fails independently - a Clerk API hiccup on the sessions list must never
+ * take down the rest of an otherwise-working settings page, matching the
  * section-level degrade pattern already used by app/evidence/[id]/page.tsx
  * and the dashboard's approval list.
  */
@@ -91,6 +131,8 @@ export async function getUserSettingsData(input: {
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
+  organizationDepartments: string[];
+  userId: string;
   clerkUserId: string;
   role: Role;
   name: string | null;
@@ -111,6 +153,41 @@ export async function getUserSettingsData(input: {
     clerkUserError = 'Your account details could not be loaded from your identity provider right now.';
   }
 
+  let profileFields: { jobTitle: string | null; department: string | null; phone: string | null; location: string | null; timezone: string | null; managerName: string | null } = {
+    jobTitle: null,
+    department: null,
+    phone: null,
+    location: null,
+    timezone: null,
+    managerName: null,
+  };
+  let notifications: UserSettingsData['notifications'];
+  try {
+    const [dbUser, notificationPreference] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: input.userId, organizationId: input.organizationId },
+        select: { jobTitle: true, department: true, phone: true, location: true, timezone: true, manager: { select: { name: true, email: true } } },
+      }),
+      prisma.userNotificationPreference.findUnique({ where: { userId: input.userId }, select: { emailEnabled: true } }),
+    ]);
+    if (dbUser) {
+      profileFields = {
+        jobTitle: dbUser.jobTitle,
+        department: dbUser.department,
+        phone: dbUser.phone,
+        location: dbUser.location,
+        timezone: dbUser.timezone,
+        managerName: dbUser.manager?.name ?? dbUser.manager?.email ?? null,
+      };
+    }
+    // No row means the user has never changed the default - true unless
+    // they explicitly opted out, matching the migration's own column default.
+    notifications = { settings: { emailEnabled: notificationPreference?.emailEnabled ?? true }, error: null };
+  } catch (error) {
+    console.error('[user-settings] profile field / notification preference query failed', error);
+    notifications = { settings: { emailEnabled: true }, error: 'Your notification preferences could not be loaded right now.' };
+  }
+
   const profile: UserSettingsProfile = {
     name: input.name,
     email: clerkUser?.primaryEmailAddress?.emailAddress ?? clerkUser?.emailAddresses[0]?.emailAddress ?? '',
@@ -119,6 +196,8 @@ export async function getUserSettingsData(input: {
     memberSince: input.createdAt,
     organizationName: input.organizationName,
     organizationSlug: input.organizationSlug,
+    organizationDepartments: input.organizationDepartments,
+    ...profileFields,
   };
 
   const security: UserSettingsData['security'] = clerkUser
@@ -181,31 +260,80 @@ export async function getUserSettingsData(input: {
     connectedSources = { list: [], error: 'Connected sources could not be loaded right now.' };
   }
 
-  return { profile, security, sessions, connectedSources };
+  let securityActivity: UserSettingsData['securityActivity'];
+  try {
+    const rows = await prisma.auditLog.findMany({
+      where: { organizationId: input.organizationId, actorUserId: input.userId, action: { in: SECURITY_ACTIVITY_ACTIONS } },
+      select: { id: true, action: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+    securityActivity = { list: rows, error: null };
+  } catch (error) {
+    console.error('[user-settings] security activity query failed', error);
+    securityActivity = { list: [], error: 'Recent security activity could not be loaded right now.' };
+  }
+
+  return { profile, security, sessions, connectedSources, notifications, securityActivity };
 }
 
-export type UpdateProfileNameResult = { ok: true } | { ok: false; error: string };
+export type UpdateProfileResult = { ok: true } | { ok: false; error: string };
+
+const MAX_TEXT_FIELD_LENGTH = 200;
+
+/** Real, current IANA timezone identifiers - never a hand-maintained, and
+ *  possibly stale, fixed list. */
+export function supportedTimezones(): string[] {
+  return Intl.supportedValuesOf('timeZone');
+}
+
+function cleanOptionalText(value: FormDataEntryValue | null): string | null {
+  const trimmed = String(value ?? '').trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 /**
- * Name is Clerk-owned identity data - updated through the Clerk Backend
- * API (the "correct Clerk update mechanism"), then mirrored into
+ * Full name is Clerk-owned identity data - updated through the Clerk
+ * Backend API (the "correct Clerk update mechanism"), then mirrored into
  * ApprovLine's own User.name so every other page that reads the DB copy
  * (not Clerk directly) sees the change immediately, and the cached tenant
  * record (lib/auth.ts's getDashboardTenant) is invalidated so the very
- * next page load reflects it rather than waiting out its 5-minute revalidate
- * window.
+ * next page load reflects it rather than waiting out its revalidate window.
+ *
+ * jobTitle/phone/location/timezone/department are self-reported fields
+ * that live only on ApprovLine's own User row - no Clerk mechanism to
+ * defer to. department is checked against the organization's own real
+ * `departments` list (never free text) and timezone against
+ * Intl.supportedValuesOf('timeZone') (never a fabricated fixed list), so
+ * neither field can be saved as a value that doesn't actually exist.
  */
-export async function updateProfileName(input: {
+export async function updateProfile(input: {
   organizationId: string;
   userId: string;
   clerkUserId: string;
   fullName: string;
-}): Promise<UpdateProfileNameResult> {
-  const trimmed = input.fullName.trim();
-  if (!trimmed) return { ok: false, error: 'Enter your name.' };
-  if (trimmed.length > 200) return { ok: false, error: 'Name is too long.' };
+  jobTitle: string | null;
+  department: string | null;
+  phone: string | null;
+  location: string | null;
+  timezone: string | null;
+  organizationDepartments: string[];
+}): Promise<UpdateProfileResult> {
+  const trimmedName = input.fullName.trim();
+  if (!trimmedName) return { ok: false, error: 'Enter your name.' };
+  if (trimmedName.length > MAX_TEXT_FIELD_LENGTH) return { ok: false, error: 'Name is too long.' };
 
-  const [firstName, ...rest] = trimmed.split(/\s+/);
+  for (const [label, value] of [['Job title', input.jobTitle], ['Phone', input.phone], ['Location', input.location]] as const) {
+    if (value && value.length > MAX_TEXT_FIELD_LENGTH) return { ok: false, error: `${label} is too long.` };
+  }
+  if (input.department && !input.organizationDepartments.includes(input.department)) {
+    return { ok: false, error: 'Choose a department your organization has configured.' };
+  }
+  if (input.timezone && !supportedTimezones().includes(input.timezone)) {
+    return { ok: false, error: 'Choose a valid time zone.' };
+  }
+
+  const [firstName, ...rest] = trimmedName.split(/\s+/);
   const lastName = rest.join(' ') || undefined;
 
   try {
@@ -216,16 +344,106 @@ export async function updateProfileName(input: {
     return { ok: false, error: 'Your name could not be updated right now. Please try again.' };
   }
 
-  await prisma.user.update({ where: { id: input.userId, organizationId: input.organizationId }, data: { name: trimmed } });
+  await prisma.user.update({
+    where: { id: input.userId, organizationId: input.organizationId },
+    data: {
+      name: trimmedName,
+      jobTitle: input.jobTitle,
+      department: input.department,
+      phone: input.phone,
+      location: input.location,
+      timezone: input.timezone,
+    },
+  });
   revalidateTag(DASHBOARD_TENANT_CACHE_TAG);
   await writeAuditLog({
     organizationId: input.organizationId,
     actorUserId: input.userId,
     action: 'PROFILE_UPDATED',
-    metadata: { field: 'name' },
+    metadata: { fields: ['name', 'jobTitle', 'department', 'phone', 'location', 'timezone'] },
   });
 
   return { ok: true };
+}
+
+/** Parses the Edit Profile form's optional text fields consistently -
+ *  shared by the page's server action so validation/trimming happens once. */
+export function parseProfileFormFields(formData: FormData) {
+  return {
+    fullName: String(formData.get('fullName') ?? ''),
+    jobTitle: cleanOptionalText(formData.get('jobTitle')),
+    department: cleanOptionalText(formData.get('department')),
+    phone: cleanOptionalText(formData.get('phone')),
+    location: cleanOptionalText(formData.get('location')),
+    timezone: cleanOptionalText(formData.get('timezone')),
+  };
+}
+
+export type UpdateNotificationPreferenceResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Persists the ONLY real, optional notification preference this app
+ * currently supports: whether to also receive an email when this user (by
+ * matching email) is asked to confirm a manual approval recorded on their
+ * behalf. See shouldSendOptionalConfirmationEmail() below and
+ * app/api/approvals/[id]/confirmations/route.ts for how this is enforced -
+ * disabling it never removes the ApprovalConfirmationRequest record, the
+ * audit trail, or the requirement to act on it.
+ */
+export async function updateNotificationPreference(input: {
+  organizationId: string;
+  userId: string;
+  emailEnabled: boolean;
+}): Promise<UpdateNotificationPreferenceResult> {
+  try {
+    await prisma.userNotificationPreference.upsert({
+      where: { userId: input.userId },
+      create: { userId: input.userId, emailEnabled: input.emailEnabled },
+      update: { emailEnabled: input.emailEnabled },
+    });
+  } catch (error) {
+    console.error('[user-settings] notification preference update failed', error);
+    return { ok: false, error: 'Your notification preference could not be saved right now.' };
+  }
+
+  await writeAuditLog({
+    organizationId: input.organizationId,
+    actorUserId: input.userId,
+    action: 'NOTIFICATION_PREFERENCES_UPDATED',
+    metadata: { emailEnabled: input.emailEnabled },
+  });
+
+  return { ok: true };
+}
+
+/**
+ * Whether the optional confirmation-request email should be sent to a given
+ * approver address within an organization. Returns true (send it) whenever
+ * the address doesn't match any registered ApprovLine user in that org -
+ * an external/verbal approver has no preference to check, so the email
+ * behaves exactly as it always has for them. Only when the address belongs
+ * to a real user in this org does their own emailEnabled preference apply.
+ *
+ * This is the ONLY thing the preference is allowed to affect - it is never
+ * consulted anywhere that would skip creating the ApprovalConfirmationRequest
+ * record itself, its audit log entry, or the confirmation link.
+ */
+export async function shouldSendOptionalConfirmationEmail(organizationId: string, approverEmail: string): Promise<boolean> {
+  try {
+    const user = await prisma.user.findFirst({
+      where: { organizationId, email: { equals: approverEmail, mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (!user) return true;
+    const preference = await prisma.userNotificationPreference.findUnique({ where: { userId: user.id }, select: { emailEnabled: true } });
+    return preference?.emailEnabled ?? true;
+  } catch (error) {
+    console.error('[user-settings] confirmation email preference lookup failed, defaulting to sending it', error);
+    // Fail open toward the existing, always-on behavior - a preference
+    // lookup outage must never silently suppress a compliance-relevant
+    // confirmation email that would otherwise have been sent.
+    return true;
+  }
 }
 
 export type RevokeSessionResult = { ok: true } | { ok: false; error: string };

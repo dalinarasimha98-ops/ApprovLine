@@ -4,7 +4,13 @@ import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { UserSettingsShell } from '@/components/settings/UserSettingsShell';
 import { getDashboardTenant } from '@/lib/auth';
 import { enforcePageRole } from '@/lib/rbac';
-import { getUserSettingsData, updateProfileName, revokeUserSession } from '@/services/userSettings';
+import {
+  getUserSettingsData,
+  updateProfile as updateProfileService,
+  parseProfileFormFields,
+  updateNotificationPreference,
+  revokeUserSession,
+} from '@/services/userSettings';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,18 +21,41 @@ async function updateProfile(formData: FormData) {
   if (!tenant.organization || !tenant.user) redirect('/onboarding');
   enforcePageRole('/settings/profile', tenant.user.role);
 
-  const fullName = String(formData.get('fullName') ?? '');
-  const result = await updateProfileName({
+  const fields = parseProfileFormFields(formData);
+  const result = await updateProfileService({
     organizationId: tenant.organization.id,
     userId: tenant.user.id,
     clerkUserId: tenant.user.clerkUserId,
-    fullName,
+    organizationDepartments: tenant.organization.departments,
+    ...fields,
   });
 
   if (!result.ok) {
     redirect(`/settings/profile?profile=error&profileError=${encodeURIComponent(result.error)}`);
   }
   redirect('/settings/profile?profile=success');
+}
+
+async function updateNotifications(formData: FormData) {
+  'use server';
+  const tenant = await getDashboardTenant(8000);
+  if (tenant.status === 'unauthenticated') redirect('/sign-in');
+  if (!tenant.organization || !tenant.user) redirect('/onboarding');
+  enforcePageRole('/settings/profile', tenant.user.role);
+
+  const emailEnabled = formData.get('emailEnabled') === 'on';
+  const returnSectionRaw = String(formData.get('returnSection') ?? '');
+  const returnSection = ['profile', 'notifications'].includes(returnSectionRaw) ? returnSectionRaw : 'notifications';
+  const result = await updateNotificationPreference({
+    organizationId: tenant.organization.id,
+    userId: tenant.user.id,
+    emailEnabled,
+  });
+
+  if (!result.ok) {
+    redirect(`/settings/profile?section=${returnSection}&notifications=error&notificationsError=${encodeURIComponent(result.error)}`);
+  }
+  redirect(`/settings/profile?section=${returnSection}&notifications=success`);
 }
 
 async function revokeSession(formData: FormData) {
@@ -65,6 +94,8 @@ export default async function UserSettingsPage() {
       organizationId: tenant.organization.id,
       organizationName: tenant.organization.name,
       organizationSlug: tenant.organization.slug,
+      organizationDepartments: tenant.organization.departments,
+      userId: tenant.user.id,
       clerkUserId: tenant.user.clerkUserId,
       role: tenant.user.role,
       name: tenant.user.name,
@@ -90,7 +121,12 @@ export default async function UserSettingsPage() {
     <DashboardShell>
       <div className="grid gap-4">
         <PageHeader />
-        <UserSettingsShell data={data} updateProfileAction={updateProfile} revokeSessionAction={revokeSession} />
+        <UserSettingsShell
+          data={data}
+          updateProfileAction={updateProfile}
+          updateNotificationsAction={updateNotifications}
+          revokeSessionAction={revokeSession}
+        />
       </div>
     </DashboardShell>
   );

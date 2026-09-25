@@ -363,6 +363,31 @@ model User {
   email                          String
   name                           String?
   role                           Role                          @default(MEMBER)
+  // Self-reported personal/professional profile fields (User Settings ->
+  // Profile). Deliberately separate from Clerk's own identity fields
+  // (name/email/avatar, which stay Clerk-owned) - these have no equivalent
+  // anywhere else in the app, so this is new data, not a duplicate store.
+  jobTitle                       String?
+  // Soft-constrained (not a DB enum/FK) to the owning Organization's own
+  // `departments` string list - the same list Users & Teams and Reports
+  // already treat as that org's authoritative department set - so the
+  // Edit Profile dropdown never lets a user pick a department their
+  // organization hasn't defined.
+  department                     String?
+  phone                          String?
+  location                       String?
+  // IANA timezone identifier (e.g. "America/New_York"), validated against
+  // Intl.supportedValuesOf('timeZone') at write time - never a fabricated
+  // fixed list.
+  timezone                       String?
+  // An organizational fact, not self-reported: no admin UI sets this yet
+  // (out of scope for this change), so it is always null today and User
+  // Settings renders it as a plain, honest "Not set" - a real, correctly
+  // modeled relationship rather than an invented manager.
+  managerId                      String?
+  manager                        User?                         @relation("UserManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports                  User[]                        @relation("UserManager")
+  notificationPreference         UserNotificationPreference?
   createdAt                      DateTime                      @default(now())
   updatedAt                      DateTime                      @updatedAt
   organization                   Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -386,6 +411,32 @@ model User {
 
   @@index([organizationId, role])
   @@index([email])
+  @@index([managerId])
+}
+
+/**
+ * Personal, per-user notification preferences (User Settings -> Notifications).
+ * Deliberately its own tiny table rather than columns on User, matching this
+ * schema's existing pattern of one small dedicated model per concern
+ * (e.g. EvidenceProviderHealth next to EvidenceProviderConnection) - and
+ * because "no row yet" cleanly means "defaults" without a migration-time
+ * backfill.
+ *
+ * emailEnabled controls ONLY the optional, non-critical email nudge sent
+ * when this user (by email) is asked to confirm a manual approval recorded
+ * on their behalf (see app/api/approvals/[id]/confirmations/route.ts).
+ * Disabling it never removes the underlying ApprovalConfirmationRequest,
+ * its audit trail, or the requirement to act on it - those are the actual
+ * compliance mechanism and are never gated by this preference. Only the
+ * convenience email is optional.
+ */
+model UserNotificationPreference {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailEnabled Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Team {
