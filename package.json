@@ -66,6 +66,7 @@
     "test:p1-security": "node --import tsx tests/p1-security-hardening.test.ts",
     "test:access-control": "node --import tsx tests/access-control.test.ts",
     "test:user-settings": "node --import tsx tests/user-settings.test.ts",
+    "test:organization-settings": "node --import tsx tests/organization-settings.test.ts",
     "test:theme": "node --import tsx tests/theme.test.ts",
     "test:e2e:approvals": "playwright test tests/e2e/approval-timeline.spec.ts",
     "readiness": "tsx scripts/readiness.ts",

@@ -704,18 +704,65 @@ function NotificationsTab() {
 
 // ─── Tab: Billing ─────────────────────────────────────────────────────────────
 
+const ACCOUNT_STATUS_TONE: Record<string, { label: string; className: string }> = {
+  ACTIVE: { label: 'Active', className: 'bg-al-success/10 text-al-success' },
+  TRIAL: { label: 'Trial', className: 'bg-al-info/10 text-al-info' },
+  SUSPENDED: { label: 'Suspended', className: 'bg-al-warning/10 text-al-warning' },
+  CHURNED: { label: 'Churned', className: 'bg-al-danger/10 text-al-danger' },
+};
+
 function BillingTab({ data }: { data: SettingsOverview }) {
   const org = data.organization;
+  const billing = data.billing;
+
   return (
     <div className="grid gap-4">
       <SectionCard>
-        <SectionHeader title="Current Plan" />
+        <SectionHeader
+          title="Current Plan"
+          action={
+            billing ? (
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${ACCOUNT_STATUS_TONE[billing.accountStatus]?.className ?? 'bg-al-surface-elevated text-al-text-secondary'}`}>
+                {ACCOUNT_STATUS_TONE[billing.accountStatus]?.label ?? billing.accountStatus}
+              </span>
+            ) : null
+          }
+        />
         <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Organization" value={org.name} />
           <ConfigRow label="Onboarded" value={org.onboardedAt ? new Date(org.onboardedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Pending'} />
+          {billing ? (
+            <>
+              <ConfigRow label="Plan" value={billing.planLabel} />
+              <ConfigRow label="Price" value={billing.planPrice} />
+            </>
+          ) : null}
           <ConfigRow label="Members" value={`${data.stats.totalUsers}`} />
         </div>
       </SectionCard>
+
+      {billing ? (
+        <SectionCard>
+          <SectionHeader title="Seats & Usage" subtitle="Purchased, allocated, and used seats for this workspace" />
+          <div className="divide-y divide-al-border px-6">
+            <ConfigRow label="Purchased seats" value={`${billing.purchasedSeats}`} />
+            <ConfigRow label="Allocated seats" value={`${billing.allocatedSeats}`} />
+            <ConfigRow label="Used seats" value={`${billing.usedSeats}`} />
+            <ConfigRow label="Available seats" value={`${Math.max(0, billing.purchasedSeats - billing.usedSeats)}`} />
+            <ConfigRow
+              label="Utilization"
+              value={billing.purchasedSeats > 0 ? `${Math.round((billing.usedSeats / billing.purchasedSeats) * 100)}%` : '—'}
+              valueClass={billing.purchasedSeats > 0 && billing.usedSeats / billing.purchasedSeats >= 0.9 ? 'text-al-warning' : ''}
+            />
+          </div>
+        </SectionCard>
+      ) : (
+        <SectionCard>
+          <SectionHeader title="Seats & Usage" />
+          <p className="p-6 text-sm text-al-text-muted">This workspace has not yet been provisioned with a plan and seat allocation.</p>
+        </SectionCard>
+      )}
+
       <div className="rounded-xl border border-al-info/20 bg-al-info/10 p-5">
         <p className="text-sm font-semibold text-al-info">Billing is managed externally</p>
         <p className="mt-1 text-xs text-al-text-secondary">
