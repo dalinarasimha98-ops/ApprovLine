@@ -22,7 +22,7 @@ function minutesAgo(ms: number) {
 function badgeClass(action: string) {
   if (action.includes('error') || action.includes('failed')) return 'bg-al-danger/10 text-al-danger border-rose-100';
   if (action.includes('demo')) return 'bg-al-info/10 text-al-accent border-al-info/20';
-  if (action.includes('connected') || action.includes('created')) return 'bg-al-success/10 text-al-success border-emerald-100';
+  if (action.includes('connected') || action.includes('created')) return 'bg-al-success/10 text-al-success border-al-success/20';
   return 'bg-al-surface-elevated text-al-text-secondary border-al-border';
 }
 

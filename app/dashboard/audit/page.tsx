@@ -76,7 +76,7 @@ export default async function ReportsAndExportsPage() {
           label="Available Reports"
           value={summary.availableReports}
           sub="Backed by real export APIs"
-          colorClass="border-al-info/30 bg-al-info/10 text-blue-600"
+          colorClass="border-al-info/30 bg-al-info/10 text-al-accent"
         />
         <SummaryCard
           icon={FileBarChart2}

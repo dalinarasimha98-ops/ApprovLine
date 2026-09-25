@@ -55,7 +55,7 @@ export function MarketplaceSection() {
       <div className="grid gap-5">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-black uppercase tracking-[0.08em] text-al-text-muted">Coming Soon</h3>
-          <span className="rounded-full border border-al-info/30 bg-al-info/10 px-3 py-1 text-xs font-black text-blue-600">
+          <span className="rounded-full border border-al-info/30 bg-al-info/10 px-3 py-1 text-xs font-black text-al-accent">
             {COMING_SOON.length} planned
           </span>
         </div>
@@ -73,7 +73,7 @@ export function MarketplaceSection() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="block text-sm font-black text-al-text">{provider.name}</span>
-                  <span className="rounded-full border border-al-info/30 bg-al-info/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
+                  <span className="rounded-full border border-al-info/30 bg-al-info/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-al-accent">
                     Soon
                   </span>
                 </div>

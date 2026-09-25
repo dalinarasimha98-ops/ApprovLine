@@ -77,7 +77,7 @@ function ManageLink({ href, label = 'Manage' }: { href: string; label?: string }
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info"
+      className="inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info"
     >
       {label} <ExternalLink className="h-3 w-3" />
     </Link>
@@ -129,7 +129,7 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
             {label}
           </span>
         ))}
-        <Link href="/health" className="ml-auto flex items-center gap-1 text-[11px] text-blue-600 hover:text-al-info">
+        <Link href="/health" className="ml-auto flex items-center gap-1 text-[11px] text-al-accent hover:text-al-info">
           View status <ExternalLink className="h-3 w-3" />
         </Link>
       </div>
@@ -139,14 +139,14 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
         {/* Workspace */}
         <SectionCard>
           <SectionHeader title="Workspace" action={<ManageLink href="/dashboard/settings" label="Edit" />} />
-          <div className="divide-y divide-slate-100 px-6">
+          <div className="divide-y divide-al-border px-6">
             <ConfigRow label="Organization" value={org.name} />
             <ConfigRow label="Industry" value={org.industry ?? '—'} />
             <ConfigRow label="Company size" value={org.companySize ?? '—'} />
             <ConfigRow label="Country" value={org.country ?? '—'} />
           </div>
           <div className="px-6 pb-4">
-            <button onClick={() => setTab('organization')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
+            <button onClick={() => setTab('organization')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
               Configure organization <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -155,13 +155,13 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
         {/* Members & Access */}
         <SectionCard>
           <SectionHeader title="Members & Access" action={<ManageLink href="/settings/users" />} />
-          <div className="divide-y divide-slate-100 px-6">
+          <div className="divide-y divide-al-border px-6">
             <ConfigRow label="Users" value={`${stats.totalUsers}`} />
             <ConfigRow label="Teams" value={`${stats.totalTeams}`} />
             <ConfigRow label="Approval categories" value={`${org.approvalCategories.length} configured`} />
           </div>
           <div className="px-6 pb-4">
-            <Link href="/settings/users" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
+            <Link href="/settings/users" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
               Manage users & teams <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -170,7 +170,7 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
         {/* Security */}
         <SectionCard>
           <SectionHeader title="Security" action={<ManageLink href="/settings/identity" label="Configure" />} />
-          <div className="divide-y divide-slate-100 px-6">
+          <div className="divide-y divide-al-border px-6">
             <div className="flex items-center justify-between py-3">
               <span className="text-sm text-al-text-muted">Authentication</span>
               <StatusBadge ok={true} />
@@ -185,7 +185,7 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
             </div>
           </div>
           <div className="px-6 pb-4">
-            <button onClick={() => setTab('security')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
+            <button onClick={() => setTab('security')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
               Manage security <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -194,13 +194,13 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
         {/* Workflows */}
         <SectionCard>
           <SectionHeader title="Workflows" action={<ManageLink href="/playbooks" label="Configure" />} />
-          <div className="divide-y divide-slate-100 px-6">
+          <div className="divide-y divide-al-border px-6">
             <ConfigRow label="Playbooks" value={`${stats.totalPlaybooks} configured`} />
             <ConfigRow label="Classifier" value="Anthropic Claude + OpenAI" />
             <ConfigRow label="Queue" value="BullMQ + Redis" />
           </div>
           <div className="px-6 pb-4">
-            <button onClick={() => setTab('workflow')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
+            <button onClick={() => setTab('workflow')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
               Configure workflows <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -209,13 +209,13 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
         {/* Evidence & Data */}
         <SectionCard>
           <SectionHeader title="Evidence & Data" action={<ManageLink href="/evidence" label="View" />} />
-          <div className="divide-y divide-slate-100 px-6">
+          <div className="divide-y divide-al-border px-6">
             <ConfigRow label="Evidence capture" value="Enabled" valueClass="text-al-success" />
             <ConfigRow label="Deduplication" value="Content-hash idempotency" />
             <ConfigRow label="Cross-source correlation" value="Unified evidence records" />
           </div>
           <div className="px-6 pb-4">
-            <button onClick={() => setTab('evidence')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
+            <button onClick={() => setTab('evidence')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
               Configure evidence <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -224,12 +224,12 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
         {/* Integrations */}
         <SectionCard>
           <SectionHeader title="Integrations" action={<ManageLink href="/dashboard/settings/integrations" />} />
-          <div className="divide-y divide-slate-100 px-6">
+          <div className="divide-y divide-al-border px-6">
             <ConfigRow label="Connected" value={`${stats.activeIntegrations} integration${stats.activeIntegrations !== 1 ? 's' : ''}`} />
             <ConfigRow label="Token security" value="AES-256-GCM at rest" />
           </div>
           <div className="px-6 pb-4">
-            <Link href="/dashboard/settings/integrations" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
+            <Link href="/dashboard/settings/integrations" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-al-accent hover:text-al-info">
               Manage integrations <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -262,7 +262,7 @@ function InputField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-al-info/20"
+        className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
       />
     </div>
   );
@@ -334,7 +334,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
             <button onClick={discard} disabled={saving} className="rounded-lg border border-al-border bg-al-surface px-3 py-1.5 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">
               Discard
             </button>
-            <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-al-info/100 disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-al-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-al-accent-hover disabled:opacity-50">
               {saving && <RefreshCw className="h-3 w-3 animate-spin" />}
               {saving ? 'Saving…' : 'Save changes'}
             </button>
@@ -343,7 +343,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
       )}
 
       {result && (
-        <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${result.ok ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-red-200 bg-al-danger/10 text-red-800'}`}>
+        <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${result.ok ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-al-danger/30 bg-al-danger/10 text-al-danger'}`}>
           {result.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
           {result.msg}
         </div>
@@ -360,7 +360,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
             <select
               value={form.companySize}
               onChange={(e) => update('companySize', e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-al-info/20"
+              className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-al-accent focus:outline-none focus:ring-2 focus:ring-al-info/20"
             >
               <option value="">Select size…</option>
               {sizes.map((s) => <option key={s} value={s}>{s} employees</option>)}
@@ -417,7 +417,7 @@ function SecurityTab() {
     <div className="grid gap-4">
       <SectionCard>
         <SectionHeader title="Authentication" subtitle="Identity and access management via Clerk" action={<ManageLink href="/settings/identity" label="Configure" />} />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Identity provider" value="Clerk" />
           <ConfigRow label="MFA enforcement" value="Configured via Clerk organization settings" />
           <ConfigRow label="SSO" value="Configure in Identity Center" />
@@ -427,7 +427,7 @@ function SecurityTab() {
         <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/settings/identity"
-            className="inline-flex items-center gap-2 rounded-lg border border-al-info/30 bg-al-info/10 px-4 py-2 text-sm font-semibold text-al-info hover:bg-blue-100"
+            className="inline-flex items-center gap-2 rounded-lg border border-al-info/30 bg-al-info/10 px-4 py-2 text-sm font-semibold text-al-info hover:bg-al-info/15"
           >
             <Key className="h-4 w-4" />
             Open Identity Center
@@ -447,7 +447,7 @@ function SecurityTab() {
             'IDOR prevention on all API mutations',
             'RBAC enforced at page, API, and service layers',
           ].map((item) => (
-            <div key={item} className="flex items-start gap-2.5 rounded-lg border border-emerald-100 bg-al-success/10 px-3 py-2.5">
+            <div key={item} className="flex items-start gap-2.5 rounded-lg border border-al-success/20 bg-al-success/10 px-3 py-2.5">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-al-success" />
               <span className="text-xs text-al-text-secondary">{item}</span>
             </div>
@@ -477,14 +477,14 @@ function UsersTab({ data }: { data: SettingsOverview }) {
     <div className="grid gap-4">
       <SectionCard>
         <SectionHeader title="Users & Teams" subtitle="Manage workspace members, teams, roles, and permissions" />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Total users" value={`${data.stats.totalUsers}`} />
           <ConfigRow label="Total teams" value={`${data.stats.totalTeams}`} />
         </div>
         <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/settings/users"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-al-info/100"
+            className="inline-flex items-center gap-2 rounded-lg bg-al-accent px-4 py-2 text-sm font-semibold text-white hover:bg-al-accent-hover"
           >
             <Users className="h-4 w-4" />
             Open Users & Teams
@@ -506,7 +506,7 @@ function UsersTab({ data }: { data: SettingsOverview }) {
                 <th className="px-4 py-3 text-left font-semibold text-al-text-muted">Compliance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-al-border">
               {[
                 { role: 'OWNER', analytics: true, settings: true, investigations: true, compliance: true },
                 { role: 'ADMIN', analytics: true, settings: true, investigations: true, compliance: true },
@@ -538,7 +538,7 @@ function WorkflowTab({ data }: { data: SettingsOverview }) {
     <div className="grid gap-4">
       <SectionCard>
         <SectionHeader title="Classification Pipeline" subtitle="AI-powered approval detection and classification" />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Primary classifier" value="Anthropic Claude" />
           <ConfigRow label="Fallback classifier" value="OpenAI GPT" />
           <ConfigRow label="Queue" value="BullMQ + Redis (concurrency 10)" />
@@ -548,7 +548,7 @@ function WorkflowTab({ data }: { data: SettingsOverview }) {
 
       <SectionCard>
         <SectionHeader title="Playbook AI" subtitle="Compliance playbooks that guide approval evaluation" action={<ManageLink href="/playbooks" label="Manage playbooks" />} />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Configured playbooks" value={`${data.stats.totalPlaybooks}`} />
           <ConfigRow label="Evaluation" value="Per-approval compliance scoring" />
         </div>
@@ -584,7 +584,7 @@ function EvidenceTab() {
     <div className="grid gap-4">
       <SectionCard>
         <SectionHeader title="Evidence Pipeline" subtitle="Capture, deduplication, and correlation settings" />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Evidence capture" value="Enabled" valueClass="text-al-success" />
           <ConfigRow label="Deduplication" value="Content-hash idempotency" />
           <ConfigRow label="Cross-source correlation" value="UnifiedEvidenceRecord" />
@@ -624,7 +624,7 @@ function IntegrationsTab({ data }: { data: SettingsOverview }) {
           title="Connected Integrations"
           subtitle={`${data.stats.activeIntegrations} integration${data.stats.activeIntegrations !== 1 ? 's' : ''} currently connected`}
         />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Token security" value="AES-256-GCM encrypted at rest" />
           <ConfigRow label="OAuth scopes" value="Read-only by design" />
           <ConfigRow label="Providers" value="Slack, Gmail, Teams, Jira, ServiceNow, Zoom" />
@@ -632,7 +632,7 @@ function IntegrationsTab({ data }: { data: SettingsOverview }) {
         <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/dashboard/settings/integrations"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-al-info/100"
+            className="inline-flex items-center gap-2 rounded-lg bg-al-accent px-4 py-2 text-sm font-semibold text-white hover:bg-al-accent-hover"
           >
             <Cable className="h-4 w-4" />
             Manage Integrations
@@ -643,7 +643,7 @@ function IntegrationsTab({ data }: { data: SettingsOverview }) {
 
       <SectionCard>
         <SectionHeader title="Universal Approval Gateway" subtitle="Enterprise system connections via API key" />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Authentication" value="Static API key (timing-safe comparison)" />
           <ConfigRow label="Enterprise systems" value="SAP, Oracle, Coupa, Workday, Salesforce, HubSpot" />
         </div>
@@ -679,7 +679,7 @@ function NotificationsTab() {
     <div className="grid gap-4">
       <SectionCard>
         <SectionHeader title="Notification Channels" action={<ManageLink href="/dashboard/alerts" label="Configure alerts" />} />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           {channels.map(({ label, status }) => (
             <ConfigRow key={label} label={label} value={status} />
           ))}
@@ -710,14 +710,14 @@ function BillingTab({ data }: { data: SettingsOverview }) {
     <div className="grid gap-4">
       <SectionCard>
         <SectionHeader title="Current Plan" />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Organization" value={org.name} />
           <ConfigRow label="Onboarded" value={org.onboardedAt ? new Date(org.onboardedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Pending'} />
           <ConfigRow label="Members" value={`${data.stats.totalUsers}`} />
         </div>
       </SectionCard>
       <div className="rounded-xl border border-al-info/20 bg-al-info/10 p-5">
-        <p className="text-sm font-semibold text-blue-900">Billing is managed externally</p>
+        <p className="text-sm font-semibold text-al-info">Billing is managed externally</p>
         <p className="mt-1 text-xs text-al-text-secondary">
           For plan changes, seat additions, or billing inquiries, contact your account representative at{' '}
           <span className="font-semibold text-al-info">support@approvline.ai</span>
@@ -759,13 +759,13 @@ function AuditTab({ data }: { data: SettingsOverview }) {
     <div className="grid gap-4">
       <SectionCard>
         <SectionHeader title="Audit Configuration" subtitle="All configuration changes are automatically audited" />
-        <div className="divide-y divide-slate-100 px-6">
+        <div className="divide-y divide-al-border px-6">
           <ConfigRow label="Audit logging" value="Enabled — all mutations" />
           <ConfigRow label="Scope" value="Organization-scoped with actor tracking" />
           <ConfigRow label="Retention" value="Full history retained" />
         </div>
         <div className="border-t border-al-border px-6 py-4">
-          <Link href="/dashboard/audit-log" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-al-info/100">
+          <Link href="/dashboard/audit-log" className="inline-flex items-center gap-2 rounded-lg bg-al-accent px-4 py-2 text-sm font-semibold text-white hover:bg-al-accent-hover">
             <ScrollText className="h-4 w-4" />
             Open Audit Logs
             <ExternalLink className="h-3.5 w-3.5" />
@@ -778,7 +778,7 @@ function AuditTab({ data }: { data: SettingsOverview }) {
         {data.recentActivity.length === 0 ? (
           <p className="p-6 text-sm text-al-text-muted">No recent configuration events.</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-al-border">
             {data.recentActivity.map((ev) => (
               <li key={ev.id} className="flex items-center gap-3 px-6 py-3 text-xs">
                 <ScrollText className="h-3.5 w-3.5 shrink-0 text-al-text-muted" />
@@ -815,7 +815,7 @@ function SystemTab({ data }: { data: SettingsOverview }) {
             </span>
           }
         />
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-al-border">
           {checks.map(({ label, status, message }) => (
             <li key={label} className="flex items-center justify-between px-6 py-3">
               <div className="flex items-center gap-2">
@@ -842,7 +842,7 @@ function SystemTab({ data }: { data: SettingsOverview }) {
         <SectionHeader title="Demo Workspace" subtitle="Generate or reset demo data for testing" />
         <div className="flex flex-wrap gap-2 p-6">
           <form action="/api/demo/seed" method="post">
-            <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-al-info/100">
+            <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-al-accent px-4 text-xs font-semibold text-white hover:bg-al-accent-hover">
               Generate Demo Data
             </button>
           </form>
@@ -877,7 +877,7 @@ export function SettingsShell({ data }: { data: SettingsOverview }) {
                   : 'text-al-text-secondary hover:bg-al-surface-elevated hover:text-al-text'
               }`}
             >
-              <Icon className={`h-3.5 w-3.5 shrink-0 ${activeTab === id ? 'text-blue-600' : 'text-al-text-muted'}`} />
+              <Icon className={`h-3.5 w-3.5 shrink-0 ${activeTab === id ? 'text-al-accent' : 'text-al-text-muted'}`} />
               <span className="truncate">{label}</span>
             </button>
           ))}
@@ -891,7 +891,7 @@ export function SettingsShell({ data }: { data: SettingsOverview }) {
             key={id}
             onClick={() => setActiveTab(id)}
             className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold whitespace-nowrap ${
-              activeTab === id ? 'border-blue-500 bg-blue-600 text-white' : 'border-al-border bg-al-surface text-al-text-secondary'
+              activeTab === id ? 'border-al-accent bg-al-accent text-white' : 'border-al-border bg-al-surface text-al-text-secondary'
             }`}
           >
             <Icon className="h-3 w-3" />

@@ -120,7 +120,7 @@ function requestStatusColor(s: string): string {
 function integrationHealthLabel(status: string): { label: string; cls: string } {
   switch (status) {
     case 'CONNECTED': return { label: 'Healthy', cls: 'text-al-success' };
-    case 'SYNCING': return { label: 'Syncing', cls: 'text-blue-600' };
+    case 'SYNCING': return { label: 'Syncing', cls: 'text-al-accent' };
     case 'ERROR': return { label: 'Error', cls: 'text-rose-600' };
     case 'NEEDS_REAUTH': return { label: 'Needs reconnect', cls: 'text-al-warning' };
     default: return { label: 'Not connected', cls: 'text-al-text-muted' };
@@ -332,7 +332,7 @@ function AvailableCard({ p, onRequest }: { p: ShellProvider; onRequest: (name: s
                 </span>
               )}
               {!isBeta && !isComingSoon && (
-                <span className="rounded-full border border-al-info/30 bg-al-info/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
+                <span className="rounded-full border border-al-info/30 bg-al-info/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-al-accent">
                   Available
                 </span>
               )}

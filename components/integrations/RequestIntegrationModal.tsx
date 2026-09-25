@@ -171,10 +171,10 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
           </div>
         ) : state === 'already_requested' ? (
           <div className="rounded-2xl border border-al-info/30 bg-al-info/10 p-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-blue-100 text-2xl">
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-al-info/15 text-2xl">
               📋
             </div>
-            <h3 className="text-lg font-black text-blue-900">Already requested</h3>
+            <h3 className="text-lg font-black text-al-info">Already requested</h3>
             <p className="mt-2 text-sm font-semibold text-al-info">
               You&apos;ve already requested this integration.
               {totalRequests > 1 ? ` ${totalRequests} customers in total have requested it.` : ''}
@@ -182,7 +182,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
             </p>
             <button
               onClick={handleClose}
-              className="mt-5 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-black text-white transition hover:bg-blue-700"
+              className="mt-5 rounded-xl bg-al-accent px-6 py-2.5 text-sm font-black text-white transition hover:bg-blue-700"
             >
               Got it
             </button>

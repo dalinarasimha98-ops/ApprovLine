@@ -226,7 +226,7 @@ export default async function IdentitySettingsPage() {
                     <th className="px-4 py-3">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
+                <tbody className="divide-y divide-al-border">
                   {data.groupMappings.map((mapping) => (
                     <tr key={`${mapping.providerGroup}-${mapping.approvLineRole}`}>
                       <td className="px-4 py-3 font-bold text-al-text">{mapping.providerGroup}</td>

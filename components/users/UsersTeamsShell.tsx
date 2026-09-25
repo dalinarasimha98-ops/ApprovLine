@@ -34,7 +34,7 @@ type Props = {
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-700 border-purple-200',
-  ADMIN: 'bg-blue-100 text-al-accent border-al-info/30',
+  ADMIN: 'bg-al-info/15 text-al-accent border-al-info/30',
   MANAGER: 'bg-indigo-100 text-indigo-700 border-indigo-200',
   MEMBER: 'bg-al-surface-elevated text-al-text-secondary border-al-border',
   AUDITOR: 'bg-amber-100 text-al-warning border-al-warning/30',
@@ -233,7 +233,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
       {/* Toast */}
       {toast && (
         <div className={`fixed right-4 top-4 z-50 flex items-center gap-3 rounded-2xl border px-5 py-3 text-sm font-bold shadow-lg ${
-          toast.type === 'success' ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-red-200 bg-al-danger/10 text-red-800'
+          toast.type === 'success' ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-al-danger/30 bg-al-danger/10 text-al-danger'
         }`}>
           {toast.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           {toast.msg}
@@ -336,7 +336,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
                   <th className="px-4 py-3 text-xs font-black uppercase tracking-wide text-al-text-muted">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-al-border">
                 {filteredUsers.length === 0 && (
                   <tr><td colSpan={5} className="px-4 py-8 text-center text-sm font-semibold text-al-text-muted">No users match your filter.</td></tr>
                 )}
@@ -469,7 +469,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-al-border">
                   {PERMISSION_MATRIX.map((row) => (
                     <tr key={row.permission} className="hover:bg-al-surface-sunken/60">
                       <td className="px-5 py-3">
@@ -516,7 +516,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
                       {canAdmin && <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wide text-al-text-muted">Actions</th>}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-al-border">
                     {data.pendingInvites.map((invite) => (
                       <tr key={invite.email} className="hover:bg-al-surface-sunken/70">
                         <td className="px-4 py-3">
@@ -532,7 +532,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
                           <td className="px-4 py-3">
                             <button
                               onClick={() => handleCancelInvite(invite.email)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-al-danger/10 px-3 py-1.5 text-xs font-black text-al-danger hover:bg-al-danger/15"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-al-danger/30 bg-al-danger/10 px-3 py-1.5 text-xs font-black text-al-danger hover:bg-al-danger/15"
                             >
                               <X className="h-3 w-3" />
                               Cancel
@@ -559,7 +559,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
               <p className="mt-1 text-xs font-semibold text-al-text-muted">User and team events will appear here.</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-al-border">
               {data.recentActivity.map((event) => (
                 <div key={event.id} className="flex items-start gap-4 px-5 py-4">
                   <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-al-surface-elevated">
@@ -669,7 +669,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
             <div className="mt-5 border-t border-al-border pt-4">
               <button
                 onClick={() => handleDeleteTeam(selectedTeam.id)}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-al-danger/10 px-4 py-2 text-sm font-black text-al-danger hover:bg-al-danger/15"
+                className="inline-flex items-center gap-2 rounded-xl border border-al-danger/30 bg-al-danger/10 px-4 py-2 text-sm font-black text-al-danger hover:bg-al-danger/15"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete Team
