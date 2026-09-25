@@ -10,7 +10,7 @@
  * tenant lookup or the evidence fetch take.
  */
 function Bar({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-md bg-white/[0.06] ${className}`} />;
+  return <div className={`animate-pulse rounded-md bg-al-surface/[0.06] ${className}`} />;
 }
 
 function Card({ className = '', children }: { className?: string; children?: React.ReactNode }) {
@@ -67,7 +67,7 @@ export default function EvidenceDetailLoading() {
               <Bar className="h-4 w-48" />
               <div className="mt-4 space-y-3">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                  <div key={index} className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-al-surface/[0.02] p-3">
                     <Bar className="h-8 w-8 shrink-0 rounded-lg" />
                     <div className="flex-1 space-y-2">
                       <Bar className="h-3 w-1/3" />

@@ -56,7 +56,7 @@ function pctChange(current: number | undefined, previous: number | undefined): s
 
 function DarkCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-al-border bg-[#0D1526] p-5 ${className}`}>
+    <div className={`rounded-2xl border border-al-border bg-al-surface p-5 ${className}`}>
       {children}
     </div>
   );
@@ -119,7 +119,7 @@ function ConnectorBars({ items }: { items: CoreAnalytics['connectorActivity'] })
   return (
     <div className="grid gap-2.5">
       {items.length === 0 ? (
-        <div className="rounded-xl border border-al-border bg-[#0A0E1A] p-4 text-center">
+        <div className="rounded-xl border border-al-border bg-al-bg p-4 text-center">
           <p className="text-xs font-semibold text-al-text-muted">No connector data yet.</p>
           <p className="mt-1 text-[11px] text-al-text-secondary">Connect integrations to see approval source activity.</p>
         </div>
@@ -374,14 +374,14 @@ async function ExecutiveDashboardSection({
             <h3 className="font-black text-white">Demo analytics preview — synthetic numbers only</h3>
             <p className="mt-1 text-sm font-semibold text-al-text-secondary">Use this for sales conversations. Every figure is scaled/fabricated.</p>
           </div>
-          <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex h-9 items-center justify-center rounded-lg border border-al-border bg-[#0D1526] px-4 text-sm font-bold text-al-text-secondary hover:bg-[#1a2a45]">
+          <PendingLink href="/analytics" pendingText="Loading live..." className="inline-flex h-9 items-center justify-center rounded-lg border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary hover:bg-[#1a2a45]">
             View live data
           </PendingLink>
         </div>
       )}
 
       {hasNoLiveData && (
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-al-border bg-[#0D1526] p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-al-border bg-al-surface p-4 sm:flex-row sm:items-center">
           <div>
             <h3 className="font-black text-white">No approvals captured yet</h3>
             <p className="mt-1 text-sm font-semibold text-al-text-muted">These are your real, live numbers — zero because no approvals have been captured. Connect an integration to start.</p>
@@ -391,7 +391,7 @@ async function ExecutiveDashboardSection({
               Preview demo
             </PendingLink>
             <form action="/api/demo/seed" method="post">
-              <FormSubmitButton pendingText="Generating..." className="inline-flex h-9 items-center justify-center rounded-lg border border-al-border bg-[#0D1526] px-4 text-sm font-bold text-al-text-secondary">
+              <FormSubmitButton pendingText="Generating..." className="inline-flex h-9 items-center justify-center rounded-lg border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary">
                 Generate demo data
               </FormSubmitButton>
             </form>
@@ -507,7 +507,7 @@ async function ExecutiveDashboardSection({
               <div className="mt-4 flex items-start gap-5">
                 <div className="flex-shrink-0">
                   <SVGDonutChart
-                    segments={deptSegments.length > 0 ? deptSegments : [{ label: 'No data', value: 1, color: '#1E2D4A' }]}
+                    segments={deptSegments.length > 0 ? deptSegments : [{ label: 'No data', value: 1, color: 'rgb(var(--al-border-rgb))' }]}
                     size={140}
                     strokeWidth={24}
                     centerLabel={numberFormat(total)}
@@ -549,7 +549,7 @@ async function ExecutiveDashboardSection({
               <div className="mt-3 flex items-center gap-4">
                 <div className="flex-shrink-0">
                   <SVGDonutChart
-                    segments={riskSegments.length > 0 ? riskSegments : [{ label: 'No data', value: 1, color: '#1E2D4A' }]}
+                    segments={riskSegments.length > 0 ? riskSegments : [{ label: 'No data', value: 1, color: 'rgb(var(--al-border-rgb))' }]}
                     size={130}
                     strokeWidth={22}
                     centerLabel={numberFormat(total)}
@@ -586,7 +586,7 @@ async function ExecutiveDashboardSection({
                 hrefLabel="View all investigations →"
               />
               {report.investigationMetrics.total === 0 ? (
-                <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-xl border border-al-border bg-[#0A0E1A] py-8 text-center">
+                <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-xl border border-al-border bg-al-bg py-8 text-center">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-al-text-muted/10">
                     <svg className="h-5 w-5 text-al-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -616,7 +616,7 @@ async function ExecutiveDashboardSection({
                         <Link
                           key={label}
                           href={`/investigations${status ? `?status=${status}` : ''}`}
-                          className="flex flex-col items-center rounded-xl border border-al-border bg-[#0A0E1A] px-1 py-2.5 text-center transition-colors hover:border-al-border-strong"
+                          className="flex flex-col items-center rounded-xl border border-al-border bg-al-bg px-1 py-2.5 text-center transition-colors hover:border-al-border-strong"
                         >
                           <div className="mb-1.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${color}20` }}>
                             <svg className="h-4.5 w-4.5 h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke={color} strokeWidth={2}>
@@ -635,7 +635,7 @@ async function ExecutiveDashboardSection({
                       ))}
                     </div>
                     {report.investigationMetrics.avgResolutionHours !== null && (
-                      <div className="mt-3 flex items-center gap-2 rounded-lg border border-al-border bg-[#0A0E1A] px-3 py-2">
+                      <div className="mt-3 flex items-center gap-2 rounded-lg border border-al-border bg-al-bg px-3 py-2">
                         <svg className="h-3.5 w-3.5 flex-shrink-0 text-al-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -673,11 +673,11 @@ async function ExecutiveDashboardSection({
                 {/* Show evidence counts only when they have real data */}
                 {(report.evidenceMetrics.totalEvents > 0 || report.evidenceMetrics.unifiedRecords > 0) && (
                   <div className="w-full grid grid-cols-2 gap-2 border-t border-al-border pt-3">
-                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-al-border bg-[#0A0E1A] px-2 py-1.5 hover:border-al-border-strong transition-colors">
+                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-al-border bg-al-bg px-2 py-1.5 hover:border-al-border-strong transition-colors">
                       <span className="text-[9px] font-semibold uppercase tracking-wide text-al-text-muted">Evidence Events</span>
                       <span className="mt-0.5 text-sm font-black text-white">{numberFormat(report.evidenceMetrics.totalEvents)}</span>
                     </Link>
-                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-al-border bg-[#0A0E1A] px-2 py-1.5 hover:border-al-border-strong transition-colors">
+                    <Link href="/analytics/drilldown/traceability" className="flex flex-col rounded-lg border border-al-border bg-al-bg px-2 py-1.5 hover:border-al-border-strong transition-colors">
                       <span className="text-[9px] font-semibold uppercase tracking-wide text-al-text-muted">Unified Records</span>
                       <span className="mt-0.5 text-sm font-black text-white">{numberFormat(report.evidenceMetrics.unifiedRecords)}</span>
                     </Link>
@@ -749,7 +749,7 @@ async function ExecutiveDashboardSection({
                       { label: 'Search Time Saved', value: `${numberFormat(timeSaved.manualSearchHours)}h`, sub: 'manual search', color: '#0891B2' },
                       { label: 'Est. Operational Savings', value: `$${numberFormat(estimatedSavings)}`, sub: `at $${hrRate}/hr assumed`, color: '#F59E0B' },
                     ].map(({ label, value, sub, color }) => (
-                      <div key={label} className="rounded-xl border border-al-border bg-[#0A0E1A] p-3">
+                      <div key={label} className="rounded-xl border border-al-border bg-al-bg p-3">
                         <p className="text-[10px] font-semibold text-al-text-muted">{label}</p>
                         <p className="mt-1.5 text-xl font-black text-white" style={{ color }}>{value}</p>
                         <p className="mt-0.5 text-[10px] text-al-text-secondary">{sub}</p>
@@ -757,7 +757,7 @@ async function ExecutiveDashboardSection({
                     ))}
                   </div>
                 ) : (
-                  <div className="mt-4 rounded-xl border border-al-border bg-[#0A0E1A] px-4 py-6 text-center">
+                  <div className="mt-4 rounded-xl border border-al-border bg-al-bg px-4 py-6 text-center">
                     <p className="text-xs font-bold text-al-text-muted">ROI measurement requires additional historical approval activity.</p>
                     <p className="mt-1 text-[11px] text-al-text-secondary">Connect integrations and capture approvals to generate operational impact metrics.</p>
                   </div>
@@ -793,12 +793,12 @@ function DashboardSkeleton() {
     <div className="grid gap-5">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-32 animate-pulse rounded-2xl border border-al-border bg-[#0D1526]" />
+          <div key={i} className="h-32 animate-pulse rounded-2xl border border-al-border bg-al-surface" />
         ))}
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
-        <div className="h-64 animate-pulse rounded-2xl border border-al-border bg-[#0D1526]" />
-        <div className="h-64 animate-pulse rounded-2xl border border-al-border bg-[#0D1526]" />
+        <div className="h-64 animate-pulse rounded-2xl border border-al-border bg-al-surface" />
+        <div className="h-64 animate-pulse rounded-2xl border border-al-border bg-al-surface" />
       </div>
     </div>
   );

@@ -64,7 +64,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
       {/* Left column — tabs + content */}
       <div className="min-w-0">
         {/* Tab bar */}
-        <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-xl border border-al-border bg-white p-1 shadow-sm">
+        <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-xl border border-al-border bg-al-surface p-1 shadow-sm">
           {TABS.map((tab) => (
             <button
               key={tab}
@@ -77,7 +77,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
             >
               {tab}
               {tab === 'Exports' && summary.recentExportCount > 0 && (
-                <span className="ml-2 rounded-full bg-white/20 px-1.5 text-xs">
+                <span className="ml-2 rounded-full bg-al-surface/20 px-1.5 text-xs">
                   {activeTab === 'Exports' ? summary.recentExportCount : ''}
                 </span>
               )}
@@ -89,7 +89,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
         {activeTab === 'All Reports' && (
           <div className="grid gap-4">
             {/* Filter bar */}
-            <div className="flex flex-col gap-3 rounded-xl border border-al-border bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 rounded-xl border border-al-border bg-al-surface p-4 shadow-sm sm:flex-row sm:items-center">
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-al-text-muted" />
                 <input
@@ -119,7 +119,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
             </div>
 
             {/* Report list */}
-            <div className="overflow-hidden rounded-xl border border-al-border bg-white shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-al-border bg-al-surface shadow-sm">
               {/* Table header — desktop */}
               <div className="hidden grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 border-b border-al-border bg-al-surface-sunken px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-al-text-muted sm:grid">
                 <span>Report Name</span>
@@ -181,7 +181,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
                         href={Object.values(report.exportPaths)[0]}
                         onClick={(e) => e.stopPropagation()}
                         aria-label={`Export ${report.name}`}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 text-xs font-semibold text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 text-xs font-semibold text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
                       >
                         <Download className="h-3.5 w-3.5" />
                         <span className="hidden md:inline">Export</span>
@@ -199,7 +199,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
 
         {/* Exports tab */}
         {activeTab === 'Exports' && (
-          <div className="overflow-hidden rounded-xl border border-al-border bg-white shadow-sm">
+          <div className="overflow-hidden rounded-xl border border-al-border bg-al-surface shadow-sm">
             <div className="border-b border-al-border bg-al-surface-sunken px-5 py-3">
               <h3 className="text-sm font-bold text-al-text">Export History</h3>
               <p className="mt-0.5 text-xs text-al-text-muted">All report exports from this workspace, newest first.</p>
@@ -252,7 +252,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
 
         {/* Scheduled tab — coming soon */}
         {activeTab === 'Scheduled' && (
-          <div className="rounded-xl border border-al-border bg-white shadow-sm">
+          <div className="rounded-xl border border-al-border bg-al-surface shadow-sm">
             <div className="flex flex-col items-center px-6 py-16 text-center">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-al-border bg-al-surface-sunken">
                 <CalendarOff className="h-6 w-6 text-al-text-muted" />
@@ -286,7 +286,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
       {selectedReport && (
         <div className="fixed inset-0 z-50 flex items-end lg:hidden" role="dialog" aria-modal="true">
           <div className="absolute inset-0 bg-black/30" onClick={() => setSelectedId(null)} />
-          <div className="relative z-10 max-h-[80vh] w-full overflow-auto rounded-t-2xl bg-white">
+          <div className="relative z-10 max-h-[80vh] w-full overflow-auto rounded-t-2xl bg-al-surface">
             <ReportDetailPanel report={selectedReport} onClose={() => setSelectedId(null)} />
           </div>
         </div>
@@ -297,7 +297,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
 
 export function ReportsCenterEmpty() {
   return (
-    <div className="rounded-xl border border-al-border bg-white px-6 py-16 text-center shadow-sm">
+    <div className="rounded-xl border border-al-border bg-al-surface px-6 py-16 text-center shadow-sm">
       <FileText className="mx-auto mb-3 h-10 w-10 text-al-text-secondary" />
       <h3 className="text-base font-black text-al-text">No reports available yet.</h3>
       <p className="mt-2 max-w-sm mx-auto text-sm text-al-text-muted">

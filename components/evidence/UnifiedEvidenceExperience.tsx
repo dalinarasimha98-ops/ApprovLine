@@ -529,7 +529,7 @@ export function UnifiedEvidenceExperience({
             <span className="text-al-text-secondary">{initialData.id}</span>
           </div>
 
-          <div className="order-3 flex min-w-full flex-1 items-center rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 shadow-[0_0_0_1px_rgba(37,99,235,0.08)] lg:order-none lg:mx-auto lg:min-w-0 lg:max-w-xl">
+          <div className="order-3 flex min-w-full flex-1 items-center rounded-lg border border-white/10 bg-al-surface/[0.04] px-3 py-2 shadow-[0_0_0_1px_rgba(37,99,235,0.08)] lg:order-none lg:mx-auto lg:min-w-0 lg:max-w-xl">
             <Search className="h-4 w-4 text-al-text-muted" />
             <input
               value={query}
@@ -549,7 +549,7 @@ export function UnifiedEvidenceExperience({
             <button
               type="button"
               onClick={() => setToast('Notifications are routed through workspace alerts.')}
-              className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-al-text-secondary transition hover:bg-white/[0.08]"
+              className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-al-surface/[0.04] text-al-text-secondary transition hover:bg-al-surface/[0.08]"
               aria-label="Notifications"
             >
               <Activity className="h-4 w-4" />
@@ -698,7 +698,7 @@ export function UnifiedEvidenceExperience({
                         type="button"
                         onClick={() => void refreshTimeline()}
                         disabled={refreshing}
-                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary transition hover:bg-al-surface/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                         Refresh
@@ -730,7 +730,7 @@ export function UnifiedEvidenceExperience({
                       groupedEvents.map((group) => (
                         <div key={group.key}>
                           {groupBy !== 'none' ? (
-                            <div className="border-b border-white/[0.08] bg-white/[0.025] px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-al-text-muted">
+                            <div className="border-b border-white/[0.08] bg-al-surface/[0.025] px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-al-text-muted">
                               {group.label}
                             </div>
                           ) : null}
@@ -745,7 +745,7 @@ export function UnifiedEvidenceExperience({
                                 <button
                                   type="button"
                                   onClick={() => setExpandedId(expanded ? null : event.id)}
-                                  className="grid w-full grid-cols-[92px_minmax(150px,220px)_minmax(0,1fr)] items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.035] lg:grid-cols-[104px_minmax(180px,230px)_minmax(0,1fr)_170px_210px]"
+                                  className="grid w-full grid-cols-[92px_minmax(150px,220px)_minmax(0,1fr)] items-center gap-3 px-4 py-3 text-left transition hover:bg-al-surface/[0.035] lg:grid-cols-[104px_minmax(180px,230px)_minmax(0,1fr)_170px_210px]"
                                 >
                                   <div className="flex items-start gap-3">
                                     <span className="mt-1 h-2.5 w-2.5 rounded-full" style={{ backgroundColor: info.color }} />
@@ -785,7 +785,7 @@ export function UnifiedEvidenceExperience({
 
                                 {expanded ? (
                                   <div className="grid gap-3 border-t border-white/[0.07] bg-[#020a15] px-4 py-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)]">
-                                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+                                    <div className="rounded-xl border border-white/[0.08] bg-al-surface/[0.025] p-4">
                                       <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">Original evidence</p>
                                       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-al-text-secondary">{event.content ?? 'No body text was stored for this source event.'}</p>
                                       <div className="mt-4 flex flex-wrap gap-2">
@@ -800,7 +800,7 @@ export function UnifiedEvidenceExperience({
                                             Open source
                                           </a>
                                         ) : (
-                                          <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-al-text-muted">
+                                          <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.04] px-3 py-2 text-xs font-bold text-al-text-muted">
                                             <LockKeyhole className="h-4 w-4" />
                                             Source link unavailable
                                           </span>
@@ -841,7 +841,7 @@ export function UnifiedEvidenceExperience({
                         type="button"
                         onClick={() => void loadMore()}
                         disabled={loadingMore}
-                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-al-text-secondary transition hover:bg-white/[0.08] disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-al-surface/[0.04] px-4 py-2 text-xs font-bold text-al-text-secondary transition hover:bg-al-surface/[0.08] disabled:opacity-60"
                       >
                         {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
                         Load more evidence
@@ -934,7 +934,7 @@ export function UnifiedEvidenceExperience({
                       className={`w-full rounded-xl border p-2 text-center transition ${
                         providerFilter === provider.providerKey
                           ? 'border-blue-400/50 bg-blue-500/[0.14]'
-                          : 'border-white/[0.08] bg-white/[0.035] hover:border-blue-300/30 hover:bg-blue-500/[0.08]'
+                          : 'border-white/[0.08] bg-al-surface/[0.035] hover:border-blue-300/30 hover:bg-blue-500/[0.08]'
                       }`}
                     >
                       <span className="relative inline-flex">
@@ -974,7 +974,7 @@ export function UnifiedEvidenceExperience({
             <FlagshipSideCard title={`Related Records (${related.length})`} action="View all" onAction={() => setActiveTab('related')}>
               <div className="space-y-2">
                 {related.length > 0 ? related.slice(0, 4).map((item) => (
-                  <div key={item.id} className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+                  <div key={item.id} className="flex gap-3 rounded-xl border border-white/[0.07] bg-al-surface/[0.025] p-3">
                     <ProviderMark providerKey={item.providerKey} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate text-xs font-bold text-al-text-secondary">{item.label}</p>
@@ -990,13 +990,13 @@ export function UnifiedEvidenceExperience({
         </div>
 
         <div className="fixed right-4 top-16 z-40 flex flex-wrap justify-end gap-2">
-          <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-white/[0.08]">
+          <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-al-surface/[0.08]">
             <ArrowDownToLine className="h-4 w-4" /> Export
           </button>
-          <button type="button" onClick={() => void copyText(window.location.href, 'Share link')} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-white/[0.08]">
+          <button type="button" onClick={() => void copyText(window.location.href, 'Share link')} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-al-surface/[0.08]">
             <Share2 className="h-4 w-4" /> Share
           </button>
-          <Link href={`/audit-logs?evidence=${encodeURIComponent(initialData.id)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-white/[0.08]">
+          <Link href={`/audit-logs?evidence=${encodeURIComponent(initialData.id)}`} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-[#0a1728] px-3 text-xs font-bold text-al-text-secondary shadow-xl transition hover:bg-al-surface/[0.08]">
             <History className="h-4 w-4" /> Audit Log
           </Link>
           <div className="relative">
@@ -1005,9 +1005,9 @@ export function UnifiedEvidenceExperience({
             </button>
             {actionsOpen ? (
               <div className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-[#081525] p-2 shadow-2xl">
-                <button type="button" onClick={() => void copyText(initialData.id, 'Decision ID')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-white/[0.06]">Copy decision ID</button>
-                <button type="button" onClick={() => void copyText(evidenceHash, 'Evidence hash')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-white/[0.06]">Copy evidence hash</button>
-                <button type="button" onClick={() => void refreshTimeline()} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-white/[0.06]">Refresh timeline</button>
+                <button type="button" onClick={() => void copyText(initialData.id, 'Decision ID')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-al-surface/[0.06]">Copy decision ID</button>
+                <button type="button" onClick={() => void copyText(evidenceHash, 'Evidence hash')} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-al-surface/[0.06]">Copy evidence hash</button>
+                <button type="button" onClick={() => void refreshTimeline()} className="w-full rounded-lg px-3 py-2 text-left text-xs font-bold text-al-text-secondary hover:bg-al-surface/[0.06]">Refresh timeline</button>
               </div>
             ) : null}
           </div>
@@ -1029,7 +1029,7 @@ export function UnifiedEvidenceExperience({
 
 function FlagshipMetadata({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
+    <div className="rounded-xl border border-white/[0.08] bg-al-surface/[0.025] p-3">
       <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">{label}</p>
       <p className="mt-1 break-words text-xs leading-5 text-al-text-secondary">{value}</p>
     </div>
@@ -1065,7 +1065,7 @@ function FlagshipSideCard({
 function FlagshipAttachmentRow({ attachment }: { attachment: AttachmentItem }) {
   const url = safeUrl(attachment.url);
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+    <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-al-surface/[0.025] p-3">
       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-blue-300/15 bg-blue-500/[0.12] text-blue-300">
         <FileText className="h-4 w-4" />
       </div>
@@ -1127,7 +1127,7 @@ function FlagshipTabPanel({
           </p>
           <div className="mt-4 space-y-2">
             {(confidenceReasons.length ? confidenceReasons : ['No explicit matching reasons were stored for this record.']).map((reason) => (
-              <div key={reason} className="flex gap-2 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3 text-sm text-al-text-secondary">
+              <div key={reason} className="flex gap-2 rounded-lg border border-white/[0.07] bg-al-surface/[0.025] p-3 text-sm text-al-text-secondary">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-al-success" />
                 {reason}
               </div>
@@ -1143,7 +1143,7 @@ function FlagshipTabPanel({
             ['Risk level', titleCase(initialData.riskLevel ?? 'Not assessed')],
             ['Verification status', titleCase(initialData.verificationStatus)],
           ].map(([label, value]) => (
-            <div key={label} className="mt-3 flex items-center justify-between rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+            <div key={label} className="mt-3 flex items-center justify-between rounded-lg border border-white/[0.07] bg-al-surface/[0.025] p-3">
               <span className="text-xs font-semibold text-al-text-muted">{label}</span>
               <span className="text-sm font-black text-al-text">{value}</span>
             </div>
@@ -1233,7 +1233,7 @@ function FlagshipTabPanel({
               ['Evidence locked', dateTime(initialData.updatedAt), `Hash: ${events[0]?.evidenceHash ?? initialData.id}`],
               ['Correlation version', dateTime(initialData.updatedAt), 'Current production correlation engine.'],
             ].map(([title, time, detail]) => (
-              <div key={title} className="flex gap-3 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+              <div key={title} className="flex gap-3 rounded-lg border border-white/[0.07] bg-al-surface/[0.025] p-3">
                 <CircleDot className="mt-1 h-4 w-4 shrink-0 text-blue-300" />
                 <div>
                   <p className="text-sm font-bold text-white">{title}</p>
@@ -1294,7 +1294,7 @@ function FlagshipProviderDrawer({ provider, onClose }: { provider: EvidenceProvi
             ['Latency', provider.connection?.health?.latencyMs != null ? `${provider.connection.health.latencyMs}ms` : 'Not reported'],
             ['Consecutive failures', String(provider.connection?.health?.consecutiveFailures ?? 0)],
           ].map(([label, value]) => (
-            <div key={label} className="flex items-center justify-between gap-4 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+            <div key={label} className="flex items-center justify-between gap-4 rounded-lg border border-white/[0.07] bg-al-surface/[0.025] p-3">
               <span className="text-xs font-semibold text-al-text-muted">{label}</span>
               <span className="text-right text-xs font-black text-al-text-secondary">{value}</span>
             </div>
@@ -1510,7 +1510,7 @@ function ProviderMark({ providerKey, size = 'md' }: { providerKey: string; size?
   const dimensions = size === 'lg' ? 'h-11 w-11 text-xs' : size === 'sm' ? 'h-7 w-7 text-[8px]' : 'h-9 w-9 text-[10px]';
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.06] font-black shadow-inner ${dimensions}`}
+      className={`grid shrink-0 place-items-center rounded-lg border border-white/10 bg-al-surface/[0.06] font-black shadow-inner ${dimensions}`}
       style={{ color: info.color }}
       title={info.label}
     >
@@ -1624,7 +1624,7 @@ function RiskRadarChart({ dimensions }: { dimensions: RiskDimension[] }) {
       <div className="w-full space-y-2">
         <p className={`text-sm font-black ${tone}`}>Overall risk score: {overallScore} / 100</p>
         {dimensions.map((dimension) => (
-          <div key={dimension.label} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2">
+          <div key={dimension.label} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-al-surface/[0.025] px-3 py-2">
             <span className="text-xs font-semibold text-al-text-muted">{dimension.label}</span>
             <span className="text-xs font-black text-al-text-secondary">{dimension.score}</span>
           </div>
@@ -1681,7 +1681,7 @@ function renderRiskRadar(evaluation: ComplianceEvaluation | null | undefined): R
 
 function EmptyPanel({ title, text }: { title: string; text: string }) {
   return (
-    <div className="grid min-h-[280px] place-items-center rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
+    <div className="grid min-h-[280px] place-items-center rounded-xl border border-dashed border-white/10 bg-al-surface/[0.02] p-8 text-center">
       <div>
         <Archive className="mx-auto h-8 w-8 text-al-text-secondary" />
         <h3 className="mt-4 text-sm font-bold text-al-text-secondary">{title}</h3>
@@ -1907,7 +1907,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search evidence..."
-              className="h-9 w-full rounded-lg border border-white/10 bg-white/[0.04] pl-9 pr-3 text-xs text-al-text-secondary outline-none transition placeholder:text-al-text-secondary focus:border-blue-500/60"
+              className="h-9 w-full rounded-lg border border-white/10 bg-al-surface/[0.04] pl-9 pr-3 text-xs text-al-text-secondary outline-none transition placeholder:text-al-text-secondary focus:border-blue-500/60"
             />
           </label>
           <label className="relative">
@@ -1980,7 +1980,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                       type="button"
                       aria-expanded={expanded}
                       onClick={() => setExpandedId(expanded ? null : event.id)}
-                      className="grid w-full grid-cols-[82px_1fr_auto] items-center gap-3 px-3 py-3 text-left transition hover:bg-white/[0.025] sm:grid-cols-[95px_185px_minmax(180px,1fr)_155px_auto]"
+                      className="grid w-full grid-cols-[82px_1fr_auto] items-center gap-3 px-3 py-3 text-left transition hover:bg-al-surface/[0.025] sm:grid-cols-[95px_185px_minmax(180px,1fr)_155px_auto]"
                     >
                       <span className="relative pl-4">
                         <span
@@ -2081,13 +2081,13 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                                 href={sourceUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-[10px] font-bold text-blue-300 hover:border-blue-500/40"
+                                className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.04] px-3 text-[10px] font-bold text-blue-300 hover:border-blue-500/40"
                               >
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 Open immutable source
                               </a>
                             ) : (
-                              <span className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 text-[10px] font-semibold text-al-text-secondary">
+                              <span className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/[0.06] bg-al-surface/[0.02] px-3 text-[10px] font-semibold text-al-text-secondary">
                                 <LockKeyhole className="h-3.5 w-3.5" />
                                 Source URL unavailable
                               </span>
@@ -2098,7 +2098,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                                 void navigator.clipboard.writeText(event.evidenceHash);
                                 showToast('Evidence hash copied.');
                               }}
-                              className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-[10px] font-bold text-al-text-secondary hover:border-blue-500/40"
+                              className="inline-flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.04] px-3 text-[10px] font-bold text-al-text-secondary hover:border-blue-500/40"
                             >
                               <Fingerprint className="h-3.5 w-3.5" />
                               Copy evidence hash
@@ -2163,7 +2163,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
     if (activeTab === 'analysis') {
       return (
         <div className="grid gap-4 p-4 lg:grid-cols-2">
-          <section className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+          <section className="rounded-xl border border-white/[0.08] bg-al-surface/[0.025] p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-al-accent">What AI observed</p>
             <h2 className="mt-2 text-lg font-bold text-white">{initialData.subject}</h2>
             <p className="mt-2 text-xs leading-6 text-al-text-muted">
@@ -2173,7 +2173,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             <div className="mt-4 grid gap-2">
               {matchingReasons.length ? (
                 matchingReasons.map((reason) => (
-                  <div key={reason} className="flex items-start gap-2 rounded-lg bg-white/[0.025] p-2.5 text-xs text-al-text-secondary">
+                  <div key={reason} className="flex items-start gap-2 rounded-lg bg-al-surface/[0.025] p-2.5 text-xs text-al-text-secondary">
                     <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-al-success" />
                     {reason}
                   </div>
@@ -2185,7 +2185,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               )}
             </div>
           </section>
-          <section className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+          <section className="rounded-xl border border-white/[0.08] bg-al-surface/[0.025] p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-300">Confidence breakdown</p>
             <div className="mt-4 grid gap-4">
               {[
@@ -2212,7 +2212,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                     <span className="font-semibold text-al-text-muted">{label}</span>
                     <span className="font-bold text-al-text-secondary">{value}%</span>
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-al-surface/[0.05]">
                     <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500" style={{ width: `${value}%` }} />
                   </div>
                 </div>
@@ -2232,7 +2232,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
     }
     if (activeTab === 'details') {
       return (
-        <dl className="grid gap-px bg-white/[0.06] sm:grid-cols-2 lg:grid-cols-3">
+        <dl className="grid gap-px bg-al-surface/[0.06] sm:grid-cols-2 lg:grid-cols-3">
           {[
             ['Decision', initialData.decision ?? initialData.outcome ?? 'Not captured'],
             ['Category', initialData.category ?? 'Not captured'],
@@ -2267,7 +2267,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
       return participants.length ? (
         <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
           {participants.map((participant) => (
-            <div key={participant.email ?? participant.name} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
+            <div key={participant.email ?? participant.name} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-al-surface/[0.025] p-3">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-blue-500/30 to-violet-500/30 text-xs font-black text-blue-200">
                 {participant.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}
               </span>
@@ -2287,7 +2287,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
       return attachments.length ? (
         <div className="grid gap-3 p-4 sm:grid-cols-2">
           {attachments.map((attachment) => (
-            <div key={attachment.id} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3">
+            <div key={attachment.id} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-al-surface/[0.025] p-3">
               <span className="grid h-10 w-10 place-items-center rounded-lg bg-al-info/10 text-blue-300"><File className="h-5 w-5" /></span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs font-bold text-al-text-secondary">{attachment.name}</span>
@@ -2309,7 +2309,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
       return related.length ? (
         <div className="grid gap-3 p-4 sm:grid-cols-2">
           {related.map((item) => (
-            <button key={item.id} type="button" onClick={() => { setActiveTab('timeline'); setExpandedId(item.eventId); }} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 text-left hover:border-blue-500/30">
+            <button key={item.id} type="button" onClick={() => { setActiveTab('timeline'); setExpandedId(item.eventId); }} className="flex items-center gap-3 rounded-xl border border-white/[0.08] bg-al-surface/[0.025] p-3 text-left hover:border-blue-500/30">
               <ProviderMark providerKey={item.providerKey} />
               <span className="min-w-0">
                 <span className="block truncate text-xs font-bold text-al-text-secondary">{item.label}</span>
@@ -2325,7 +2325,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
     return (
       <div className="grid gap-3 p-4">
         {events.map((event) => (
-          <div key={event.id} className="grid gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:grid-cols-[160px_1fr_auto] sm:items-center">
+          <div key={event.id} className="grid gap-2 rounded-xl border border-white/[0.08] bg-al-surface/[0.025] p-3 sm:grid-cols-[160px_1fr_auto] sm:items-center">
             <span className="text-[10px] font-semibold text-al-text-muted">{dateTime(event.receivedAt)}</span>
             <span className="text-xs text-al-text-secondary">
               Evidence received from <strong>{providerInfo(event.providerKey).label}</strong> and recorded as {titleCase(event.status)}.
@@ -2353,13 +2353,13 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
             <span className="truncate text-al-text-secondary">{initialData.id}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[11px] font-bold text-al-text-secondary hover:border-blue-500/40 hover:text-white">
+            <button type="button" onClick={exportRecord} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.035] px-3 text-[11px] font-bold text-al-text-secondary hover:border-blue-500/40 hover:text-white">
               <ArrowDownToLine className="h-3.5 w-3.5" /> Export
             </button>
-            <button type="button" onClick={() => void shareRecord()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[11px] font-bold text-al-text-secondary hover:border-blue-500/40 hover:text-white">
+            <button type="button" onClick={() => void shareRecord()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.035] px-3 text-[11px] font-bold text-al-text-secondary hover:border-blue-500/40 hover:text-white">
               <Share2 className="h-3.5 w-3.5" /> Share
             </button>
-            <button type="button" onClick={() => setActiveTab('audit')} className="hidden h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-[11px] font-bold text-al-text-secondary hover:border-blue-500/40 hover:text-white sm:inline-flex">
+            <button type="button" onClick={() => setActiveTab('audit')} className="hidden h-9 items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.035] px-3 text-[11px] font-bold text-al-text-secondary hover:border-blue-500/40 hover:text-white sm:inline-flex">
               <History className="h-3.5 w-3.5" /> Audit Log
             </button>
             <div className="relative">
@@ -2369,10 +2369,10 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               {actionsOpen ? (
                 <div className="absolute right-0 top-11 z-30 w-52 rounded-xl border border-white/10 bg-[#071426] p-1.5 shadow-2xl">
                   {initialData.primaryApproval ? (
-                    <PendingLink href={`/approvals/${initialData.primaryApproval.id}`} pendingText="Opening approval..." className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-white/[0.05]"><ClipboardCheck className="h-3.5 w-3.5" /> View full approval</PendingLink>
+                    <PendingLink href={`/approvals/${initialData.primaryApproval.id}`} pendingText="Opening approval..." className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface/[0.05]"><ClipboardCheck className="h-3.5 w-3.5" /> View full approval</PendingLink>
                   ) : null}
-                  <button type="button" onClick={() => { setActiveTab('analysis'); setActionsOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-al-text-secondary hover:bg-white/[0.05]"><Sparkles className="h-3.5 w-3.5" /> Explain correlation</button>
-                  <Link href="/investigations" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-white/[0.05]"><AlertTriangle className="h-3.5 w-3.5" /> Open investigation center</Link>
+                  <button type="button" onClick={() => { setActiveTab('analysis'); setActionsOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-al-text-secondary hover:bg-al-surface/[0.05]"><Sparkles className="h-3.5 w-3.5" /> Explain correlation</button>
+                  <Link href="/investigations" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface/[0.05]"><AlertTriangle className="h-3.5 w-3.5" /> Open investigation center</Link>
                 </div>
               ) : null}
             </div>
@@ -2393,7 +2393,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                     {titleCase(initialData.verificationStatus)}
                   </span>
                   {initialData.riskLevel ? (
-                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-bold text-al-text-muted">
+                    <span className="rounded-full border border-white/10 bg-al-surface/[0.04] px-2 py-1 text-[9px] font-bold text-al-text-muted">
                       {titleCase(initialData.riskLevel)} risk
                     </span>
                   ) : null}
@@ -2502,7 +2502,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                     key={provider.providerKey}
                     type="button"
                     onClick={() => setProviderDrawer(provider)}
-                    className="group grid min-w-0 place-items-center gap-1.5 rounded-lg border border-white/[0.07] bg-white/[0.025] px-1 py-2 hover:border-blue-500/30"
+                    className="group grid min-w-0 place-items-center gap-1.5 rounded-lg border border-white/[0.07] bg-al-surface/[0.025] px-1 py-2 hover:border-blue-500/30"
                     title={`Open ${providerInfo(provider.providerKey).label} diagnostics`}
                   >
                     <ProviderMark providerKey={provider.providerKey} />
@@ -2520,7 +2520,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               </div>
               <div className="mt-3 grid gap-2">
                 {attachments.length ? attachments.slice(0, 4).map((attachment) => (
-                  <div key={attachment.id} className="flex items-center gap-2 rounded-lg bg-white/[0.025] p-2">
+                  <div key={attachment.id} className="flex items-center gap-2 rounded-lg bg-al-surface/[0.025] p-2">
                     <FileText className="h-4 w-4 shrink-0 text-blue-300" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[10px] font-semibold text-al-text-secondary">{attachment.name}</span>
@@ -2541,7 +2541,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
               </div>
               <div className="mt-3 grid gap-2">
                 {related.length ? related.slice(0, 4).map((item) => (
-                  <button key={item.id} type="button" onClick={() => { setActiveTab('timeline'); setExpandedId(item.eventId); }} className="flex min-w-0 items-center gap-2 rounded-lg bg-white/[0.025] p-2 text-left">
+                  <button key={item.id} type="button" onClick={() => { setActiveTab('timeline'); setExpandedId(item.eventId); }} className="flex min-w-0 items-center gap-2 rounded-lg bg-al-surface/[0.025] p-2 text-left">
                     <ProviderMark providerKey={item.providerKey} size="sm" />
                     <span className="min-w-0">
                       <span className="block truncate text-[10px] font-semibold text-al-text-secondary">{item.label}</span>
@@ -2603,7 +2603,7 @@ export function LegacyUnifiedEvidenceExperience({ initialData }: { initialData: 
                 ['Latency', providerDrawer.connection?.health?.latencyMs != null ? `${providerDrawer.connection.health.latencyMs}ms` : 'Not reported'],
                 ['Consecutive failures', String(providerDrawer.connection?.health?.consecutiveFailures ?? 0)],
               ].map(([label, value]) => (
-                <div key={label} className="flex items-center justify-between gap-4 rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+                <div key={label} className="flex items-center justify-between gap-4 rounded-lg border border-white/[0.07] bg-al-surface/[0.025] p-3">
                   <span className="text-xs font-semibold text-al-text-muted">{label}</span>
                   <span className="text-right text-xs font-bold text-al-text-secondary">{value}</span>
                 </div>

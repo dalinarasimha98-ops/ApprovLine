@@ -598,7 +598,7 @@ export function InvestigationCenter({
         )}
         <button type="submit" className="h-9 px-3 rounded-lg bg-al-accent hover:bg-al-accent-hover text-sm font-semibold text-white transition flex items-center gap-1.5">
           <Filter className="w-3.5 h-3.5" />
-          {activeFilters > 0 && <span className="bg-white/20 rounded-full px-1.5 py-0.5 text-xs">{activeFilters}</span>}
+          {activeFilters > 0 && <span className="bg-al-surface/20 rounded-full px-1.5 py-0.5 text-xs">{activeFilters}</span>}
         </button>
         <button
           type="button"

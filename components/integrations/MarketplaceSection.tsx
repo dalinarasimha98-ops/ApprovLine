@@ -67,7 +67,7 @@ export function MarketplaceSection() {
           {COMING_SOON.map((provider) => (
             <div
               key={provider.slug}
-              className="flex items-start gap-4 rounded-2xl border border-al-border bg-white p-5 shadow-sm"
+              className="flex items-start gap-4 rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm"
             >
               <ProviderIcon name={provider.name} color={provider.color} />
               <div className="min-w-0 flex-1">
@@ -81,7 +81,7 @@ export function MarketplaceSection() {
                 <p className="mt-1.5 text-xs font-semibold leading-5 text-al-text-muted">{provider.description}</p>
                 <button
                   onClick={() => openModal({ name: provider.name, slug: provider.slug })}
-                  className="mt-3 rounded-lg border border-al-border bg-white px-3 py-1.5 text-xs font-black text-al-text-secondary transition hover:bg-al-surface-sunken hover:text-al-text"
+                  className="mt-3 rounded-lg border border-al-border bg-al-surface px-3 py-1.5 text-xs font-black text-al-text-secondary transition hover:bg-al-surface-sunken hover:text-al-text"
                 >
                   Request access
                 </button>
@@ -121,7 +121,7 @@ export function MarketplaceSection() {
           </div>
           <a
             href={`/dashboard/gateway`}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-300 bg-white px-5 py-3 text-sm font-black text-violet-700 transition hover:bg-violet-50"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-300 bg-al-surface px-5 py-3 text-sm font-black text-violet-700 transition hover:bg-violet-50"
           >
             Use Generic Connector
           </a>

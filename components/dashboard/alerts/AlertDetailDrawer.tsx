@@ -58,7 +58,7 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
         role="dialog"
         aria-modal="true"
         aria-label="Alert detail"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col overflow-hidden border-l border-al-border bg-white shadow-2xl lg:max-w-lg"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col overflow-hidden border-l border-al-border bg-al-surface shadow-2xl lg:max-w-lg"
       >
         {/* header */}
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-al-border bg-al-surface-sunken px-5 py-4">
@@ -177,7 +177,7 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
         </div>
 
         {/* sticky footer with actions */}
-        <div className="shrink-0 border-t border-al-border bg-white px-5 py-4">
+        <div className="shrink-0 border-t border-al-border bg-al-surface px-5 py-4">
           <div className="grid gap-2">
             <form action={investigateAction}>
               <input type="hidden" name="approvalId" value={alert.id} />

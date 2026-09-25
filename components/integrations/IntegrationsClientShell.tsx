@@ -166,7 +166,7 @@ function SearchBar({ value, onChange }: { value: string; onChange: (v: string) =
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search integrations (e.g. Slack, Gmail, Jira…)"
-        className="w-full rounded-xl border border-al-border bg-white py-3 pl-10 pr-4 text-sm font-semibold text-al-text shadow-sm outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-xl border border-al-border bg-al-surface py-3 pl-10 pr-4 text-sm font-semibold text-al-text shadow-sm outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
         aria-label="Search integrations"
       />
       {value && (
@@ -208,7 +208,7 @@ function CategoryTabs({
           className={`rounded-full border px-3.5 py-1.5 text-xs font-black transition ${
             active === cat
               ? 'border-al-accent bg-al-accent text-white'
-              : 'border-al-border bg-white text-al-text-secondary hover:border-al-border-strong hover:bg-al-surface-sunken'
+              : 'border-al-border bg-al-surface text-al-text-secondary hover:border-al-border-strong hover:bg-al-surface-sunken'
           }`}
         >
           {cat}
@@ -217,7 +217,7 @@ function CategoryTabs({
       {hasMore && (
         <button
           onClick={() => setShowAll((p) => !p)}
-          className="rounded-full border border-al-border bg-white px-3.5 py-1.5 text-xs font-black text-al-text-muted hover:bg-al-surface-sunken transition"
+          className="rounded-full border border-al-border bg-al-surface px-3.5 py-1.5 text-xs font-black text-al-text-muted hover:bg-al-surface-sunken transition"
         >
           {showAll ? 'Show less' : `More (${allCategories.length - VISIBLE})`}
         </button>
@@ -231,7 +231,7 @@ function ConnectedCard({ p }: { p: ShellProvider }) {
   const isNeedsReauth = p.integrationStatus === 'NEEDS_REAUTH' || p.integrationStatus === 'ERROR';
 
   return (
-    <div className="group flex flex-col gap-4 rounded-2xl border border-al-border bg-white p-5 shadow-sm transition hover:border-al-border-strong hover:shadow-md">
+    <div className="group flex flex-col gap-4 rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm transition hover:border-al-border-strong hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <ProviderIcon slug={p.slug} name={p.displayName} size="md" />
@@ -287,7 +287,7 @@ function ConnectedCard({ p }: { p: ShellProvider }) {
             <input type="hidden" name="integrationId" value={p.integrationId} />
             <FormSubmitButton
               pendingText="Syncing…"
-              className="min-h-0 h-7 rounded-lg border border-al-border bg-white px-3 text-xs font-black text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
+              className="min-h-0 h-7 rounded-lg border border-al-border bg-al-surface px-3 text-xs font-black text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
             >
               Sync now
             </FormSubmitButton>
@@ -298,7 +298,7 @@ function ConnectedCard({ p }: { p: ShellProvider }) {
             <ConfirmSubmitButton
               pendingText="Disconnecting…"
               confirmMessage={`Disconnect ${p.displayName}? ApprovLine will stop ingesting new evidence. Existing evidence is preserved.`}
-              className="min-h-0 h-7 rounded-lg border border-rose-200 bg-white px-3 text-xs font-black text-rose-700 shadow-sm hover:bg-rose-50"
+              className="min-h-0 h-7 rounded-lg border border-rose-200 bg-al-surface px-3 text-xs font-black text-rose-700 shadow-sm hover:bg-rose-50"
             >
               Disconnect
             </ConfirmSubmitButton>
@@ -314,7 +314,7 @@ function AvailableCard({ p, onRequest }: { p: ShellProvider; onRequest: (name: s
   const isComingSoon = p.status === 'COMING_SOON';
 
   return (
-    <div className="group flex flex-col gap-3 rounded-2xl border border-al-border bg-white p-4 shadow-sm transition hover:border-al-border-strong hover:shadow-md">
+    <div className="group flex flex-col gap-3 rounded-2xl border border-al-border bg-al-surface p-4 shadow-sm transition hover:border-al-border-strong hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <ProviderIcon slug={p.slug} name={p.displayName} size="sm" />
@@ -355,7 +355,7 @@ function AvailableCard({ p, onRequest }: { p: ShellProvider; onRequest: (name: s
         ) : isComingSoon ? (
           <button
             onClick={() => onRequest(p.displayName, p.slug)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-1.5 text-xs font-black text-al-text-secondary transition hover:bg-al-surface-sunken"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-1.5 text-xs font-black text-al-text-secondary transition hover:bg-al-surface-sunken"
           >
             Request
           </button>
@@ -530,7 +530,7 @@ export function IntegrationsClientShell({ providers, myRequests }: Props) {
           {comingSoon.length > COMING_SOON_VISIBLE && (
             <button
               onClick={() => setShowAllComingSoon((s) => !s)}
-              className="mx-auto flex items-center gap-2 rounded-xl border border-al-border bg-white px-6 py-2.5 text-sm font-black text-al-text-secondary shadow-sm transition hover:bg-al-surface-sunken"
+              className="mx-auto flex items-center gap-2 rounded-xl border border-al-border bg-al-surface px-6 py-2.5 text-sm font-black text-al-text-secondary shadow-sm transition hover:bg-al-surface-sunken"
             >
               {showAllComingSoon ? 'Show fewer' : `Load ${comingSoon.length - COMING_SOON_VISIBLE} more integrations`}
               <svg
@@ -550,7 +550,7 @@ export function IntegrationsClientShell({ providers, myRequests }: Props) {
           <SectionHeader title="My Requested Integrations" count={pendingRequests.length} />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {pendingRequests.map((r) => (
-              <div key={r.id} className="flex items-start gap-3 rounded-xl border border-al-border bg-white p-4 shadow-sm">
+              <div key={r.id} className="flex items-start gap-3 rounded-xl border border-al-border bg-al-surface p-4 shadow-sm">
                 <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-al-surface-elevated text-sm font-black text-al-text-muted">
                   {providerInitials(r.providerName)}
                 </div>

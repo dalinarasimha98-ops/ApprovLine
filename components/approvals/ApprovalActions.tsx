@@ -9,7 +9,7 @@ type ApprovalActionsProps = {
   memoryEntityId?: string | null;
 };
 
-const actionClass = 'inline-flex h-10 items-center justify-center rounded-xl border border-al-border bg-white px-3.5 text-xs font-black text-al-text-secondary shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-al-accent';
+const actionClass = 'inline-flex h-10 items-center justify-center rounded-xl border border-al-border bg-al-surface px-3.5 text-xs font-black text-al-text-secondary shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-al-accent';
 
 type DownloadKind = 'evidence' | 'pdf' | 'json' | 'csv';
 
@@ -93,7 +93,7 @@ export function ApprovalActions({ approvalId, subject, memoryEntityId }: Approva
   }
 
   return (
-    <section aria-label="Approval actions" className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+    <section aria-label="Approval actions" className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-al-accent">Actions</p>
@@ -124,7 +124,7 @@ export function ApprovalActions({ approvalId, subject, memoryEntityId }: Approva
         <div role="status" aria-live="polite" className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm font-semibold ${message.tone === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
           <span>{message.text}</span>
           {retryDownload ? (
-            <button type="button" onClick={() => download(retryDownload)} className="rounded-lg bg-white px-3 py-2 text-xs font-black shadow-sm">Retry</button>
+            <button type="button" onClick={() => download(retryDownload)} className="rounded-lg bg-al-surface px-3 py-2 text-xs font-black shadow-sm">Retry</button>
           ) : null}
         </div>
       ) : null}

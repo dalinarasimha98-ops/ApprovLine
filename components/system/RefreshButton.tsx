@@ -28,7 +28,7 @@ export function RefreshButton({ className }: { className?: string }) {
       disabled={isPending}
       className={
         className ??
-        'inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-4 text-sm font-black text-white disabled:opacity-70'
+        'inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.06] px-4 text-sm font-black text-white disabled:opacity-70'
       }
     >
       {isPending ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" /> : null}

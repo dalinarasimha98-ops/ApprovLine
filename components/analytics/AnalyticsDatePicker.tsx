@@ -95,7 +95,7 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {/* Preset pills */}
-      <div className="flex rounded-lg border border-al-border bg-[#0D1526] p-0.5 gap-0.5">
+      <div className="flex rounded-lg border border-al-border bg-al-surface p-0.5 gap-0.5">
         {PRESETS.map((preset) => (
           <button
             key={preset.label}
@@ -103,7 +103,7 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
             className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
               activePreset?.label === preset.label
                 ? 'bg-al-accent text-white'
-                : 'text-al-text-muted hover:text-white hover:bg-white/10'
+                : 'text-al-text-muted hover:text-white hover:bg-al-surface/10'
             }`}
           >
             {preset.label}
@@ -112,7 +112,7 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
         <button
           onClick={() => setShowCustom((v) => !v)}
           className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-            showCustom ? 'bg-al-accent text-white' : 'text-al-text-muted hover:text-white hover:bg-white/10'
+            showCustom ? 'bg-al-accent text-white' : 'text-al-text-muted hover:text-white hover:bg-al-surface/10'
           }`}
         >
           Custom
@@ -134,7 +134,7 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
         className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
           compare
             ? 'border-al-accent/50 bg-al-accent-hover/10 text-al-accent'
-            : 'border-al-border bg-[#0D1526] text-al-text-muted hover:text-white'
+            : 'border-al-border bg-al-surface text-al-text-muted hover:text-white'
         }`}
       >
         <span className={`h-1.5 w-1.5 rounded-full ${compare ? 'bg-violet-400' : 'bg-al-text-muted'}`} />
@@ -143,19 +143,19 @@ export function AnalyticsDatePicker({ currentFrom, currentTo, compareEnabled }: 
 
       {/* Custom date inputs */}
       {showCustom && (
-        <div className="flex items-center gap-2 rounded-lg border border-al-border bg-[#0D1526] p-2">
+        <div className="flex items-center gap-2 rounded-lg border border-al-border bg-al-surface p-2">
           <input
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="h-8 rounded-md border border-al-border bg-[#0A0E1A] px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
+            className="h-8 rounded-md border border-al-border bg-al-bg px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
           />
           <span className="text-xs text-al-text-muted">to</span>
           <input
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="h-8 rounded-md border border-al-border bg-[#0A0E1A] px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
+            className="h-8 rounded-md border border-al-border bg-al-bg px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
           />
           <button
             onClick={() => {

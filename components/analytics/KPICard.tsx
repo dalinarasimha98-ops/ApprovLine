@@ -37,7 +37,7 @@ export function KPICard({
   const isPositive = change !== null ? change >= 0 : null;
 
   const content = (
-    <div className="group relative rounded-2xl border border-al-border bg-[#0D1526] p-4 transition-all hover:border-al-border-strong hover:shadow-lg hover:shadow-black/30">
+    <div className="group relative rounded-2xl border border-al-border bg-al-surface p-4 transition-all hover:border-al-border-strong hover:shadow-lg hover:shadow-black/30">
       {/* Top row: icon + title */}
       <div className="flex items-center gap-2.5">
         <div

@@ -55,7 +55,7 @@ const TABS: { id: Tab; label: string; icon: typeof Settings2 }[] = [
 
 function SectionCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-al-border bg-white shadow-sm ${className}`}>
+    <div className={`rounded-2xl border border-al-border bg-al-surface shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -117,7 +117,7 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
   return (
     <div className="grid gap-4">
       {/* Compact system status row */}
-      <div className="flex items-center gap-3 rounded-xl border border-al-border bg-white px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-3 rounded-xl border border-al-border bg-al-surface px-4 py-3 shadow-sm">
         <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${systemOk ? 'text-emerald-600' : 'text-amber-600'}`}>
           <span className={`h-2 w-2 rounded-full ${systemOk ? 'bg-al-success' : 'bg-amber-400'}`} />
           {systemOk ? 'All systems operational' : 'System degraded'}
@@ -262,7 +262,7 @@ function InputField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1.5 w-full rounded-lg border border-al-border bg-white px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
       />
     </div>
   );
@@ -331,7 +331,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
         <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
           <span className="text-sm font-semibold text-amber-800">You have unsaved changes</span>
           <div className="flex gap-2">
-            <button onClick={discard} disabled={saving} className="rounded-lg border border-al-border bg-white px-3 py-1.5 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">
+            <button onClick={discard} disabled={saving} className="rounded-lg border border-al-border bg-al-surface px-3 py-1.5 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">
               Discard
             </button>
             <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50">
@@ -360,7 +360,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
             <select
               value={form.companySize}
               onChange={(e) => update('companySize', e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-al-border bg-white px-3 py-2 text-sm text-al-text focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             >
               <option value="">Select size…</option>
               {sizes.map((s) => <option key={s} value={s}>{s} employees</option>)}
@@ -370,7 +370,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
         </div>
         {!dirty && (
           <div className="flex justify-end border-t border-al-border px-6 py-4">
-            <button onClick={() => setDirty(true)} className="rounded-lg border border-al-border bg-white px-4 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+            <button onClick={() => setDirty(true)} className="rounded-lg border border-al-border bg-al-surface px-4 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
               Edit
             </button>
           </div>
@@ -458,10 +458,10 @@ function SecurityTab() {
       <SectionCard>
         <SectionHeader title="Trust & Compliance" />
         <div className="flex flex-wrap gap-2 p-6">
-          <Link href="/trust" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+          <Link href="/trust" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Security & Trust Center <ExternalLink className="h-3 w-3" />
           </Link>
-          <Link href="/trust/compliance" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+          <Link href="/trust/compliance" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Compliance Hub <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -553,7 +553,7 @@ function WorkflowTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="Evaluation" value="Per-approval compliance scoring" />
         </div>
         <div className="border-t border-al-border px-6 py-4">
-          <Link href="/playbooks" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+          <Link href="/playbooks" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Open Playbook AI <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -592,10 +592,10 @@ function EvidenceTab() {
           <ConfigRow label="Tenant isolation" value="Column-based (organizationId)" />
         </div>
         <div className="flex flex-wrap gap-2 border-t border-al-border px-6 py-4">
-          <Link href="/evidence" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+          <Link href="/evidence" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Unified Evidence <ExternalLink className="h-3 w-3" />
           </Link>
-          <Link href="/memory" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+          <Link href="/memory" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Memory Graph <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -648,7 +648,7 @@ function IntegrationsTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="Enterprise systems" value="SAP, Oracle, Coupa, Workday, Salesforce, HubSpot" />
         </div>
         <div className="border-t border-al-border px-6 py-4">
-          <Link href="/dashboard/gateway" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+          <Link href="/dashboard/gateway" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Universal Gateway <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -693,7 +693,7 @@ function NotificationsTab() {
           ))}
         </div>
         <div className="border-t border-al-border px-6 py-4">
-          <Link href="/dashboard/alerts" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+          <Link href="/dashboard/alerts" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Configure Alerts & Risks <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -832,7 +832,7 @@ function SystemTab({ data }: { data: SettingsOverview }) {
           ))}
         </ul>
         <div className="border-t border-al-border px-6 py-4">
-          <Link href="/health" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-white px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+          <Link href="/health" className="inline-flex items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-3 py-2 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
             Full system status <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
@@ -847,7 +847,7 @@ function SystemTab({ data }: { data: SettingsOverview }) {
             </button>
           </form>
           <form action="/api/demo/reset" method="post">
-            <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-al-border bg-white px-4 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
+            <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-al-border bg-al-surface px-4 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken">
               Reset Demo Data
             </button>
           </form>
@@ -891,7 +891,7 @@ export function SettingsShell({ data }: { data: SettingsOverview }) {
             key={id}
             onClick={() => setActiveTab(id)}
             className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold whitespace-nowrap ${
-              activeTab === id ? 'border-blue-500 bg-blue-600 text-white' : 'border-al-border bg-white text-al-text-secondary'
+              activeTab === id ? 'border-blue-500 bg-blue-600 text-white' : 'border-al-border bg-al-surface text-al-text-secondary'
             }`}
           >
             <Icon className="h-3 w-3" />

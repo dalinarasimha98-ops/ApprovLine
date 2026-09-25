@@ -73,7 +73,7 @@ export function SVGLineChart({
               y1={yPos(val)}
               x2={width - paddingRight}
               y2={yPos(val)}
-              stroke="#1E2D4A"
+              stroke="rgb(var(--al-border-rgb))"
               strokeWidth={1}
             />
             <text
@@ -81,7 +81,7 @@ export function SVGLineChart({
               y={yPos(val) + 4}
               textAnchor="end"
               fontSize={9}
-              fill="#4B5563"
+              fill="rgb(var(--al-text-muted-rgb))"
             >
               {val > 999 ? `${Math.round(val / 1000)}k` : val}
             </text>
@@ -118,7 +118,7 @@ export function SVGLineChart({
                   cy={yPos(Number(d[s.key] ?? 0))}
                   r={3}
                   fill={s.color}
-                  stroke="#0D1526"
+                  stroke="rgb(var(--al-surface-rgb))"
                   strokeWidth={1.5}
                 />
               ))}
@@ -136,7 +136,7 @@ export function SVGLineChart({
               y={height - paddingBottom + 16}
               textAnchor="middle"
               fontSize={9}
-              fill="#4B5563"
+              fill="rgb(var(--al-text-muted-rgb))"
             >
               {String(d[labelKey] ?? '').slice(0, 8)}
             </text>

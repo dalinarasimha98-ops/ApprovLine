@@ -35,7 +35,7 @@ export function GenericConnectorInfo({ organizationSlug, appUrl = 'https://appro
   return (
     <div className="grid gap-6">
       {/* Webhook */}
-      <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
         <div className="flex items-start gap-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-violet-50 text-xl font-black text-al-accent">
             W
@@ -81,7 +81,7 @@ export function GenericConnectorInfo({ organizationSlug, appUrl = 'https://appro
 
             <a
               href="/dashboard/gateway"
-              className="mt-4 inline-flex rounded-xl border border-al-border bg-white px-4 py-2 text-xs font-black text-al-text-secondary shadow-sm transition hover:bg-al-surface-sunken"
+              className="mt-4 inline-flex rounded-xl border border-al-border bg-al-surface px-4 py-2 text-xs font-black text-al-text-secondary shadow-sm transition hover:bg-al-surface-sunken"
             >
               Open Gateway dashboard →
             </a>
@@ -90,7 +90,7 @@ export function GenericConnectorInfo({ organizationSlug, appUrl = 'https://appro
       </div>
 
       {/* REST API */}
-      <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
         <div className="flex items-start gap-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-50 text-xl font-black text-sky-600">
             A
@@ -118,7 +118,7 @@ export function GenericConnectorInfo({ organizationSlug, appUrl = 'https://appro
       </div>
 
       {/* Email forwarding */}
-      <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
         <div className="flex items-start gap-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50 text-xl font-black text-al-danger">
             @
@@ -137,7 +137,7 @@ export function GenericConnectorInfo({ organizationSlug, appUrl = 'https://appro
       </div>
 
       {/* CSV Import */}
-      <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
         <div className="flex items-start gap-4">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-xl font-black text-emerald-600">
             C

@@ -17,7 +17,7 @@ export default function AnalyticsError({ error, reset }: { error: Error & { dige
           >
             Retry
           </button>
-          <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-xl border border-amber-200 bg-white px-5 text-sm font-bold text-amber-950 shadow-sm">
+          <PendingLink href="/analytics?demo=1" pendingText="Loading demo..." className="inline-flex min-h-0 h-11 items-center justify-center rounded-xl border border-amber-200 bg-al-surface px-5 text-sm font-bold text-amber-950 shadow-sm">
             Open demo preview
           </PendingLink>
         </div>

@@ -85,7 +85,7 @@ function countBy<T>(items: T[], fn: (item: T) => string | null | undefined) {
 function CountBars({ title, items }: { title: string; items: Array<{ name: string; count: number }> }) {
   const max = Math.max(...items.map((item) => item.count), 1);
   return (
-    <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
       <h3 className="text-sm font-black text-al-text">{title}</h3>
       <div className="mt-4 grid gap-3">
         {items.length === 0 ? <p className="text-sm font-semibold text-al-text-muted">No matching records.</p> : items.map((item) => (
@@ -174,7 +174,7 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
           <p className="mt-2 max-w-3xl text-sm leading-6 text-al-text-secondary">{copy.description}</p>
         </div>
 
-        <form className="grid gap-4 rounded-2xl border border-al-border bg-white p-4 shadow-sm md:grid-cols-4">
+        <form className="grid gap-4 rounded-2xl border border-al-border bg-al-surface p-4 shadow-sm md:grid-cols-4">
           {[
             ['q', 'Search title, approver, department, source'],
             ['department', 'Department'],
@@ -184,16 +184,16 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
           ].map(([name, placeholder]) => (
             <label key={name} className="grid gap-1.5">
               <span className="text-xs font-bold uppercase tracking-wide text-al-text-muted">{placeholder}</span>
-              <input name={name} defaultValue={filters[name as keyof typeof filters] ?? ''} placeholder={placeholder} className="h-11 rounded-lg border border-al-border bg-white px-3 text-sm font-semibold outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+              <input name={name} defaultValue={filters[name as keyof typeof filters] ?? ''} placeholder={placeholder} className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
             </label>
           ))}
           <label className="grid gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wide text-al-text-muted">From</span>
-            <input name="from" defaultValue={filters.from ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-white px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+            <input name="from" defaultValue={filters.from ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
           </label>
           <label className="grid gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wide text-al-text-muted">To</span>
-            <input name="to" defaultValue={filters.to ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-white px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+            <input name="to" defaultValue={filters.to ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
           </label>
           <div className="flex items-end gap-2">
             <FormSubmitButton pendingText="Filtering..." className="min-h-0 h-11 rounded-lg bg-al-accent px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
@@ -212,7 +212,7 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
               ['Audit Preparation Time', `${numberFormat(report.timeSaved.auditPreparationHours)} hrs`, 'Evidence reconstruction and audit prep avoided.'],
               ['Search Time Saved', `${numberFormat(report.timeSaved.manualSearchHours)} hrs`, 'Manual search across Slack, Gmail, and tools avoided.'],
             ].map(([label, value, help]) => (
-              <div key={label} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+              <div key={label} className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-wide text-al-accent">{label}</p>
                 <p className="mt-3 text-3xl font-black text-al-text">{value}</p>
                 <p className="mt-2 text-sm leading-6 text-al-text-muted">{help}</p>
@@ -232,7 +232,7 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
               ['Source present', approvals.filter((approval) => approval.sourcePlatform).length],
               ['Evidence + audit trail', traceable],
             ].map(([label, value]) => (
-              <div key={label as string} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+              <div key={label as string} className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">{label}</p>
                 <p className="mt-3 text-3xl font-black text-al-text">{numberFormat(value as number)}</p>
               </div>
@@ -246,7 +246,7 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
           <CountBars title={metric === 'high-risk-approvals' ? 'Risk by source platform' : 'Records by source platform'} items={riskBySource} />
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface shadow-sm">
           <div className="border-b border-al-border p-5">
             <p className="text-xs font-black uppercase tracking-wide text-al-accent">Detailed records</p>
             <h3 className="mt-1 text-lg font-black text-al-text">{numberFormat(approvals.length)} records behind this number</h3>

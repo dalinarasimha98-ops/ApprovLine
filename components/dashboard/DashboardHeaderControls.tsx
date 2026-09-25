@@ -9,7 +9,7 @@ export function WorkspaceSwitcherLink() {
     <Link
       href="/dashboard/settings"
       title="Open workspace settings"
-      className="mb-3 flex shrink-0 items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.045] p-2.5 transition hover:border-blue-400/30 hover:bg-white/[0.07]"
+      className="mb-3 flex shrink-0 items-center gap-2.5 rounded-lg border border-white/10 bg-al-surface/[0.045] p-2.5 transition hover:border-blue-400/30 hover:bg-al-surface/[0.07]"
     >
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-al-success/20 text-xs font-black text-al-success">AW</span>
       <span className="min-w-0 flex-1">
@@ -39,7 +39,7 @@ export function DashboardSearch() {
   return (
     <form
       action="/dashboard/approvals"
-      className="hidden h-9 min-w-[260px] max-w-[480px] flex-1 items-center gap-2 rounded-md border border-white/10 bg-white/[0.045] px-3 text-xs text-al-text-secondary transition focus-within:border-blue-500/60 focus-within:ring-2 focus-within:ring-blue-500/15 md:flex"
+      className="hidden h-9 min-w-[260px] max-w-[480px] flex-1 items-center gap-2 rounded-md border border-white/10 bg-al-surface/[0.045] px-3 text-xs text-al-text-secondary transition focus-within:border-blue-500/60 focus-within:ring-2 focus-within:ring-blue-500/15 md:flex"
     >
       <Search className="h-4 w-4 shrink-0 text-al-text-muted" />
       <input
@@ -61,7 +61,7 @@ export function DashboardUtilityLinks() {
       <Link
         href="/dashboard/alerts"
         title="Open alerts and risks"
-        className="relative grid h-8 w-8 place-items-center rounded-md text-al-text-muted transition hover:bg-white/[0.06] hover:text-white"
+        className="relative grid h-8 w-8 place-items-center rounded-md text-al-text-muted transition hover:bg-al-surface/[0.06] hover:text-white"
         aria-label="Notifications and alerts"
       >
         <Bell className="h-4 w-4" />
@@ -70,7 +70,7 @@ export function DashboardUtilityLinks() {
       <Link
         href="/trust"
         title="Open Security and Trust Center"
-        className="hidden h-8 w-8 place-items-center rounded-md text-al-text-muted transition hover:bg-white/[0.06] hover:text-white sm:grid"
+        className="hidden h-8 w-8 place-items-center rounded-md text-al-text-muted transition hover:bg-al-surface/[0.06] hover:text-white sm:grid"
         aria-label="Help and trust center"
       >
         <HelpCircle className="h-4 w-4" />
@@ -89,14 +89,14 @@ export function DashboardFilterLinks() {
       <Link
         href={`/dashboard/approvals?from=${from}`}
         title="View approvals captured during the last seven days"
-        className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 bg-white/[0.035] px-3 text-[11px] font-medium text-al-text-secondary transition hover:border-blue-500/40 hover:bg-white/[0.07] hover:text-white"
+        className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 bg-al-surface/[0.035] px-3 text-[11px] font-medium text-al-text-secondary transition hover:border-blue-500/40 hover:bg-al-surface/[0.07] hover:text-white"
       >
         <CalendarDays className="h-3.5 w-3.5" /> Last 7 days
       </Link>
       <Link
         href="/dashboard/approvals#filters"
         title="Open approval filters"
-        className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 bg-white/[0.035] px-3 text-[11px] font-medium text-al-text-secondary transition hover:border-blue-500/40 hover:bg-white/[0.07] hover:text-white"
+        className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 bg-al-surface/[0.035] px-3 text-[11px] font-medium text-al-text-secondary transition hover:border-blue-500/40 hover:bg-al-surface/[0.07] hover:text-white"
       >
         <Filter className="h-3.5 w-3.5" /> Filters
       </Link>

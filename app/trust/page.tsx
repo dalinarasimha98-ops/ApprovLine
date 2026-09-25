@@ -162,7 +162,7 @@ function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title
 function ReadinessCard({ label, check }: { label: string; check: ReadinessCheck }) {
   const tone = toneFromStatus(check.status);
   return (
-    <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-black text-al-text">{label}</p>
         <StatusPill label={check.status} tone={tone} />
@@ -235,7 +235,7 @@ export default async function TrustPage() {
   return (
     <DashboardShell>
       <section className="grid gap-8">
-        <div className="overflow-hidden rounded-3xl border border-al-border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-3xl border border-al-border bg-al-surface shadow-sm">
           <div className="bg-al-bg px-6 py-8 text-white sm:px-8">
             <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Security & Trust Center</p>
             <h1 className="mt-3 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">Enterprise security, permissions, privacy, and compliance in one place.</h1>
@@ -248,7 +248,7 @@ export default async function TrustPage() {
               <StatusPill label="Audit-ready" />
               <StatusPill label="Encrypted storage" />
             </div>
-            <PendingLink href="/trust/compliance" pendingText="Opening compliance hub..." className="mt-6 inline-flex min-h-0 h-11 items-center rounded-xl bg-white px-5 text-sm font-black text-[#07111f] shadow-sm transition hover:bg-blue-50">
+            <PendingLink href="/trust/compliance" pendingText="Opening compliance hub..." className="mt-6 inline-flex min-h-0 h-11 items-center rounded-xl bg-al-surface px-5 text-sm font-black text-[#07111f] shadow-sm transition hover:bg-blue-50">
               Open Compliance Hub
             </PendingLink>
           </div>
@@ -262,7 +262,7 @@ export default async function TrustPage() {
           />
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {securityPrinciples.map((principle) => (
-              <div key={principle.title} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+              <div key={principle.title} className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-lg font-black text-al-text">{principle.title}</h3>
                   <StatusPill label={principle.status} />
@@ -280,7 +280,7 @@ export default async function TrustPage() {
             title="Connector permissions"
             description="Every connector is documented with what ApprovLine can read and what it is intentionally not allowed to do."
           />
-          <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[980px] border-collapse text-left text-sm">
                 <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
@@ -312,7 +312,7 @@ export default async function TrustPage() {
             title="Data types stored"
             description="ApprovLine stores only the evidence and metadata needed to provide approval intelligence, auditability, investigations, analytics, and Copilot context."
           />
-          <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] border-collapse text-left text-sm">
                 <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
@@ -346,7 +346,7 @@ export default async function TrustPage() {
           />
           <div className="grid gap-4 md:grid-cols-4">
             {tenantIsolation.map((item) => (
-              <div key={item} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+              <div key={item} className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
                 <StatusPill label="Isolated" />
                 <p className="mt-4 text-base font-black text-al-text">{item}</p>
               </div>
@@ -364,7 +364,7 @@ export default async function TrustPage() {
             title="Role-based permissions matrix"
             description="Workspace roles determine whether a user can view, edit, investigate, use Copilot, or export approval evidence."
           />
-          <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] border-collapse text-left text-sm">
                 <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
@@ -395,7 +395,7 @@ export default async function TrustPage() {
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
             <SectionHeader
               eyebrow="Auditability"
               title="Every action recorded"
@@ -410,7 +410,7 @@ export default async function TrustPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
             <SectionHeader
               eyebrow="FAQ"
               title="Common security questions"
@@ -418,7 +418,7 @@ export default async function TrustPage() {
             />
             <div className="mt-5 grid gap-3">
               {faqs.map((faq) => (
-                <details key={faq.question} className="group rounded-xl border border-al-border bg-white p-4">
+                <details key={faq.question} className="group rounded-xl border border-al-border bg-al-surface p-4">
                   <summary className="cursor-pointer text-sm font-black text-al-text marker:text-al-accent">{faq.question}</summary>
                   <p className="mt-3 text-sm leading-6 text-al-text-secondary">{faq.answer}</p>
                 </details>
@@ -441,7 +441,7 @@ export default async function TrustPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
           <SectionHeader
             eyebrow="Contacts"
             title="Security, support, and issue reporting"

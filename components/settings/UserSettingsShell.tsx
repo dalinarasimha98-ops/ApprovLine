@@ -144,7 +144,7 @@ function AutoSubmitToggle({ name, defaultChecked, label }: { name: string; defau
         className="peer sr-only"
       />
       <span className="h-6 w-11 rounded-full bg-al-border-strong transition peer-checked:bg-al-accent peer-disabled:opacity-60" />
-      <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-5" />
+      <span className="absolute left-1 h-4 w-4 rounded-full bg-al-surface transition peer-checked:translate-x-5" />
     </label>
   );
 }

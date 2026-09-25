@@ -84,7 +84,7 @@ export function AIInsightsPanel({ insights, highRiskApprovals = [] }: Props) {
 
       {/* Insight cards */}
       {insights.length === 0 ? (
-        <div className="rounded-xl border border-al-border bg-[#0A0E1A] p-4 text-center">
+        <div className="rounded-xl border border-al-border bg-al-bg p-4 text-center">
           <p className="text-xs font-semibold text-al-text-muted">
             Insights appear once approval data is captured.
           </p>
@@ -96,7 +96,7 @@ export function AIInsightsPanel({ insights, highRiskApprovals = [] }: Props) {
             return (
               <div
                 key={insight.id}
-                className="rounded-xl border border-al-border bg-[#0A0E1A] p-3 transition-colors hover:border-al-border-strong"
+                className="rounded-xl border border-al-border bg-al-bg p-3 transition-colors hover:border-al-border-strong"
               >
                 <div className="flex items-start gap-2.5">
                   <InsightIcon type={insight.type} />
@@ -165,7 +165,7 @@ export function AIInsightsPanel({ insights, highRiskApprovals = [] }: Props) {
                 <Link
                   key={approval.id}
                   href={`/approvals/${approval.id}`}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-al-border bg-[#0A0E1A] p-2.5 transition-colors hover:border-al-border-strong"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-al-border bg-al-bg p-2.5 transition-colors hover:border-al-border-strong"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[11px] font-semibold text-al-text-secondary">
@@ -198,7 +198,7 @@ export function AIInsightsPanel({ insights, highRiskApprovals = [] }: Props) {
             <Link
               key={label}
               href={href}
-              className="flex items-center gap-2 rounded-lg border border-al-border bg-[#0A0E1A] px-3 py-2 text-xs font-semibold text-al-text-secondary transition-colors hover:border-al-border-strong hover:text-white"
+              className="flex items-center gap-2 rounded-lg border border-al-border bg-al-bg px-3 py-2 text-xs font-semibold text-al-text-secondary transition-colors hover:border-al-border-strong hover:text-white"
             >
               <svg className="h-3.5 w-3.5 flex-shrink-0 text-al-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={iconPath} />

@@ -51,7 +51,7 @@ export function AnalyticsFilters({ currentDepartment, currentRiskLevel, currentS
       <div className="flex items-center gap-2">
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-2 rounded-lg border border-al-border bg-[#0D1526] px-3 py-1.5 text-xs font-semibold text-al-text-muted hover:text-white transition-colors"
+          className="flex items-center gap-2 rounded-lg border border-al-border bg-al-surface px-3 py-1.5 text-xs font-semibold text-al-text-muted hover:text-white transition-colors"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
@@ -74,14 +74,14 @@ export function AnalyticsFilters({ currentDepartment, currentRiskLevel, currentS
       </div>
 
       {expanded && (
-        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-al-border bg-[#0D1526] p-3">
+        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-al-border bg-al-surface p-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">Department</label>
             <input
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               placeholder="e.g. Finance"
-              className="h-8 w-36 rounded-md border border-al-border bg-[#0A0E1A] px-2 text-xs text-al-text-secondary placeholder:text-al-text-secondary outline-none focus:border-al-accent"
+              className="h-8 w-36 rounded-md border border-al-border bg-al-bg px-2 text-xs text-al-text-secondary placeholder:text-al-text-secondary outline-none focus:border-al-accent"
             />
           </div>
 
@@ -90,7 +90,7 @@ export function AnalyticsFilters({ currentDepartment, currentRiskLevel, currentS
             <select
               value={riskLevel}
               onChange={(e) => setRiskLevel(e.target.value)}
-              className="h-8 rounded-md border border-al-border bg-[#0A0E1A] px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
+              className="h-8 rounded-md border border-al-border bg-al-bg px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
             >
               {RISK_LEVELS.map((r) => (
                 <option key={r} value={r}>{r === '' ? 'All risk levels' : r.charAt(0).toUpperCase() + r.slice(1)}</option>
@@ -103,7 +103,7 @@ export function AnalyticsFilters({ currentDepartment, currentRiskLevel, currentS
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="h-8 rounded-md border border-al-border bg-[#0A0E1A] px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
+              className="h-8 rounded-md border border-al-border bg-al-bg px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>{s === '' ? 'All statuses' : s.replaceAll('_', ' ')}</option>
@@ -116,7 +116,7 @@ export function AnalyticsFilters({ currentDepartment, currentRiskLevel, currentS
             <select
               value={source}
               onChange={(e) => setSource(e.target.value)}
-              className="h-8 rounded-md border border-al-border bg-[#0A0E1A] px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
+              className="h-8 rounded-md border border-al-border bg-al-bg px-2 text-xs text-al-text-secondary outline-none focus:border-al-accent"
             >
               {SOURCES.map((s) => (
                 <option key={s} value={s}>{s === '' ? 'All sources' : s}</option>

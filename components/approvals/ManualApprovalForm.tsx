@@ -35,7 +35,7 @@ const defaults: ManualApprovalFormValues = {
   confidenceLevel: 50, secondPersonRequired: false, secondVerifierUserId: '', changeReason: 'Initial manual approval record',
 };
 
-const inputClass = 'h-11 w-full rounded-xl border border-al-border bg-white px-3 text-sm font-semibold text-al-text outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100 disabled:bg-al-surface-elevated';
+const inputClass = 'h-11 w-full rounded-xl border border-al-border bg-al-surface px-3 text-sm font-semibold text-al-text outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100 disabled:bg-al-surface-elevated';
 const textAreaClass = `${inputClass} min-h-28 resize-y py-3`;
 
 function Field({ label, children, wide = false }: { label: string; children: React.ReactNode; wide?: boolean }) {
@@ -96,7 +96,7 @@ export function ManualApprovalForm({ approvalId, initial, onCancel }: { approval
       {values.secondPersonRequired ? <Field label="Second verifier user ID"><input required className={inputClass} disabled={saving} value={values.secondVerifierUserId} onChange={(e) => update('secondVerifierUserId', e.target.value)} placeholder="ApprovLine user ID" /></Field> : null}
       {error ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">{error}</p> : null}
       <div className="flex flex-wrap justify-end gap-3">
-        {onCancel ? <button type="button" disabled={saving} onClick={onCancel} className="h-11 rounded-xl border border-al-border bg-white px-5 text-sm font-bold text-al-text-secondary disabled:opacity-60">Cancel</button> : null}
+        {onCancel ? <button type="button" disabled={saving} onClick={onCancel} className="h-11 rounded-xl border border-al-border bg-al-surface px-5 text-sm font-bold text-al-text-secondary disabled:opacity-60">Cancel</button> : null}
         <button type="submit" disabled={saving} className="h-11 rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60">{saving ? 'Saving...' : approvalId ? 'Save changes' : 'Record approval'}</button>
       </div>
     </form>

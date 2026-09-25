@@ -59,7 +59,7 @@ export function ToastOnQuery() {
   if (!message) return null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-2xl border border-al-border bg-white px-4 py-3 text-sm font-bold text-al-text shadow-[0_20px_70px_rgba(15,23,42,0.18)]">
+    <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-2xl border border-al-border bg-al-surface px-4 py-3 text-sm font-bold text-al-text shadow-[0_20px_70px_rgba(15,23,42,0.18)]">
       <span className={message.tone === 'success' ? 'text-emerald-600' : 'text-rose-600'}>
         {message.tone === 'success' ? 'Success: ' : 'Error: '}
       </span>

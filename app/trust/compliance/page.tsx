@@ -91,7 +91,7 @@ export default async function ComplianceHubPage() {
   return (
     <DashboardShell>
       {/* Page header */}
-      <div className="mb-6 overflow-hidden rounded-3xl border border-al-border bg-white shadow-sm">
+      <div className="mb-6 overflow-hidden rounded-3xl border border-al-border bg-al-surface shadow-sm">
         <div className="bg-al-bg px-6 py-7 text-white">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">
             Compliance Hub

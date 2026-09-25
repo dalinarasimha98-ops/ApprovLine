@@ -52,7 +52,7 @@ export default async function IdentitySettingsPage() {
   } catch (error) {
     return (
       <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
-        <section className="mx-auto grid max-w-5xl gap-4 rounded-[28px] border border-amber-200 bg-white p-6 shadow-sm">
+        <section className="mx-auto grid max-w-5xl gap-4 rounded-[28px] border border-amber-200 bg-al-surface p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Enterprise Identity Center</p>
           <h1 className="text-2xl font-black text-al-text">We could not load identity settings this time</h1>
           <p className="text-sm leading-6 text-al-text-secondary">The database did not respond in time. This is usually transient - retry in a moment.</p>
@@ -68,7 +68,7 @@ export default async function IdentitySettingsPage() {
   return (
     <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
       <section className="mx-auto grid max-w-7xl gap-6">
-        <div className="overflow-hidden rounded-[32px] border border-al-border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-[32px] border border-al-border bg-al-surface shadow-sm">
           <div className="grid gap-8 bg-al-bg p-6 text-white lg:grid-cols-[1.1fr_0.9fr] lg:p-8">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">Enterprise Identity Center</p>
@@ -82,7 +82,7 @@ export default async function IdentitySettingsPage() {
                 <StatusPill tone="slate">{data.scimStatus}</StatusPill>
               </div>
             </div>
-            <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+            <div className="rounded-3xl border border-white/10 bg-al-surface/[0.06] p-5">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Workspace</p>
               <h2 className="mt-2 text-2xl font-black">{data.organizationName}</h2>
               <div className="mt-4 grid gap-3 text-sm font-semibold text-al-text-secondary">
@@ -109,13 +109,13 @@ export default async function IdentitySettingsPage() {
         </div>
 
         <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">Identity Providers</p>
                 <h2 className="mt-2 text-2xl font-black text-al-text">Supported SSO providers</h2>
               </div>
-              <Link href="/dashboard/settings" className="rounded-xl border border-al-border bg-white px-4 py-2 text-xs font-black text-al-text-secondary shadow-sm">
+              <Link href="/dashboard/settings" className="rounded-xl border border-al-border bg-al-surface px-4 py-2 text-xs font-black text-al-text-secondary shadow-sm">
                 Back to settings
               </Link>
             </div>
@@ -126,7 +126,7 @@ export default async function IdentitySettingsPage() {
             </div>
           </div>
 
-          <form action={saveIdentity} className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+          <form action={saveIdentity} className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">SSO Setup Wizard</p>
             <h2 className="mt-2 text-2xl font-black text-al-text">Configure identity provider</h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-al-text-secondary">
@@ -136,7 +136,7 @@ export default async function IdentitySettingsPage() {
             <div className="mt-5 grid gap-4">
               <label className="grid gap-2 text-sm font-black text-al-text-secondary">
                 Select provider
-                <select name="provider" defaultValue={data.selectedProvider} disabled={!data.canEdit} className="h-12 rounded-xl border border-al-border bg-white px-3 text-sm font-bold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100">
+                <select name="provider" defaultValue={data.selectedProvider} disabled={!data.canEdit} className="h-12 rounded-xl border border-al-border bg-al-surface px-3 text-sm font-bold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100">
                   <option value="azure_ad">Microsoft Entra ID</option>
                   <option value="okta">Okta</option>
                   <option value="google_workspace">Google Workspace</option>
@@ -173,7 +173,7 @@ export default async function IdentitySettingsPage() {
                 <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">JIT provisioning</p>
                 <label className="grid gap-2 text-sm font-black text-al-text-secondary">
                   Default role for new SSO users
-                  <select name="defaultRole" defaultValue={data.defaultRole} disabled={!data.canEdit} className="h-12 rounded-xl border border-al-border bg-white px-3 text-sm font-bold outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100">
+                  <select name="defaultRole" defaultValue={data.defaultRole} disabled={!data.canEdit} className="h-12 rounded-xl border border-al-border bg-al-surface px-3 text-sm font-bold outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100">
                     <option value="VIEWER">Viewer</option>
                     <option value="MEMBER">Member</option>
                     <option value="MANAGER">Manager</option>
@@ -204,7 +204,7 @@ export default async function IdentitySettingsPage() {
                 <FormSubmitButton pendingText="Saving identity..." className="inline-flex h-12 items-center gap-2 rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm shadow-blue-200 disabled:opacity-60">
                   Save identity settings
                 </FormSubmitButton>
-                <button formAction={testConnection} className="inline-flex h-12 items-center gap-2 rounded-xl border border-al-border bg-white px-5 text-sm font-black text-al-text-secondary shadow-sm disabled:opacity-60">
+                <button formAction={testConnection} className="inline-flex h-12 items-center gap-2 rounded-xl border border-al-border bg-al-surface px-5 text-sm font-black text-al-text-secondary shadow-sm disabled:opacity-60">
                   Test connection
                 </button>
               </div>
@@ -213,7 +213,7 @@ export default async function IdentitySettingsPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1fr_0.8fr]">
-          <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">Group Mapping</p>
             <h2 className="mt-2 text-2xl font-black text-al-text">Map identity groups to ApprovLine roles</h2>
             <div className="mt-5 overflow-hidden rounded-2xl border border-al-border">
@@ -240,7 +240,7 @@ export default async function IdentitySettingsPage() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">SCIM Preparation</p>
             <h2 className="mt-2 text-2xl font-black text-al-text">Provisioning architecture</h2>
             <div className="mt-5 grid gap-3">
@@ -255,7 +255,7 @@ export default async function IdentitySettingsPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">Session Management</p>
             <h2 className="mt-2 text-2xl font-black text-al-text">Active sessions</h2>
             <div className="mt-5 grid gap-3">
@@ -268,7 +268,7 @@ export default async function IdentitySettingsPage() {
                     </div>
                     <form action={revokeSession}>
                       <input type="hidden" name="sessionId" value={session.id} />
-                      <FormSubmitButton pendingText="Logging..." className="inline-flex h-10 items-center gap-2 rounded-xl border border-al-border bg-white px-4 text-xs font-black text-al-text-secondary disabled:opacity-60">
+                      <FormSubmitButton pendingText="Logging..." className="inline-flex h-10 items-center gap-2 rounded-xl border border-al-border bg-al-surface px-4 text-xs font-black text-al-text-secondary disabled:opacity-60">
                         Revoke session
                       </FormSubmitButton>
                     </form>
@@ -278,7 +278,7 @@ export default async function IdentitySettingsPage() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">Security Center</p>
             <h2 className="mt-2 text-2xl font-black text-al-text">Identity health</h2>
             <div className="mt-5 grid gap-3">
@@ -296,7 +296,7 @@ export default async function IdentitySettingsPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">Founder Visibility</p>
             <h2 className="mt-2 text-2xl font-black text-al-text">Customer identity posture</h2>
             <div className="mt-5 grid gap-3">
@@ -308,7 +308,7 @@ export default async function IdentitySettingsPage() {
             <p className="mt-4 text-xs font-semibold leading-5 text-al-text-muted">Founder views show provider health and user counts only. Passwords and identity secrets are never exposed.</p>
           </div>
 
-          <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">Audit Logging</p>
             <h2 className="mt-2 text-2xl font-black text-al-text">Identity event trail</h2>
             <div className="mt-5 grid gap-3">
@@ -347,7 +347,7 @@ function providerLabel(provider: string) {
 
 function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="rounded-[24px] border border-al-border bg-white p-5 shadow-sm">
+    <div className="rounded-[24px] border border-al-border bg-al-surface p-5 shadow-sm">
       <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">{label}</p>
       <p className="mt-2 text-2xl font-black text-al-text">{value}</p>
       <p className="mt-1 text-xs font-semibold leading-5 text-al-text-muted">{detail}</p>

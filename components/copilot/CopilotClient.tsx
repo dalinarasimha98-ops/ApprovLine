@@ -29,7 +29,7 @@ function badgeClass(type: string) {
   if (type === 'policy') return 'border-emerald-800 bg-emerald-950 text-al-success';
   if (type === 'investigation') return 'border-rose-800 bg-rose-950 text-al-danger';
   if (type === 'audit_log') return 'border-amber-800 bg-amber-950 text-al-warning';
-  return 'border-[#1E3354] bg-[#0D1B30] text-[#8BA3BE]';
+  return 'border-al-border bg-al-surface-sunken text-al-text-muted';
 }
 
 function confidenceClass(confidence: number) {
@@ -43,17 +43,17 @@ function ResponseSkeleton() {
   return (
     <div className="grid gap-4 p-4 sm:p-5" aria-label="Copilot is preparing an answer">
       <div className="flex items-center gap-3">
-        <div className="h-2.5 w-24 rounded-full bg-[#1E3354] animate-pulse" />
-        <div className="h-2.5 w-40 rounded-full bg-[#1E3354] animate-pulse" />
+        <div className="h-2.5 w-24 rounded-full bg-al-border animate-pulse" />
+        <div className="h-2.5 w-40 rounded-full bg-al-border animate-pulse" />
       </div>
       <div className="grid gap-2">
-        <div className="h-4 w-4/5 rounded-full bg-[#1E3354] animate-pulse" />
-        <div className="h-4 w-3/4 rounded-full bg-[#1E3354] animate-pulse" />
-        <div className="h-4 w-2/3 rounded-full bg-[#1E3354] animate-pulse" />
+        <div className="h-4 w-4/5 rounded-full bg-al-border animate-pulse" />
+        <div className="h-4 w-3/4 rounded-full bg-al-border animate-pulse" />
+        <div className="h-4 w-2/3 rounded-full bg-al-border animate-pulse" />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="h-24 rounded-xl border border-[#1E3354] bg-[#112240] animate-pulse" />
-        <div className="h-24 rounded-xl border border-[#1E3354] bg-[#112240] animate-pulse" />
+        <div className="h-24 rounded-xl border border-al-border bg-al-surface animate-pulse" />
+        <div className="h-24 rounded-xl border border-al-border bg-al-surface animate-pulse" />
       </div>
     </div>
   );
@@ -176,30 +176,30 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
     <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_272px] xl:items-start">
 
       {/* ── Chat column ── */}
-      <section className="flex h-[min(800px,calc(100vh-200px))] min-h-[560px] min-w-0 flex-col overflow-hidden rounded-2xl border border-[#1E3354] bg-[#060C17]">
+      <section className="flex h-[min(800px,calc(100vh-200px))] min-h-[560px] min-w-0 flex-col overflow-hidden rounded-2xl border border-al-border bg-al-bg">
 
         {/* Stats strip */}
-        <div className="grid shrink-0 grid-cols-4 border-b border-[#1E3354]">
-          <div className="border-r border-[#1E3354] px-5 py-3.5">
-            <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">Total Approvals</p>
-            <p className="mt-1 font-mono text-xl font-medium tabular-nums text-[#E8F0FE]">
+        <div className="grid shrink-0 grid-cols-4 border-b border-al-border">
+          <div className="border-r border-al-border px-5 py-3.5">
+            <p className="font-mono text-[9.5px] uppercase tracking-widest text-al-text-secondary">Total Approvals</p>
+            <p className="mt-1 font-mono text-xl font-medium tabular-nums text-al-text">
               {stats.total.toLocaleString()}
             </p>
           </div>
-          <div className="border-r border-[#1E3354] px-5 py-3.5">
-            <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">High Risk</p>
+          <div className="border-r border-al-border px-5 py-3.5">
+            <p className="font-mono text-[9.5px] uppercase tracking-widest text-al-text-secondary">High Risk</p>
             <p className="mt-1 font-mono text-xl font-medium tabular-nums text-al-warning">
               {stats.highRisk.toLocaleString()}
             </p>
           </div>
-          <div className="border-r border-[#1E3354] px-5 py-3.5">
-            <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">Violations</p>
+          <div className="border-r border-al-border px-5 py-3.5">
+            <p className="font-mono text-[9.5px] uppercase tracking-widest text-al-text-secondary">Violations</p>
             <p className="mt-1 font-mono text-xl font-medium tabular-nums text-al-danger">
               {stats.violations.toLocaleString()}
             </p>
           </div>
           <div className="px-5 py-3.5">
-            <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">Evidence Coverage</p>
+            <p className="font-mono text-[9.5px] uppercase tracking-widest text-al-text-secondary">Evidence Coverage</p>
             <p className="mt-1 font-mono text-xl font-medium tabular-nums text-teal-400">
               {stats.evidenceCoverage}%
             </p>
@@ -209,21 +209,21 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
         {/* Chat scroll */}
         <div
           ref={messageAreaRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth p-5 [scrollbar-width:thin] [scrollbar-color:#1E3354_transparent]"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth p-5 [scrollbar-width:thin] [scrollbar-color:rgb(var(--al-border-rgb))_transparent]"
         >
           <div className="flex flex-col gap-5">
 
             {/* Empty / welcome state */}
             {turns.length === 0 ? (
-              <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-[#1E3354] bg-[#0D1B30]/40 p-8 text-center">
+              <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-al-border bg-al-surface-sunken/40 p-8 text-center">
                 <div className="grid h-11 w-11 place-items-center rounded-xl border border-teal-800/60 bg-teal-950/50 text-teal-500">
                   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 13h2v-6h-2v6zm0-8h2V5h-2v2z" fill="currentColor" stroke="none" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-[#E8F0FE]">Ask ApprovLine anything about decisions</h3>
-                  <p className="mt-2 max-w-sm text-sm leading-6 text-[#8BA3BE]">
+                  <h3 className="text-base font-semibold text-al-text">Ask ApprovLine anything about decisions</h3>
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-al-text-muted">
                     Query approvals, surface risk patterns, check compliance gaps, or request an audit-ready report.
                   </p>
                 </div>
@@ -242,7 +242,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
                 </div>
 
                 {/* AI response card */}
-                <div className="border-l-2 border-teal-500 bg-[#0D1B30] rounded-r-xl overflow-hidden">
+                <div className="border-l-2 border-teal-500 bg-al-surface-sunken rounded-r-xl overflow-hidden">
 
                   {/* Loading skeleton */}
                   {!turn.answer && !turn.error ? <ResponseSkeleton /> : null}
@@ -256,7 +256,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
 
                   {/* Answer */}
                   {turn.answer ? (
-                    <div className="grid gap-0 divide-y divide-[#1E3354]">
+                    <div className="grid gap-0 divide-y divide-al-border">
 
                       {/* Answer header */}
                       <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
@@ -264,7 +264,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
                           <p className="font-mono text-[9.5px] uppercase tracking-widest text-teal-600">
                             Direct Answer
                           </p>
-                          <p className="mt-2 font-mono text-sm leading-7 text-[#E8F0FE]">
+                          <p className="mt-2 font-mono text-sm leading-7 text-al-text">
                             {turn.answer.answer}
                           </p>
                         </div>
@@ -276,10 +276,10 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
                       {/* Evidence + Actions */}
                       <div className="grid gap-4 px-5 py-4 lg:grid-cols-2">
                         <div>
-                          <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">
+                          <p className="font-mono text-[9.5px] uppercase tracking-widest text-al-text-secondary">
                             Supporting Evidence
                           </p>
-                          <ul className="mt-3 grid gap-2 text-sm leading-6 text-[#8BA3BE]">
+                          <ul className="mt-3 grid gap-2 text-sm leading-6 text-al-text-muted">
                             {turn.answer.supportingEvidence.map((item) => (
                               <li key={item} className="flex gap-2">
                                 <span className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-teal-500" />
@@ -289,10 +289,10 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
                           </ul>
                         </div>
                         <div>
-                          <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">
+                          <p className="font-mono text-[9.5px] uppercase tracking-widest text-al-text-secondary">
                             Recommended Actions
                           </p>
-                          <ul className="mt-3 grid gap-2 text-sm leading-6 text-[#8BA3BE]">
+                          <ul className="mt-3 grid gap-2 text-sm leading-6 text-al-text-muted">
                             {turn.answer.recommendedActions.map((item) => (
                               <li key={item} className="flex gap-2">
                                 <span className="mt-1 shrink-0 font-mono text-teal-500">→</span>
@@ -306,7 +306,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
                       {/* Sources */}
                       {turn.answer.sources.length > 0 ? (
                         <div className="px-5 py-4">
-                          <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">
+                          <p className="font-mono text-[9.5px] uppercase tracking-widest text-al-text-secondary">
                             Sources
                           </p>
                           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -314,7 +314,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
                               <Link
                                 key={`${source.type}-${source.id}`}
                                 href={source.href}
-                                className="group block rounded-xl border border-[#1E3354] bg-[#112240] p-4 text-sm transition hover:border-teal-800 hover:bg-[#0D1B30]"
+                                className="group block rounded-xl border border-al-border bg-al-surface p-4 text-sm transition hover:border-teal-800 hover:bg-al-surface-sunken"
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <span className={`rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide ${badgeClass(source.type)}`}>
@@ -324,8 +324,8 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
                                     Open →
                                   </span>
                                 </div>
-                                <p className="mt-2.5 font-medium text-[#E8F0FE]">{source.label}</p>
-                                <p className="mt-1 line-clamp-2 leading-5 text-[#8BA3BE]">{source.excerpt}</p>
+                                <p className="mt-2.5 font-medium text-al-text">{source.label}</p>
+                                <p className="mt-1 line-clamp-2 leading-5 text-al-text-muted">{source.excerpt}</p>
                               </Link>
                             ))}
                           </div>
@@ -343,7 +343,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
         </div>
 
         {/* Input zone */}
-        <form onSubmit={onSubmit} className="shrink-0 border-t border-[#1E3354] bg-[#060C17] p-4">
+        <form onSubmit={onSubmit} className="shrink-0 border-t border-al-border bg-al-bg p-4">
 
           {/* Suggestion chips */}
           {turns.length === 0 && visibleSuggestions.length > 0 ? (
@@ -354,7 +354,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
                   type="button"
                   onClick={() => void ask(s)}
                   disabled={pending}
-                  className="shrink-0 rounded-full border border-[#1E3354] bg-[#0D1B30] px-3 py-1.5 font-mono text-[11px] text-[#8BA3BE] transition hover:border-teal-800 hover:bg-teal-950 hover:text-teal-400 disabled:cursor-wait disabled:opacity-50"
+                  className="shrink-0 rounded-full border border-al-border bg-al-surface-sunken px-3 py-1.5 font-mono text-[11px] text-al-text-muted transition hover:border-teal-800 hover:bg-teal-950 hover:text-teal-400 disabled:cursor-wait disabled:opacity-50"
                 >
                   {s.length > 40 ? s.slice(0, 40) + '…' : s}
                 </button>
@@ -363,7 +363,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
           ) : null}
 
           <div className="flex items-end gap-2">
-            <div className="flex flex-1 items-end gap-2 rounded-xl border border-[#1E3354] bg-[#0D1B30] px-4 py-3 transition focus-within:border-teal-800 focus-within:ring-1 focus-within:ring-teal-800/50">
+            <div className="flex flex-1 items-end gap-2 rounded-xl border border-al-border bg-al-surface-sunken px-4 py-3 transition focus-within:border-teal-800 focus-within:ring-1 focus-within:ring-teal-800/50">
               <textarea
                 ref={textareaRef}
                 value={question}
@@ -372,7 +372,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
                 placeholder="Ask about approvals, risk patterns, compliance gaps…"
                 rows={1}
                 disabled={pending}
-                className="max-h-[120px] min-h-[20px] flex-1 resize-none bg-transparent font-mono text-sm text-[#E8F0FE] outline-none placeholder:text-[#4A6785] disabled:opacity-60"
+                className="max-h-[120px] min-h-[20px] flex-1 resize-none bg-transparent font-mono text-sm text-al-text outline-none placeholder:text-al-text-secondary disabled:opacity-60"
               />
             </div>
             <button
@@ -390,7 +390,7 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
               )}
             </button>
           </div>
-          <p className="mt-2 text-center font-mono text-[10px] text-[#4A6785]">
+          <p className="mt-2 text-center font-mono text-[10px] text-al-text-secondary">
             ⌘ Enter to send · Shift+Enter for newline · Copilot has access to your org&apos;s approval history
           </p>
         </form>
@@ -406,13 +406,13 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
             <p className="font-mono text-[9.5px] uppercase tracking-widest text-teal-600">Copilot Context</p>
             <div className="mt-3 grid gap-1.5">
               {[
-                { label: 'Records in scope', value: stats.total.toLocaleString(), color: 'text-[#E8F0FE]' },
+                { label: 'Records in scope', value: stats.total.toLocaleString(), color: 'text-al-text' },
                 { label: 'High risk', value: stats.highRisk.toLocaleString(), color: 'text-al-warning' },
                 { label: 'Violations', value: stats.violations.toLocaleString(), color: 'text-al-danger' },
                 { label: 'Evidence coverage', value: `${stats.evidenceCoverage}%`, color: 'text-teal-400' },
               ].map(({ label, value, color }) => (
-                <div key={label} className="flex items-center justify-between border-b border-[#1E3354]/50 py-1.5 last:border-0">
-                  <span className="text-xs text-[#8BA3BE]">{label}</span>
+                <div key={label} className="flex items-center justify-between border-b border-al-border/50 py-1.5 last:border-0">
+                  <span className="text-xs text-al-text-muted">{label}</span>
                   <span className={`font-mono text-xs font-medium tabular-nums ${color}`}>{value}</span>
                 </div>
               ))}
@@ -421,21 +421,21 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
         ) : null}
 
         {/* Suggested questions */}
-        <div className="overflow-hidden rounded-2xl border border-[#1E3354] bg-[#0D1B30]">
-          <div className="flex items-center justify-between border-b border-[#1E3354] px-4 py-3">
-            <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">Suggested Questions</p>
-            <span className="rounded-full bg-[#112240] px-2 py-0.5 font-mono text-[10px] text-[#8BA3BE]">
+        <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface-sunken">
+          <div className="flex items-center justify-between border-b border-al-border px-4 py-3">
+            <p className="font-mono text-[9.5px] uppercase tracking-widest text-al-text-secondary">Suggested Questions</p>
+            <span className="rounded-full bg-al-surface px-2 py-0.5 font-mono text-[10px] text-al-text-muted">
               {visibleSuggestions.length}
             </span>
           </div>
-          <div className="grid max-h-[420px] gap-1.5 overflow-y-auto p-3 [scrollbar-width:thin] [scrollbar-color:#1E3354_transparent]">
+          <div className="grid max-h-[420px] gap-1.5 overflow-y-auto p-3 [scrollbar-width:thin] [scrollbar-color:rgb(var(--al-border-rgb))_transparent]">
             {visibleSuggestions.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => void ask(item)}
                 disabled={pending}
-                className="group w-full rounded-xl border border-[#1E3354] bg-[#060C17]/50 px-3 py-2.5 text-left text-xs font-medium leading-5 text-[#8BA3BE] transition hover:border-teal-800 hover:bg-teal-950/30 hover:text-teal-400 disabled:cursor-wait disabled:opacity-50"
+                className="group w-full rounded-xl border border-al-border bg-al-bg/50 px-3 py-2.5 text-left text-xs font-medium leading-5 text-al-text-muted transition hover:border-teal-800 hover:bg-teal-950/30 hover:text-teal-400 disabled:cursor-wait disabled:opacity-50"
               >
                 <span className="block whitespace-normal break-words">{item}</span>
               </button>
@@ -444,19 +444,19 @@ export function CopilotClient({ suggestions, initialQuestion, orgStats }: Copilo
         </div>
 
         {/* Coverage */}
-        <div className="overflow-hidden rounded-2xl border border-[#1E3354] bg-[#0D1B30]">
-          <div className="border-b border-[#1E3354] px-4 py-3">
-            <p className="font-mono text-[9.5px] uppercase tracking-widest text-[#4A6785]">Copilot Coverage</p>
+        <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface-sunken">
+          <div className="border-b border-al-border px-4 py-3">
+            <p className="font-mono text-[9.5px] uppercase tracking-widest text-al-text-secondary">Copilot Coverage</p>
           </div>
           <div className="grid gap-1.5 p-3">
             {coverageItems.map((item) => (
-              <div key={item} className="flex items-center gap-2.5 rounded-lg border border-[#1E3354] bg-[#060C17]/40 px-3 py-2">
+              <div key={item} className="flex items-center gap-2.5 rounded-lg border border-al-border bg-al-bg/40 px-3 py-2">
                 <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-emerald-950 text-al-success ring-1 ring-emerald-800">
                   <svg viewBox="0 0 16 16" className="h-2.5 w-2.5" fill="none" aria-hidden="true">
                     <path d="M3 8.5L6.5 12 13 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
-                <span className="text-xs leading-5 text-[#8BA3BE]">{item}</span>
+                <span className="text-xs leading-5 text-al-text-muted">{item}</span>
               </div>
             ))}
           </div>

@@ -52,7 +52,7 @@ export function GatewayFlowDiagram({ counts }: { counts: FlowCounts }) {
                   <Icon className="h-5 w-5" style={{ color: stage.color }} />
                 </div>
                 <p className="text-[11px] font-bold text-white leading-tight" style={{ textWrap: 'balance' } as React.CSSProperties}>{stage.title}</p>
-                <p className="mt-0.5 text-[10px] text-slate-500 max-w-[88px] leading-relaxed">{stage.desc}</p>
+                <p className="mt-0.5 text-[10px] text-al-text-muted max-w-[88px] leading-relaxed">{stage.desc}</p>
                 <span
                   className="mt-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums"
                   style={{ background: `${stage.color}14`, color: stage.color }}
@@ -70,7 +70,7 @@ export function GatewayFlowDiagram({ counts }: { counts: FlowCounts }) {
                         style={{ background: '#7C3AED80', animationDelay: `${delay}s` }}
                       />
                     ))}
-                    <span className="ml-0.5 text-[10px] text-slate-600">›</span>
+                    <span className="ml-0.5 text-[10px] text-al-text-secondary">›</span>
                   </span>
                 </div>
               )}
@@ -94,7 +94,7 @@ export function GatewayFlowDiagram({ counts }: { counts: FlowCounts }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-bold text-white">{stage.title}</p>
-                <p className="text-[10px] text-slate-500">{stage.desc}</p>
+                <p className="text-[10px] text-al-text-muted">{stage.desc}</p>
               </div>
               <span
                 className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums"

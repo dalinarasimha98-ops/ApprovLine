@@ -39,7 +39,7 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
 
   return (
     <section className="grid gap-6">
-      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-al-border bg-white p-6 shadow-sm sm:flex-row sm:items-end">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm sm:flex-row sm:items-end">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-al-accent">Compliance activity</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-al-text">Audit Logs</h2>
@@ -51,7 +51,7 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
       </div>
 
       {result.message ? (
-        <div className={result.alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm' : 'rounded-2xl border border-al-border bg-white p-4 text-al-text-secondary shadow-sm'}>
+        <div className={result.alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm' : 'rounded-2xl border border-al-border bg-al-surface p-4 text-al-text-secondary shadow-sm'}>
           {result.alert ? <AutoRetryOnDegraded /> : null}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -60,7 +60,7 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
               </p>
               <p className="mt-1 text-sm leading-6">{result.message}</p>
             </div>
-            <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-al-border bg-white px-4 text-sm font-bold text-al-text-secondary disabled:opacity-70" />
+            <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary disabled:opacity-70" />
           </div>
         </div>
       ) : null}
@@ -68,7 +68,7 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
         <p className="-mt-2 text-xs font-bold text-al-text-muted">Last updated {minutesAgo(result.staleAsOfMs)}.</p>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-al-border bg-white p-2 shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface p-2 shadow-sm">
         {result.logs.map((log) => (
           <div key={log.id} className="grid gap-3 rounded-xl p-4 transition hover:bg-al-surface-sunken sm:grid-cols-[auto_1fr_auto] sm:items-start">
             <span className="mt-1 h-2.5 w-2.5 rounded-full bg-al-accent shadow-[0_0_0_4px_rgba(33,85,217,0.12)]" />
@@ -98,7 +98,7 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
           <PendingLink
             href={`/dashboard/audit-log?cursor=${result.nextCursor}`}
             pendingText="Loading older logs..."
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-al-border bg-white px-5 text-sm font-bold text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-al-border bg-al-surface px-5 text-sm font-bold text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
           >
             Load older logs
           </PendingLink>

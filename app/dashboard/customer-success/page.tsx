@@ -11,11 +11,11 @@ import { PendingLink } from '@/components/system/PendingLink';
 
 export const dynamic = 'force-dynamic';
 
-const cardClass = 'rounded-2xl border border-al-border bg-white p-5 shadow-sm';
+const cardClass = 'rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm';
 const inputClass =
-  'h-11 w-full rounded-xl border border-al-border bg-white px-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
+  'h-11 w-full rounded-xl border border-al-border bg-al-surface px-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
 const textareaClass =
-  'min-h-28 w-full rounded-xl border border-al-border bg-white px-3 py-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
+  'min-h-28 w-full rounded-xl border border-al-border bg-al-surface px-3 py-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
 
 function cleanString(value: FormDataEntryValue | null, fallback = '') {
   return String(value ?? fallback).trim();
@@ -143,7 +143,7 @@ export default async function CustomerSuccessPage({
             <PendingLink href="/analytics" pendingText="Opening ROI..." className="inline-flex h-11 items-center justify-center rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm shadow-blue-950/30">
               Executive ROI
             </PendingLink>
-            <PendingLink href="/dashboard/pilot" pendingText="Opening pilot..." className="inline-flex h-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 px-5 text-sm font-black text-white">
+            <PendingLink href="/dashboard/pilot" pendingText="Opening pilot..." className="inline-flex h-11 items-center justify-center rounded-xl border border-white/15 bg-al-surface/10 px-5 text-sm font-black text-white">
               Pilot Readiness
             </PendingLink>
           </div>
@@ -189,7 +189,7 @@ export default async function CustomerSuccessPage({
                 <input type="hidden" name="plan" value={plan.name} />
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-base font-black text-al-text">{plan.name}</p>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-al-text-secondary ring-1 ring-slate-200">{plan.price}</span>
+                  <span className="rounded-full bg-al-surface px-3 py-1 text-xs font-black text-al-text-secondary ring-1 ring-slate-200">{plan.price}</span>
                 </div>
                 <p className="mt-3 text-sm font-bold text-al-text-secondary">{plan.limits}</p>
                 <div className="mt-3 grid gap-2">
@@ -311,7 +311,7 @@ export default async function CustomerSuccessPage({
                 <input name="score" type="number" min="0" max="10" defaultValue="9" className={inputClass} />
               </label>
               <textarea name="comment" placeholder="Optional NPS comment" className={textareaClass} />
-              <FormSubmitButton pendingText="Saving..." className="inline-flex h-10 items-center justify-center rounded-lg border border-al-border bg-white px-4 text-sm font-black text-al-text-secondary">
+              <FormSubmitButton pendingText="Saving..." className="inline-flex h-10 items-center justify-center rounded-lg border border-al-border bg-al-surface px-4 text-sm font-black text-al-text-secondary">
                 Submit NPS
               </FormSubmitButton>
             </form>
@@ -330,7 +330,7 @@ export default async function CustomerSuccessPage({
             <PendingLink href="/api/export/analytics?format=pdf" pendingText="Preparing PDF..." className="inline-flex h-10 items-center rounded-lg bg-al-accent px-4 text-sm font-black text-white">
               PDF ROI Report
             </PendingLink>
-            <PendingLink href="/api/export/analytics?format=csv" pendingText="Preparing CSV..." className="inline-flex h-10 items-center rounded-lg border border-al-border bg-white px-4 text-sm font-black text-al-text-secondary">
+            <PendingLink href="/api/export/analytics?format=csv" pendingText="Preparing CSV..." className="inline-flex h-10 items-center rounded-lg border border-al-border bg-al-surface px-4 text-sm font-black text-al-text-secondary">
               CSV Metrics
             </PendingLink>
           </div>
@@ -345,7 +345,7 @@ export default async function CustomerSuccessPage({
               ['Security posture', data.enterprise.securityCenter],
               ['Data retention', data.enterprise.retention],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-white/10 bg-white/[0.06] p-3">
+              <div key={label} className="rounded-xl border border-white/10 bg-al-surface/[0.06] p-3">
                 <p className="text-xs font-black uppercase tracking-wide text-blue-200">{label}</p>
                 <p className="mt-1 text-sm font-semibold text-al-text-secondary">{value}</p>
               </div>

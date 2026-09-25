@@ -65,7 +65,7 @@ export function ComplianceInsightsPanel({
   return (
     <div className="grid gap-5">
       {/* Insights card */}
-      <div className="rounded-2xl border border-al-border bg-[#0D1526] p-5">
+      <div className="rounded-2xl border border-al-border bg-al-surface p-5">
         <div className="flex items-center gap-2 mb-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-al-accent-hover/20">
             <svg className="h-4 w-4 text-al-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -80,7 +80,7 @@ export function ComplianceInsightsPanel({
 
         <div className="grid gap-3">
           {insights.length === 0 ? (
-            <div className="rounded-xl border border-al-border bg-[#0A0E1A] p-4 text-center">
+            <div className="rounded-xl border border-al-border bg-al-bg p-4 text-center">
               <p className="text-xs font-semibold text-al-text-muted">No insights generated yet.</p>
               <p className="mt-1 text-[11px] text-al-text-secondary">Capture more approvals to generate compliance insights.</p>
             </div>
@@ -88,7 +88,7 @@ export function ComplianceInsightsPanel({
             insights.map((insight) => (
               <div
                 key={insight.id}
-                className={`rounded-xl border bg-[#0A0E1A] p-3 ${insightBorderColor(insight.type)}`}
+                className={`rounded-xl border bg-al-bg p-3 ${insightBorderColor(insight.type)}`}
               >
                 <div className="flex items-start gap-2.5">
                   <InsightIcon type={insight.type} />
@@ -113,7 +113,7 @@ export function ComplianceInsightsPanel({
       </div>
 
       {/* Score gauge */}
-      <div className="rounded-2xl border border-al-border bg-[#0D1526] p-5">
+      <div className="rounded-2xl border border-al-border bg-al-surface p-5">
         <h3 className="text-sm font-bold text-white mb-3">Score Breakdown</h3>
         <div className="grid gap-2.5">
           {[
@@ -141,7 +141,7 @@ export function ComplianceInsightsPanel({
       </div>
 
       {/* Quick Actions */}
-      <div className="rounded-2xl border border-al-border bg-[#0D1526] p-5">
+      <div className="rounded-2xl border border-al-border bg-al-surface p-5">
         <h3 className="text-sm font-bold text-white mb-3">Quick Actions</h3>
         <div className="grid gap-2">
           {[
@@ -155,7 +155,7 @@ export function ComplianceInsightsPanel({
             <Link
               key={href}
               href={href}
-              className="flex items-center justify-between gap-2 rounded-lg border border-al-border bg-[#0A0E1A] px-3 py-2 text-[11px] font-semibold text-al-text-secondary hover:border-al-border-strong hover:text-white transition-colors"
+              className="flex items-center justify-between gap-2 rounded-lg border border-al-border bg-al-bg px-3 py-2 text-[11px] font-semibold text-al-text-secondary hover:border-al-border-strong hover:text-white transition-colors"
             >
               {label}
               <svg className="h-3 w-3 text-al-text-secondary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

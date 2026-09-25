@@ -46,7 +46,7 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-al-border bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-al-border bg-al-surface shadow-sm">
         {/* Mobile: card stack */}
         <div className="divide-y divide-slate-100 lg:hidden">
           {alerts.map((alert) => (

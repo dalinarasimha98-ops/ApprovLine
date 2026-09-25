@@ -54,8 +54,8 @@ export function SVGBarChart({
         const y = paddingTop + ((maxValue - val) / maxValue) * chartHeight;
         return (
           <g key={val}>
-            <line x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} stroke="#1E2D4A" strokeWidth={1} />
-            <text x={paddingLeft - 4} y={y + 4} textAnchor="end" fontSize={9} fill="#4B5563">
+            <line x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} stroke="rgb(var(--al-border-rgb))" strokeWidth={1} />
+            <text x={paddingLeft - 4} y={y + 4} textAnchor="end" fontSize={9} fill="rgb(var(--al-text-muted-rgb))">
               {val > 999 ? `${Math.round(val / 1000)}k` : val}
             </text>
           </g>
@@ -84,7 +84,7 @@ export function SVGBarChart({
                 y={y - 4}
                 textAnchor="middle"
                 fontSize={8}
-                fill="#9CA3AF"
+                fill="rgb(var(--al-text-muted-rgb))"
                 fontWeight="bold"
               >
                 {nf(d.value)}
@@ -95,7 +95,7 @@ export function SVGBarChart({
               y={height - paddingBottom + 14}
               textAnchor="middle"
               fontSize={9}
-              fill="#4B5563"
+              fill="rgb(var(--al-text-muted-rgb))"
             >
               {d.label.slice(0, 6)}
             </text>

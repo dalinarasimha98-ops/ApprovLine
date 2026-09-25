@@ -27,7 +27,7 @@ function EvidenceDetailSkeleton() {
       <div className="h-12 animate-pulse rounded-2xl border border-blue-300/15 bg-[#071321]/95" />
       <div className="grid gap-2 rounded-2xl border border-blue-300/15 bg-[#071321]/95 p-4">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index} className="h-14 animate-pulse rounded-xl bg-white/[0.04]" />
+          <div key={index} className="h-14 animate-pulse rounded-xl bg-al-surface/[0.04]" />
         ))}
       </div>
     </div>
@@ -54,7 +54,7 @@ async function EvidenceDetailContent({ id, initialProviderFilter }: { id: string
   } catch (error) {
     console.error('[evidence-detail] fetch failed', { id }, error);
     return (
-      <section className="mx-auto grid w-full max-w-3xl gap-4 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
+      <section className="mx-auto grid w-full max-w-3xl gap-4 rounded-2xl border border-amber-200 bg-al-surface p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-wide text-amber-700">Evidence record</p>
         <h1 className="text-2xl font-black text-al-text">We could not load this record this time</h1>
         <p className="text-sm leading-6 text-al-text-secondary">The database did not respond in time. This is usually transient - retry in a moment.</p>

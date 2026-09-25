@@ -19,7 +19,7 @@ export default async function SettingsPage() {
   } catch {
     return (
       <div className="grid gap-4">
-        <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface shadow-sm">
           <div className="bg-al-bg px-6 py-7 text-white">
             <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Workspace Configuration</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight">Settings</h1>
@@ -36,7 +36,7 @@ export default async function SettingsPage() {
   return (
     <div className="grid gap-4">
       {/* Page header — dark card matching the Users & Teams / Playbooks pattern */}
-      <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface shadow-sm">
         <div className="bg-al-bg px-6 py-7 text-white">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Workspace Configuration</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight">{data.organization.name}</h1>

@@ -77,7 +77,7 @@ export default async function CopilotPage({
           <PendingLink
             href="/api/debug/dashboard"
             pendingText="Opening diagnostics..."
-            className="mt-3 inline-flex h-10 min-h-0 items-center rounded-lg border border-amber-300 bg-white px-3 text-sm font-black text-amber-900"
+            className="mt-3 inline-flex h-10 min-h-0 items-center rounded-lg border border-amber-300 bg-al-surface px-3 text-sm font-black text-amber-900"
           >
             Open diagnostics
           </PendingLink>

@@ -446,7 +446,7 @@ export default async function IntegrationsPage({
         <div className="flex shrink-0 flex-wrap gap-2">
           <a
             href="/dashboard/gateway?tab=data-flow"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-al-border bg-white px-4 py-2 text-sm font-black text-al-text-secondary shadow-sm transition hover:bg-al-surface-sunken"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-al-border bg-al-surface px-4 py-2 text-sm font-black text-al-text-secondary shadow-sm transition hover:bg-al-surface-sunken"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -459,7 +459,7 @@ export default async function IntegrationsPage({
 
       {/* ── Notices ──────────────────────────────────────────────────────── */}
       {statusNotice && (
-        <div className="mb-4 rounded-2xl border border-al-border bg-white p-4 text-sm font-semibold text-al-text-secondary shadow-sm">
+        <div className="mb-4 rounded-2xl border border-al-border bg-al-surface p-4 text-sm font-semibold text-al-text-secondary shadow-sm">
           <p className="font-black text-al-text">Status refresh delayed</p>
           <p className="mt-1">{statusNotice}</p>
         </div>
@@ -489,7 +489,7 @@ export default async function IntegrationsPage({
         <aside className="w-full shrink-0 xl:w-72 xl:sticky xl:top-6">
           <div className="flex flex-col gap-4">
             {/* Your Connections */}
-            <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
               <h2 className="mb-4 text-sm font-black tracking-tight text-al-text">Your Connections</h2>
               <div className="flex flex-col gap-3">
                 <StatPill label="Connected" value={connectedCount} color="bg-emerald-400" />
@@ -501,7 +501,7 @@ export default async function IntegrationsPage({
 
             {/* Integration Requests */}
             {sidebarRequests.length > 0 && (
-              <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="text-sm font-black text-al-text">Integration Requests</h2>
                   <span className="rounded-full bg-al-surface-elevated px-2 py-0.5 text-xs font-black text-al-text-secondary">
@@ -527,7 +527,7 @@ export default async function IntegrationsPage({
             )}
 
             {/* Generic Connectors */}
-            <div className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
               <h2 className="mb-1 text-sm font-black text-al-text">Generic Connectors</h2>
               <p className="mb-3 text-xs font-semibold text-al-text-muted">
                 Connect tools using webhooks, APIs, email ingestion or data import.
@@ -537,7 +537,7 @@ export default async function IntegrationsPage({
                   <Link
                     key={gc.slug}
                     href={gc.href}
-                    className="flex items-center justify-between gap-2 rounded-xl border border-al-border bg-al-surface-sunken px-3 py-2 text-xs transition hover:border-al-border hover:bg-white"
+                    className="flex items-center justify-between gap-2 rounded-xl border border-al-border bg-al-surface-sunken px-3 py-2 text-xs transition hover:border-al-border hover:bg-al-surface"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-black ${gc.color}`}>
@@ -568,7 +568,7 @@ export default async function IntegrationsPage({
               <div className="mt-3 flex flex-col gap-2">
                 <a
                   href="/dashboard/gateway?tab=data-flow"
-                  className="block rounded-lg border border-violet-200 bg-white px-3 py-2 text-center text-xs font-black text-violet-700 transition hover:bg-violet-50"
+                  className="block rounded-lg border border-violet-200 bg-al-surface px-3 py-2 text-center text-xs font-black text-violet-700 transition hover:bg-violet-50"
                 >
                   Use generic connector
                 </a>

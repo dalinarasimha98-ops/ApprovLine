@@ -21,7 +21,7 @@ function SummaryCard({
   colorClass: string;
 }) {
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-al-border bg-white p-5 shadow-sm">
+    <div className="flex items-start gap-4 rounded-xl border border-al-border bg-al-surface p-5 shadow-sm">
       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${colorClass}`}>
         <Icon className="h-5 w-5" />
       </div>
@@ -50,7 +50,7 @@ export default async function ReportsAndExportsPage() {
   return (
     <section className="grid gap-6">
       {/* Header */}
-      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-al-border bg-white p-6 shadow-sm sm:flex-row sm:items-end">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm sm:flex-row sm:items-end">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-al-accent">Governance &amp; Risk</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-al-text">Reports &amp; Exports</h2>
@@ -61,7 +61,7 @@ export default async function ReportsAndExportsPage() {
         <div className="flex shrink-0 items-center gap-2">
           <a
             href="/api/export/approvals?format=csv"
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-al-border bg-white px-4 text-sm font-bold text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary shadow-sm hover:bg-al-surface-sunken"
           >
             <Download className="h-4 w-4" />
             Quick CSV Export

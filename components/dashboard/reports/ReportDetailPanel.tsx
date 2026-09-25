@@ -24,7 +24,7 @@ export function ReportDetailPanel({ report, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label={`${report.name} details`}
-      className="flex flex-col overflow-hidden rounded-xl border border-al-border bg-white shadow-sm"
+      className="flex flex-col overflow-hidden rounded-xl border border-al-border bg-al-surface shadow-sm"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 border-b border-al-border p-5">

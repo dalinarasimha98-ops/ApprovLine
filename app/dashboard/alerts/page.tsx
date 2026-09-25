@@ -87,7 +87,7 @@ async function acknowledgeAlertAction(formData: FormData) {
 // ── Degraded banner ───────────────────────────────────────────────────────────
 function DegradedBanner({ message, alert }: { message: string; alert: boolean }) {
   return (
-    <div className={`rounded-xl border p-4 ${alert ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-al-border bg-white text-al-text-secondary'}`}>
+    <div className={`rounded-xl border p-4 ${alert ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-al-border bg-al-surface text-al-text-secondary'}`}>
       {alert ? <AutoRetryOnDegraded intervalMs={AUTO_RETRY_INTERVAL_MS} /> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -96,7 +96,7 @@ function DegradedBanner({ message, alert }: { message: string; alert: boolean })
           </p>
           <p className="mt-1 text-sm leading-5">{message}</p>
         </div>
-        <RefreshButton className="inline-flex h-9 items-center gap-2 rounded-lg border border-al-border bg-white px-3 text-sm font-bold text-al-text-secondary disabled:opacity-70" />
+        <RefreshButton className="inline-flex h-9 items-center gap-2 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-bold text-al-text-secondary disabled:opacity-70" />
       </div>
     </div>
   );
@@ -116,7 +116,7 @@ function KpiCard({ metric, active }: { metric: KpiMetric; active: boolean }) {
   return (
     <Link
       href={metric.href}
-      className={`group rounded-xl border bg-white p-4 shadow-sm transition hover:shadow-md ${active ? 'ring-2 ring-[#2155d9]/30 border-al-accent/30' : 'border-al-border'}`}
+      className={`group rounded-xl border bg-al-surface p-4 shadow-sm transition hover:shadow-md ${active ? 'ring-2 ring-[#2155d9]/30 border-al-accent/30' : 'border-al-border'}`}
     >
       <div className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${metric.colorClass}`}>
         <span className={`h-1.5 w-1.5 rounded-full ${metric.dotClass}`} />
@@ -219,7 +219,7 @@ function AttentionItem({
   const stripColor = alert.severity === 'Critical' ? 'bg-al-danger' : 'bg-al-warning';
 
   return (
-    <div className={`relative overflow-hidden rounded-xl border ${borderColor} bg-white shadow-sm`}>
+    <div className={`relative overflow-hidden rounded-xl border ${borderColor} bg-al-surface shadow-sm`}>
       <div className={`absolute inset-y-0 left-0 w-1 ${stripColor}`} />
       <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4 pl-6">
         <div className="min-w-0">
@@ -290,7 +290,7 @@ async function AlertsList({
             : 'No high-risk or policy-violating approvals are currently flagged.'}
         </p>
         {Object.values(filters).some(Boolean) ? (
-          <PendingLink href="/dashboard/alerts" pendingText="Clearing…" className="mt-4 inline-flex h-9 items-center rounded-lg border border-al-border bg-white px-4 text-sm font-bold text-al-text-secondary">
+          <PendingLink href="/dashboard/alerts" pendingText="Clearing…" className="mt-4 inline-flex h-9 items-center rounded-lg border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary">
             Clear filters
           </PendingLink>
         ) : null}
@@ -365,18 +365,18 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           <PendingLink
             href="/investigations"
             pendingText="Opening…"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-al-text-secondary hover:bg-white/[0.1]"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.06] px-3 text-xs font-bold text-al-text-secondary hover:bg-al-surface/[0.1]"
           >
             Investigation Center
           </PendingLink>
           <PendingLink
             href="/dashboard/audit"
             pendingText="Opening…"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-al-text-secondary hover:bg-white/[0.1]"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.06] px-3 text-xs font-bold text-al-text-secondary hover:bg-al-surface/[0.1]"
           >
             Export
           </PendingLink>
-          <RefreshButton className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 text-xs font-bold text-al-text-secondary disabled:opacity-50 hover:bg-white/[0.1]" />
+          <RefreshButton className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-al-surface/[0.06] px-3 text-xs font-bold text-al-text-secondary disabled:opacity-50 hover:bg-al-surface/[0.1]" />
         </div>
       </div>
 
@@ -386,7 +386,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
       </Suspense>
 
       {/* Filter bar */}
-      <form className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4 backdrop-blur-sm">
+      <form className="rounded-xl border border-white/[0.07] bg-al-surface/[0.04] p-4 backdrop-blur-sm">
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
           <label className="xl:col-span-2 grid gap-1">
             <span className="text-[10px] font-bold uppercase tracking-widest text-al-text-muted">Search</span>
@@ -397,13 +397,13 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
                 type="search"
                 defaultValue={filters.q ?? ''}
                 placeholder="Alert title, approver, department…"
-                className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.07] pl-9 pr-3 text-sm font-semibold text-al-text placeholder-slate-500 outline-none focus:border-al-accent/60 focus:ring-2 focus:ring-[#2155d9]/25"
+                className="h-10 w-full rounded-lg border border-white/10 bg-al-surface/[0.07] pl-9 pr-3 text-sm font-semibold text-al-text placeholder-slate-500 outline-none focus:border-al-accent/60 focus:ring-2 focus:ring-[#2155d9]/25"
               />
             </div>
           </label>
           <label className="grid gap-1">
             <span className="text-[10px] font-bold uppercase tracking-widest text-al-text-muted">Severity</span>
-            <select name="severity" defaultValue={filters.severity ?? ''} className="h-10 rounded-lg border border-white/10 bg-white/[0.07] px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60">
+            <select name="severity" defaultValue={filters.severity ?? ''} className="h-10 rounded-lg border border-white/10 bg-al-surface/[0.07] px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60">
               <option value="">All severities</option>
               <option value="critical">Critical</option>
               <option value="high">High</option>
@@ -413,7 +413,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           </label>
           <label className="grid gap-1">
             <span className="text-[10px] font-bold uppercase tracking-widest text-al-text-muted">Status</span>
-            <select name="status" defaultValue={filters.status ?? ''} className="h-10 rounded-lg border border-white/10 bg-white/[0.07] px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60">
+            <select name="status" defaultValue={filters.status ?? ''} className="h-10 rounded-lg border border-white/10 bg-al-surface/[0.07] px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60">
               <option value="">All statuses</option>
               <option value="open">Open</option>
               <option value="escalated">Escalated</option>
@@ -423,7 +423,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           </label>
           <label className="grid gap-1">
             <span className="text-[10px] font-bold uppercase tracking-widest text-al-text-muted">Type</span>
-            <select name="approvalType" defaultValue={filters.approvalType ?? ''} className="h-10 rounded-lg border border-white/10 bg-white/[0.07] px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60">
+            <select name="approvalType" defaultValue={filters.approvalType ?? ''} className="h-10 rounded-lg border border-white/10 bg-al-surface/[0.07] px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60">
               <option value="">All types</option>
               <option value="EXPLICIT">Explicit</option>
               <option value="IMPLICIT">Implicit</option>
@@ -434,7 +434,7 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
           </label>
           <label className="grid gap-1">
             <span className="text-[10px] font-bold uppercase tracking-widest text-al-text-muted">Source</span>
-            <select name="sourcePlatform" defaultValue={filters.sourcePlatform ?? ''} className="h-10 rounded-lg border border-white/10 bg-white/[0.07] px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60">
+            <select name="sourcePlatform" defaultValue={filters.sourcePlatform ?? ''} className="h-10 rounded-lg border border-white/10 bg-al-surface/[0.07] px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60">
               <option value="">All sources</option>
               <option value="slack">Slack</option>
               <option value="gmail">Gmail</option>
@@ -447,15 +447,15 @@ export default async function AlertsPage({ searchParams }: AlertsPageProps) {
         <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-3">
           <label className="flex items-center gap-2 text-[11px] text-al-text-muted">
             <span className="text-[10px] font-bold uppercase tracking-widest">From</span>
-            <input name="from" type="date" defaultValue={filters.from ?? ''} className="h-8 rounded-lg border border-white/10 bg-white/[0.07] px-2 text-sm text-al-text outline-none focus:border-al-accent/60" />
+            <input name="from" type="date" defaultValue={filters.from ?? ''} className="h-8 rounded-lg border border-white/10 bg-al-surface/[0.07] px-2 text-sm text-al-text outline-none focus:border-al-accent/60" />
           </label>
           <label className="flex items-center gap-2 text-[11px] text-al-text-muted">
             <span className="text-[10px] font-bold uppercase tracking-widest">To</span>
-            <input name="to" type="date" defaultValue={filters.to ?? ''} className="h-8 rounded-lg border border-white/10 bg-white/[0.07] px-2 text-sm text-al-text outline-none focus:border-al-accent/60" />
+            <input name="to" type="date" defaultValue={filters.to ?? ''} className="h-8 rounded-lg border border-white/10 bg-al-surface/[0.07] px-2 text-sm text-al-text outline-none focus:border-al-accent/60" />
           </label>
           <div className="ml-auto flex gap-2">
             {hasActiveFilter ? (
-              <PendingLink href="/dashboard/alerts" pendingText="Clearing…" className="inline-flex h-9 items-center rounded-lg border border-white/10 px-4 text-sm font-bold text-al-text-secondary hover:bg-white/[0.06]">
+              <PendingLink href="/dashboard/alerts" pendingText="Clearing…" className="inline-flex h-9 items-center rounded-lg border border-white/10 px-4 text-sm font-bold text-al-text-secondary hover:bg-al-surface/[0.06]">
                 Clear
               </PendingLink>
             ) : null}

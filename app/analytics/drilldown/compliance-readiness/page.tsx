@@ -100,7 +100,7 @@ function deriveEvidenceCoverage(record: {
 
 function DarkCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-al-border bg-[#0D1526] p-5 ${className}`}>
+    <div className={`rounded-2xl border border-al-border bg-al-surface p-5 ${className}`}>
       {children}
     </div>
   );

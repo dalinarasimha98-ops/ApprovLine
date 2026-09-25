@@ -274,7 +274,7 @@ export default async function DashboardPage() {
           <SectionHeader title="Live Evidence Feed" subtitle="Real-time capture from connected tools" href="/evidence" linkLabel="All evidence" />
           <div className="mt-3 divide-y divide-white/[0.06]">
             {(recentApprovals.length ? recentApprovals.slice(0, 5) : []).map((approval) => (
-              <Link href={`/approvals/${approval.id}`} key={approval.id} className="grid grid-cols-[28px_50px_1fr_auto] items-center gap-2 py-2.5 hover:bg-white/[0.025]">
+              <Link href={`/approvals/${approval.id}`} key={approval.id} className="grid grid-cols-[28px_50px_1fr_auto] items-center gap-2 py-2.5 hover:bg-al-surface/[0.025]">
                 <ProviderIcon provider={approval.sourcePlatform ?? 'manual'} />
                 <span className="text-[9px] text-al-text-muted">{approval.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 <span className="min-w-0">
@@ -302,7 +302,7 @@ export default async function DashboardPage() {
               ))}
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.025] p-2.5">
+          <div className="mt-3 flex items-center gap-2 rounded-md border border-white/[0.06] bg-al-surface/[0.025] p-2.5">
             <span className="text-[10px] font-semibold text-al-text-muted">{connected.length} connected</span>
             <div className="ml-auto flex -space-x-1">
               {connected.slice(0, 8).map((integration) => <ProviderIcon key={integration.id} provider={integration.provider} />)}
@@ -319,7 +319,7 @@ export default async function DashboardPage() {
               const status = 'outcome' in record ? record.outcome : record.status;
               const detailHref = 'outcome' in record ? `/evidence/${id}` : `/approvals/${id}`;
               return (
-                <Link href={detailHref} key={id} className="flex items-center gap-3 py-3 hover:bg-white/[0.025]">
+                <Link href={detailHref} key={id} className="flex items-center gap-3 py-3 hover:bg-al-surface/[0.025]">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[11px] font-semibold text-al-text">{subject}</p>
                     <p className="mt-0.5 truncate text-[9px] text-al-text-muted">{'department' in record ? record.department ?? 'General' : 'General'}</p>
@@ -338,7 +338,7 @@ export default async function DashboardPage() {
           <SectionHeader title="AI Copilot" subtitle="Ask anything about approvals" href="/copilot" linkLabel="Open" />
           <div className="mt-3 grid gap-2">
             {['Who approved the latest budget?', 'Show high-risk approvals this month', 'Which approvals need Finance?', 'Show approvals above $50,000'].map((question) => (
-              <Link key={question} href={`/copilot?q=${encodeURIComponent(question)}`} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-[10px] text-al-text-secondary hover:border-al-accent/30 hover:bg-al-accent-hover/[0.06]">
+              <Link key={question} href={`/copilot?q=${encodeURIComponent(question)}`} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-al-surface/[0.025] px-3 py-2 text-[10px] text-al-text-secondary hover:border-al-accent/30 hover:bg-al-accent-hover/[0.06]">
                 <Sparkles className="h-3 w-3 text-al-accent" /> {question}
               </Link>
             ))}
@@ -374,7 +374,7 @@ export default async function DashboardPage() {
                 ['Policy Violations', categories.filter((item) => item.category?.toLowerCase().includes('compliance')).reduce((sum, item) => sum + item._count._all, 0), 'text-al-accent'],
                 ['Pending Review', pendingReview, 'text-al-info'],
               ].map(([label, value, color]) => (
-                <div key={String(label)} className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-white/[0.02] px-2.5 py-2 text-[10px]">
+                <div key={String(label)} className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-al-surface/[0.02] px-2.5 py-2 text-[10px]">
                   <AlertTriangle className={`h-3.5 w-3.5 ${color}`} />
                   <span className="flex-1 text-al-text-muted">{label}</span>
                   <span className={`font-bold ${color}`}>{value}</span>

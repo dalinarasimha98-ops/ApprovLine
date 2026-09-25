@@ -9,7 +9,7 @@ export default function OnboardingError({ error, reset }: { error: Error & { dig
 
   return (
     <main className="min-h-screen bg-al-surface-sunken px-6 py-10">
-      <section className="mx-auto grid max-w-3xl gap-4 rounded-lg border border-amber-200 bg-white p-6">
+      <section className="mx-auto grid max-w-3xl gap-4 rounded-lg border border-amber-200 bg-al-surface p-6">
         <p className="text-sm font-bold uppercase text-amber-700">Onboarding paused</p>
         <h1 className="text-3xl font-black text-al-text">We could not load setup right now</h1>
         <p className="text-al-text-secondary">

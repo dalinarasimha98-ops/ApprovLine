@@ -58,7 +58,7 @@ export function HighRiskFiltersForm({
   const hasActiveFilters = Object.values(values).some(Boolean) && values.riskLevel !== 'high,critical';
 
   return (
-    <div className="rounded-2xl border border-al-border bg-[#0D1526]">
+    <div className="rounded-2xl border border-al-border bg-al-surface">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -97,7 +97,7 @@ export function HighRiskFiltersForm({
                 name="q"
                 defaultValue={values.q ?? ''}
                 placeholder="Title, approver, department, category..."
-                className="h-9 w-full rounded-lg border border-al-border bg-[#0A0E1A] px-3 text-sm font-semibold text-al-text-secondary placeholder:text-al-text-secondary outline-none focus:border-al-accent/50 focus:ring-1 focus:ring-al-accent/20 transition"
+                className="h-9 w-full rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-secondary placeholder:text-al-text-secondary outline-none focus:border-al-accent/50 focus:ring-1 focus:ring-al-accent/20 transition"
               />
             </div>
 
@@ -109,7 +109,7 @@ export function HighRiskFiltersForm({
               <select
                 name="department"
                 defaultValue={values.department ?? ''}
-                className="h-9 w-full rounded-lg border border-al-border bg-[#0A0E1A] px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
+                className="h-9 w-full rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
               >
                 <option value="">All departments</option>
                 {filterOptions.departments.map((d) => (
@@ -126,7 +126,7 @@ export function HighRiskFiltersForm({
               <select
                 name="category"
                 defaultValue={values.category ?? ''}
-                className="h-9 w-full rounded-lg border border-al-border bg-[#0A0E1A] px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
+                className="h-9 w-full rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
               >
                 <option value="">All categories</option>
                 {filterOptions.categories.map((c) => (
@@ -143,7 +143,7 @@ export function HighRiskFiltersForm({
               <select
                 name="source"
                 defaultValue={values.source ?? ''}
-                className="h-9 w-full rounded-lg border border-al-border bg-[#0A0E1A] px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
+                className="h-9 w-full rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
               >
                 <option value="">All sources</option>
                 {filterOptions.sources.map((s) => (
@@ -160,7 +160,7 @@ export function HighRiskFiltersForm({
               <select
                 name="riskLevel"
                 defaultValue={values.riskLevel ?? 'high,critical'}
-                className="h-9 w-full rounded-lg border border-al-border bg-[#0A0E1A] px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
+                className="h-9 w-full rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
               >
                 <option value="high,critical">High + Critical</option>
                 <option value="critical">Critical only</option>
@@ -176,7 +176,7 @@ export function HighRiskFiltersForm({
               <select
                 name="status"
                 defaultValue={values.status ?? ''}
-                className="h-9 w-full rounded-lg border border-al-border bg-[#0A0E1A] px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
+                className="h-9 w-full rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition appearance-none"
               >
                 <option value="">All statuses</option>
                 <option value="APPROVED">Approved</option>
@@ -195,7 +195,7 @@ export function HighRiskFiltersForm({
                 name="from"
                 type="date"
                 defaultValue={values.from ?? ''}
-                className="h-9 w-full rounded-lg border border-al-border bg-[#0A0E1A] px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition [color-scheme:dark]"
+                className="h-9 w-full rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition [color-scheme:dark]"
               />
             </div>
 
@@ -208,7 +208,7 @@ export function HighRiskFiltersForm({
                 name="to"
                 type="date"
                 defaultValue={values.to ?? ''}
-                className="h-9 w-full rounded-lg border border-al-border bg-[#0A0E1A] px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition [color-scheme:dark]"
+                className="h-9 w-full rounded-lg border border-al-border bg-al-bg px-3 text-sm font-semibold text-al-text-secondary outline-none focus:border-al-accent/50 transition [color-scheme:dark]"
               />
             </div>
           </div>

@@ -100,7 +100,7 @@ function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="h-12 rounded-xl border border-al-border bg-white px-4 text-sm font-bold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+        className="h-12 rounded-xl border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
       />
     </label>
   );
@@ -123,7 +123,7 @@ function SelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-12 rounded-xl border border-al-border bg-white px-4 text-sm font-bold text-al-text shadow-sm outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+        className="h-12 rounded-xl border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text shadow-sm outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100"
       >
         <option value="">Select</option>
         {options.map((option) => <option key={option}>{option}</option>)}
@@ -212,12 +212,12 @@ export function CustomerOnboardingWizard({ initialState }: { initialState: Wizar
             </span>
           </Link>
 
-          <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+          <div className="mt-8 rounded-2xl border border-white/10 bg-al-surface/[0.06] p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-200">Readiness</p>
               <Badge tone={readinessScore >= 80 ? 'green' : readinessScore >= 50 ? 'amber' : 'blue'}>{readinessScore}%</Badge>
             </div>
-            <div className="mt-4 h-2 rounded-full bg-white/10">
+            <div className="mt-4 h-2 rounded-full bg-al-surface/10">
               <div className="h-2 rounded-full bg-[#2f6bff]" style={{ width: `${readinessScore}%` }} />
             </div>
             <p className="mt-3 text-sm font-semibold text-al-text-secondary">Operational setup for {state.name || 'your workspace'}.</p>
@@ -232,10 +232,10 @@ export function CustomerOnboardingWizard({ initialState }: { initialState: Wizar
                   type="button"
                   onClick={() => save(index + 1)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-black transition ${
-                    active ? 'bg-white text-al-text' : 'text-al-text-secondary hover:bg-white/10 hover:text-white'
+                    active ? 'bg-al-surface text-al-text' : 'text-al-text-secondary hover:bg-al-surface/10 hover:text-white'
                   }`}
                 >
-                  <span className={`grid h-6 w-6 place-items-center rounded-full text-xs ${active ? 'bg-al-accent text-white' : 'bg-white/10 text-al-text-secondary'}`}>{index + 1}</span>
+                  <span className={`grid h-6 w-6 place-items-center rounded-full text-xs ${active ? 'bg-al-accent text-white' : 'bg-al-surface/10 text-al-text-secondary'}`}>{index + 1}</span>
                   {onboardingStepLabels[key]}
                 </button>
               );
@@ -244,7 +244,7 @@ export function CustomerOnboardingWizard({ initialState }: { initialState: Wizar
         </aside>
 
         <section className="grid content-start gap-6">
-          <header className="rounded-[28px] border border-al-border bg-white/90 p-6 shadow-sm backdrop-blur">
+          <header className="rounded-[28px] border border-al-border bg-al-surface/90 p-6 shadow-sm backdrop-blur">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-al-accent">Step {step} of 10</p>
@@ -255,12 +255,12 @@ export function CustomerOnboardingWizard({ initialState }: { initialState: Wizar
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone={saveState === 'Saved' ? 'green' : saveState === 'Error' ? 'amber' : 'blue'}>{isPending ? 'Saving...' : saveState}</Badge>
-                <Link href="/dashboard" className="rounded-xl border border-al-border bg-white px-4 py-2 text-sm font-black text-al-text-secondary shadow-sm hover:bg-al-surface-sunken">Exit</Link>
+                <Link href="/dashboard" className="rounded-xl border border-al-border bg-al-surface px-4 py-2 text-sm font-black text-al-text-secondary shadow-sm hover:bg-al-surface-sunken">Exit</Link>
               </div>
             </div>
           </header>
 
-          <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-[0_20px_70px_rgba(15,23,42,0.08)]">
+          <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-[0_20px_70px_rgba(15,23,42,0.08)]">
             {step === 1 ? (
               <div className="grid gap-6">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -299,8 +299,8 @@ export function CustomerOnboardingWizard({ initialState }: { initialState: Wizar
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" className="rounded-xl border border-al-border bg-white px-4 py-2 text-sm font-black text-al-text-secondary">CSV upload</button>
-                  <button type="button" className="rounded-xl border border-al-border bg-white px-4 py-2 text-sm font-black text-al-text-secondary">Bulk invite</button>
+                  <button type="button" className="rounded-xl border border-al-border bg-al-surface px-4 py-2 text-sm font-black text-al-text-secondary">CSV upload</button>
+                  <button type="button" className="rounded-xl border border-al-border bg-al-surface px-4 py-2 text-sm font-black text-al-text-secondary">Bulk invite</button>
                   <Badge tone="blue">{initialState.seatUsage.used + state.invitedTeamMembers.length} seats planned</Badge>
                 </div>
                 <div className="grid gap-2">
@@ -452,10 +452,10 @@ export function CustomerOnboardingWizard({ initialState }: { initialState: Wizar
             ) : null}
           </div>
 
-          <footer className="flex flex-col-reverse justify-between gap-3 rounded-[24px] border border-al-border bg-white p-4 shadow-sm sm:flex-row sm:items-center">
-            <button type="button" onClick={back} disabled={step === 1 || isPending} className="rounded-xl border border-al-border bg-white px-5 py-3 text-sm font-black text-al-text-secondary disabled:opacity-40">Back</button>
+          <footer className="flex flex-col-reverse justify-between gap-3 rounded-[24px] border border-al-border bg-al-surface p-4 shadow-sm sm:flex-row sm:items-center">
+            <button type="button" onClick={back} disabled={step === 1 || isPending} className="rounded-xl border border-al-border bg-al-surface px-5 py-3 text-sm font-black text-al-text-secondary disabled:opacity-40">Back</button>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => save(step, currentKey)} disabled={isPending} className="rounded-xl border border-al-border bg-white px-5 py-3 text-sm font-black text-al-text-secondary disabled:opacity-50">Save progress</button>
+              <button type="button" onClick={() => save(step, currentKey)} disabled={isPending} className="rounded-xl border border-al-border bg-al-surface px-5 py-3 text-sm font-black text-al-text-secondary disabled:opacity-50">Save progress</button>
               {step < 10 ? (
                 <button type="button" onClick={next} disabled={isPending} className="rounded-xl bg-al-accent px-5 py-3 text-sm font-black text-white shadow-sm shadow-blue-200 disabled:opacity-50">Continue</button>
               ) : (
@@ -479,7 +479,7 @@ function SelectionGrid({ items, selected, onChange }: { items: string[]; selecte
             key={item}
             type="button"
             onClick={() => onChange(active ? selected.filter((value) => value !== item) : [...selected, item])}
-            className={`rounded-2xl border p-4 text-left text-sm font-black transition ${active ? 'border-al-accent bg-blue-50 text-al-accent' : 'border-al-border bg-white text-al-text hover:bg-al-surface-sunken'}`}
+            className={`rounded-2xl border p-4 text-left text-sm font-black transition ${active ? 'border-al-accent bg-blue-50 text-al-accent' : 'border-al-border bg-al-surface text-al-text hover:bg-al-surface-sunken'}`}
           >
             <span className="mr-2">{active ? '✓' : '○'}</span>
             {item}

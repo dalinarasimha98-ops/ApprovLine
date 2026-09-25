@@ -161,7 +161,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
             <div className="flex flex-wrap gap-2">
               <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase ${investigation.status === 'OPEN' ? 'border-blue-100 bg-blue-50 text-al-accent' : 'border-emerald-100 bg-emerald-50 text-emerald-700'}`}>{investigation.status}</span>
               <span className={`rounded-full border px-3 py-1 text-xs font-black capitalize ${riskClass(investigation.riskLevel)}`}>{summary.riskLevel} risk</span>
-              {metadata.demo ? <span className="rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-black text-blue-100">Demo</span> : null}
+              {metadata.demo ? <span className="rounded-full border border-white/10 bg-al-surface/[0.08] px-3 py-1 text-xs font-black text-blue-100">Demo</span> : null}
             </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -171,7 +171,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
             <form action={updateStatusAction}>
               <input type="hidden" name="investigationId" value={investigation.id} />
               <input type="hidden" name="status" value={investigation.status === 'OPEN' ? 'CLOSED' : 'OPEN'} />
-              <FormSubmitButton pendingText="Updating..." className="min-h-0 h-11 rounded-xl border border-white/10 bg-white/[0.08] px-5 text-sm font-black text-white">
+              <FormSubmitButton pendingText="Updating..." className="min-h-0 h-11 rounded-xl border border-white/10 bg-al-surface/[0.08] px-5 text-sm font-black text-white">
                 {investigation.status === 'OPEN' ? 'Close Investigation' : 'Reopen Investigation'}
               </FormSubmitButton>
             </form>
@@ -186,7 +186,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
             ['Policy Checks', policyChecks.length],
             ['Notes', investigation.notes.length],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-2xl border border-al-border bg-white p-5 shadow-sm">
+            <div key={label} className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
               <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">{label}</p>
               <p className="mt-2 text-3xl font-black text-al-text">{value}</p>
             </div>
@@ -194,7 +194,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-al-accent">AI Investigation Summary</p>
             <h3 className="mt-1 text-lg font-black text-al-text">What happened, why it matters, and what is missing</h3>
             <div className="mt-5 grid gap-4 text-sm leading-6 text-al-text-secondary">
@@ -226,7 +226,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
             </div>
           </div>
 
-          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-al-accent">Playbook AI Integration</p>
             <h3 className="mt-1 text-lg font-black text-al-text">Policy compliance checks</h3>
             <div className="mt-5 grid gap-3">
@@ -256,7 +256,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-al-accent">Evidence Timeline</p>
             <h3 className="mt-1 text-lg font-black text-al-text">Chronological source, decision, policy, and audit events</h3>
             <div className="mt-6 grid gap-4">
@@ -279,7 +279,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
           </div>
 
           <div className="grid gap-6">
-            <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
               <p className="text-xs font-black uppercase tracking-wide text-al-accent">Approval Details</p>
               <div className="mt-5 grid gap-3">
                 {approvals.map((approval) => (
@@ -295,8 +295,8 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
                       <span className="rounded-full bg-blue-50 px-2.5 py-1 text-al-accent">{approval.confidence}% confidence</span>
-                      <span className="rounded-full bg-white px-2.5 py-1 text-al-text-secondary">{approval.status?.replaceAll('_', ' ') ?? 'Unknown'}</span>
-                      <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening approval..." className="rounded-full bg-white px-2.5 py-1 text-al-accent">
+                      <span className="rounded-full bg-al-surface px-2.5 py-1 text-al-text-secondary">{approval.status?.replaceAll('_', ' ') ?? 'Unknown'}</span>
+                      <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening approval..." className="rounded-full bg-al-surface px-2.5 py-1 text-al-accent">
                         View Full Approval
                       </PendingLink>
                     </div>
@@ -305,7 +305,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
               </div>
             </div>
 
-            <form action={addNoteAction} className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+            <form action={addNoteAction} className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
               <input type="hidden" name="investigationId" value={investigation.id} />
               <p className="text-xs font-black uppercase tracking-wide text-al-accent">Investigation Notes</p>
               <h3 className="mt-1 text-lg font-black text-al-text">Legal, compliance, and audit notes</h3>

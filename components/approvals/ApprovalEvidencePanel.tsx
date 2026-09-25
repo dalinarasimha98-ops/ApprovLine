@@ -100,11 +100,11 @@ export function ApprovalEvidencePanel({
   let lastDay: string | null = null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-al-border bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-al-border bg-al-surface-sunken px-5 py-4">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-black text-al-text">{channelName ?? 'Captured thread'}</h2>
-          <span className="rounded-full border border-al-border bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-al-text-muted">
+          <span className="rounded-full border border-al-border bg-al-surface px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-al-text-muted">
             {platform ?? 'Source'} · read-only view
           </span>
         </div>
@@ -169,7 +169,7 @@ export function ApprovalEvidencePanel({
             <ExternalLink className="h-4 w-4" /> Open in {platform ?? 'source'}
           </a>
         ) : null}
-        <CopyEvidenceLinkButton path={evidenceLinkPath} className="inline-flex h-10 items-center gap-2 rounded-xl border border-al-border bg-white px-4 text-sm font-bold text-al-text-secondary hover:bg-al-surface-sunken" />
+        <CopyEvidenceLinkButton path={evidenceLinkPath} className="inline-flex h-10 items-center gap-2 rounded-xl border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary hover:bg-al-surface-sunken" />
       </div>
     </div>
   );

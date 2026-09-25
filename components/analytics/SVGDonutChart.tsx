@@ -75,7 +75,7 @@ export function SVGDonutChart({
             cy={cy}
             r={r}
             fill="none"
-            stroke="#1E2D4A"
+            stroke="rgb(var(--al-border-rgb))"
             strokeWidth={strokeWidth}
           />
           {/* Segments */}

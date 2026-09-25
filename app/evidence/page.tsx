@@ -125,7 +125,7 @@ async function ViewLatestRecordLink({ organizationId }: { organizationId: string
     <PendingLink
       href={`/evidence/${latestRecordId}`}
       pendingText="Opening latest record..."
-      className="rounded-lg bg-white/10 border border-white/15 px-4 py-2 text-sm font-bold text-white hover:bg-white/15 transition"
+      className="rounded-lg bg-al-surface/10 border border-white/15 px-4 py-2 text-sm font-bold text-white hover:bg-al-surface/15 transition"
     >
       View latest →
     </PendingLink>

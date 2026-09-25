@@ -17,7 +17,7 @@ export function QueueWarningDismissible() {
       <button
         type="button"
         onClick={() => setVisible(false)}
-        className="min-h-0 rounded-md border border-amber-200 bg-white px-2 py-1 text-xs font-bold text-amber-800 shadow-sm hover:bg-amber-100"
+        className="min-h-0 rounded-md border border-amber-200 bg-al-surface px-2 py-1 text-xs font-bold text-amber-800 shadow-sm hover:bg-amber-100"
       >
         Dismiss
       </button>

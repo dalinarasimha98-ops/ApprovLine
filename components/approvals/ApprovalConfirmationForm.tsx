@@ -98,16 +98,16 @@ export function ApprovalConfirmationForm({ token }: { token: string }) {
         </div>
         <h2 className="mt-3 text-2xl font-black text-al-text">{record.subject}</h2>
         <dl className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl bg-white p-4"><dt className="text-xs font-black uppercase text-al-text-muted">Stated approver</dt><dd className="mt-1 font-black text-al-text">{record.approverName ?? 'Not specified'}</dd></div>
-          <div className="rounded-xl bg-white p-4"><dt className="text-xs font-black uppercase text-al-text-muted">Approval time</dt><dd className="mt-1 font-black text-al-text">{new Date(record.approvalTimestamp).toLocaleString()}</dd></div>
+          <div className="rounded-xl bg-al-surface p-4"><dt className="text-xs font-black uppercase text-al-text-muted">Stated approver</dt><dd className="mt-1 font-black text-al-text">{record.approverName ?? 'Not specified'}</dd></div>
+          <div className="rounded-xl bg-al-surface p-4"><dt className="text-xs font-black uppercase text-al-text-muted">Approval time</dt><dd className="mt-1 font-black text-al-text">{new Date(record.approvalTimestamp).toLocaleString()}</dd></div>
         </dl>
         {record.conditions ? <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950"><span className="font-black">Conditions:</span> {record.conditions}</div> : null}
         <p className="mt-4 text-sm leading-6 text-al-text-secondary">{record.recorderContext}</p>
       </div>
 
       <div className="grid gap-4">
-        <label className="grid gap-2 text-sm font-black text-al-text">Response note<textarea value={responseNote} onChange={(event) => setResponseNote(event.target.value)} rows={4} placeholder="Confirm the context, explain a dispute, or add clarification." className="resize-y rounded-xl border border-al-border-strong bg-white px-4 py-3 font-medium text-al-text outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" /></label>
-        <label className="grid gap-2 text-sm font-black text-al-text">Correction details <span className="font-medium text-al-text-muted">(only required when correcting)</span><textarea value={correction} onChange={(event) => setCorrection(event.target.value)} rows={3} placeholder="Describe the corrected decision, conditions, approver, or timestamp." className="resize-y rounded-xl border border-al-border-strong bg-white px-4 py-3 font-medium text-al-text outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" /></label>
+        <label className="grid gap-2 text-sm font-black text-al-text">Response note<textarea value={responseNote} onChange={(event) => setResponseNote(event.target.value)} rows={4} placeholder="Confirm the context, explain a dispute, or add clarification." className="resize-y rounded-xl border border-al-border-strong bg-al-surface px-4 py-3 font-medium text-al-text outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" /></label>
+        <label className="grid gap-2 text-sm font-black text-al-text">Correction details <span className="font-medium text-al-text-muted">(only required when correcting)</span><textarea value={correction} onChange={(event) => setCorrection(event.target.value)} rows={3} placeholder="Describe the corrected decision, conditions, approver, or timestamp." className="resize-y rounded-xl border border-al-border-strong bg-al-surface px-4 py-3 font-medium text-al-text outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" /></label>
       </div>
 
       {error ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-800">{error}</p> : null}

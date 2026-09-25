@@ -65,7 +65,7 @@ export function SVGArcGauge({
         <path
           d={trackPath}
           fill="none"
-          stroke="#1E2D4A"
+          stroke="rgb(var(--al-border-rgb))"
           strokeWidth={sw}
           strokeLinecap="round"
         />
@@ -99,7 +99,7 @@ export function SVGArcGauge({
             textAnchor="middle"
             dominantBaseline="central"
             fontSize={size * 0.075}
-            fill="#9CA3AF"
+            fill="rgb(var(--al-text-muted-rgb))"
             fontWeight="600"
           >
             {label}

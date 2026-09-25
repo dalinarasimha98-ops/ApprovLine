@@ -38,7 +38,7 @@ export default async function OnboardingSettingsPage() {
   if (error) {
     return (
       <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
-        <section className="mx-auto grid max-w-5xl gap-5 rounded-[28px] border border-amber-200 bg-white p-6 shadow-sm">
+        <section className="mx-auto grid max-w-5xl gap-5 rounded-[28px] border border-amber-200 bg-al-surface p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Onboarding Management</p>
           <h1 className="text-2xl font-black text-al-text">
             {isMigrationError(error) ? 'Onboarding storage is not ready yet' : 'We could not load onboarding status this time'}
@@ -53,7 +53,7 @@ export default async function OnboardingSettingsPage() {
             <PendingLink href="/settings/onboarding" pendingText="Retrying..." className="inline-flex w-fit rounded-xl bg-al-accent px-5 py-3 text-sm font-black text-white">
               Retry
             </PendingLink>
-            <Link href="/dashboard/settings" className="inline-flex w-fit rounded-xl border border-al-border bg-white px-5 py-3 text-sm font-black text-al-text-secondary">
+            <Link href="/dashboard/settings" className="inline-flex w-fit rounded-xl border border-al-border bg-al-surface px-5 py-3 text-sm font-black text-al-text-secondary">
               Back to settings
             </Link>
           </div>
@@ -69,7 +69,7 @@ export default async function OnboardingSettingsPage() {
   return (
     <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
       <section className="mx-auto grid max-w-5xl gap-6">
-        <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+        <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-al-accent">Onboarding Management</p>
           <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
@@ -82,7 +82,7 @@ export default async function OnboardingSettingsPage() {
               <Link href={organization.onboardedAt ? '/onboarding?restart=1' : '/onboarding'} className="rounded-xl bg-al-accent px-5 py-3 text-sm font-black text-white shadow-sm shadow-blue-200">
                 {organization.onboardedAt ? 'Restart onboarding' : 'Continue onboarding'}
               </Link>
-              <Link href="/dashboard/settings" className="rounded-xl border border-al-border bg-white px-5 py-3 text-sm font-black text-al-text-secondary shadow-sm">
+              <Link href="/dashboard/settings" className="rounded-xl border border-al-border bg-al-surface px-5 py-3 text-sm font-black text-al-text-secondary shadow-sm">
                 Back to settings
               </Link>
             </div>
@@ -90,7 +90,7 @@ export default async function OnboardingSettingsPage() {
         </div>
 
         {state.message ? (
-          <div className={state.alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm' : 'rounded-2xl border border-al-border bg-white p-4 text-al-text-secondary shadow-sm'}>
+          <div className={state.alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm' : 'rounded-2xl border border-al-border bg-al-surface p-4 text-al-text-secondary shadow-sm'}>
             {state.alert ? <AutoRetryOnDegraded /> : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -99,7 +99,7 @@ export default async function OnboardingSettingsPage() {
                 </p>
                 <p className="mt-1 text-sm leading-6">{state.message}</p>
               </div>
-              <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-al-border bg-white px-4 text-sm font-bold text-al-text-secondary disabled:opacity-70" />
+              <RefreshButton className="inline-flex h-10 items-center gap-2 rounded-lg border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text-secondary disabled:opacity-70" />
             </div>
           </div>
         ) : null}
@@ -113,7 +113,7 @@ export default async function OnboardingSettingsPage() {
           <Metric label="Last saved" value={organization.onboardingLastSavedAt ? organization.onboardingLastSavedAt.toLocaleString() : 'Not saved yet'} />
         </div>
 
-        <div className="rounded-[28px] border border-al-border bg-white p-6 shadow-sm">
+        <div className="rounded-[28px] border border-al-border bg-al-surface p-6 shadow-sm">
           <h2 className="text-xl font-black text-al-text">Completed steps</h2>
           <div className="mt-5 grid gap-3">
             {readiness.checks.map((check) => (
@@ -143,7 +143,7 @@ export default async function OnboardingSettingsPage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[24px] border border-al-border bg-white p-5 shadow-sm">
+    <div className="rounded-[24px] border border-al-border bg-al-surface p-5 shadow-sm">
       <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">{label}</p>
       <p className="mt-2 text-2xl font-black text-al-text">{value}</p>
     </div>

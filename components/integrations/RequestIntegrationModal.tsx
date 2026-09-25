@@ -128,7 +128,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
   return (
     <dialog
       ref={dialogRef}
-      className="w-full max-w-xl rounded-2xl border border-al-border bg-white p-0 shadow-[0_20px_60px_rgba(15,23,42,0.25)] backdrop:bg-slate-950/60"
+      className="w-full max-w-xl rounded-2xl border border-al-border bg-al-surface p-0 shadow-[0_20px_60px_rgba(15,23,42,0.25)] backdrop:bg-slate-950/60"
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-al-border px-6 py-5">

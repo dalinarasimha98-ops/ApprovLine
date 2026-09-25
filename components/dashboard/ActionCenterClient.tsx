@@ -522,7 +522,7 @@ export function ActionCenterClient(props: ActionCenterProps) {
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-al-border bg-white px-5 py-4">
+          <div className="shrink-0 border-t border-al-border bg-al-surface px-5 py-4">
             <div className="grid gap-2">
               {selected.sourceExternalUrl ? (
                 <a

@@ -328,7 +328,7 @@ export default async function ApprovalsPage({
               {label}
               <span
                 className={`rounded-full px-1.5 py-0.5 text-[10px] font-black tabular-nums ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-al-surface-elevated text-al-text-muted'
+                  isActive ? 'bg-al-surface/20 text-white' : 'bg-al-surface-elevated text-al-text-muted'
                 }`}
               >
                 {chipCount[key].toLocaleString()}

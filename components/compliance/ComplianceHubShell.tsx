@@ -55,7 +55,7 @@ function severityBadge(s: string) {
     MEDIUM: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     LOW: 'bg-blue-100 text-blue-700 border-blue-200',
   };
-  return map[s] ?? 'bg-slate-100 text-slate-600 border-slate-200';
+  return map[s] ?? 'bg-al-surface-elevated text-al-text-secondary border-al-border';
 }
 
 function statusBadge(s: string) {
@@ -63,18 +63,18 @@ function statusBadge(s: string) {
     OPEN: 'bg-red-100 text-red-700',
     IN_PROGRESS: 'bg-blue-100 text-blue-700',
     RESOLVED: 'bg-green-100 text-green-700',
-    ACCEPTED: 'bg-slate-100 text-slate-600',
+    ACCEPTED: 'bg-al-surface-elevated text-al-text-secondary',
     DEFERRED: 'bg-yellow-100 text-yellow-700',
     PENDING: 'bg-yellow-100 text-yellow-700',
     COMPLETED: 'bg-green-100 text-green-700',
     OVERDUE: 'bg-red-100 text-red-700',
-    REJECTED: 'bg-slate-100 text-slate-600',
+    REJECTED: 'bg-al-surface-elevated text-al-text-secondary',
     EFFECTIVE: 'bg-green-100 text-green-700',
     PARTIALLY_EFFECTIVE: 'bg-yellow-100 text-yellow-700',
     INEFFECTIVE: 'bg-red-100 text-red-700',
-    NOT_ASSESSED: 'bg-slate-100 text-slate-500',
+    NOT_ASSESSED: 'bg-al-surface-elevated text-al-text-muted',
   };
-  return map[s] ?? 'bg-slate-100 text-slate-500';
+  return map[s] ?? 'bg-al-surface-elevated text-al-text-muted';
 }
 
 function statusLabel(s: string) {
@@ -93,12 +93,12 @@ function categoryBadge(cat: string) {
     Issue: 'bg-red-100 text-red-700',
     Attestation: 'bg-green-100 text-green-700',
     Control: 'bg-sky-100 text-sky-700',
-    Integration: 'bg-slate-100 text-slate-600',
+    Integration: 'bg-al-surface-elevated text-al-text-secondary',
     Investigation: 'bg-orange-100 text-orange-700',
     Security: 'bg-red-100 text-red-700',
-    General: 'bg-slate-100 text-slate-500',
+    General: 'bg-al-surface-elevated text-al-text-muted',
   };
-  return map[cat] ?? 'bg-slate-100 text-slate-500';
+  return map[cat] ?? 'bg-al-surface-elevated text-al-text-muted';
 }
 
 function deadlineDaysBadge(days: number) {
@@ -106,7 +106,7 @@ function deadlineDaysBadge(days: number) {
   if (days <= 14) return 'bg-red-100 text-red-700';
   if (days <= 30) return 'bg-orange-100 text-orange-700';
   if (days <= 60) return 'bg-yellow-100 text-yellow-700';
-  return 'bg-slate-100 text-slate-600';
+  return 'bg-al-surface-elevated text-al-text-secondary';
 }
 
 function deadlineMonthDay(iso: string) {
@@ -119,7 +119,7 @@ function deadlineMonthDay(iso: string) {
 
 function deadlineColor(days: number) {
   if (days < 0) return { bg: 'bg-red-600', text: 'text-white' };
-  if (days <= 14) return { bg: 'bg-red-500', text: 'text-white' };
+  if (days <= 14) return { bg: 'bg-al-danger', text: 'text-white' };
   if (days <= 30) return { bg: 'bg-orange-500', text: 'text-white' };
   if (days <= 60) return { bg: 'bg-yellow-500', text: 'text-white' };
   return { bg: 'bg-indigo-600', text: 'text-white' };
@@ -169,17 +169,17 @@ function priorityBadge(p: WorkQueueItem['priority']) {
   switch (p) {
     case 'High': return 'bg-red-100 text-red-700';
     case 'Medium': return 'bg-yellow-100 text-yellow-700';
-    default: return 'bg-slate-100 text-slate-600';
+    default: return 'bg-al-surface-elevated text-al-text-secondary';
   }
 }
 
 function policyStateStyles(state: PolicyDocStatus['state']) {
   switch (state) {
-    case 'compliant': return { dot: 'bg-emerald-500', text: 'text-emerald-700' };
+    case 'compliant': return { dot: 'bg-al-success', text: 'text-emerald-700' };
     case 'review_required': return { dot: 'bg-orange-500', text: 'text-orange-700' };
-    case 'violations': return { dot: 'bg-red-500', text: 'text-red-700' };
+    case 'violations': return { dot: 'bg-al-danger', text: 'text-red-700' };
     case 'indexing': return { dot: 'bg-blue-400 animate-pulse', text: 'text-blue-600' };
-    case 'archived': return { dot: 'bg-slate-300', text: 'text-slate-500' };
+    case 'archived': return { dot: 'bg-slate-300', text: 'text-al-text-muted' };
   }
 }
 
@@ -196,7 +196,7 @@ function OverviewTab({ data, workspace, onTabChange }: {
     <div className="space-y-5">
 
       {/* ── Section 1: Compliance Posture ─────────────────────────────────── */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm px-5 py-4">
+      <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm px-5 py-4">
         <div className="flex flex-wrap items-center gap-5">
           {/* Score circle */}
           <div className="flex items-center gap-3 shrink-0">
@@ -204,11 +204,11 @@ function OverviewTab({ data, workspace, onTabChange }: {
               <span className="text-lg font-black tabular-nums" style={{ color: scoreCol }}>{data.score}</span>
             </div>
             <div>
-              <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Compliance Score</p>
+              <p className="text-xs font-black text-al-text-muted uppercase tracking-wider">Compliance Score</p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-sm font-black" style={{ color: scoreCol }}>{data.scoreLabel}</span>
                 {data.scoreTrend !== null && (
-                  <span className={`text-xs font-black ${data.scoreTrend >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                  <span className={`text-xs font-black ${data.scoreTrend >= 0 ? 'text-emerald-600' : 'text-al-danger'}`}>
                     {data.scoreTrend >= 0 ? `↑${data.scoreTrend}pts` : `↓${Math.abs(data.scoreTrend)}pts`}
                   </span>
                 )}
@@ -227,8 +227,8 @@ function OverviewTab({ data, workspace, onTabChange }: {
               { label: 'Evidence Coverage', value: `${data.evidenceCoverage}%` },
             ].map(({ label, value, alert }) => (
               <div key={label} className="flex flex-col">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{label}</span>
-                <span className={`text-xl font-black tabular-nums leading-none mt-0.5 ${alert ? 'text-red-600' : 'text-slate-900'}`}>{value}</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-al-text-muted">{label}</span>
+                <span className={`text-xl font-black tabular-nums leading-none mt-0.5 ${alert ? 'text-red-600' : 'text-al-text'}`}>{value}</span>
               </div>
             ))}
           </div>
@@ -237,14 +237,14 @@ function OverviewTab({ data, workspace, onTabChange }: {
           <div className="flex items-center gap-2 shrink-0">
             <a
               href="/api/export/approvals?format=csv"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-al-border px-3 py-1.5 text-xs font-black text-al-text-secondary hover:bg-al-surface-sunken transition"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
               Export
             </a>
             <a
               href="/dashboard/audit-log"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-al-border px-3 py-1.5 text-xs font-black text-al-text-secondary hover:bg-al-surface-sunken transition"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
               Audit Log
@@ -254,11 +254,11 @@ function OverviewTab({ data, workspace, onTabChange }: {
       </div>
 
       {/* ── Section 2: Action Required ────────────────────────────────────── */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+      <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-al-border">
           <div>
-            <h2 className="text-sm font-black text-slate-900">Action Required</h2>
-            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Items that require your attention today</p>
+            <h2 className="text-sm font-black text-al-text">Action Required</h2>
+            <p className="text-[11px] font-semibold text-al-text-muted mt-0.5">Items that require your attention today</p>
           </div>
           {workspace.actionItems.length > 0 && (
             <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-600 text-[11px] font-black text-white">
@@ -272,8 +272,8 @@ function OverviewTab({ data, workspace, onTabChange }: {
             <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
               <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
-            <p className="text-sm font-black text-slate-700">All clear</p>
-            <p className="text-xs font-semibold text-slate-400">No compliance actions require attention right now.</p>
+            <p className="text-sm font-black text-al-text-secondary">All clear</p>
+            <p className="text-xs font-semibold text-al-text-muted">No compliance actions require attention right now.</p>
           </div>
         ) : (
           <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -288,12 +288,12 @@ function OverviewTab({ data, workspace, onTabChange }: {
                     </span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs font-black text-slate-900 leading-snug">{item.title}</p>
-                    <p className="mt-1 text-[11px] font-semibold text-slate-600 leading-snug">{item.subtitle}</p>
+                    <p className="text-xs font-black text-al-text leading-snug">{item.title}</p>
+                    <p className="mt-1 text-[11px] font-semibold text-al-text-secondary leading-snug">{item.subtitle}</p>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className={`text-2xl font-black tabular-nums ${s.count}`}>{item.count}</span>
-                    <a href={item.href} className="inline-flex items-center gap-1 rounded-lg bg-white border border-white/80 px-2.5 py-1 text-[11px] font-black text-slate-800 hover:bg-slate-50 transition shadow-sm">
+                    <a href={item.href} className="inline-flex items-center gap-1 rounded-lg bg-al-surface border border-white/80 px-2.5 py-1 text-[11px] font-black text-al-text hover:bg-al-surface-sunken transition shadow-sm">
                       {item.actionLabel} →
                     </a>
                   </div>
@@ -305,15 +305,15 @@ function OverviewTab({ data, workspace, onTabChange }: {
       </div>
 
       {/* ── Section 3: My Compliance Work ────────────────────────────────── */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+      <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-al-border">
           <div>
-            <h2 className="text-sm font-black text-slate-900">My Compliance Work</h2>
-            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Your active compliance tasks across frameworks, controls, and attestations</p>
+            <h2 className="text-sm font-black text-al-text">My Compliance Work</h2>
+            <p className="text-[11px] font-semibold text-al-text-muted mt-0.5">Your active compliance tasks across frameworks, controls, and attestations</p>
           </div>
           <button
             onClick={() => onTabChange('Attestations')}
-            className="text-xs font-black text-[#2155d9] hover:underline"
+            className="text-xs font-black text-al-accent hover:underline"
           >
             View All →
           </button>
@@ -321,14 +321,14 @@ function OverviewTab({ data, workspace, onTabChange }: {
 
         {workspace.workQueue.length === 0 ? (
           <div className="px-5 py-6 text-center">
-            <p className="text-sm font-semibold text-slate-500">No active compliance work assigned.</p>
-            <p className="mt-1 text-xs text-slate-400">Tasks appear when attestations, controls, or issues require your attention.</p>
+            <p className="text-sm font-semibold text-al-text-muted">No active compliance work assigned.</p>
+            <p className="mt-1 text-xs text-al-text-muted">Tasks appear when attestations, controls, or issues require your attention.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <thead className="bg-al-surface-sunken border-b border-al-border">
+                <tr className="text-[10px] font-black uppercase tracking-wider text-al-text-muted">
                   <th className="py-3 pl-5 pr-3">Item</th>
                   <th className="py-3 px-3">Owner</th>
                   <th className="py-3 px-3">Priority</th>
@@ -339,12 +339,12 @@ function OverviewTab({ data, workspace, onTabChange }: {
               </thead>
               <tbody>
                 {workspace.workQueue.map((item) => (
-                  <tr key={item.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={item.id} className="border-t border-al-border hover:bg-al-surface-sunken transition-colors">
                     <td className="py-3 pl-5 pr-3 max-w-xs">
-                      <p className="text-xs font-black text-slate-800 leading-snug">{item.title}</p>
-                      {item.subtitle && <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{item.subtitle}</p>}
+                      <p className="text-xs font-black text-al-text leading-snug">{item.title}</p>
+                      {item.subtitle && <p className="text-[10px] font-semibold text-al-text-muted mt-0.5">{item.subtitle}</p>}
                     </td>
-                    <td className="py-3 px-3 text-xs font-semibold text-slate-600">{item.owner ?? '—'}</td>
+                    <td className="py-3 px-3 text-xs font-semibold text-al-text-secondary">{item.owner ?? '—'}</td>
                     <td className="py-3 px-3">
                       <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${priorityBadge(item.priority)}`}>
                         {item.priority}
@@ -352,10 +352,10 @@ function OverviewTab({ data, workspace, onTabChange }: {
                     </td>
                     <td className="py-3 px-3">
                       {item.dueLabel ? (
-                        <span className={`text-xs font-black ${item.dueUrgent ? 'text-red-600' : 'text-slate-500'}`}>
+                        <span className={`text-xs font-black ${item.dueUrgent ? 'text-red-600' : 'text-al-text-muted'}`}>
                           {item.dueLabel}
                         </span>
-                      ) : <span className="text-xs text-slate-400">—</span>}
+                      ) : <span className="text-xs text-al-text-muted">—</span>}
                     </td>
                     <td className="py-3 px-3">
                       {item.status && (
@@ -365,7 +365,7 @@ function OverviewTab({ data, workspace, onTabChange }: {
                       )}
                     </td>
                     <td className="py-3 pl-3 pr-5">
-                      <a href={item.href} className="text-[11px] font-black text-[#2155d9] hover:underline whitespace-nowrap">
+                      <a href={item.href} className="text-[11px] font-black text-al-accent hover:underline whitespace-nowrap">
                         {item.actionLabel} →
                       </a>
                     </td>
@@ -378,15 +378,15 @@ function OverviewTab({ data, workspace, onTabChange }: {
       </div>
 
       {/* ── Section 4: Controls Requiring Attention ───────────────────────── */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+      <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-al-border">
           <div>
-            <h2 className="text-sm font-black text-slate-900">Controls Requiring Attention</h2>
-            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Ineffective and partially effective controls that need remediation</p>
+            <h2 className="text-sm font-black text-al-text">Controls Requiring Attention</h2>
+            <p className="text-[11px] font-semibold text-al-text-muted mt-0.5">Ineffective and partially effective controls that need remediation</p>
           </div>
           <button
             onClick={() => onTabChange('Controls')}
-            className="text-xs font-black text-[#2155d9] hover:underline"
+            className="text-xs font-black text-al-accent hover:underline"
           >
             View All Controls →
           </button>
@@ -398,15 +398,15 @@ function OverviewTab({ data, workspace, onTabChange }: {
               <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
             <div>
-              <p className="text-sm font-black text-slate-700">All controls are effective</p>
-              <p className="text-xs font-semibold text-slate-400">No control remediation is required at this time.</p>
+              <p className="text-sm font-black text-al-text-secondary">All controls are effective</p>
+              <p className="text-xs font-semibold text-al-text-muted">No control remediation is required at this time.</p>
             </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <thead className="bg-al-surface-sunken border-b border-al-border">
+                <tr className="text-[10px] font-black uppercase tracking-wider text-al-text-muted">
                   <th className="py-3 pl-5 pr-3">Control</th>
                   <th className="py-3 px-3">Framework</th>
                   <th className="py-3 px-3">Owner</th>
@@ -417,22 +417,22 @@ function OverviewTab({ data, workspace, onTabChange }: {
               </thead>
               <tbody>
                 {workspace.topControls.map((c) => (
-                  <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={c.id} className="border-t border-al-border hover:bg-al-surface-sunken transition-colors">
                     <td className="py-3 pl-5 pr-3">
-                      <p className="text-xs font-black text-slate-800">{c.name}</p>
+                      <p className="text-xs font-black text-al-text">{c.name}</p>
                     </td>
-                    <td className="py-3 px-3 text-xs font-semibold text-slate-600">{c.frameworkName ?? '—'}</td>
-                    <td className="py-3 px-3 text-xs font-semibold text-slate-600">{c.owner ?? '—'}</td>
+                    <td className="py-3 px-3 text-xs font-semibold text-al-text-secondary">{c.frameworkName ?? '—'}</td>
+                    <td className="py-3 px-3 text-xs font-semibold text-al-text-secondary">{c.owner ?? '—'}</td>
                     <td className="py-3 px-3">
                       <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${statusBadge(c.status)}`}>
                         {statusLabel(c.status)}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-xs font-semibold text-slate-400">
+                    <td className="py-3 px-3 text-xs font-semibold text-al-text-muted">
                       {c.lastTestedAt ? relDate(c.lastTestedAt) : '—'}
                     </td>
                     <td className="py-3 pl-3 pr-5">
-                      <a href={c.href} className="text-[11px] font-black text-[#2155d9] hover:underline">
+                      <a href={c.href} className="text-[11px] font-black text-al-accent hover:underline">
                         Update Status →
                       </a>
                     </td>
@@ -448,30 +448,30 @@ function OverviewTab({ data, workspace, onTabChange }: {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
         {/* Risk & Issues */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100">
-            <h3 className="text-xs font-black text-slate-800">Risk &amp; Issues</h3>
-            <button onClick={() => onTabChange('Risk & Issues')} className="text-[11px] font-black text-[#2155d9] hover:underline">
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-al-border">
+            <h3 className="text-xs font-black text-al-text">Risk &amp; Issues</h3>
+            <button onClick={() => onTabChange('Risk & Issues')} className="text-[11px] font-black text-al-accent hover:underline">
               View all
             </button>
           </div>
           {workspace.recentIssues.length === 0 ? (
-            <div className="px-4 py-5 text-center text-xs font-semibold text-slate-400">No open compliance issues.</div>
+            <div className="px-4 py-5 text-center text-xs font-semibold text-al-text-muted">No open compliance issues.</div>
           ) : (
             <ul className="divide-y divide-slate-100">
               {workspace.recentIssues.slice(0, 5).map((issue) => (
                 <li key={issue.id} className="px-4 py-3 flex items-start gap-2.5">
                   <div className="shrink-0 mt-0.5">
-                    <div className={`h-1.5 w-1.5 rounded-full mt-1 ${issue.severity === 'CRITICAL' ? 'bg-red-500' : issue.severity === 'HIGH' ? 'bg-orange-500' : 'bg-yellow-500'}`} />
+                    <div className={`h-1.5 w-1.5 rounded-full mt-1 ${issue.severity === 'CRITICAL' ? 'bg-al-danger' : issue.severity === 'HIGH' ? 'bg-orange-500' : 'bg-yellow-500'}`} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-black text-slate-800 leading-snug line-clamp-2">{issue.title}</p>
+                    <p className="text-[11px] font-black text-al-text leading-snug line-clamp-2">{issue.title}</p>
                     <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                       <span className={`inline-block rounded-full border px-1 py-0.5 text-[9px] font-black ${severityBadge(issue.severity)}`}>
                         {issue.severity}
                       </span>
                       {issue.frameworkName && (
-                        <span className="text-[9px] font-semibold text-slate-400">{issue.frameworkName}</span>
+                        <span className="text-[9px] font-semibold text-al-text-muted">{issue.frameworkName}</span>
                       )}
                     </div>
                   </div>
@@ -482,15 +482,15 @@ function OverviewTab({ data, workspace, onTabChange }: {
         </div>
 
         {/* Policy Status */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100">
-            <h3 className="text-xs font-black text-slate-800">Policy Status</h3>
-            <a href="/playbooks" className="text-[11px] font-black text-[#2155d9] hover:underline">Open Playbooks</a>
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-al-border">
+            <h3 className="text-xs font-black text-al-text">Policy Status</h3>
+            <a href="/playbooks" className="text-[11px] font-black text-al-accent hover:underline">Open Playbooks</a>
           </div>
           {workspace.policyDocs.length === 0 ? (
             <div className="px-4 py-5 text-center">
-              <p className="text-xs font-semibold text-slate-400">No policy documents uploaded.</p>
-              <a href="/playbooks" className="mt-2 inline-block text-[11px] font-black text-[#2155d9] hover:underline">Upload policy →</a>
+              <p className="text-xs font-semibold text-al-text-muted">No policy documents uploaded.</p>
+              <a href="/playbooks" className="mt-2 inline-block text-[11px] font-black text-al-accent hover:underline">Upload policy →</a>
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">
@@ -500,7 +500,7 @@ function OverviewTab({ data, workspace, onTabChange }: {
                   <li key={doc.id} className="px-4 py-3 flex items-center gap-2.5">
                     <div className={`h-2 w-2 rounded-full shrink-0 ${s.dot}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-black text-slate-800 truncate">{doc.name}</p>
+                      <p className="text-[11px] font-black text-al-text truncate">{doc.name}</p>
                       <p className={`text-[10px] font-semibold ${s.text}`}>{doc.detail}</p>
                     </div>
                   </li>
@@ -511,8 +511,8 @@ function OverviewTab({ data, workspace, onTabChange }: {
         </div>
 
         {/* Evidence Health */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-          <h3 className="text-xs font-black text-slate-800 mb-3">Evidence Health</h3>
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm p-4">
+          <h3 className="text-xs font-black text-al-text mb-3">Evidence Health</h3>
           <div className="space-y-3.5">
             {[
               { label: 'Evidence Coverage', value: data.evidenceCoverage, color: '#10B981' },
@@ -521,10 +521,10 @@ function OverviewTab({ data, workspace, onTabChange }: {
             ].map(({ label, value, color }) => (
               <div key={label}>
                 <div className="flex justify-between mb-1">
-                  <span className="text-[11px] font-black text-slate-600">{label}</span>
+                  <span className="text-[11px] font-black text-al-text-secondary">{label}</span>
                   <span className="text-[11px] font-black tabular-nums" style={{ color }}>{value}%</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-1.5 rounded-full bg-al-surface-elevated overflow-hidden">
                   <div className="h-full rounded-full transition-all" style={{ width: `${value}%`, backgroundColor: color }} />
                 </div>
               </div>
@@ -533,12 +533,12 @@ function OverviewTab({ data, workspace, onTabChange }: {
         </div>
 
         {/* Upcoming Deadlines */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100">
-            <h3 className="text-xs font-black text-slate-800">Upcoming Deadlines</h3>
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-al-border">
+            <h3 className="text-xs font-black text-al-text">Upcoming Deadlines</h3>
           </div>
           {data.upcomingDeadlines.length === 0 ? (
-            <div className="px-4 py-5 text-center text-xs font-semibold text-slate-400">No upcoming deadlines.</div>
+            <div className="px-4 py-5 text-center text-xs font-semibold text-al-text-muted">No upcoming deadlines.</div>
           ) : (
             <ul className="divide-y divide-slate-100">
               {data.upcomingDeadlines.slice(0, 5).map((d) => {
@@ -551,7 +551,7 @@ function OverviewTab({ data, workspace, onTabChange }: {
                       <span className="text-sm font-black leading-none">{day}</span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-black text-slate-800 leading-snug line-clamp-1">{d.title}</p>
+                      <p className="text-[11px] font-black text-al-text leading-snug line-clamp-1">{d.title}</p>
                       <span className={`inline-block rounded-full px-1.5 py-0.5 text-[9px] font-black mt-0.5 ${deadlineDaysBadge(d.daysRemaining)}`}>
                         {d.daysRemaining < 0 ? 'Overdue' : `${d.daysRemaining}d left`}
                       </span>
@@ -568,28 +568,28 @@ function OverviewTab({ data, workspace, onTabChange }: {
       <div className="grid gap-4 lg:grid-cols-3">
 
         {/* Recent Activity */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-slate-100">
-            <h3 className="text-xs font-black text-slate-800">Recent Activity</h3>
-            <button onClick={() => onTabChange('Audit Trail')} className="text-[11px] font-black text-[#2155d9] hover:underline">
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-al-border">
+            <h3 className="text-xs font-black text-al-text">Recent Activity</h3>
+            <button onClick={() => onTabChange('Audit Trail')} className="text-[11px] font-black text-al-accent hover:underline">
               Full audit log
             </button>
           </div>
           {data.recentActivities.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs font-semibold text-slate-400">No recent compliance activity.</div>
+            <div className="px-4 py-6 text-center text-xs font-semibold text-al-text-muted">No recent compliance activity.</div>
           ) : (
             <ul className="divide-y divide-slate-100">
               {data.recentActivities.slice(0, 7).map((a) => (
                 <li key={a.id} className="flex items-start gap-3 px-4 py-3">
                   <div className="mt-0.5 shrink-0">
-                    <div className="h-6 w-6 rounded-lg bg-slate-100 flex items-center justify-center">
-                      <svg className="h-3 w-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
+                    <div className="h-6 w-6 rounded-lg bg-al-surface-elevated flex items-center justify-center">
+                      <svg className="h-3 w-3 text-al-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-black text-slate-700 leading-snug">{a.label}</p>
+                    <p className="text-[11px] font-black text-al-text-secondary leading-snug">{a.label}</p>
                     <div className="mt-0.5 flex items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-slate-400">{relDate(a.createdAt)}</span>
+                      <span className="text-[10px] font-semibold text-al-text-muted">{relDate(a.createdAt)}</span>
                       <span className={`inline-block rounded-full px-1.5 py-0.5 text-[9px] font-black ${categoryBadge(a.category)}`}>{a.category}</span>
                     </div>
                   </div>
@@ -600,24 +600,24 @@ function OverviewTab({ data, workspace, onTabChange }: {
         </div>
 
         {/* AI Compliance Advisor */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-4 pt-4 pb-2 border-b border-slate-100">
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
+          <div className="px-4 pt-4 pb-2 border-b border-al-border">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
-                <svg className="h-3.5 w-3.5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>
+                <svg className="h-3.5 w-3.5 text-al-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>
               </div>
-              <h3 className="text-xs font-black text-slate-800">AI Compliance Advisor</h3>
+              <h3 className="text-xs font-black text-al-text">AI Compliance Advisor</h3>
             </div>
           </div>
 
           {workspace.aiAdvisor === null ? (
             <div className="px-4 py-6 text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
-                <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <p className="text-sm font-black text-slate-700">Looking good</p>
+                <svg className="h-5 w-5 text-al-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <p className="text-sm font-black text-al-text-secondary">Looking good</p>
               </div>
-              <p className="text-xs font-semibold text-slate-400 leading-relaxed">No critical compliance patterns detected. Continue monitoring your controls and maintaining evidence documentation.</p>
-              <a href="/copilot?q=What+is+our+compliance+posture%3F" className="mt-3 inline-flex items-center gap-1 rounded-xl bg-violet-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-violet-700 transition">
+              <p className="text-xs font-semibold text-al-text-muted leading-relaxed">No critical compliance patterns detected. Continue monitoring your controls and maintaining evidence documentation.</p>
+              <a href="/copilot?q=What+is+our+compliance+posture%3F" className="mt-3 inline-flex items-center gap-1 rounded-xl bg-al-accent px-3 py-1.5 text-[11px] font-black text-white hover:bg-violet-700 transition">
                 Ask AI Copilot
               </a>
             </div>
@@ -627,18 +627,18 @@ function OverviewTab({ data, workspace, onTabChange }: {
                 <p className="text-xs font-black text-violet-900 leading-snug">{workspace.aiAdvisor.headline}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Why it matters</p>
-                <p className="text-[11px] font-semibold text-slate-600 leading-relaxed">{workspace.aiAdvisor.whyItMatters}</p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-al-text-muted mb-1">Why it matters</p>
+                <p className="text-[11px] font-semibold text-al-text-secondary leading-relaxed">{workspace.aiAdvisor.whyItMatters}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Recommended action</p>
-                <p className="text-[11px] font-semibold text-slate-600 leading-relaxed">{workspace.aiAdvisor.recommendedAction}</p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-al-text-muted mb-1">Recommended action</p>
+                <p className="text-[11px] font-semibold text-al-text-secondary leading-relaxed">{workspace.aiAdvisor.recommendedAction}</p>
               </div>
               <div className="flex gap-2 pt-1">
-                <a href={workspace.aiAdvisor.evidenceHref} className="inline-flex items-center gap-1 rounded-xl bg-[#2155d9] px-3 py-1.5 text-[11px] font-black text-white hover:bg-[#1a44be] transition">
+                <a href={workspace.aiAdvisor.evidenceHref} className="inline-flex items-center gap-1 rounded-xl bg-al-accent px-3 py-1.5 text-[11px] font-black text-white hover:bg-al-accent-hover transition">
                   View Evidence →
                 </a>
-                <a href={`/copilot?q=${encodeURIComponent(workspace.aiAdvisor.copilotQuery)}`} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-[11px] font-black text-slate-700 hover:bg-slate-50 transition">
+                <a href={`/copilot?q=${encodeURIComponent(workspace.aiAdvisor.copilotQuery)}`} className="inline-flex items-center gap-1 rounded-xl border border-al-border px-3 py-1.5 text-[11px] font-black text-al-text-secondary hover:bg-al-surface-sunken transition">
                   Ask AI Copilot
                 </a>
               </div>
@@ -647,9 +647,9 @@ function OverviewTab({ data, workspace, onTabChange }: {
         </div>
 
         {/* Quick Actions */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-4 pt-4 pb-2 border-b border-slate-100">
-            <h3 className="text-xs font-black text-slate-800">Quick Actions</h3>
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
+          <div className="px-4 pt-4 pb-2 border-b border-al-border">
+            <h3 className="text-xs font-black text-al-text">Quick Actions</h3>
           </div>
           <div className="p-3 space-y-1.5">
             {[
@@ -664,27 +664,27 @@ function OverviewTab({ data, workspace, onTabChange }: {
                 <button
                   key={action.label}
                   onClick={() => onTabChange(action.tab!)}
-                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 transition text-left"
+                  className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-al-surface-sunken transition text-left"
                 >
                   <span className="text-base shrink-0">{action.icon}</span>
                   <div className="min-w-0">
-                    <p className="text-[11px] font-black text-slate-800">{action.label}</p>
-                    <p className="text-[10px] font-semibold text-slate-400">{action.sub}</p>
+                    <p className="text-[11px] font-black text-al-text">{action.label}</p>
+                    <p className="text-[10px] font-semibold text-al-text-muted">{action.sub}</p>
                   </div>
-                  <svg className="h-3.5 w-3.5 text-slate-300 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                  <svg className="h-3.5 w-3.5 text-al-text-secondary ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
                 </button>
               ) : (
                 <a
                   key={action.label}
                   href={action.href}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 transition"
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-al-surface-sunken transition"
                 >
                   <span className="text-base shrink-0">{action.icon}</span>
                   <div className="min-w-0">
-                    <p className="text-[11px] font-black text-slate-800">{action.label}</p>
-                    <p className="text-[10px] font-semibold text-slate-400">{action.sub}</p>
+                    <p className="text-[11px] font-black text-al-text">{action.label}</p>
+                    <p className="text-[10px] font-semibold text-al-text-muted">{action.sub}</p>
                   </div>
-                  <svg className="h-3.5 w-3.5 text-slate-300 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                  <svg className="h-3.5 w-3.5 text-al-text-secondary ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
                 </a>
               )
             ))}
@@ -720,29 +720,29 @@ function FrameworksTab({ initial }: { initial: FrameworkSummary[] }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-black text-white">Compliance Frameworks</h2>
-        <button onClick={refresh} disabled={loading} className="text-xs font-black text-[#2155d9] bg-[#2155d9]/10 px-3 py-1.5 rounded-lg hover:bg-[#2155d9]/20 transition disabled:opacity-50">
+        <button onClick={refresh} disabled={loading} className="text-xs font-black text-al-accent bg-al-accent/10 px-3 py-1.5 rounded-lg hover:bg-al-accent/20 transition disabled:opacity-50">
           {loading ? 'Refreshing…' : 'Refresh'}
         </button>
       </div>
       {frameworks.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-sm font-semibold text-slate-500">No compliance frameworks configured yet.</p>
-          <p className="mt-1 text-xs text-slate-400">Use the seed API to configure default frameworks, or contact your administrator.</p>
+        <div className="rounded-2xl border border-al-border bg-al-surface p-10 text-center shadow-sm">
+          <p className="text-sm font-semibold text-al-text-muted">No compliance frameworks configured yet.</p>
+          <p className="mt-1 text-xs text-al-text-muted">Use the seed API to configure default frameworks, or contact your administrator.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {frameworks.map((fw) => {
             const score = fw.score;
             return (
-              <div key={fw.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-300 hover:shadow-md transition">
+              <div key={fw.id} className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm hover:border-al-border-strong hover:shadow-md transition">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-xl">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-al-surface-elevated text-xl">
                       {FW_LOGOS[fw.slug] ?? '📋'}
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-slate-900">{fw.name}</h3>
-                      <span className={`text-[10px] font-black ${fw.isEnabled ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      <h3 className="text-sm font-black text-al-text">{fw.name}</h3>
+                      <span className={`text-[10px] font-black ${fw.isEnabled ? 'text-emerald-600' : 'text-al-text-muted'}`}>
                         {fw.isEnabled ? '● Active' : '○ Inactive'}
                       </span>
                     </div>
@@ -753,20 +753,20 @@ function FrameworksTab({ initial }: { initial: FrameworkSummary[] }) {
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                   <div>
-                    <div className="text-lg font-black text-slate-900 tabular-nums">{fw.controls}</div>
-                    <div className="text-[10px] font-semibold text-slate-400">Controls</div>
+                    <div className="text-lg font-black text-al-text tabular-nums">{fw.controls}</div>
+                    <div className="text-[10px] font-semibold text-al-text-muted">Controls</div>
                   </div>
                   <div>
                     <div className="text-lg font-black text-red-600 tabular-nums">{fw.openIssues}</div>
-                    <div className="text-[10px] font-semibold text-slate-400">Open Issues</div>
+                    <div className="text-[10px] font-semibold text-al-text-muted">Open Issues</div>
                   </div>
                   <div>
-                    <div className="text-[11px] font-black text-slate-600">{shortDate(fw.lastAssessmentAt)}</div>
-                    <div className="text-[10px] font-semibold text-slate-400">Last Review</div>
+                    <div className="text-[11px] font-black text-al-text-secondary">{shortDate(fw.lastAssessmentAt)}</div>
+                    <div className="text-[10px] font-semibold text-al-text-muted">Last Review</div>
                   </div>
                 </div>
                 {score !== null && (
-                  <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="mt-3 h-1.5 rounded-full bg-al-surface-elevated overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, backgroundColor: scoreColor(score) }} />
                   </div>
                 )}
@@ -807,25 +807,25 @@ function ControlsTab() {
     }
   }
 
-  if (loading) return <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-400 shadow-sm">Loading controls…</div>;
+  if (loading) return <div className="rounded-2xl border border-al-border bg-al-surface p-10 text-center text-sm font-semibold text-al-text-muted shadow-sm">Loading controls…</div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-black text-white">Compliance Controls</h2>
-        <span className="text-xs font-semibold text-slate-400">{controls.length} controls</span>
+        <span className="text-xs font-semibold text-al-text-muted">{controls.length} controls</span>
       </div>
       {controls.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-sm font-semibold text-slate-500">No controls configured yet.</p>
-          <p className="mt-1 text-xs text-slate-400">Controls are added automatically when you configure compliance frameworks.</p>
+        <div className="rounded-2xl border border-al-border bg-al-surface p-10 text-center shadow-sm">
+          <p className="text-sm font-semibold text-al-text-muted">No controls configured yet.</p>
+          <p className="mt-1 text-xs text-al-text-muted">Controls are added automatically when you configure compliance frameworks.</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <thead className="bg-al-surface-sunken border-b border-al-border">
+                <tr className="text-[10px] font-black uppercase tracking-wider text-al-text-muted">
                   <th className="py-3 pl-4 pr-2">Control</th>
                   <th className="py-3 px-2">Framework</th>
                   <th className="py-3 px-2">Category</th>
@@ -837,32 +837,32 @@ function ControlsTab() {
               </thead>
               <tbody>
                 {controls.map((c) => (
-                  <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={c.id} className="border-t border-al-border hover:bg-al-surface-sunken transition-colors">
                     <td className="py-3 pl-4 pr-2">
                       <div>
-                        <span className="text-xs font-black text-slate-400 font-mono">{c.controlRef}</span>
-                        <p className="text-xs font-black text-slate-800 mt-0.5">{c.name}</p>
+                        <span className="text-xs font-black text-al-text-muted font-mono">{c.controlRef}</span>
+                        <p className="text-xs font-black text-al-text mt-0.5">{c.name}</p>
                       </div>
                     </td>
                     <td className="py-3 px-2">
-                      <span className="text-xs font-semibold text-slate-600">{c.frameworkName}</span>
+                      <span className="text-xs font-semibold text-al-text-secondary">{c.frameworkName}</span>
                     </td>
                     <td className="py-3 px-2">
-                      <span className="text-xs font-semibold text-slate-500">{c.category ?? '—'}</span>
+                      <span className="text-xs font-semibold text-al-text-muted">{c.category ?? '—'}</span>
                     </td>
                     <td className="py-3 px-2">
                       <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${statusBadge(c.status)}`}>
                         {statusLabel(c.status)}
                       </span>
                     </td>
-                    <td className="py-3 px-2 text-xs font-black text-slate-700 tabular-nums">{c.openIssues > 0 ? c.openIssues : '—'}</td>
-                    <td className="py-3 pl-2 pr-4 text-xs font-semibold text-slate-400">{shortDate(c.lastTestedAt)}</td>
+                    <td className="py-3 px-2 text-xs font-black text-al-text-secondary tabular-nums">{c.openIssues > 0 ? c.openIssues : '—'}</td>
+                    <td className="py-3 pl-2 pr-4 text-xs font-semibold text-al-text-muted">{shortDate(c.lastTestedAt)}</td>
                     <td className="py-3 pl-2 pr-4">
                       <select
                         disabled={updating === c.id}
                         value={c.status}
                         onChange={(e) => updateStatus(c.id, e.target.value)}
-                        className="text-[10px] font-black rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#2155d9] disabled:opacity-50"
+                        className="text-[10px] font-black rounded-lg border border-al-border bg-al-surface px-1.5 py-1 text-al-text-secondary focus:outline-none focus:ring-1 focus:ring-al-focus disabled:opacity-50"
                       >
                         <option value="NOT_ASSESSED">Not Assessed</option>
                         <option value="EFFECTIVE">Effective</option>
@@ -888,12 +888,12 @@ function PolicyCenterTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-black text-white">Policy Center</h2>
-        <a href="/playbooks" className="text-xs font-black text-[#2155d9] bg-[#2155d9]/10 px-3 py-1.5 rounded-lg hover:bg-[#2155d9]/20 transition">
+        <a href="/playbooks" className="text-xs font-black text-al-accent bg-al-accent/10 px-3 py-1.5 rounded-lg hover:bg-al-accent/20 transition">
           Open Playbook AI →
         </a>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
             <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center">
               <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -901,57 +901,57 @@ function PolicyCenterTab() {
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-900">Playbook AI</h3>
-              <p className="text-xs font-semibold text-slate-500">Policy rules & compliance guidance</p>
+              <h3 className="text-sm font-black text-al-text">Playbook AI</h3>
+              <p className="text-xs font-semibold text-al-text-muted">Policy rules & compliance guidance</p>
             </div>
           </div>
-          <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+          <p className="text-xs font-semibold text-al-text-secondary leading-relaxed">
             Playbook AI evaluates approval decisions against your uploaded policy documents, extracting compliance rules and checking required approvers, thresholds, and evidence.
           </p>
           <div className="mt-4 flex gap-2">
-            <a href="/playbooks" className="inline-flex items-center gap-1.5 rounded-xl bg-[#2155d9] px-3 py-1.5 text-xs font-black text-white hover:bg-[#1a44be] transition">
+            <a href="/playbooks" className="inline-flex items-center gap-1.5 rounded-xl bg-al-accent px-3 py-1.5 text-xs font-black text-white hover:bg-al-accent-hover transition">
               View Playbooks
             </a>
-            <a href="/playbooks" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50 transition">
+            <a href="/playbooks" className="inline-flex items-center gap-1.5 rounded-xl border border-al-border px-3 py-1.5 text-xs font-black text-al-text-secondary hover:bg-al-surface-sunken transition">
               Upload Policy
             </a>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
             <div className="h-10 w-10 rounded-xl bg-violet-50 flex items-center justify-center">
-              <svg className="h-5 w-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-5 w-5 text-al-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-900">AI Copilot</h3>
-              <p className="text-xs font-semibold text-slate-500">Compliance intelligence assistant</p>
+              <h3 className="text-sm font-black text-al-text">AI Copilot</h3>
+              <p className="text-xs font-semibold text-al-text-muted">Compliance intelligence assistant</p>
             </div>
           </div>
-          <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+          <p className="text-xs font-semibold text-al-text-secondary leading-relaxed">
             Ask the AI Copilot compliance questions — missing evidence, failing controls, audit readiness — using real ApprovLine data from your workspace.
           </p>
           <div className="mt-4 flex gap-2">
-            <a href="/copilot?q=What+is+our+compliance+score%3F" className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-black text-white hover:bg-violet-700 transition">
+            <a href="/copilot?q=What+is+our+compliance+score%3F" className="inline-flex items-center gap-1.5 rounded-xl bg-al-accent px-3 py-1.5 text-xs font-black text-white hover:bg-violet-700 transition">
               Ask Compliance Question
             </a>
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-black text-slate-800 mb-2">Policy → Control → Approval → Evidence Flow</h3>
-        <p className="text-xs font-semibold text-slate-500 mb-4">How ApprovLine connects policy requirements to real approval evidence.</p>
+      <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
+        <h3 className="text-sm font-black text-al-text mb-2">Policy → Control → Approval → Evidence Flow</h3>
+        <p className="text-xs font-semibold text-al-text-muted mb-4">How ApprovLine connects policy requirements to real approval evidence.</p>
         <div className="flex flex-wrap items-center gap-2 text-xs font-black">
           {['Policy Upload', 'Rule Extraction', 'Approval Review', 'Evidence Capture', 'Compliance Score', 'Issue Creation', 'Remediation', 'Audit Ready'].map((step, i, arr) => (
             <>
-              <span key={step} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-slate-700">
-                <span className="text-[10px] font-black text-[#2155d9]">{i + 1}</span>
+              <span key={step} className="inline-flex items-center gap-1.5 rounded-lg bg-al-surface-elevated px-2.5 py-1.5 text-al-text-secondary">
+                <span className="text-[10px] font-black text-al-accent">{i + 1}</span>
                 {step}
               </span>
-              {i < arr.length - 1 && <span className="text-slate-300" key={`arrow-${i}`}>→</span>}
+              {i < arr.length - 1 && <span className="text-al-text-secondary" key={`arrow-${i}`}>→</span>}
             </>
           ))}
         </div>
@@ -1008,7 +1008,7 @@ function RiskIssuesTab() {
           <select
             value={filter.severity ?? ''}
             onChange={(e) => setFilter((f) => ({ ...f, severity: e.target.value || undefined }))}
-            className="text-xs font-black rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#2155d9]"
+            className="text-xs font-black rounded-xl border border-al-border bg-al-surface px-2.5 py-1.5 text-al-text-secondary focus:outline-none focus:ring-1 focus:ring-al-focus"
           >
             <option value="">All Severities</option>
             <option value="CRITICAL">Critical</option>
@@ -1019,7 +1019,7 @@ function RiskIssuesTab() {
           <select
             value={filter.status ?? ''}
             onChange={(e) => setFilter((f) => ({ ...f, status: e.target.value || undefined }))}
-            className="text-xs font-black rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#2155d9]"
+            className="text-xs font-black rounded-xl border border-al-border bg-al-surface px-2.5 py-1.5 text-al-text-secondary focus:outline-none focus:ring-1 focus:ring-al-focus"
           >
             <option value="">All Statuses</option>
             <option value="OPEN">Open</option>
@@ -1028,24 +1028,24 @@ function RiskIssuesTab() {
             <option value="ACCEPTED">Accepted</option>
             <option value="DEFERRED">Deferred</option>
           </select>
-          <Link href="/investigations" className="text-xs font-black text-[#2155d9] bg-[#2155d9]/10 px-3 py-1.5 rounded-lg hover:bg-[#2155d9]/20 transition">
+          <Link href="/investigations" className="text-xs font-black text-al-accent bg-al-accent/10 px-3 py-1.5 rounded-lg hover:bg-al-accent/20 transition">
             Investigation Center →
           </Link>
         </div>
       </div>
       {loading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-400 shadow-sm">Loading issues…</div>
+        <div className="rounded-2xl border border-al-border bg-al-surface p-10 text-center text-sm font-semibold text-al-text-muted shadow-sm">Loading issues…</div>
       ) : issues.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-sm font-semibold text-slate-500">No compliance issues found.</p>
-          <p className="mt-1 text-xs text-slate-400">Issues are created when compliance violations are detected.</p>
+        <div className="rounded-2xl border border-al-border bg-al-surface p-10 text-center shadow-sm">
+          <p className="text-sm font-semibold text-al-text-muted">No compliance issues found.</p>
+          <p className="mt-1 text-xs text-al-text-muted">Issues are created when compliance violations are detected.</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <thead className="bg-al-surface-sunken border-b border-al-border">
+                <tr className="text-[10px] font-black uppercase tracking-wider text-al-text-muted">
                   <th className="py-3 pl-4 pr-2">Issue</th>
                   <th className="py-3 px-2">Severity</th>
                   <th className="py-3 px-2">Framework</th>
@@ -1058,25 +1058,25 @@ function RiskIssuesTab() {
               </thead>
               <tbody>
                 {issues.map((issue) => (
-                  <tr key={issue.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={issue.id} className="border-t border-al-border hover:bg-al-surface-sunken transition-colors">
                     <td className="py-3 pl-4 pr-2 max-w-xs">
-                      <p className="text-xs font-black text-slate-800 leading-snug">{issue.title}</p>
-                      {issue.description && <p className="text-[10px] font-semibold text-slate-400 mt-0.5 line-clamp-1">{issue.description}</p>}
+                      <p className="text-xs font-black text-al-text leading-snug">{issue.title}</p>
+                      {issue.description && <p className="text-[10px] font-semibold text-al-text-muted mt-0.5 line-clamp-1">{issue.description}</p>}
                     </td>
                     <td className="py-3 px-2">
                       <span className={`inline-block rounded-full border px-1.5 py-0.5 text-[10px] font-black ${severityBadge(issue.severity)}`}>
                         {issue.severity}
                       </span>
                     </td>
-                    <td className="py-3 px-2 text-xs font-semibold text-slate-600">{issue.frameworkName ?? '—'}</td>
-                    <td className="py-3 px-2 text-xs font-semibold text-slate-600">{issue.controlName ?? '—'}</td>
-                    <td className="py-3 px-2 text-xs font-semibold text-slate-600">{issue.owner ?? '—'}</td>
+                    <td className="py-3 px-2 text-xs font-semibold text-al-text-secondary">{issue.frameworkName ?? '—'}</td>
+                    <td className="py-3 px-2 text-xs font-semibold text-al-text-secondary">{issue.controlName ?? '—'}</td>
+                    <td className="py-3 px-2 text-xs font-semibold text-al-text-secondary">{issue.owner ?? '—'}</td>
                     <td className="py-3 px-2">
                       <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${statusBadge(issue.status)}`}>
                         {statusLabel(issue.status)}
                       </span>
                     </td>
-                    <td className="py-3 px-2 text-xs font-semibold text-slate-400">{shortDate(issue.dueDate)}</td>
+                    <td className="py-3 px-2 text-xs font-semibold text-al-text-muted">{shortDate(issue.dueDate)}</td>
                     <td className="py-3 pl-2 pr-4">
                       {issue.status !== 'RESOLVED' && (
                         <button
@@ -1127,25 +1127,25 @@ function AttestationsTab() {
     }
   }
 
-  if (loading) return <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-400 shadow-sm">Loading attestations…</div>;
+  if (loading) return <div className="rounded-2xl border border-al-border bg-al-surface p-10 text-center text-sm font-semibold text-al-text-muted shadow-sm">Loading attestations…</div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-black text-white">Attestations</h2>
-        <span className="text-xs font-semibold text-slate-400">{attestations.length} attestations</span>
+        <span className="text-xs font-semibold text-al-text-muted">{attestations.length} attestations</span>
       </div>
       {attestations.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <p className="text-sm font-semibold text-slate-500">No attestations configured.</p>
-          <p className="mt-1 text-xs text-slate-400">Attestations are periodic sign-offs for compliance controls.</p>
+        <div className="rounded-2xl border border-al-border bg-al-surface p-10 text-center shadow-sm">
+          <p className="text-sm font-semibold text-al-text-muted">No attestations configured.</p>
+          <p className="mt-1 text-xs text-al-text-muted">Attestations are periodic sign-offs for compliance controls.</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <thead className="bg-al-surface-sunken border-b border-al-border">
+                <tr className="text-[10px] font-black uppercase tracking-wider text-al-text-muted">
                   <th className="py-3 pl-4 pr-2">Attestation</th>
                   <th className="py-3 px-2">Policy</th>
                   <th className="py-3 px-2">Control</th>
@@ -1158,26 +1158,26 @@ function AttestationsTab() {
               </thead>
               <tbody>
                 {attestations.map((a) => (
-                  <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={a.id} className="border-t border-al-border hover:bg-al-surface-sunken transition-colors">
                     <td className="py-3 pl-4 pr-2">
-                      <p className="text-xs font-black text-slate-800">{a.title}</p>
+                      <p className="text-xs font-black text-al-text">{a.title}</p>
                     </td>
-                    <td className="py-3 px-2 text-xs font-semibold text-slate-600">{a.policy ?? '—'}</td>
-                    <td className="py-3 px-2 text-xs font-semibold text-slate-600">{a.controlName ?? '—'}</td>
-                    <td className="py-3 px-2 text-xs font-semibold text-slate-600">{a.owner ?? '—'}</td>
+                    <td className="py-3 px-2 text-xs font-semibold text-al-text-secondary">{a.policy ?? '—'}</td>
+                    <td className="py-3 px-2 text-xs font-semibold text-al-text-secondary">{a.controlName ?? '—'}</td>
+                    <td className="py-3 px-2 text-xs font-semibold text-al-text-secondary">{a.owner ?? '—'}</td>
                     <td className="py-3 px-2">
                       <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${statusBadge(a.status)}`}>
                         {statusLabel(a.status)}
                       </span>
                     </td>
-                    <td className="py-3 px-2 text-xs font-semibold text-slate-400">{shortDate(a.dueDate)}</td>
-                    <td className="py-3 px-2 text-xs font-semibold text-slate-400">{shortDate(a.completedAt)}</td>
+                    <td className="py-3 px-2 text-xs font-semibold text-al-text-muted">{shortDate(a.dueDate)}</td>
+                    <td className="py-3 px-2 text-xs font-semibold text-al-text-muted">{shortDate(a.completedAt)}</td>
                     <td className="py-3 pl-2 pr-4">
                       {a.status === 'PENDING' && (
                         <button
                           disabled={completing === a.id}
                           onClick={() => complete(a.id)}
-                          className="text-[10px] font-black text-[#2155d9] bg-[#2155d9]/10 hover:bg-[#2155d9]/20 px-2 py-1 rounded-lg transition disabled:opacity-50"
+                          className="text-[10px] font-black text-al-accent bg-al-accent/10 hover:bg-al-accent/20 px-2 py-1 rounded-lg transition disabled:opacity-50"
                         >
                           {completing === a.id ? 'Completing…' : 'Complete'}
                         </button>
@@ -1228,23 +1228,23 @@ function AuditTrailTab() {
     return () => abortController.abort();
   }, []);
 
-  if (loading) return <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-400 shadow-sm">Loading audit trail…</div>;
+  if (loading) return <div className="rounded-2xl border border-al-border bg-al-surface p-10 text-center text-sm font-semibold text-al-text-muted shadow-sm">Loading audit trail…</div>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-black text-white">Audit Trail</h2>
         <div className="flex items-center gap-2">
-          <a href="/dashboard/audit-log" className="text-xs font-black text-[#2155d9] bg-[#2155d9]/10 px-3 py-1.5 rounded-lg hover:bg-[#2155d9]/20 transition">
+          <a href="/dashboard/audit-log" className="text-xs font-black text-al-accent bg-al-accent/10 px-3 py-1.5 rounded-lg hover:bg-al-accent/20 transition">
             Full Audit Log →
           </a>
-          <a href="/api/export/approvals?format=csv" className="text-xs font-black text-slate-700 border border-slate-200 bg-white px-3 py-1.5 rounded-lg hover:bg-slate-50 transition">
+          <a href="/api/export/approvals?format=csv" className="text-xs font-black text-al-text-secondary border border-al-border bg-al-surface px-3 py-1.5 rounded-lg hover:bg-al-surface-sunken transition">
             Export CSV
           </a>
         </div>
       </div>
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="text-xs font-semibold text-slate-500 mb-4">
+      <div className="rounded-2xl border border-al-border bg-al-surface p-4 shadow-sm">
+        <p className="text-xs font-semibold text-al-text-muted mb-4">
           The Audit Trail is powered by the ApprovLine audit log. All compliance-relevant actions — policy uploads, evaluations, control updates, issue resolutions, attestations — are captured and accessible in the full audit log.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -1256,25 +1256,25 @@ function AuditTrailTab() {
             { label: 'Full Audit Log', href: '/dashboard/audit-log', icon: '📋', desc: 'All platform events with actor' },
             { label: 'Export Evidence', href: '/api/export/approvals?format=csv', icon: '⬇️', desc: 'Download approval evidence CSV' },
           ].map((item) => (
-            <a key={item.label} href={item.href} className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 hover:border-[#2155d9]/30 hover:bg-slate-50 transition">
+            <a key={item.label} href={item.href} className="flex items-start gap-3 rounded-xl border border-al-border p-3 hover:border-al-accent/30 hover:bg-al-surface-sunken transition">
               <span className="text-xl">{item.icon}</span>
               <div>
-                <p className="text-xs font-black text-slate-800">{item.label}</p>
-                <p className="text-[10px] font-semibold text-slate-400">{item.desc}</p>
+                <p className="text-xs font-black text-al-text">{item.label}</p>
+                <p className="text-[10px] font-semibold text-al-text-muted">{item.desc}</p>
               </div>
             </a>
           ))}
         </div>
       </div>
       {logs.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-al-border bg-al-surface shadow-sm overflow-hidden">
           <div className="px-4 pt-4 pb-2">
-            <h3 className="text-sm font-black text-slate-800">Recent Compliance Records</h3>
+            <h3 className="text-sm font-black text-al-text">Recent Compliance Records</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              <thead className="bg-al-surface-sunken border-b border-al-border">
+                <tr className="text-[10px] font-black uppercase tracking-wider text-al-text-muted">
                   <th className="py-3 pl-4 pr-2">Subject</th>
                   <th className="py-3 px-2">Compliance Score</th>
                   <th className="py-3 px-2">Status</th>
@@ -1285,24 +1285,24 @@ function AuditTrailTab() {
                 {logs.slice(page * 20, page * 20 + 20).map((log) => {
                   const meta = log.metadata as Record<string, unknown>;
                   return (
-                    <tr key={log.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                    <tr key={log.id} className="border-t border-al-border hover:bg-al-surface-sunken transition-colors">
                       <td className="py-3 pl-4 pr-2">
-                        <p className="text-xs font-black text-slate-800 line-clamp-1">{String(meta?.subject ?? 'Approval record')}</p>
-                        {meta?.department != null && <p className="text-[10px] font-semibold text-slate-400">{String(meta.department)}</p>}
+                        <p className="text-xs font-black text-al-text line-clamp-1">{String(meta?.subject ?? 'Approval record')}</p>
+                        {meta?.department != null && <p className="text-[10px] font-semibold text-al-text-muted">{String(meta.department)}</p>}
                       </td>
                       <td className="py-3 px-2">
                         {typeof meta?.complianceScore === 'number' ? (
                           <span className="text-xs font-black tabular-nums" style={{ color: scoreColor(meta.complianceScore as number) }}>
                             {meta.complianceScore}%
                           </span>
-                        ) : <span className="text-xs text-slate-400">—</span>}
+                        ) : <span className="text-xs text-al-text-muted">—</span>}
                       </td>
                       <td className="py-3 px-2">
                         <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-black ${statusBadge(String(meta?.status ?? 'PENDING'))}`}>
                           {String(meta?.status ?? 'Pending')}
                         </span>
                       </td>
-                      <td className="py-3 pl-2 pr-4 text-xs font-semibold text-slate-400">{relDate(log.createdAt)}</td>
+                      <td className="py-3 pl-2 pr-4 text-xs font-semibold text-al-text-muted">{relDate(log.createdAt)}</td>
                     </tr>
                   );
                 })}
@@ -1310,10 +1310,10 @@ function AuditTrailTab() {
             </table>
           </div>
           {logs.length > 20 && (
-            <div className="flex justify-center gap-3 p-3 border-t border-slate-100">
-              <button disabled={page === 0} onClick={() => setPage((p) => p - 1)} className="text-xs font-black text-[#2155d9] disabled:opacity-40">← Previous</button>
-              <span className="text-xs font-semibold text-slate-400">{page + 1} / {Math.ceil(logs.length / 20)}</span>
-              <button disabled={(page + 1) * 20 >= logs.length} onClick={() => setPage((p) => p + 1)} className="text-xs font-black text-[#2155d9] disabled:opacity-40">Next →</button>
+            <div className="flex justify-center gap-3 p-3 border-t border-al-border">
+              <button disabled={page === 0} onClick={() => setPage((p) => p - 1)} className="text-xs font-black text-al-accent disabled:opacity-40">← Previous</button>
+              <span className="text-xs font-semibold text-al-text-muted">{page + 1} / {Math.ceil(logs.length / 20)}</span>
+              <button disabled={(page + 1) * 20 >= logs.length} onClick={() => setPage((p) => p + 1)} className="text-xs font-black text-al-accent disabled:opacity-40">Next →</button>
             </div>
           )}
         </div>
@@ -1344,8 +1344,8 @@ export function ComplianceHubShell({ initialData, workspaceData }: Props) {
             onClick={() => setActiveTab(tab)}
             className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-black transition-all ${
               activeTab === tab
-                ? 'border-[#2155d9] text-white'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-al-accent text-white'
+                : 'border-transparent text-al-text-muted hover:text-al-text-secondary'
             }`}
           >
             {tab}

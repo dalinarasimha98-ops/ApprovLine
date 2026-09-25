@@ -12,11 +12,11 @@ import type { Role } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-const cardClass = 'rounded-2xl border border-al-border bg-white p-5 shadow-sm';
+const cardClass = 'rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm';
 const inputClass =
-  'h-11 w-full rounded-xl border border-al-border bg-white px-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
+  'h-11 w-full rounded-xl border border-al-border bg-al-surface px-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
 const textareaClass =
-  'min-h-28 w-full rounded-xl border border-al-border bg-white px-3 py-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
+  'min-h-28 w-full rounded-xl border border-al-border bg-al-surface px-3 py-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
 
 function cleanString(value: FormDataEntryValue | null, fallback = '') {
   return String(value ?? fallback).trim();
@@ -158,7 +158,7 @@ export default async function PilotReadinessPage({
 
   return (
     <section className="grid gap-6">
-      <div className="rounded-2xl border border-al-border bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">Pilot Readiness</p>
         <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
@@ -227,9 +227,9 @@ export default async function PilotReadinessPage({
           </div>
           <div className="mt-5 grid gap-3">
             {readiness.checklist.map((item) => (
-              <PendingLink key={item.key} href={item.href} pendingText="Opening..." className="flex items-center justify-between gap-3 rounded-xl border border-al-border bg-al-surface-sunken px-4 py-3 text-sm font-bold text-al-text-secondary hover:bg-white">
+              <PendingLink key={item.key} href={item.href} pendingText="Opening..." className="flex items-center justify-between gap-3 rounded-xl border border-al-border bg-al-surface-sunken px-4 py-3 text-sm font-bold text-al-text-secondary hover:bg-al-surface">
                 <span className="flex items-center gap-3">
-                  <span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-black ${item.complete ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-al-text-muted ring-1 ring-slate-200'}`}>
+                  <span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-black ${item.complete ? 'bg-emerald-100 text-emerald-700' : 'bg-al-surface text-al-text-muted ring-1 ring-slate-200'}`}>
                     {item.complete ? '✓' : '○'}
                   </span>
                   {item.label}
@@ -267,7 +267,7 @@ export default async function PilotReadinessPage({
             {readiness.invites.length ? readiness.invites.map((invite) => (
               <div key={invite.id} className="flex items-center justify-between gap-3 rounded-xl bg-al-surface-sunken px-3 py-2 text-sm">
                 <span className="truncate font-bold text-al-text">{invite.email}</span>
-                <span className="rounded-full bg-white px-2 py-1 text-[11px] font-black uppercase text-al-text-muted">{invite.status}</span>
+                <span className="rounded-full bg-al-surface px-2 py-1 text-[11px] font-black uppercase text-al-text-muted">{invite.status}</span>
               </div>
             )) : <p className="rounded-xl bg-al-surface-sunken p-3 text-sm font-semibold text-al-text-muted">No beta users invited yet.</p>}
           </div>
@@ -319,7 +319,7 @@ export default async function PilotReadinessPage({
                 </div>
                 <input type="hidden" name="key" value={flag.key} />
                 <input type="hidden" name="enabled" value={flag.enabled ? 'false' : 'true'} />
-                <FormSubmitButton pendingText="Saving..." className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-black ${flag.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-al-text-muted ring-1 ring-slate-200'}`}>
+                <FormSubmitButton pendingText="Saving..." className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-black ${flag.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-al-surface text-al-text-muted ring-1 ring-slate-200'}`}>
                   {flag.enabled ? 'Enabled' : 'Disabled'}
                 </FormSubmitButton>
               </form>
@@ -347,9 +347,9 @@ export default async function PilotReadinessPage({
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
         <p className="text-xs font-black uppercase tracking-wide">Production safety</p>
         <div className="mt-3 grid gap-3 text-sm font-bold md:grid-cols-3">
-          <span className="rounded-xl bg-white/70 p-3">Destructive demo reset requires confirmation.</span>
-          <span className="rounded-xl bg-white/70 p-3">Demo records remain marked with demo metadata.</span>
-          <span className="rounded-xl bg-white/70 p-3">Integration disconnect actions require explicit confirmation.</span>
+          <span className="rounded-xl bg-al-surface/70 p-3">Destructive demo reset requires confirmation.</span>
+          <span className="rounded-xl bg-al-surface/70 p-3">Demo records remain marked with demo metadata.</span>
+          <span className="rounded-xl bg-al-surface/70 p-3">Integration disconnect actions require explicit confirmation.</span>
         </div>
       </div>
     </section>
