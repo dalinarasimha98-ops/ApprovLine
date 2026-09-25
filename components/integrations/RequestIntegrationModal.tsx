@@ -182,7 +182,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
             </p>
             <button
               onClick={handleClose}
-              className="mt-5 rounded-xl bg-al-accent px-6 py-2.5 text-sm font-black text-white transition hover:bg-blue-700"
+              className="mt-5 rounded-xl bg-al-accent px-6 py-2.5 text-sm font-black text-white transition hover:bg-al-accent-hover"
             >
               Got it
             </button>

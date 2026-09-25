@@ -67,7 +67,7 @@ export function GatewayFlowDiagram({ counts }: { counts: FlowCounts }) {
                       <span
                         key={delay}
                         className="gw-dot inline-block h-1.5 w-1.5 rounded-full"
-                        style={{ background: '#7C3AED80', animationDelay: `${delay}s` }}
+                        style={{ background: 'rgb(var(--al-accent-rgb) / 0.5)', animationDelay: `${delay}s` }}
                       />
                     ))}
                     <span className="ml-0.5 text-[10px] text-al-text-secondary">›</span>

@@ -33,9 +33,14 @@ function timeAgo(date: Date): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+// Real connection-status semantics (unlike the funnel/KPI colors below,
+// which are arbitrary per-metric identity, not status) - theme-reactive
+// via the same --al-*-rgb custom properties used everywhere else, since
+// these render through inline style={{backgroundColor}} where a Tailwind
+// class can't reach.
 const STATUS_COLORS: Record<string, string> = {
-  CONNECTED: '#10B981', SYNCING: '#3B82F6', DISCONNECTED: '#64748B',
-  NEEDS_REAUTH: '#F59E0B', ERROR: '#EF4444',
+  CONNECTED: 'rgb(var(--al-success-rgb))', SYNCING: 'rgb(var(--al-info-rgb))', DISCONNECTED: 'rgb(var(--al-text-muted-rgb))',
+  NEEDS_REAUTH: 'rgb(var(--al-warning-rgb))', ERROR: 'rgb(var(--al-danger-rgb))',
 };
 const INTEGRATION_LABELS: Record<string, string> = {
   SLACK: 'Slack', GMAIL: 'Gmail', OUTLOOK: 'Outlook', MICROSOFT_TEAMS: 'Teams',
@@ -47,7 +52,7 @@ const PROVIDER_COLORS: Record<string, string> = {
   sap: '#0FAAFF', oracle: '#F80000', coupa: '#C02E37', workday: '#F38023',
   salesforce: '#00A1E0', hubspot: '#FF7A59', custom: '#7C3AED',
 };
-const providerColor = (key: string) => PROVIDER_COLORS[key.toLowerCase()] ?? '#64748B';
+const providerColor = (key: string) => PROVIDER_COLORS[key.toLowerCase()] ?? 'rgb(var(--al-text-muted-rgb))';
 const providerLabel = (key: string) => INTEGRATION_LABELS[key.toUpperCase()] ?? key;
 
 // ---------------------------------------------------------------------------
@@ -156,7 +161,7 @@ function CardTitle({ children }: { children: React.ReactNode }) {
   return <h3 className="text-sm font-bold text-white">{children}</h3>;
 }
 function StatusBadge({ status }: { status: string }) {
-  const color = STATUS_COLORS[status] ?? '#64748B';
+  const color = STATUS_COLORS[status] ?? 'rgb(var(--al-text-muted-rgb))';
   return (
     <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: `${color}18`, color }}>
       {status}
@@ -283,7 +288,7 @@ function OverviewTab({ d, gatewayEmail }: { d: GatewayData; gatewayEmail: string
                   <div key={int.id} className="rounded-xl border border-al-border bg-al-surface-sunken p-3">
                     <div className="flex items-center justify-between gap-1.5 mb-1">
                       <p className="text-[11px] font-bold text-white truncate">{INTEGRATION_LABELS[int.provider] ?? int.provider}</p>
-                      <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: STATUS_COLORS[int.status] ?? '#64748B' }} />
+                      <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: STATUS_COLORS[int.status] ?? 'rgb(var(--al-text-muted-rgb))' }} />
                     </div>
                     <p className="text-[10px] text-al-text-muted">{timeAgo(int.updatedAt)}</p>
                   </div>
@@ -420,7 +425,7 @@ function HealthTab({ d }: { d: GatewayData }) {
       <DarkCard>
         <CardTitle>Gateway Health</CardTitle>
         <div className="mt-4 flex items-center gap-3">
-          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: d.deadLetterCount > 0 ? '#F59E0B' : '#10B981' }} />
+          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: d.deadLetterCount > 0 ? 'rgb(var(--al-warning-rgb))' : 'rgb(var(--al-success-rgb))' }} />
           <p className="text-sm font-semibold text-white">{d.deadLetterCount > 0 ? `${nf(d.deadLetterCount)} dead-letter events need attention` : 'Processing pipeline healthy'}</p>
         </div>
       </DarkCard>
@@ -431,7 +436,7 @@ function HealthTab({ d }: { d: GatewayData }) {
         <div className="mt-3 grid gap-2">
           {d.integrations.map(int => (
             <div key={int.id} className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_COLORS[int.status] ?? '#64748B' }} />
+              <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: STATUS_COLORS[int.status] ?? 'rgb(var(--al-text-muted-rgb))' }} />
               <p className="flex-1 text-xs text-al-text-secondary truncate">{INTEGRATION_LABELS[int.provider] ?? int.provider}</p>
               <p className="text-[10px] text-al-text-muted">{timeAgo(int.updatedAt)}</p>
             </div>

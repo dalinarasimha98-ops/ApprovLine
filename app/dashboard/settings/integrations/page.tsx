@@ -493,8 +493,8 @@ export default async function IntegrationsPage({
               <h2 className="mb-4 text-sm font-black tracking-tight text-al-text">Your Connections</h2>
               <div className="flex flex-col gap-3">
                 <StatPill label="Connected" value={connectedCount} color="bg-al-success" />
-                <StatPill label="Available" value={availableCount} color="bg-blue-400" />
-                <StatPill label="Beta" value={betaCount} color="bg-violet-400" />
+                <StatPill label="Available" value={availableCount} color="bg-al-info" />
+                <StatPill label="Beta" value={betaCount} color="bg-al-accent" />
                 <StatPill label="Requested" value={requestedCount} color="bg-al-warning" />
               </div>
             </div>

@@ -284,7 +284,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
           {canAdmin && (
             <button
               onClick={() => setShowInviteModal(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-al-accent px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-al-accent px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-al-accent-hover"
             >
               <UserPlus className="h-4 w-4" />
               Invite User
@@ -702,7 +702,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
             </label>
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowInviteModal(false)} className="rounded-xl border border-al-border px-4 py-2.5 text-sm font-black text-al-text-secondary hover:bg-al-surface-sunken">Cancel</button>
-              <button type="submit" disabled={isPending} className="rounded-xl bg-al-accent px-5 py-2.5 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-60">
+              <button type="submit" disabled={isPending} className="rounded-xl bg-al-accent px-5 py-2.5 text-sm font-black text-white hover:bg-al-accent-hover disabled:opacity-60">
                 Send Invitation
               </button>
             </div>
@@ -727,7 +727,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
             </label>
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowCreateTeamModal(false)} className="rounded-xl border border-al-border px-4 py-2.5 text-sm font-black text-al-text-secondary hover:bg-al-surface-sunken">Cancel</button>
-              <button type="submit" disabled={isPending} className="rounded-xl bg-al-accent px-5 py-2.5 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-60">
+              <button type="submit" disabled={isPending} className="rounded-xl bg-al-accent px-5 py-2.5 text-sm font-black text-white hover:bg-al-accent-hover disabled:opacity-60">
                 Create Team
               </button>
             </div>

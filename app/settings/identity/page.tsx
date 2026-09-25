@@ -71,7 +71,7 @@ export default async function IdentitySettingsPage() {
         <div className="overflow-hidden rounded-[32px] border border-al-border bg-al-surface shadow-sm">
           <div className="grid gap-8 bg-al-bg p-6 text-white lg:grid-cols-[1.1fr_0.9fr] lg:p-8">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">Enterprise Identity Center</p>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-al-accent">Enterprise Identity Center</p>
               <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">Manage SSO, identity policies, sessions, and access control.</h1>
               <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-al-text-secondary">
                 Connect Microsoft Entra ID, Okta, Google Workspace, SAML, or OIDC so enterprise customers can govern ApprovLine from their existing identity provider.
@@ -83,7 +83,7 @@ export default async function IdentitySettingsPage() {
               </div>
             </div>
             <div className="rounded-3xl border border-white/10 bg-al-surface/[0.06] p-5">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Workspace</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-al-accent">Workspace</p>
               <h2 className="mt-2 text-2xl font-black">{data.organizationName}</h2>
               <div className="mt-4 grid gap-3 text-sm font-semibold text-al-text-secondary">
                 <Row label="Verified domain" value={data.domain} />
@@ -201,7 +201,7 @@ export default async function IdentitySettingsPage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <FormSubmitButton pendingText="Saving identity..." className="inline-flex h-12 items-center gap-2 rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm shadow-blue-200 disabled:opacity-60">
+                <FormSubmitButton pendingText="Saving identity..." className="inline-flex h-12 items-center gap-2 rounded-xl bg-al-accent px-5 text-sm font-black text-white shadow-sm shadow-al-accent/20 disabled:opacity-60">
                   Save identity settings
                 </FormSubmitButton>
                 <button formAction={testConnection} className="inline-flex h-12 items-center gap-2 rounded-xl border border-al-border bg-al-surface px-5 text-sm font-black text-al-text-secondary shadow-sm disabled:opacity-60">

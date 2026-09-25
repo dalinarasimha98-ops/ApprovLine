@@ -27,7 +27,7 @@ export default async function UsersTeamsPage() {
       <DashboardShell>
         <div className="mb-6 overflow-hidden rounded-3xl border border-al-border bg-al-surface shadow-sm">
           <div className="bg-al-bg px-6 py-7 text-white">
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Users & Teams</p>
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-al-accent">Users & Teams</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{tenant.organization.name}</h1>
           </div>
         </div>
@@ -44,7 +44,7 @@ export default async function UsersTeamsPage() {
       {/* Page header */}
       <div className="mb-6 overflow-hidden rounded-3xl border border-al-border bg-al-surface shadow-sm">
         <div className="bg-al-bg px-6 py-7 text-white">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Users & Teams</p>
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-al-accent">Users & Teams</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{tenant.organization.name}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-al-text-secondary">
             Manage workspace members, teams, roles, and permissions across your organization.
