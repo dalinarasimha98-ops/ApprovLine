@@ -910,7 +910,7 @@ export function SettingsShell({ data }: { data: SettingsOverview }) {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
       {/* Secondary settings nav — desktop sidebar */}
       <aside className="hidden w-48 shrink-0 lg:block">
         <nav className="grid gap-0.5">

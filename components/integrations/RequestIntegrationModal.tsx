@@ -125,15 +125,18 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
     }
   }
 
+  const titleId = 'request-integration-title';
+
   return (
     <dialog
       ref={dialogRef}
+      aria-labelledby={titleId}
       className="w-full max-w-xl rounded-2xl border border-al-border bg-al-surface p-0 shadow-[0_20px_60px_rgba(15,23,42,0.25)] backdrop:bg-slate-950/60"
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-al-border px-6 py-5">
         <div>
-          <h2 className="text-xl font-black tracking-tight text-al-text">Request an Integration</h2>
+          <h2 id={titleId} className="text-xl font-black tracking-tight text-al-text">Request an Integration</h2>
           <p className="mt-0.5 text-sm font-semibold text-al-text-muted">
             Tell us what tool you need. We prioritize by customer demand.
           </p>
@@ -164,7 +167,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
             </p>
             <button
               onClick={handleClose}
-              className="mt-5 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-black text-white transition hover:bg-emerald-700"
+              className="mt-5 rounded-xl bg-al-success px-6 py-2.5 text-sm font-black text-white transition hover:opacity-90"
             >
               Done
             </button>

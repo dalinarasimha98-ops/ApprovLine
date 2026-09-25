@@ -4,7 +4,7 @@ import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded'
 import { PendingLink } from '@/components/system/PendingLink';
 import { RefreshButton } from '@/components/system/RefreshButton';
 import { getDashboardTenant } from '@/lib/auth';
-import { isMigrationError } from '@/lib/prisma-errors';
+import { isMigrationError, safeDiagnosticSummary } from '@/lib/prisma-errors';
 import { buildOnboardingState } from '@/services/onboarding';
 import { enforcePageRole } from '@/lib/rbac';
 
@@ -48,7 +48,7 @@ export default async function OnboardingSettingsPage() {
               ? 'Run npm run db:deploy in production to enable onboarding tables.'
               : 'The database did not respond in time. This is usually transient - retry in a moment.'}
           </p>
-          <p className="rounded-xl bg-al-warning/10 p-3 text-xs font-bold text-al-warning">Safe diagnostic: {error}</p>
+          <p className="rounded-xl bg-al-warning/10 p-3 text-xs font-bold text-al-warning">Safe diagnostic: {safeDiagnosticSummary(error)}</p>
           <div className="flex flex-wrap gap-3">
             <PendingLink href="/settings/onboarding" pendingText="Retrying..." className="inline-flex w-fit rounded-xl bg-al-accent px-5 py-3 text-sm font-black text-white">
               Retry

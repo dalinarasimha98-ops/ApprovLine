@@ -10,6 +10,7 @@ import {
   type IdentityProviderCard,
 } from '@/services/identity';
 import { enforcePageRole } from '@/lib/rbac';
+import { safeDiagnosticSummary } from '@/lib/prisma-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +57,7 @@ export default async function IdentitySettingsPage() {
           <p className="text-xs font-black uppercase tracking-[0.22em] text-al-warning">Enterprise Identity Center</p>
           <h1 className="text-2xl font-black text-al-text">We could not load identity settings this time</h1>
           <p className="text-sm leading-6 text-al-text-secondary">The database did not respond in time. This is usually transient - retry in a moment.</p>
-          <p className="rounded-xl bg-al-warning/10 p-3 text-xs font-bold text-al-warning">Safe diagnostic: {error instanceof Error ? error.message.slice(0, 220) : 'Unknown error.'}</p>
+          <p className="rounded-xl bg-al-warning/10 p-3 text-xs font-bold text-al-warning">Safe diagnostic: {safeDiagnosticSummary(error instanceof Error ? error.message : null)}</p>
           <Link href="/settings/identity" className="inline-flex w-fit rounded-xl bg-al-accent px-5 py-3 text-sm font-black text-white">
             Retry
           </Link>

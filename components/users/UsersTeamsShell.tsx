@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useId, useState, useTransition, useMemo, useRef, useEffect } from 'react';
+import { DetailDrawer } from '@/components/dashboard/DetailDrawer';
 import {
   Users,
   UserPlus,
@@ -759,32 +760,66 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   );
 }
 
+/** Reuses the same accessible drawer shell as User Settings' Edit Profile
+ *  panel (components/dashboard/DetailDrawer.tsx) instead of a second,
+ *  hand-rolled overlay with none of its focus-trap/Escape/focus-restoration
+ *  behavior - this file's previous version had a scrim + fixed panel with
+ *  no role="dialog", no aria-modal, no aria-labelledby, and no keyboard
+ *  handling at all. */
 function SlidePanel({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  const titleId = useId();
   return (
-    <>
-      <div className="fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed bottom-0 right-0 top-0 z-40 w-full max-w-sm overflow-y-auto border-l border-al-border bg-al-surface shadow-xl">
-        <div className="flex items-center justify-between border-b border-al-border px-5 py-4">
-          <p className="text-base font-black text-al-text">{title}</p>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-al-text-muted hover:bg-al-surface-elevated"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="px-5 py-5">{children}</div>
+    <DetailDrawer open onClose={onClose} titleId={titleId} size="sm">
+      <div className="flex shrink-0 items-center justify-between border-b border-al-border px-5 py-4">
+        <p id={titleId} className="text-base font-black text-al-text">{title}</p>
+        <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-al-text-muted hover:bg-al-surface-elevated"><X className="h-5 w-5" /></button>
       </div>
-    </>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">{children}</div>
+    </DetailDrawer>
   );
 }
 
+/** A real, accessible centered dialog - the native <dialog> element opened
+ *  via showModal(), same pattern as RequestIntegrationModal. Native modal
+ *  dialogs get an implicit dialog role, a built-in focus trap, and close
+ *  on Escape for free; this only has to wire up aria-labelledby and focus
+ *  restoration explicitly. Replaces the previous hand-rolled overlay,
+ *  which had none of that. */
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const triggerRef = useRef<Element | null>(null);
+
+  useEffect(() => {
+    triggerRef.current = document.activeElement;
+    dialogRef.current?.showModal();
+    return () => {
+      if (triggerRef.current instanceof HTMLElement) triggerRef.current.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    const handler = () => onClose();
+    el.addEventListener('close', handler);
+    return () => el.removeEventListener('close', handler);
+  }, [onClose]);
+
   return (
-    <>
-      <div className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed left-1/2 top-1/2 z-40 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-al-border bg-al-surface p-6 shadow-2xl">
-        <div className="mb-5 flex items-center justify-between">
-          <p className="text-lg font-black text-al-text">{title}</p>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-al-text-muted hover:bg-al-surface-elevated"><X className="h-5 w-5" /></button>
-        </div>
-        {children}
+    <dialog
+      ref={dialogRef}
+      aria-labelledby={titleId}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) dialogRef.current?.close();
+      }}
+      className="w-full max-w-md rounded-3xl border border-al-border bg-al-surface p-6 shadow-2xl backdrop:bg-slate-950/40"
+    >
+      <div className="mb-5 flex items-center justify-between">
+        <p id={titleId} className="text-lg font-black text-al-text">{title}</p>
+        <button onClick={() => dialogRef.current?.close()} aria-label="Close" className="rounded-lg p-1.5 text-al-text-muted hover:bg-al-surface-elevated"><X className="h-5 w-5" /></button>
       </div>
-    </>
+      {children}
+    </dialog>
   );
 }
