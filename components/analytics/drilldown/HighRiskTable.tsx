@@ -91,9 +91,9 @@ function SourceBadge({ source }: { source: string | null }) {
     slack: 'bg-[#4A154B]/30 text-[#E01E5A]',
     gmail: 'bg-al-danger/10 text-al-danger',
     teams: 'bg-blue-600/10 text-al-info',
-    outlook: 'bg-al-info/10 text-blue-300',
+    outlook: 'bg-al-info/10 text-al-info',
     jira: 'bg-blue-700/10 text-blue-500',
-    zoom: 'bg-blue-900/20 text-blue-300',
+    zoom: 'bg-blue-900/20 text-al-info',
     sap: 'bg-al-warning/10 text-al-warning',
     workday: 'bg-orange-500/10 text-orange-400',
     salesforce: 'bg-cyan-500/10 text-cyan-400',
@@ -221,7 +221,7 @@ export function HighRiskTable({ records }: { records: HighRiskTableRecord[] }) {
                     <span className="text-al-text-secondary">·</span>
                     <Link
                       href={`/copilot?context=approval&id=${record.id}`}
-                      className="text-[10px] font-bold text-al-info hover:text-blue-300 transition-colors whitespace-nowrap"
+                      className="text-[10px] font-bold text-al-info hover:text-al-info transition-colors whitespace-nowrap"
                     >
                       Copilot
                     </Link>

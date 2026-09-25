@@ -87,11 +87,11 @@ async function acknowledgeAlertAction(formData: FormData) {
 // ── Degraded banner ───────────────────────────────────────────────────────────
 function DegradedBanner({ message, alert }: { message: string; alert: boolean }) {
   return (
-    <div className={`rounded-xl border p-4 ${alert ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-al-border bg-al-surface text-al-text-secondary'}`}>
+    <div className={`rounded-xl border p-4 ${alert ? 'border-al-warning/30 bg-al-warning/10 text-al-warning' : 'border-al-border bg-al-surface text-al-text-secondary'}`}>
       {alert ? <AutoRetryOnDegraded intervalMs={AUTO_RETRY_INTERVAL_MS} /> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className={`text-sm font-black ${alert ? 'text-amber-950' : 'text-al-text'}`}>
+          <p className={`text-sm font-black ${alert ? 'text-al-warning' : 'text-al-text'}`}>
             {alert ? 'Alerts are recovering' : 'Refreshing alerts…'}
           </p>
           <p className="mt-1 text-sm leading-5">{message}</p>
@@ -143,7 +143,7 @@ async function AlertMetricsRow({ filters }: { filters: Awaited<AlertsPageProps['
       label: 'Critical',
       value: result.severityCounts.Critical,
       href: qs({ severity: 'critical' }),
-      colorClass: 'border-rose-200 bg-rose-50 text-rose-700',
+      colorClass: 'border-al-danger/30 bg-al-danger/10 text-al-danger',
       dotClass: 'bg-al-danger',
       desc: 'Needs immediate attention',
     },
@@ -151,7 +151,7 @@ async function AlertMetricsRow({ filters }: { filters: Awaited<AlertsPageProps['
       label: 'High',
       value: result.severityCounts.High,
       href: qs({ severity: 'high' }),
-      colorClass: 'border-amber-200 bg-amber-50 text-amber-800',
+      colorClass: 'border-al-warning/30 bg-al-warning/10 text-al-warning',
       dotClass: 'bg-al-warning',
       desc: 'Requires prompt review',
     },
@@ -167,7 +167,7 @@ async function AlertMetricsRow({ filters }: { filters: Awaited<AlertsPageProps['
       label: 'Escalated',
       value: result.escalatedCount,
       href: qs({ status: 'escalated' }),
-      colorClass: 'border-violet-200 bg-violet-50 text-violet-700',
+      colorClass: 'border-al-accent/30 bg-al-accent/10 text-al-accent',
       dotClass: 'bg-al-accent-hover',
       desc: 'Sent to senior review',
     },
@@ -215,7 +215,7 @@ function AttentionItem({
   alert: ApprovalAlert;
   investigateAction: (fd: FormData) => Promise<void>;
 }) {
-  const borderColor = alert.severity === 'Critical' ? 'border-rose-200' : 'border-amber-200';
+  const borderColor = alert.severity === 'Critical' ? 'border-al-danger/30' : 'border-al-warning/30';
   const stripColor = alert.severity === 'Critical' ? 'bg-al-danger' : 'bg-al-warning';
 
   return (
@@ -279,9 +279,9 @@ async function AlertsList({
 
   if (result.alerts.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/60 p-10 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-          <ShieldAlert className="h-5 w-5 text-emerald-600" />
+      <div className="rounded-xl border border-dashed border-al-success/30 bg-al-success/10/60 p-10 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-al-success/15">
+          <ShieldAlert className="h-5 w-5 text-al-success" />
         </div>
         <h3 className="mt-4 text-base font-black text-al-text">No active alerts</h3>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-al-text-muted">
@@ -310,7 +310,7 @@ async function AlertsList({
           <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-al-warning" />
             <h3 className="text-sm font-black text-al-text">Attention Required</h3>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">{attentionItems.length}</span>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-al-warning">{attentionItems.length}</span>
           </div>
           <div className="grid gap-3">
             {attentionItems.map((alert) => (

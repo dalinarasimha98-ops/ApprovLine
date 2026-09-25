@@ -444,7 +444,7 @@ export function ActionCenterClient(props: ActionCenterProps) {
           <div className="flex shrink-0 items-start justify-between gap-3 border-b border-al-border bg-al-surface-sunken px-5 py-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-al-info/10 px-2.5 py-1 text-xs font-bold text-al-info">
                   <ProviderIcon platform={selected.sourcePlatformRaw} className="h-3 w-3" />
                   {SOURCE_PLATFORM_LABELS[normalizeSourcePlatform(selected.sourcePlatformRaw)]}
                 </span>
@@ -503,7 +503,7 @@ export function ActionCenterClient(props: ActionCenterProps) {
               {selected.context ? (
                 <section>
                   <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Context</h3>
-                  <p className="max-h-40 overflow-y-auto rounded-xl border border-blue-100 bg-blue-50 p-3 text-[13px] leading-5 text-blue-900">
+                  <p className="max-h-40 overflow-y-auto rounded-xl border border-al-info/20 bg-al-info/10 p-3 text-[13px] leading-5 text-blue-900">
                     {selected.context}
                   </p>
                 </section>
@@ -512,7 +512,7 @@ export function ActionCenterClient(props: ActionCenterProps) {
               <section>
                 <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Evidence</h3>
                 {selected.evidenceRecordId ? (
-                  <a href={`/evidence/${selected.evidenceRecordId}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-violet-700 hover:text-violet-900">
+                  <a href={`/evidence/${selected.evidenceRecordId}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-al-accent hover:text-violet-900">
                     View Evidence <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 ) : (

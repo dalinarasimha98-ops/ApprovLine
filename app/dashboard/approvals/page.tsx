@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 
 // ── Dept bar colours cycling ───────────────────────────────────────────────────
 const DEPT_COLORS = [
-  'bg-al-success', 'bg-al-accent-hover', 'bg-blue-500',
+  'bg-al-success', 'bg-al-accent-hover', 'bg-al-info/100',
   'bg-al-warning',   'bg-al-danger',   'bg-teal-500',
 ];
 
@@ -635,8 +635,8 @@ export default async function ApprovalsPage({
                 </div>
                 <div className="flex flex-col gap-2">
                   {[
-                    { label: 'Approved', count: statusCounts.approved, color: 'bg-emerald-400' },
-                    { label: 'Pending',  count: statusCounts.pending,  color: 'bg-amber-400' },
+                    { label: 'Approved', count: statusCounts.approved, color: 'bg-al-success' },
+                    { label: 'Pending',  count: statusCounts.pending,  color: 'bg-al-warning' },
                     { label: 'Rejected', count: statusCounts.rejected, color: 'bg-rose-400' },
                   ].map(({ label, count, color }) => (
                     <div key={label} className="flex items-center gap-2">

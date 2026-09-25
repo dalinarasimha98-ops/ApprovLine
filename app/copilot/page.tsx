@@ -68,7 +68,7 @@ export default async function CopilotPage({
   return (
     <DashboardShell>
       {tenant.status !== 'ready' ? (
-        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm">
+        <div className="mb-4 rounded-xl border border-al-warning/30 bg-al-warning/10 p-4 text-al-warning shadow-sm">
           <h2 className="font-black">Workspace context is delayed</h2>
           <p className="mt-1 text-sm leading-6">
             Copilot can open, but answers may be limited until workspace readiness completes.{' '}
@@ -77,7 +77,7 @@ export default async function CopilotPage({
           <PendingLink
             href="/api/debug/dashboard"
             pendingText="Opening diagnostics..."
-            className="mt-3 inline-flex h-10 min-h-0 items-center rounded-lg border border-amber-300 bg-al-surface px-3 text-sm font-black text-amber-900"
+            className="mt-3 inline-flex h-10 min-h-0 items-center rounded-lg border border-amber-300 bg-al-surface px-3 text-sm font-black text-al-warning"
           >
             Open diagnostics
           </PendingLink>

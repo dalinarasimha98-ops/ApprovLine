@@ -76,21 +76,21 @@ export default async function ReportsAndExportsPage() {
           label="Available Reports"
           value={summary.availableReports}
           sub="Backed by real export APIs"
-          colorClass="border-blue-200 bg-blue-50 text-blue-600"
+          colorClass="border-al-info/30 bg-al-info/10 text-blue-600"
         />
         <SummaryCard
           icon={FileBarChart2}
           label="Approval Records"
           value={summary.approvalRecordCount.toLocaleString()}
           sub="Total records available to report on"
-          colorClass="border-violet-200 bg-violet-50 text-al-accent"
+          colorClass="border-al-accent/30 bg-al-accent/10 text-al-accent"
         />
         <SummaryCard
           icon={BarChart3}
           label="Exports (30 days)"
           value={summary.recentExportCount}
           sub="From this workspace"
-          colorClass="border-emerald-200 bg-emerald-50 text-emerald-600"
+          colorClass="border-al-success/30 bg-al-success/10 text-al-success"
         />
       </div>
 

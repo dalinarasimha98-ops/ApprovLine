@@ -224,10 +224,10 @@ type MiniRequest = {
 
 function requestStatusBadge(s: string): string {
   switch (s) {
-    case 'PENDING': return 'bg-amber-50 text-amber-700 border-amber-200';
-    case 'UNDER_REVIEW': return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'PENDING': return 'bg-al-warning/10 text-al-warning border-al-warning/30';
+    case 'UNDER_REVIEW': return 'bg-al-info/10 text-al-info border-al-info/30';
     case 'PLANNED': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-    case 'IN_DEVELOPMENT': return 'bg-violet-50 text-violet-700 border-violet-200';
+    case 'IN_DEVELOPMENT': return 'bg-al-accent/10 text-al-accent border-al-accent/30';
     default: return 'bg-al-surface-sunken text-al-text-muted border-al-border';
   }
 }
@@ -238,7 +238,7 @@ const GENERIC_CONNECTORS = [
   {
     slug: 'webhook', name: 'Webhook Connector',
     desc: 'POST signed JSON from any system',
-    icon: '⬡', color: 'bg-violet-50 text-al-accent',
+    icon: '⬡', color: 'bg-al-accent/10 text-al-accent',
     href: '/dashboard/gateway?tab=data-flow',
   },
   {
@@ -250,13 +250,13 @@ const GENERIC_CONNECTORS = [
   {
     slug: 'email', name: 'Email Ingestion',
     desc: 'Forward approval emails to capture',
-    icon: '@', color: 'bg-rose-50 text-al-danger',
+    icon: '@', color: 'bg-al-danger/10 text-al-danger',
     href: '/dashboard/gateway?tab=data-flow',
   },
   {
     slug: 'csv', name: 'CSV / Data Import',
     desc: 'Bulk import historical records',
-    icon: '⊞', color: 'bg-emerald-50 text-emerald-600',
+    icon: '⊞', color: 'bg-al-success/10 text-al-success',
     href: '/dashboard/gateway?tab=data-flow',
   },
 ];
@@ -469,8 +469,8 @@ export default async function IntegrationsPage({
           key={n!.title}
           className={`mb-4 rounded-2xl border p-4 shadow-sm ${
             n!.tone === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-              : 'border-rose-200 bg-rose-50 text-rose-900'
+              ? 'border-al-success/30 bg-al-success/10 text-al-success'
+              : 'border-al-danger/30 bg-al-danger/10 text-rose-900'
           }`}
         >
           <p className="font-black">{n!.title}</p>
@@ -492,10 +492,10 @@ export default async function IntegrationsPage({
             <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
               <h2 className="mb-4 text-sm font-black tracking-tight text-al-text">Your Connections</h2>
               <div className="flex flex-col gap-3">
-                <StatPill label="Connected" value={connectedCount} color="bg-emerald-400" />
+                <StatPill label="Connected" value={connectedCount} color="bg-al-success" />
                 <StatPill label="Available" value={availableCount} color="bg-blue-400" />
                 <StatPill label="Beta" value={betaCount} color="bg-violet-400" />
-                <StatPill label="Requested" value={requestedCount} color="bg-amber-400" />
+                <StatPill label="Requested" value={requestedCount} color="bg-al-warning" />
               </div>
             </div>
 
@@ -560,15 +560,15 @@ export default async function IntegrationsPage({
             </div>
 
             {/* Can't find your tool? */}
-            <div className="rounded-2xl border border-violet-100 bg-violet-50 p-5">
+            <div className="rounded-2xl border border-violet-100 bg-al-accent/10 p-5">
               <p className="text-sm font-black text-violet-950">Can&apos;t find your tool?</p>
-              <p className="mt-1 text-xs font-semibold text-violet-700">
+              <p className="mt-1 text-xs font-semibold text-al-accent">
                 Request an integration or use a generic connector to bring your approval data into ApprovLine.
               </p>
               <div className="mt-3 flex flex-col gap-2">
                 <a
                   href="/dashboard/gateway?tab=data-flow"
-                  className="block rounded-lg border border-violet-200 bg-al-surface px-3 py-2 text-center text-xs font-black text-violet-700 transition hover:bg-violet-50"
+                  className="block rounded-lg border border-al-accent/30 bg-al-surface px-3 py-2 text-center text-xs font-black text-al-accent transition hover:bg-al-accent/10"
                 >
                   Use generic connector
                 </a>

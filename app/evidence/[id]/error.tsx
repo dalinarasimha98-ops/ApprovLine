@@ -22,7 +22,7 @@ export default function UnifiedEvidenceError({
         <button
           type="button"
           onClick={reset}
-          className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-500"
+          className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-bold text-white hover:bg-al-info/100"
         >
           <RefreshCw className="h-4 w-4" /> Retry evidence
         </button>

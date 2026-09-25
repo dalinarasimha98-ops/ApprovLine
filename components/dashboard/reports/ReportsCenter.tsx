@@ -8,13 +8,13 @@ import { ReportDetailPanel } from './ReportDetailPanel';
 
 const CATEGORY_LABELS: string[] = ['All', 'Compliance', 'Executive', 'Risk & Security'];
 const FORMAT_COLORS: Record<string, string> = {
-  csv: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  json: 'bg-violet-50 text-violet-700 border-violet-200',
-  pdf: 'bg-rose-50 text-rose-700 border-rose-200',
+  csv: 'bg-al-success/10 text-al-success border-al-success/30',
+  json: 'bg-al-accent/10 text-al-accent border-al-accent/30',
+  pdf: 'bg-al-danger/10 text-al-danger border-al-danger/30',
 };
 const TYPE_COLORS: Record<string, string> = {
-  Standard: 'bg-blue-50 text-blue-700',
-  Analytics: 'bg-amber-50 text-amber-700',
+  Standard: 'bg-al-info/10 text-al-info',
+  Analytics: 'bg-al-warning/10 text-al-warning',
   'Per-Record': 'bg-al-surface-elevated text-al-text-secondary',
 };
 const TABS = ['All Reports', 'Exports', 'Scheduled'] as const;
@@ -109,7 +109,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
                     className={`h-9 rounded-lg px-3 text-xs font-semibold transition ${
                       category === cat
                         ? 'bg-al-accent text-white'
-                        : 'bg-al-surface-elevated text-al-text-secondary hover:bg-slate-200'
+                        : 'bg-al-surface-elevated text-al-text-secondary hover:bg-al-border-strong'
                     }`}
                   >
                     {cat}
@@ -148,7 +148,7 @@ export function ReportsCenter({ catalog, summary, exportHistory }: Props) {
                   aria-pressed={selectedId === report.id}
                   onKeyDown={(e) => e.key === 'Enter' && setSelectedId(selectedId === report.id ? null : report.id)}
                   className={`grid cursor-pointer items-center gap-4 border-b border-al-border px-5 py-4 transition last:border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2155d9]/30 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] ${
-                    selectedId === report.id ? 'bg-blue-50' : 'hover:bg-al-surface-sunken'
+                    selectedId === report.id ? 'bg-al-info/10' : 'hover:bg-al-surface-sunken'
                   }`}
                 >
                   {/* Name + description */}

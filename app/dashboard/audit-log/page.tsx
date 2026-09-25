@@ -20,9 +20,9 @@ function minutesAgo(ms: number) {
 }
 
 function badgeClass(action: string) {
-  if (action.includes('error') || action.includes('failed')) return 'bg-rose-50 text-rose-700 border-rose-100';
-  if (action.includes('demo')) return 'bg-blue-50 text-al-accent border-blue-100';
-  if (action.includes('connected') || action.includes('created')) return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  if (action.includes('error') || action.includes('failed')) return 'bg-al-danger/10 text-al-danger border-rose-100';
+  if (action.includes('demo')) return 'bg-al-info/10 text-al-accent border-al-info/20';
+  if (action.includes('connected') || action.includes('created')) return 'bg-al-success/10 text-al-success border-emerald-100';
   return 'bg-al-surface-elevated text-al-text-secondary border-al-border';
 }
 
@@ -51,11 +51,11 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
       </div>
 
       {result.message ? (
-        <div className={result.alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm' : 'rounded-2xl border border-al-border bg-al-surface p-4 text-al-text-secondary shadow-sm'}>
+        <div className={result.alert ? 'rounded-2xl border border-al-warning/30 bg-al-warning/10 p-5 text-al-warning shadow-sm' : 'rounded-2xl border border-al-border bg-al-surface p-4 text-al-text-secondary shadow-sm'}>
           {result.alert ? <AutoRetryOnDegraded /> : null}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className={result.alert ? 'text-sm font-black text-amber-950' : 'text-sm font-black text-al-text'}>
+              <p className={result.alert ? 'text-sm font-black text-al-warning' : 'text-sm font-black text-al-text'}>
                 {result.alert ? 'Audit history is recovering' : 'Refreshing...'}
               </p>
               <p className="mt-1 text-sm leading-6">{result.message}</p>

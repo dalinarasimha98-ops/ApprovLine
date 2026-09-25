@@ -184,16 +184,16 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
           ].map(([name, placeholder]) => (
             <label key={name} className="grid gap-1.5">
               <span className="text-xs font-bold uppercase tracking-wide text-al-text-muted">{placeholder}</span>
-              <input name={name} defaultValue={filters[name as keyof typeof filters] ?? ''} placeholder={placeholder} className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+              <input name={name} defaultValue={filters[name as keyof typeof filters] ?? ''} placeholder={placeholder} className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20" />
             </label>
           ))}
           <label className="grid gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wide text-al-text-muted">From</span>
-            <input name="from" defaultValue={filters.from ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+            <input name="from" defaultValue={filters.from ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-al-info/20" />
           </label>
           <label className="grid gap-1.5">
             <span className="text-xs font-bold uppercase tracking-wide text-al-text-muted">To</span>
-            <input name="to" defaultValue={filters.to ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+            <input name="to" defaultValue={filters.to ?? ''} type="date" className="h-11 rounded-lg border border-al-border bg-al-surface px-3 text-sm font-semibold outline-none transition focus:border-al-accent focus:ring-4 focus:ring-al-info/20" />
           </label>
           <div className="flex items-end gap-2">
             <FormSubmitButton pendingText="Filtering..." className="min-h-0 h-11 rounded-lg bg-al-accent px-4 text-sm font-bold text-white shadow-sm shadow-blue-200 hover:bg-[#1b49bd]">
@@ -218,7 +218,7 @@ export default async function AnalyticsDrilldownPage({ params, searchParams }: D
                 <p className="mt-2 text-sm leading-6 text-al-text-muted">{help}</p>
               </div>
             ))}
-            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm font-semibold leading-6 text-al-text-secondary md:col-span-3">
+            <div className="rounded-2xl border border-al-info/20 bg-al-info/10 p-5 text-sm font-semibold leading-6 text-al-text-secondary md:col-span-3">
               Methodology: ApprovLine estimates 4.8 minutes for approval retrieval, 6.6 minutes for manual search, and additional audit preparation effort for high-risk, conditional, and rejection records. These are conservative planning estimates for executive ROI discussions.
             </div>
           </div>

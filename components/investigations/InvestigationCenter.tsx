@@ -96,7 +96,7 @@ function riskLabel(risk?: string | null) {
 
 function statusBadge(status: InvestigationStatus) {
   switch (status) {
-    case 'IN_PROGRESS': return 'bg-blue-500/15 text-al-info border border-blue-500/25';
+    case 'IN_PROGRESS': return 'bg-al-info/100/15 text-al-info border border-blue-500/25';
     case 'ESCALATED': return 'bg-orange-500/15 text-orange-400 border border-orange-500/25';
     case 'RESOLVED': return 'bg-al-success/15 text-al-success border border-al-success/25';
     case 'CLOSED': return 'bg-al-text-muted/15 text-al-text-muted border border-al-text-muted/25';
@@ -118,7 +118,7 @@ function typeBadge(type: string | null) {
   const t = type ?? 'Other';
   const map: Record<string, string> = {
     Anomaly: 'bg-purple-500/15 text-purple-400 border border-purple-500/25',
-    Compliance: 'bg-blue-500/15 text-al-info border border-blue-500/25',
+    Compliance: 'bg-al-info/100/15 text-al-info border border-blue-500/25',
     Security: 'bg-al-danger/15 text-al-danger border border-al-danger/25',
     Pattern: 'bg-al-warning/15 text-al-warning border border-al-warning/25',
     PolicyViolation: 'bg-orange-500/15 text-orange-400 border border-orange-500/25',

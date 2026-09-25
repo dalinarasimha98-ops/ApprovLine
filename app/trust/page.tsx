@@ -134,9 +134,9 @@ function toneFromStatus(status: ReadinessStatus): Tone {
 
 function statusClass(tone: Tone) {
   return {
-    ok: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    warning: 'border-amber-200 bg-amber-50 text-amber-800',
-    error: 'border-rose-200 bg-rose-50 text-rose-700',
+    ok: 'border-al-success/30 bg-al-success/10 text-al-success',
+    warning: 'border-al-warning/30 bg-al-warning/10 text-al-warning',
+    error: 'border-al-danger/30 bg-al-danger/10 text-al-danger',
     neutral: 'border-al-border bg-al-surface-sunken text-al-text-secondary',
   }[tone];
 }
@@ -174,7 +174,7 @@ function ReadinessCard({ label, check }: { label: string; check: ReadinessCheck 
 
 function PermissionValue({ value }: { value: boolean }) {
   return (
-    <span className={`inline-flex min-w-16 justify-center rounded-full px-2.5 py-1 text-xs font-black ${value ? 'bg-emerald-50 text-emerald-700' : 'bg-al-surface-elevated text-al-text-muted'}`}>
+    <span className={`inline-flex min-w-16 justify-center rounded-full px-2.5 py-1 text-xs font-black ${value ? 'bg-al-success/10 text-al-success' : 'bg-al-surface-elevated text-al-text-muted'}`}>
       {value ? 'Yes' : 'No'}
     </span>
   );
@@ -248,7 +248,7 @@ export default async function TrustPage() {
               <StatusPill label="Audit-ready" />
               <StatusPill label="Encrypted storage" />
             </div>
-            <PendingLink href="/trust/compliance" pendingText="Opening compliance hub..." className="mt-6 inline-flex min-h-0 h-11 items-center rounded-xl bg-al-surface px-5 text-sm font-black text-[#07111f] shadow-sm transition hover:bg-blue-50">
+            <PendingLink href="/trust/compliance" pendingText="Opening compliance hub..." className="mt-6 inline-flex min-h-0 h-11 items-center rounded-xl bg-al-surface px-5 text-sm font-black text-[#07111f] shadow-sm transition hover:bg-al-info/10">
               Open Compliance Hub
             </PendingLink>
           </div>
@@ -352,7 +352,7 @@ export default async function TrustPage() {
               </div>
             ))}
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900">
+          <div className="rounded-2xl border border-al-success/30 bg-al-success/10 p-5 text-al-success">
             <p className="text-sm font-black uppercase tracking-wide">Tenant Isolation Status</p>
             <p className="mt-2 text-sm leading-6 font-semibold">Active for signed-in workspace: {tenant.organization?.name ?? 'Current workspace'}.</p>
           </div>

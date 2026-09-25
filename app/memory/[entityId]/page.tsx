@@ -16,10 +16,10 @@ function dateText(value: Date) {
 }
 
 function typeClass(type: string) {
-  if (type === 'RISK') return 'bg-rose-50 text-rose-700';
-  if (type === 'POLICY') return 'bg-violet-50 text-violet-700';
-  if (type === 'INVESTIGATION') return 'bg-amber-50 text-amber-800';
-  if (type === 'APPROVAL' || type === 'DECISION') return 'bg-blue-50 text-al-accent';
+  if (type === 'RISK') return 'bg-al-danger/10 text-al-danger';
+  if (type === 'POLICY') return 'bg-al-accent/10 text-al-accent';
+  if (type === 'INVESTIGATION') return 'bg-al-warning/10 text-al-warning';
+  if (type === 'APPROVAL' || type === 'DECISION') return 'bg-al-info/10 text-al-accent';
   return 'bg-al-surface-elevated text-al-text-secondary';
 }
 
@@ -37,11 +37,11 @@ function RelationshipCard({
   demo?: boolean;
 }) {
   return (
-    <PendingLink href={href} pendingText="Opening related entity..." className="rounded-2xl border border-al-border bg-al-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200">
+    <PendingLink href={href} pendingText="Opening related entity..." className="rounded-2xl border border-al-border bg-al-surface p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-al-info/30">
       <p className="text-[10px] font-black uppercase tracking-wide text-al-accent">{label?.replaceAll('_', ' ') ?? ''}</p>
       <p className="mt-2 text-sm font-black text-al-text">
         {title}
-        {demo ? <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-al-accent">Demo</span> : null}
+        {demo ? <span className="ml-2 rounded-full bg-al-info/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-al-accent">Demo</span> : null}
       </p>
       {subtitle ? <p className="mt-1 text-xs font-semibold text-al-text-muted">{subtitle}</p> : null}
     </PendingLink>
@@ -78,7 +78,7 @@ export default async function MemoryEntityPage({ params }: EntityPageProps) {
                 {memoryEntityLabels[entity.type]}
               </span>
               {isDemoMemoryEntity(entity) ? (
-                <span className="ml-2 inline-flex rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-al-accent">Demo</span>
+                <span className="ml-2 inline-flex rounded-full bg-al-info/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-al-accent">Demo</span>
               ) : null}
               <h1 className="mt-4 text-4xl font-black tracking-tight text-al-text">{entity.title}</h1>
               {entity.subtitle ? <p className="mt-2 text-lg font-semibold text-al-text-secondary">{entity.subtitle}</p> : null}

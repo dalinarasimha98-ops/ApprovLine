@@ -25,9 +25,9 @@ export default async function SettingsPage() {
             <h1 className="mt-2 text-3xl font-black tracking-tight">Settings</h1>
           </div>
         </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <p className="font-black text-amber-900">Could not load settings right now.</p>
-          <p className="mt-1 text-sm font-semibold text-amber-700">The database did not respond in time. Please retry in a moment.</p>
+        <div className="rounded-2xl border border-al-warning/30 bg-al-warning/10 p-6">
+          <p className="font-black text-al-warning">Could not load settings right now.</p>
+          <p className="mt-1 text-sm font-semibold text-al-warning">The database did not respond in time. Please retry in a moment.</p>
         </div>
       </div>
     );

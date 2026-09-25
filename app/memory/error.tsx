@@ -8,8 +8,8 @@ export default function MemoryError({ error, reset }: { error: Error & { digest?
   }, [error]);
 
   return (
-    <section className="grid gap-4 rounded-lg border border-amber-200 bg-al-surface p-6">
-      <p className="text-sm font-bold uppercase text-amber-700">Memory Graph unavailable</p>
+    <section className="grid gap-4 rounded-lg border border-al-warning/30 bg-al-surface p-6">
+      <p className="text-sm font-bold uppercase text-al-warning">Memory Graph unavailable</p>
       <h1 className="text-2xl font-black text-al-text">We could not load the graph this time</h1>
       <p className="text-al-text-secondary">
         Your session is still valid and the rest of the dashboard is unaffected. Retry, or check service readiness.

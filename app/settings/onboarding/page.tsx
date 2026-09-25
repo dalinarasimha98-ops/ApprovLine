@@ -38,8 +38,8 @@ export default async function OnboardingSettingsPage() {
   if (error) {
     return (
       <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
-        <section className="mx-auto grid max-w-5xl gap-5 rounded-[28px] border border-amber-200 bg-al-surface p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Onboarding Management</p>
+        <section className="mx-auto grid max-w-5xl gap-5 rounded-[28px] border border-al-warning/30 bg-al-surface p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-al-warning">Onboarding Management</p>
           <h1 className="text-2xl font-black text-al-text">
             {isMigrationError(error) ? 'Onboarding storage is not ready yet' : 'We could not load onboarding status this time'}
           </h1>
@@ -48,7 +48,7 @@ export default async function OnboardingSettingsPage() {
               ? 'Run npm run db:deploy in production to enable onboarding tables.'
               : 'The database did not respond in time. This is usually transient - retry in a moment.'}
           </p>
-          <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error}</p>
+          <p className="rounded-xl bg-al-warning/10 p-3 text-xs font-bold text-al-warning">Safe diagnostic: {error}</p>
           <div className="flex flex-wrap gap-3">
             <PendingLink href="/settings/onboarding" pendingText="Retrying..." className="inline-flex w-fit rounded-xl bg-al-accent px-5 py-3 text-sm font-black text-white">
               Retry
@@ -90,11 +90,11 @@ export default async function OnboardingSettingsPage() {
         </div>
 
         {state.message ? (
-          <div className={state.alert ? 'rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 shadow-sm' : 'rounded-2xl border border-al-border bg-al-surface p-4 text-al-text-secondary shadow-sm'}>
+          <div className={state.alert ? 'rounded-2xl border border-al-warning/30 bg-al-warning/10 p-4 text-al-warning shadow-sm' : 'rounded-2xl border border-al-border bg-al-surface p-4 text-al-text-secondary shadow-sm'}>
             {state.alert ? <AutoRetryOnDegraded /> : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className={state.alert ? 'text-sm font-black text-amber-950' : 'text-sm font-black text-al-text'}>
+                <p className={state.alert ? 'text-sm font-black text-al-warning' : 'text-sm font-black text-al-text'}>
                   {state.alert ? 'Onboarding status is recovering' : 'Refreshing...'}
                 </p>
                 <p className="mt-1 text-sm leading-6">{state.message}</p>
@@ -122,7 +122,7 @@ export default async function OnboardingSettingsPage() {
                   <p className="font-black text-al-text">{check.label}</p>
                   <p className="text-sm text-al-text-muted">{check.complete ? 'Ready for go-live validation.' : 'Still needs administrator attention.'}</p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-black ${check.complete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                <span className={`rounded-full px-3 py-1 text-xs font-black ${check.complete ? 'bg-al-success/10 text-al-success' : 'bg-al-warning/10 text-al-warning'}`}>
                   {check.complete ? 'Complete' : 'Pending'}
                 </span>
               </div>
@@ -130,7 +130,7 @@ export default async function OnboardingSettingsPage() {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-blue-100 bg-blue-50/70 p-6">
+        <div className="rounded-[28px] border border-al-info/20 bg-al-info/10/70 p-6">
           <h2 className="text-xl font-black text-al-text">Founder visibility</h2>
           <p className="mt-2 text-sm leading-6 text-al-text-secondary">
             Time-to-complete, step saves, completion, and abandonment are tracked through organization readiness fields and `onboarding.*` audit events for Founder Control Center reporting.

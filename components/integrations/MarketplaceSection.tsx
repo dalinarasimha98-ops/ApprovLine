@@ -55,7 +55,7 @@ export function MarketplaceSection() {
       <div className="grid gap-5">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-black uppercase tracking-[0.08em] text-al-text-muted">Coming Soon</h3>
-          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-600">
+          <span className="rounded-full border border-al-info/30 bg-al-info/10 px-3 py-1 text-xs font-black text-blue-600">
             {COMING_SOON.length} planned
           </span>
         </div>
@@ -73,7 +73,7 @@ export function MarketplaceSection() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="block text-sm font-black text-al-text">{provider.name}</span>
-                  <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
+                  <span className="rounded-full border border-al-info/30 bg-al-info/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
                     Soon
                   </span>
                 </div>
@@ -110,18 +110,18 @@ export function MarketplaceSection() {
       </div>
 
       {/* Generic connector CTA */}
-      <div className="rounded-2xl border border-violet-200 bg-violet-50 p-6">
+      <div className="rounded-2xl border border-al-accent/30 bg-al-accent/10 p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-lg font-black text-violet-950">Have a system with a webhook or API?</h3>
-            <p className="mt-1 max-w-lg text-sm font-semibold text-violet-700">
+            <p className="mt-1 max-w-lg text-sm font-semibold text-al-accent">
               Connect any system today using the Universal Gateway — no custom connector required.
               Supports signed webhooks, REST API, CSV import, and email forwarding.
             </p>
           </div>
           <a
             href={`/dashboard/gateway`}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-300 bg-al-surface px-5 py-3 text-sm font-black text-violet-700 transition hover:bg-violet-50"
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-300 bg-al-surface px-5 py-3 text-sm font-black text-al-accent transition hover:bg-al-accent/10"
           >
             Use Generic Connector
           </a>

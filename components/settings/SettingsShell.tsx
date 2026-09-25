@@ -77,7 +77,7 @@ function ManageLink({ href, label = 'Manage' }: { href: string; label?: string }
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info"
     >
       {label} <ExternalLink className="h-3 w-3" />
     </Link>
@@ -95,7 +95,7 @@ function ConfigRow({ label, value, valueClass = '' }: { label: string; value: st
 
 function StatusBadge({ ok }: { ok: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${ok ? 'bg-al-success/10 text-al-success' : 'bg-al-danger/10 text-al-danger'}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-al-success' : 'bg-al-danger'}`} />
       {ok ? 'Configured' : 'Not configured'}
     </span>
@@ -118,18 +118,18 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
     <div className="grid gap-4">
       {/* Compact system status row */}
       <div className="flex items-center gap-3 rounded-xl border border-al-border bg-al-surface px-4 py-3 shadow-sm">
-        <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${systemOk ? 'text-emerald-600' : 'text-amber-600'}`}>
-          <span className={`h-2 w-2 rounded-full ${systemOk ? 'bg-al-success' : 'bg-amber-400'}`} />
+        <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${systemOk ? 'text-al-success' : 'text-al-warning'}`}>
+          <span className={`h-2 w-2 rounded-full ${systemOk ? 'bg-al-success' : 'bg-al-warning'}`} />
           {systemOk ? 'All systems operational' : 'System degraded'}
         </span>
         <span className="text-al-text-secondary">|</span>
         {systemChecks.map(({ label, ok }) => (
-          <span key={label} className={`flex items-center gap-1 text-[11px] font-semibold ${ok ? 'text-al-text-muted' : 'text-red-600'}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-emerald-400' : 'bg-red-400'}`} />
+          <span key={label} className={`flex items-center gap-1 text-[11px] font-semibold ${ok ? 'text-al-text-muted' : 'text-al-danger'}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${ok ? 'bg-al-success' : 'bg-red-400'}`} />
             {label}
           </span>
         ))}
-        <Link href="/health" className="ml-auto flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700">
+        <Link href="/health" className="ml-auto flex items-center gap-1 text-[11px] text-blue-600 hover:text-al-info">
           View status <ExternalLink className="h-3 w-3" />
         </Link>
       </div>
@@ -146,7 +146,7 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
             <ConfigRow label="Country" value={org.country ?? '—'} />
           </div>
           <div className="px-6 pb-4">
-            <button onClick={() => setTab('organization')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+            <button onClick={() => setTab('organization')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
               Configure organization <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -161,7 +161,7 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
             <ConfigRow label="Approval categories" value={`${org.approvalCategories.length} configured`} />
           </div>
           <div className="px-6 pb-4">
-            <Link href="/settings/users" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+            <Link href="/settings/users" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
               Manage users & teams <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -185,7 +185,7 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
             </div>
           </div>
           <div className="px-6 pb-4">
-            <button onClick={() => setTab('security')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+            <button onClick={() => setTab('security')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
               Manage security <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -200,7 +200,7 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
             <ConfigRow label="Queue" value="BullMQ + Redis" />
           </div>
           <div className="px-6 pb-4">
-            <button onClick={() => setTab('workflow')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+            <button onClick={() => setTab('workflow')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
               Configure workflows <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -210,12 +210,12 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
         <SectionCard>
           <SectionHeader title="Evidence & Data" action={<ManageLink href="/evidence" label="View" />} />
           <div className="divide-y divide-slate-100 px-6">
-            <ConfigRow label="Evidence capture" value="Enabled" valueClass="text-emerald-700" />
+            <ConfigRow label="Evidence capture" value="Enabled" valueClass="text-al-success" />
             <ConfigRow label="Deduplication" value="Content-hash idempotency" />
             <ConfigRow label="Cross-source correlation" value="Unified evidence records" />
           </div>
           <div className="px-6 pb-4">
-            <button onClick={() => setTab('evidence')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+            <button onClick={() => setTab('evidence')} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
               Configure evidence <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -229,7 +229,7 @@ function OverviewTab({ data, setTab }: { data: SettingsOverview; setTab: (t: Tab
             <ConfigRow label="Token security" value="AES-256-GCM at rest" />
           </div>
           <div className="px-6 pb-4">
-            <Link href="/dashboard/settings/integrations" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+            <Link href="/dashboard/settings/integrations" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-al-info">
               Manage integrations <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -262,7 +262,7 @@ function InputField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text placeholder:text-al-text-muted focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-al-info/20"
       />
     </div>
   );
@@ -328,13 +328,13 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
     <div className="grid gap-4">
       {/* Unsaved changes banner */}
       {dirty && (
-        <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <span className="text-sm font-semibold text-amber-800">You have unsaved changes</span>
+        <div className="flex items-center justify-between rounded-xl border border-al-warning/30 bg-al-warning/10 px-4 py-3">
+          <span className="text-sm font-semibold text-al-warning">You have unsaved changes</span>
           <div className="flex gap-2">
             <button onClick={discard} disabled={saving} className="rounded-lg border border-al-border bg-al-surface px-3 py-1.5 text-xs font-semibold text-al-text-secondary hover:bg-al-surface-sunken disabled:opacity-50">
               Discard
             </button>
-            <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-al-info/100 disabled:opacity-50">
               {saving && <RefreshCw className="h-3 w-3 animate-spin" />}
               {saving ? 'Saving…' : 'Save changes'}
             </button>
@@ -343,7 +343,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
       )}
 
       {result && (
-        <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${result.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
+        <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${result.ok ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-red-200 bg-al-danger/10 text-red-800'}`}>
           {result.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
           {result.msg}
         </div>
@@ -360,7 +360,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
             <select
               value={form.companySize}
               onChange={(e) => update('companySize', e.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className="mt-1.5 w-full rounded-lg border border-al-border bg-al-surface px-3 py-2 text-sm text-al-text focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-al-info/20"
             >
               <option value="">Select size…</option>
               {sizes.map((s) => <option key={s} value={s}>{s} employees</option>)}
@@ -401,7 +401,7 @@ function OrganizationTab({ data }: { data: SettingsOverview }) {
         <div className="flex flex-wrap gap-2 p-6">
           {org.approvalCategories.length > 0
             ? org.approvalCategories.map((c) => (
-                <span key={c} className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{c}</span>
+                <span key={c} className="rounded-full border border-al-info/30 bg-al-info/10 px-2.5 py-1 text-xs font-medium text-al-info">{c}</span>
               ))
             : <span className="text-sm text-al-text-muted">No categories configured.</span>}
         </div>
@@ -427,7 +427,7 @@ function SecurityTab() {
         <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/settings/identity"
-            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+            className="inline-flex items-center gap-2 rounded-lg border border-al-info/30 bg-al-info/10 px-4 py-2 text-sm font-semibold text-al-info hover:bg-blue-100"
           >
             <Key className="h-4 w-4" />
             Open Identity Center
@@ -447,8 +447,8 @@ function SecurityTab() {
             'IDOR prevention on all API mutations',
             'RBAC enforced at page, API, and service layers',
           ].map((item) => (
-            <div key={item} className="flex items-start gap-2.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            <div key={item} className="flex items-start gap-2.5 rounded-lg border border-emerald-100 bg-al-success/10 px-3 py-2.5">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-al-success" />
               <span className="text-xs text-al-text-secondary">{item}</span>
             </div>
           ))}
@@ -484,7 +484,7 @@ function UsersTab({ data }: { data: SettingsOverview }) {
         <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/settings/users"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-al-info/100"
           >
             <Users className="h-4 w-4" />
             Open Users & Teams
@@ -568,7 +568,7 @@ function WorkflowTab({ data }: { data: SettingsOverview }) {
         <div className="flex flex-wrap gap-2 p-6">
           {data.organization.approvalCategories.length > 0
             ? data.organization.approvalCategories.map((c) => (
-                <span key={c} className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{c}</span>
+                <span key={c} className="rounded-full border border-al-info/30 bg-al-info/10 px-2.5 py-1 text-xs font-medium text-al-info">{c}</span>
               ))
             : <span className="text-sm text-al-text-muted">No categories configured.</span>}
         </div>
@@ -585,7 +585,7 @@ function EvidenceTab() {
       <SectionCard>
         <SectionHeader title="Evidence Pipeline" subtitle="Capture, deduplication, and correlation settings" />
         <div className="divide-y divide-slate-100 px-6">
-          <ConfigRow label="Evidence capture" value="Enabled" valueClass="text-emerald-700" />
+          <ConfigRow label="Evidence capture" value="Enabled" valueClass="text-al-success" />
           <ConfigRow label="Deduplication" value="Content-hash idempotency" />
           <ConfigRow label="Cross-source correlation" value="UnifiedEvidenceRecord" />
           <ConfigRow label="Memory graph" value="Entity-relationship timeline" />
@@ -601,10 +601,10 @@ function EvidenceTab() {
         </div>
       </SectionCard>
 
-      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+      <div className="flex items-start gap-3 rounded-xl border border-al-warning/30 bg-al-warning/10 p-4">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-al-warning" />
         <div>
-          <p className="text-sm font-semibold text-amber-900">Data retention & deletion</p>
+          <p className="text-sm font-semibold text-al-warning">Data retention & deletion</p>
           <p className="mt-1 text-xs text-al-text-secondary">
             Bulk data deletion, retention policy changes, and export operations are high-impact. Contact your administrator or use the Founder Control Center for these operations.
           </p>
@@ -632,7 +632,7 @@ function IntegrationsTab({ data }: { data: SettingsOverview }) {
         <div className="border-t border-al-border px-6 py-4">
           <Link
             href="/dashboard/settings/integrations"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-al-info/100"
           >
             <Cable className="h-4 w-4" />
             Manage Integrations
@@ -716,11 +716,11 @@ function BillingTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="Members" value={`${data.stats.totalUsers}`} />
         </div>
       </SectionCard>
-      <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
+      <div className="rounded-xl border border-al-info/20 bg-al-info/10 p-5">
         <p className="text-sm font-semibold text-blue-900">Billing is managed externally</p>
         <p className="mt-1 text-xs text-al-text-secondary">
           For plan changes, seat additions, or billing inquiries, contact your account representative at{' '}
-          <span className="font-semibold text-blue-700">support@approvline.ai</span>
+          <span className="font-semibold text-al-info">support@approvline.ai</span>
         </p>
       </div>
     </div>
@@ -765,7 +765,7 @@ function AuditTab({ data }: { data: SettingsOverview }) {
           <ConfigRow label="Retention" value="Full history retained" />
         </div>
         <div className="border-t border-al-border px-6 py-4">
-          <Link href="/dashboard/audit-log" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
+          <Link href="/dashboard/audit-log" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-al-info/100">
             <ScrollText className="h-4 w-4" />
             Open Audit Logs
             <ExternalLink className="h-3.5 w-3.5" />
@@ -810,7 +810,7 @@ function SystemTab({ data }: { data: SettingsOverview }) {
         <SectionHeader
           title="System Status"
           action={
-            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${systemStatus.ready ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${systemStatus.ready ? 'bg-al-success/10 text-al-success' : 'bg-al-danger/10 text-al-danger'}`}>
               {systemStatus.ready ? 'Operational' : 'Degraded'}
             </span>
           }
@@ -819,11 +819,11 @@ function SystemTab({ data }: { data: SettingsOverview }) {
           {checks.map(({ label, status, message }) => (
             <li key={label} className="flex items-center justify-between px-6 py-3">
               <div className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${status === 'ok' ? 'bg-al-success' : status === 'error' ? 'bg-al-danger' : 'bg-amber-400'}`} />
+                <span className={`h-2 w-2 rounded-full ${status === 'ok' ? 'bg-al-success' : status === 'error' ? 'bg-al-danger' : 'bg-al-warning'}`} />
                 <span className="text-sm text-al-text-secondary">{label}</span>
               </div>
               <div className="text-right">
-                <span className={`text-xs font-bold ${status === 'ok' ? 'text-emerald-600' : status === 'error' ? 'text-red-600' : 'text-amber-600'}`}>
+                <span className={`text-xs font-bold ${status === 'ok' ? 'text-al-success' : status === 'error' ? 'text-al-danger' : 'text-al-warning'}`}>
                   {status}
                 </span>
                 {message && status !== 'ok' && <p className="text-[11px] text-al-text-muted">{message}</p>}
@@ -842,7 +842,7 @@ function SystemTab({ data }: { data: SettingsOverview }) {
         <SectionHeader title="Demo Workspace" subtitle="Generate or reset demo data for testing" />
         <div className="flex flex-wrap gap-2 p-6">
           <form action="/api/demo/seed" method="post">
-            <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-500">
+            <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-al-info/100">
               Generate Demo Data
             </button>
           </form>
@@ -873,7 +873,7 @@ export function SettingsShell({ data }: { data: SettingsOverview }) {
               onClick={() => setActiveTab(id)}
               className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors ${
                 activeTab === id
-                  ? 'bg-blue-50 text-blue-700 font-semibold'
+                  ? 'bg-al-info/10 text-al-info font-semibold'
                   : 'text-al-text-secondary hover:bg-al-surface-elevated hover:text-al-text'
               }`}
             >

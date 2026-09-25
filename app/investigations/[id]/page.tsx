@@ -36,15 +36,15 @@ function dateText(value: Date | null | undefined) {
 }
 
 function riskClass(risk?: string | null) {
-  if (risk === 'critical' || risk === 'high') return 'border-rose-100 bg-rose-50 text-rose-700';
-  if (risk === 'medium') return 'border-amber-100 bg-amber-50 text-amber-700';
-  return 'border-emerald-100 bg-emerald-50 text-emerald-700';
+  if (risk === 'critical' || risk === 'high') return 'border-rose-100 bg-al-danger/10 text-al-danger';
+  if (risk === 'medium') return 'border-amber-100 bg-al-warning/10 text-al-warning';
+  return 'border-emerald-100 bg-al-success/10 text-al-success';
 }
 
 function policyClass(status: string) {
-  if (status === 'Non-compliant') return 'bg-rose-50 text-rose-700';
-  if (status === 'Partially compliant') return 'bg-amber-50 text-amber-800';
-  return 'bg-emerald-50 text-emerald-700';
+  if (status === 'Non-compliant') return 'bg-al-danger/10 text-al-danger';
+  if (status === 'Partially compliant') return 'bg-al-warning/10 text-al-warning';
+  return 'bg-al-success/10 text-al-success';
 }
 
 async function addNoteAction(formData: FormData) {
@@ -159,7 +159,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
               <p className="mt-3 max-w-4xl text-sm leading-6 text-al-text-secondary">{investigation.summary ?? summary.whatHappened}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase ${investigation.status === 'OPEN' ? 'border-blue-100 bg-blue-50 text-al-accent' : 'border-emerald-100 bg-emerald-50 text-emerald-700'}`}>{investigation.status}</span>
+              <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase ${investigation.status === 'OPEN' ? 'border-al-info/20 bg-al-info/10 text-al-accent' : 'border-emerald-100 bg-al-success/10 text-al-success'}`}>{investigation.status}</span>
               <span className={`rounded-full border px-3 py-1 text-xs font-black capitalize ${riskClass(investigation.riskLevel)}`}>{summary.riskLevel} risk</span>
               {metadata.demo ? <span className="rounded-full border border-white/10 bg-al-surface/[0.08] px-3 py-1 text-xs font-black text-blue-100">Demo</span> : null}
             </div>
@@ -205,20 +205,20 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
                 <p className="font-black text-al-text">Policy applies:</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {summary.policyApplies.map((policy) => (
-                    <span key={policy} className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-al-accent">{policy}</span>
+                    <span key={policy} className="rounded-full bg-al-info/10 px-3 py-1 text-xs font-black text-al-accent">{policy}</span>
                   ))}
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-xl bg-emerald-50 p-4">
-                  <p className="font-black text-emerald-800">Evidence exists</p>
-                  <ul className="mt-2 grid gap-1 text-emerald-800">
+                <div className="rounded-xl bg-al-success/10 p-4">
+                  <p className="font-black text-al-success">Evidence exists</p>
+                  <ul className="mt-2 grid gap-1 text-al-success">
                     {(summary.evidenceExists.length ? summary.evidenceExists : ['No evidence attached yet']).map((item) => <li key={item}>- {item}</li>)}
                   </ul>
                 </div>
-                <div className="rounded-xl bg-amber-50 p-4">
-                  <p className="font-black text-amber-900">Evidence missing</p>
-                  <ul className="mt-2 grid gap-1 text-amber-900">
+                <div className="rounded-xl bg-al-warning/10 p-4">
+                  <p className="font-black text-al-warning">Evidence missing</p>
+                  <ul className="mt-2 grid gap-1 text-al-warning">
                     {(summary.evidenceMissing.length ? summary.evidenceMissing : ['No missing evidence detected']).map((item) => <li key={item}>- {item}</li>)}
                   </ul>
                 </div>
@@ -238,8 +238,8 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
                   </div>
                   <p className="mt-2 text-sm leading-6 text-al-text-secondary">{evaluation.explanation}</p>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
-                    {evaluation.missingApprovers.map((item) => <span key={item} className="rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">Missing {item}</span>)}
-                    {evaluation.missingEvidence.map((item) => <span key={item} className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">Need {item}</span>)}
+                    {evaluation.missingApprovers.map((item) => <span key={item} className="rounded-full bg-al-danger/10 px-2.5 py-1 text-al-danger">Missing {item}</span>)}
+                    {evaluation.missingEvidence.map((item) => <span key={item} className="rounded-full bg-al-warning/10 px-2.5 py-1 text-al-warning">Need {item}</span>)}
                   </div>
                 </div>
               )) : policyChecks.map((check) => (
@@ -261,7 +261,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
             <h3 className="mt-1 text-lg font-black text-al-text">Chronological source, decision, policy, and audit events</h3>
             <div className="mt-6 grid gap-4">
               {timeline.map((event, index) => (
-                <div key={`${event.type}-${event.at.toISOString()}-${index}`} className="grid gap-3 border-l-2 border-blue-100 pl-4">
+                <div key={`${event.type}-${event.at.toISOString()}-${index}`} className="grid gap-3 border-l-2 border-al-info/20 pl-4">
                   <div className="rounded-2xl border border-al-border bg-al-surface-sunken p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
@@ -294,7 +294,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
                       <span className={`rounded-full border px-2.5 py-1 text-xs font-black capitalize ${riskClass(approval.riskLevel)}`}>{approval.riskLevel ?? 'low'}</span>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
-                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-al-accent">{approval.confidence}% confidence</span>
+                      <span className="rounded-full bg-al-info/10 px-2.5 py-1 text-al-accent">{approval.confidence}% confidence</span>
                       <span className="rounded-full bg-al-surface px-2.5 py-1 text-al-text-secondary">{approval.status?.replaceAll('_', ' ') ?? 'Unknown'}</span>
                       <PendingLink href={`/approvals/${approval.id}`} pendingText="Opening approval..." className="rounded-full bg-al-surface px-2.5 py-1 text-al-accent">
                         View Full Approval
@@ -309,7 +309,7 @@ export default async function InvestigationDetailPage({ params }: InvestigationD
               <input type="hidden" name="investigationId" value={investigation.id} />
               <p className="text-xs font-black uppercase tracking-wide text-al-accent">Investigation Notes</p>
               <h3 className="mt-1 text-lg font-black text-al-text">Legal, compliance, and audit notes</h3>
-              <textarea name="body" rows={4} placeholder="Add finding, follow-up, or reviewer note..." className="mt-5 w-full rounded-xl border border-al-border p-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+              <textarea name="body" rows={4} placeholder="Add finding, follow-up, or reviewer note..." className="mt-5 w-full rounded-xl border border-al-border p-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20" />
               <FormSubmitButton pendingText="Adding note..." className="mt-3 min-h-0 h-10 rounded-lg bg-al-accent px-4 text-sm font-bold text-white shadow-sm shadow-blue-200">
                 Add Note
               </FormSubmitButton>

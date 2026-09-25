@@ -122,7 +122,7 @@ function AIBadge() {
 function StatusBadge({ status }: { status: string }) {
   const s = status.toUpperCase();
   const cls = s === 'APPROVED' ? 'bg-al-success/10 text-al-success' : s === 'REJECTED' ? 'bg-al-danger/10 text-al-danger' : 'bg-al-warning/10 text-al-warning';
-  const dot = s === 'APPROVED' ? 'bg-emerald-400' : s === 'REJECTED' ? 'bg-rose-400' : 'bg-amber-400';
+  const dot = s === 'APPROVED' ? 'bg-al-success' : s === 'REJECTED' ? 'bg-rose-400' : 'bg-al-warning';
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${cls}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
@@ -944,7 +944,7 @@ export function SourceEvidenceViewer({ approvalId, approvalSubject, sourcePlatfo
             <div className="pt-4">
               <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-al-text-secondary">Evidence Highlight</p>
               {[
-                { id: 'thread', label: 'Captured Evidence', color: 'bg-emerald-400' },
+                { id: 'thread', label: 'Captured Evidence', color: 'bg-al-success' },
                 { id: 'timeline', label: 'Related Context', color: 'bg-blue-400' },
                 { id: 'thread', label: 'AI Identified Approval', color: 'bg-violet-400', count: highlightCount },
               ].map((item, i) => (

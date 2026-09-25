@@ -107,32 +107,32 @@ function statusLabel(s: string): string {
 
 function requestStatusColor(s: string): string {
   switch (s) {
-    case 'PENDING': return 'bg-amber-50 text-amber-700 border-amber-200';
-    case 'UNDER_REVIEW': return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'PENDING': return 'bg-al-warning/10 text-al-warning border-al-warning/30';
+    case 'UNDER_REVIEW': return 'bg-al-info/10 text-al-info border-al-info/30';
     case 'PLANNED': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-    case 'IN_DEVELOPMENT': return 'bg-violet-50 text-violet-700 border-violet-200';
-    case 'AVAILABLE': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    case 'REJECTED': return 'bg-rose-50 text-rose-700 border-rose-200';
+    case 'IN_DEVELOPMENT': return 'bg-al-accent/10 text-al-accent border-al-accent/30';
+    case 'AVAILABLE': return 'bg-al-success/10 text-al-success border-al-success/30';
+    case 'REJECTED': return 'bg-al-danger/10 text-al-danger border-al-danger/30';
     default: return 'bg-al-surface-sunken text-al-text-secondary border-al-border';
   }
 }
 
 function integrationHealthLabel(status: string): { label: string; cls: string } {
   switch (status) {
-    case 'CONNECTED': return { label: 'Healthy', cls: 'text-emerald-600' };
+    case 'CONNECTED': return { label: 'Healthy', cls: 'text-al-success' };
     case 'SYNCING': return { label: 'Syncing', cls: 'text-blue-600' };
     case 'ERROR': return { label: 'Error', cls: 'text-rose-600' };
-    case 'NEEDS_REAUTH': return { label: 'Needs reconnect', cls: 'text-amber-600' };
+    case 'NEEDS_REAUTH': return { label: 'Needs reconnect', cls: 'text-al-warning' };
     default: return { label: 'Not connected', cls: 'text-al-text-muted' };
   }
 }
 
 function connectionStatusBadge(status: string): string {
   switch (status) {
-    case 'CONNECTED': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    case 'SYNCING': return 'bg-blue-50 text-blue-700 border-blue-200';
-    case 'ERROR': return 'bg-rose-50 text-rose-700 border-rose-200';
-    case 'NEEDS_REAUTH': return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'CONNECTED': return 'bg-al-success/10 text-al-success border-al-success/30';
+    case 'SYNCING': return 'bg-al-info/10 text-al-info border-al-info/30';
+    case 'ERROR': return 'bg-al-danger/10 text-al-danger border-al-danger/30';
+    case 'NEEDS_REAUTH': return 'bg-al-warning/10 text-al-warning border-al-warning/30';
     default: return 'bg-al-surface-sunken text-al-text-secondary border-al-border';
   }
 }
@@ -166,7 +166,7 @@ function SearchBar({ value, onChange }: { value: string; onChange: (v: string) =
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search integrations (e.g. Slack, Gmail, Jira…)"
-        className="w-full rounded-xl border border-al-border bg-al-surface py-3 pl-10 pr-4 text-sm font-semibold text-al-text shadow-sm outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-xl border border-al-border bg-al-surface py-3 pl-10 pr-4 text-sm font-semibold text-al-text shadow-sm outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20"
         aria-label="Search integrations"
       />
       {value && (
@@ -298,7 +298,7 @@ function ConnectedCard({ p }: { p: ShellProvider }) {
             <ConfirmSubmitButton
               pendingText="Disconnecting…"
               confirmMessage={`Disconnect ${p.displayName}? ApprovLine will stop ingesting new evidence. Existing evidence is preserved.`}
-              className="min-h-0 h-7 rounded-lg border border-rose-200 bg-al-surface px-3 text-xs font-black text-rose-700 shadow-sm hover:bg-rose-50"
+              className="min-h-0 h-7 rounded-lg border border-al-danger/30 bg-al-surface px-3 text-xs font-black text-al-danger shadow-sm hover:bg-al-danger/10"
             >
               Disconnect
             </ConfirmSubmitButton>
@@ -322,7 +322,7 @@ function AvailableCard({ p, onRequest }: { p: ShellProvider; onRequest: (name: s
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-sm font-black text-al-text">{p.displayName}</span>
               {isBeta && (
-                <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-al-accent">
+                <span className="rounded-full border border-al-accent/30 bg-al-accent/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-al-accent">
                   Beta
                 </span>
               )}
@@ -332,7 +332,7 @@ function AvailableCard({ p, onRequest }: { p: ShellProvider; onRequest: (name: s
                 </span>
               )}
               {!isBeta && !isComingSoon && (
-                <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
+                <span className="rounded-full border border-al-info/30 bg-al-info/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-blue-600">
                   Available
                 </span>
               )}
@@ -362,7 +362,7 @@ function AvailableCard({ p, onRequest }: { p: ShellProvider; onRequest: (name: s
         ) : (
           <button
             onClick={() => onRequest(p.displayName, p.slug)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-black text-violet-700 transition hover:bg-violet-100"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-al-accent/30 bg-al-accent/10 px-3 py-1.5 text-xs font-black text-al-accent transition hover:bg-violet-100"
           >
             Request early access
           </button>

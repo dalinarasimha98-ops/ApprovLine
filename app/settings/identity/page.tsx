@@ -52,11 +52,11 @@ export default async function IdentitySettingsPage() {
   } catch (error) {
     return (
       <main className="min-h-screen bg-[#f5f7fb] px-4 py-8 text-al-text sm:px-6">
-        <section className="mx-auto grid max-w-5xl gap-4 rounded-[28px] border border-amber-200 bg-al-surface p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Enterprise Identity Center</p>
+        <section className="mx-auto grid max-w-5xl gap-4 rounded-[28px] border border-al-warning/30 bg-al-surface p-6 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-al-warning">Enterprise Identity Center</p>
           <h1 className="text-2xl font-black text-al-text">We could not load identity settings this time</h1>
           <p className="text-sm leading-6 text-al-text-secondary">The database did not respond in time. This is usually transient - retry in a moment.</p>
-          <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold text-amber-900">Safe diagnostic: {error instanceof Error ? error.message.slice(0, 220) : 'Unknown error.'}</p>
+          <p className="rounded-xl bg-al-warning/10 p-3 text-xs font-bold text-al-warning">Safe diagnostic: {error instanceof Error ? error.message.slice(0, 220) : 'Unknown error.'}</p>
           <Link href="/settings/identity" className="inline-flex w-fit rounded-xl bg-al-accent px-5 py-3 text-sm font-black text-white">
             Retry
           </Link>
@@ -96,7 +96,7 @@ export default async function IdentitySettingsPage() {
         </div>
 
         {!data.canEdit ? (
-          <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm font-bold text-amber-900">
+          <div className="rounded-3xl border border-al-warning/30 bg-al-warning/10 p-5 text-sm font-bold text-al-warning">
             You can view identity settings, but only organization admins can configure SSO, group mappings, access policies, or sessions.
           </div>
         ) : null}
@@ -136,7 +136,7 @@ export default async function IdentitySettingsPage() {
             <div className="mt-5 grid gap-4">
               <label className="grid gap-2 text-sm font-black text-al-text-secondary">
                 Select provider
-                <select name="provider" defaultValue={data.selectedProvider} disabled={!data.canEdit} className="h-12 rounded-xl border border-al-border bg-al-surface px-3 text-sm font-bold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100">
+                <select name="provider" defaultValue={data.selectedProvider} disabled={!data.canEdit} className="h-12 rounded-xl border border-al-border bg-al-surface px-3 text-sm font-bold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20">
                   <option value="azure_ad">Microsoft Entra ID</option>
                   <option value="okta">Okta</option>
                   <option value="google_workspace">Google Workspace</option>
@@ -148,19 +148,19 @@ export default async function IdentitySettingsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="grid gap-2 text-sm font-black text-al-text-secondary">
                   SAML Entity ID
-                  <input name="entityId" disabled={!data.canEdit} placeholder="https://idp.company.com/entity" className="h-12 rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+                  <input name="entityId" disabled={!data.canEdit} placeholder="https://idp.company.com/entity" className="h-12 rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20" />
                 </label>
                 <label className="grid gap-2 text-sm font-black text-al-text-secondary">
                   SSO URL
-                  <input name="ssoUrl" disabled={!data.canEdit} placeholder="https://idp.company.com/sso" className="h-12 rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+                  <input name="ssoUrl" disabled={!data.canEdit} placeholder="https://idp.company.com/sso" className="h-12 rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20" />
                 </label>
                 <label className="grid gap-2 text-sm font-black text-al-text-secondary">
                   OIDC Issuer
-                  <input name="oidcIssuer" disabled={!data.canEdit} placeholder="https://login.microsoftonline.com/{tenant}/v2.0" className="h-12 rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+                  <input name="oidcIssuer" disabled={!data.canEdit} placeholder="https://login.microsoftonline.com/{tenant}/v2.0" className="h-12 rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20" />
                 </label>
                 <label className="grid gap-2 text-sm font-black text-al-text-secondary">
                   Client ID hint
-                  <input name="clientIdHint" disabled={!data.canEdit} placeholder="Optional client identifier" className="h-12 rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100" />
+                  <input name="clientIdHint" disabled={!data.canEdit} placeholder="Optional client identifier" className="h-12 rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20" />
                 </label>
               </div>
 
@@ -173,7 +173,7 @@ export default async function IdentitySettingsPage() {
                 <p className="text-xs font-black uppercase tracking-wide text-al-text-muted">JIT provisioning</p>
                 <label className="grid gap-2 text-sm font-black text-al-text-secondary">
                   Default role for new SSO users
-                  <select name="defaultRole" defaultValue={data.defaultRole} disabled={!data.canEdit} className="h-12 rounded-xl border border-al-border bg-al-surface px-3 text-sm font-bold outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100">
+                  <select name="defaultRole" defaultValue={data.defaultRole} disabled={!data.canEdit} className="h-12 rounded-xl border border-al-border bg-al-surface px-3 text-sm font-bold outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20">
                     <option value="VIEWER">Viewer</option>
                     <option value="MEMBER">Member</option>
                     <option value="MANAGER">Manager</option>
@@ -396,9 +396,9 @@ function RowCard({ label, value }: { label: string; value: string }) {
 
 function StatusPill({ children, tone }: { children: React.ReactNode; tone: 'green' | 'amber' | 'blue' | 'slate' }) {
   const tones = {
-    green: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    amber: 'border-amber-200 bg-amber-50 text-amber-700',
-    blue: 'border-blue-200 bg-blue-50 text-al-accent',
+    green: 'border-al-success/30 bg-al-success/10 text-al-success',
+    amber: 'border-al-warning/30 bg-al-warning/10 text-al-warning',
+    blue: 'border-al-info/30 bg-al-info/10 text-al-accent',
     slate: 'border-al-border bg-al-surface-elevated text-al-text-secondary',
   };
   return <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${tones[tone]}`}>{children}</span>;

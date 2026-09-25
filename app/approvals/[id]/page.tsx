@@ -62,9 +62,9 @@ function statusBadge(status: string) {
 }
 
 function statusDot(status: string) {
-  if (status === 'APPROVED') return 'bg-emerald-400';
+  if (status === 'APPROVED') return 'bg-al-success';
   if (status === 'REJECTED') return 'bg-rose-400';
-  if (status === 'PENDING_REVIEW') return 'bg-amber-400';
+  if (status === 'PENDING_REVIEW') return 'bg-al-warning';
   return 'bg-al-border-strong';
 }
 

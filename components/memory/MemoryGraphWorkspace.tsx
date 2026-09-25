@@ -462,7 +462,7 @@ function NodeDetailPanel({
                   <span>↗</span> Open Investigation Center
                 </Link>
               )}
-              <Link href="/approvals" className="flex items-center gap-2 rounded-lg bg-al-surface border border-al-border px-3 py-2 text-xs font-semibold text-blue-300 hover:border-blue-500/50 hover:text-blue-200 transition">
+              <Link href="/approvals" className="flex items-center gap-2 rounded-lg bg-al-surface border border-al-border px-3 py-2 text-xs font-semibold text-al-info hover:border-blue-500/50 hover:text-blue-200 transition">
                 <span>↗</span> View Approval Records
               </Link>
             </div>

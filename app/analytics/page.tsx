@@ -137,7 +137,7 @@ function ConnectorBars({ items }: { items: CoreAnalytics['connectorActivity'] })
           </div>
           <div className="h-1.5 rounded-full bg-al-border">
             <div
-              className="h-1.5 rounded-full bg-blue-500"
+              className="h-1.5 rounded-full bg-al-info/100"
               style={{ width: `${Math.max(2, (item.count / max) * 100)}%` }}
             />
           </div>

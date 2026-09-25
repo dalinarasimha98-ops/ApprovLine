@@ -72,9 +72,9 @@ function scoreFromState(state: WizardState['organization']) {
 function Badge({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 'slate' | 'blue' | 'green' | 'amber' }) {
   const tones = {
     slate: 'bg-al-surface-elevated text-al-text-secondary',
-    blue: 'bg-blue-50 text-al-accent',
-    green: 'bg-emerald-50 text-emerald-700',
-    amber: 'bg-amber-50 text-amber-700',
+    blue: 'bg-al-info/10 text-al-accent',
+    green: 'bg-al-success/10 text-al-success',
+    amber: 'bg-al-warning/10 text-al-warning',
   };
   return <span className={`rounded-full px-2.5 py-1 text-xs font-black ${tones[tone]}`}>{children}</span>;
 }
@@ -100,7 +100,7 @@ function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="h-12 rounded-xl border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+        className="h-12 rounded-xl border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20"
       />
     </label>
   );
@@ -123,7 +123,7 @@ function SelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-12 rounded-xl border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text shadow-sm outline-none transition focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+        className="h-12 rounded-xl border border-al-border bg-al-surface px-4 text-sm font-bold text-al-text shadow-sm outline-none transition focus:border-al-accent focus:ring-4 focus:ring-al-info/20"
       >
         <option value="">Select</option>
         {options.map((option) => <option key={option}>{option}</option>)}
@@ -272,7 +272,7 @@ export function CustomerOnboardingWizard({ initialState }: { initialState: Wizar
                   <Field label="Primary Admin Name" value={state.primaryAdminName} onChange={(value) => update((draft) => ({ ...draft, primaryAdminName: value }))} placeholder="Sarah Chen" />
                   <Field label="Primary Admin Email" type="email" value={state.primaryAdminEmail} onChange={(value) => update((draft) => ({ ...draft, primaryAdminEmail: value }))} placeholder="sarah@acme.com" />
                 </div>
-                <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
+                <div className="rounded-2xl border border-al-info/20 bg-al-info/10/70 p-5">
                   <p className="text-xs font-black uppercase tracking-wide text-al-accent">Organization Summary</p>
                   <p className="mt-2 text-lg font-black text-al-text">{state.name || 'Workspace name pending'}</p>
                   <p className="text-sm text-al-text-secondary">{[state.industry, state.companySize, state.country].filter(Boolean).join(' · ') || 'Add company details to unlock validation.'}</p>
@@ -394,7 +394,7 @@ export function CustomerOnboardingWizard({ initialState }: { initialState: Wizar
                     </div>
                   ))}
                 </div>
-                <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800">Playbook Readiness Score: {state.playbookSetup.length ? 82 : 0}%</div>
+                <div className="rounded-2xl bg-al-success/10 p-4 text-sm font-bold text-al-success">Playbook Readiness Score: {state.playbookSetup.length ? 82 : 0}%</div>
               </div>
             ) : null}
 
@@ -479,7 +479,7 @@ function SelectionGrid({ items, selected, onChange }: { items: string[]; selecte
             key={item}
             type="button"
             onClick={() => onChange(active ? selected.filter((value) => value !== item) : [...selected, item])}
-            className={`rounded-2xl border p-4 text-left text-sm font-black transition ${active ? 'border-al-accent bg-blue-50 text-al-accent' : 'border-al-border bg-al-surface text-al-text hover:bg-al-surface-sunken'}`}
+            className={`rounded-2xl border p-4 text-left text-sm font-black transition ${active ? 'border-al-accent bg-al-info/10 text-al-accent' : 'border-al-border bg-al-surface text-al-text hover:bg-al-surface-sunken'}`}
           >
             <span className="mr-2">{active ? '✓' : '○'}</span>
             {item}

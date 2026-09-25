@@ -13,9 +13,9 @@ export const dynamic = 'force-dynamic';
 
 const cardClass = 'rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm';
 const inputClass =
-  'h-11 w-full rounded-xl border border-al-border bg-al-surface px-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
+  'h-11 w-full rounded-xl border border-al-border bg-al-surface px-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20';
 const textareaClass =
-  'min-h-28 w-full rounded-xl border border-al-border bg-al-surface px-3 py-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
+  'min-h-28 w-full rounded-xl border border-al-border bg-al-surface px-3 py-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20';
 
 function cleanString(value: FormDataEntryValue | null, fallback = '') {
   return String(value ?? fallback).trim();
@@ -117,7 +117,7 @@ export default async function CustomerSuccessPage({
   if (!tenant.organization) {
     return (
       <section className={cardClass}>
-        <p className="text-xs font-black uppercase tracking-wide text-amber-700">Customer success unavailable</p>
+        <p className="text-xs font-black uppercase tracking-wide text-al-warning">Customer success unavailable</p>
         <h2 className="mt-2 text-2xl font-black text-al-text">Workspace could not load</h2>
         <p className="mt-2 text-sm font-semibold text-al-text-secondary">{tenant.error ?? 'Retry after the database is ready.'}</p>
       </section>
@@ -151,7 +151,7 @@ export default async function CustomerSuccessPage({
       </div>
 
       {notice ? (
-        <div className={`rounded-2xl border p-4 text-sm font-semibold shadow-sm ${notice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
+        <div className={`rounded-2xl border p-4 text-sm font-semibold shadow-sm ${notice.tone === 'success' ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-al-danger/30 bg-al-danger/10 text-rose-900'}`}>
           <h3 className="font-black">{notice.title}</h3>
           <p className="mt-1">{notice.body}</p>
         </div>
@@ -179,7 +179,7 @@ export default async function CustomerSuccessPage({
               <p className="text-xs font-black uppercase tracking-wide text-al-accent">Subscription management</p>
               <h3 className="mt-1 text-xl font-black text-al-text">Plan readiness</h3>
             </div>
-            <p className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black uppercase text-al-accent">
+            <p className="rounded-full bg-al-info/10 px-3 py-1 text-xs font-black uppercase text-al-accent">
               Renews {data.subscription.currentPeriodEnd.toLocaleDateString()}
             </p>
           </div>
@@ -246,7 +246,7 @@ export default async function CustomerSuccessPage({
         <div className={cardClass}>
           <p className="text-xs font-black uppercase tracking-wide text-al-accent">ROI calculator</p>
           <h3 className="mt-1 text-xl font-black text-al-text">Business impact</h3>
-          <p className="mt-3 rounded-xl bg-blue-50 p-3 text-sm font-bold leading-6 text-blue-950">{data.roi.summary}</p>
+          <p className="mt-3 rounded-xl bg-al-info/10 p-3 text-sm font-bold leading-6 text-blue-950">{data.roi.summary}</p>
           <div className="mt-4 grid gap-2 text-sm font-semibold text-al-text-secondary">
             <span>Audit effort reduced: <b className="text-al-text">{data.roi.auditEffortReduced} hours</b></span>
             <span>Compliance improvement: <b className="text-al-text">{data.roi.complianceImprovement}%</b></span>
@@ -274,16 +274,16 @@ export default async function CustomerSuccessPage({
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <div className={cardClass}>
-          <p className="text-xs font-black uppercase tracking-wide text-amber-600">Admin notifications</p>
+          <p className="text-xs font-black uppercase tracking-wide text-al-warning">Admin notifications</p>
           <h3 className="mt-1 text-xl font-black text-al-text">Revenue risks</h3>
           <div className="mt-5 grid gap-3">
             {data.notifications.length ? data.notifications.map((item) => (
-              <div key={item.title} className={`rounded-xl border p-3 ${item.tone === 'error' ? 'border-rose-200 bg-rose-50 text-rose-950' : 'border-amber-200 bg-amber-50 text-amber-950'}`}>
+              <div key={item.title} className={`rounded-xl border p-3 ${item.tone === 'error' ? 'border-al-danger/30 bg-al-danger/10 text-rose-950' : 'border-al-warning/30 bg-al-warning/10 text-al-warning'}`}>
                 <p className="text-sm font-black">{item.title}</p>
                 <p className="mt-1 text-sm font-semibold">{item.body}</p>
               </div>
             )) : (
-              <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">No active revenue-risk alerts.</p>
+              <p className="rounded-xl border border-al-success/30 bg-al-success/10 p-4 text-sm font-bold text-al-success">No active revenue-risk alerts.</p>
             )}
           </div>
         </div>

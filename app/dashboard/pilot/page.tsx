@@ -14,9 +14,9 @@ export const dynamic = 'force-dynamic';
 
 const cardClass = 'rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm';
 const inputClass =
-  'h-11 w-full rounded-xl border border-al-border bg-al-surface px-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
+  'h-11 w-full rounded-xl border border-al-border bg-al-surface px-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20';
 const textareaClass =
-  'min-h-28 w-full rounded-xl border border-al-border bg-al-surface px-3 py-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100';
+  'min-h-28 w-full rounded-xl border border-al-border bg-al-surface px-3 py-3 text-sm font-semibold text-al-text shadow-sm outline-none transition placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20';
 
 function cleanString(value: FormDataEntryValue | null, fallback = '') {
   return String(value ?? fallback).trim();
@@ -108,7 +108,7 @@ export default async function PilotReadinessPage({
   if (!tenant.organization) {
     return (
       <section className={cardClass}>
-        <p className="text-xs font-black uppercase tracking-wide text-amber-700">Pilot readiness unavailable</p>
+        <p className="text-xs font-black uppercase tracking-wide text-al-warning">Pilot readiness unavailable</p>
         <h2 className="mt-2 text-2xl font-black text-al-text">Workspace could not load</h2>
         <p className="mt-2 text-sm font-semibold text-al-text-secondary">{tenant.error ?? 'Retry after the database is ready.'}</p>
       </section>
@@ -174,14 +174,14 @@ export default async function PilotReadinessPage({
       </div>
 
       {notice ? (
-        <div className={`rounded-2xl border p-4 text-sm font-semibold shadow-sm ${notice.tone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}>
+        <div className={`rounded-2xl border p-4 text-sm font-semibold shadow-sm ${notice.tone === 'success' ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-al-danger/30 bg-al-danger/10 text-rose-900'}`}>
           <h3 className="font-black">{notice.title}</h3>
           <p className="mt-1">{notice.body}</p>
         </div>
       ) : null}
 
       {readiness.storageFallback ? (
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-blue-950 shadow-sm">
+        <div className="rounded-2xl border border-al-info/20 bg-al-info/10 p-4 text-blue-950 shadow-sm">
           <p className="text-xs font-black uppercase tracking-wide">Pilot compatibility mode</p>
           <p className="mt-1 text-sm font-semibold leading-6">
             Pilot invites, feedback, feature flags, and activity events are being recorded in ApprovLine audit logs. Dedicated pilot tables can still be deployed later, but this page is ready to use now.
@@ -190,7 +190,7 @@ export default async function PilotReadinessPage({
       ) : null}
 
       {readiness.degraded ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-950 shadow-sm">
+        <div className="rounded-2xl border border-al-danger/30 bg-al-danger/10 p-5 text-rose-950 shadow-sm">
           <p className="text-xs font-black uppercase tracking-wide">Pilot diagnostics</p>
           <h3 className="mt-2 text-xl font-black text-al-text">Pilot mode is running in safe fallback</h3>
           <p className="mt-2 text-sm font-semibold leading-6">
@@ -229,7 +229,7 @@ export default async function PilotReadinessPage({
             {readiness.checklist.map((item) => (
               <PendingLink key={item.key} href={item.href} pendingText="Opening..." className="flex items-center justify-between gap-3 rounded-xl border border-al-border bg-al-surface-sunken px-4 py-3 text-sm font-bold text-al-text-secondary hover:bg-al-surface">
                 <span className="flex items-center gap-3">
-                  <span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-black ${item.complete ? 'bg-emerald-100 text-emerald-700' : 'bg-al-surface text-al-text-muted ring-1 ring-slate-200'}`}>
+                  <span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-black ${item.complete ? 'bg-al-success/15 text-al-success' : 'bg-al-surface text-al-text-muted ring-1 ring-slate-200'}`}>
                     {item.complete ? '✓' : '○'}
                   </span>
                   {item.label}
@@ -319,7 +319,7 @@ export default async function PilotReadinessPage({
                 </div>
                 <input type="hidden" name="key" value={flag.key} />
                 <input type="hidden" name="enabled" value={flag.enabled ? 'false' : 'true'} />
-                <FormSubmitButton pendingText="Saving..." className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-black ${flag.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-al-surface text-al-text-muted ring-1 ring-slate-200'}`}>
+                <FormSubmitButton pendingText="Saving..." className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-black ${flag.enabled ? 'bg-al-success/15 text-al-success' : 'bg-al-surface text-al-text-muted ring-1 ring-slate-200'}`}>
                   {flag.enabled ? 'Enabled' : 'Disabled'}
                 </FormSubmitButton>
               </form>
@@ -344,7 +344,7 @@ export default async function PilotReadinessPage({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
+      <div className="rounded-2xl border border-al-warning/30 bg-al-warning/10 p-5 text-al-warning shadow-sm">
         <p className="text-xs font-black uppercase tracking-wide">Production safety</p>
         <div className="mt-3 grid gap-3 text-sm font-bold md:grid-cols-3">
           <span className="rounded-xl bg-al-surface/70 p-3">Destructive demo reset requires confirmation.</span>

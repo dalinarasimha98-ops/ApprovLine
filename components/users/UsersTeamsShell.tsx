@@ -34,10 +34,10 @@ type Props = {
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER: 'bg-purple-100 text-purple-700 border-purple-200',
-  ADMIN: 'bg-blue-100 text-al-accent border-blue-200',
+  ADMIN: 'bg-blue-100 text-al-accent border-al-info/30',
   MANAGER: 'bg-indigo-100 text-indigo-700 border-indigo-200',
   MEMBER: 'bg-al-surface-elevated text-al-text-secondary border-al-border',
-  AUDITOR: 'bg-amber-100 text-amber-700 border-amber-200',
+  AUDITOR: 'bg-amber-100 text-al-warning border-al-warning/30',
   VIEWER: 'bg-gray-100 text-gray-500 border-gray-200',
 };
 
@@ -233,7 +233,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
       {/* Toast */}
       {toast && (
         <div className={`fixed right-4 top-4 z-50 flex items-center gap-3 rounded-2xl border px-5 py-3 text-sm font-bold shadow-lg ${
-          toast.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-800'
+          toast.type === 'success' ? 'border-al-success/30 bg-al-success/10 text-al-success' : 'border-red-200 bg-al-danger/10 text-red-800'
         }`}>
           {toast.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           {toast.msg}
@@ -244,7 +244,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryCard label="Total Users" value={data.summary.totalUsers} icon={<Users className="h-5 w-5 text-al-accent" />} />
         <SummaryCard label="Teams" value={data.summary.totalTeams} icon={<UsersRound className="h-5 w-5 text-purple-600" />} />
-        <SummaryCard label="Pending Invites" value={data.summary.pendingInvites} icon={<Mail className="h-5 w-5 text-amber-600" />} urgent={data.summary.pendingInvites > 0} />
+        <SummaryCard label="Pending Invites" value={data.summary.pendingInvites} icon={<Mail className="h-5 w-5 text-al-warning" />} urgent={data.summary.pendingInvites > 0} />
         <SummaryCard label="Roles in Use" value={Object.keys(data.summary.roleDistribution).length} icon={<Shield className="h-5 w-5 text-indigo-600" />} />
       </div>
 
@@ -264,7 +264,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
               {tab.icon}
               {tab.label}
               {tab.count !== undefined && (
-                <span className={`rounded-full px-2 py-0.5 text-xs font-black ${activeTab === tab.id ? 'bg-al-surface-elevated text-al-text-secondary' : 'bg-slate-200 text-al-text-muted'}`}>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-black ${activeTab === tab.id ? 'bg-al-surface-elevated text-al-text-secondary' : 'bg-al-border-strong text-al-text-muted'}`}>
                   {tab.count}
                 </span>
               )}
@@ -303,7 +303,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
               placeholder={activeTab === 'users' ? 'Search users by name or email…' : 'Search teams…'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-xl border border-al-border bg-al-surface pl-9 pr-4 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-2 focus:ring-blue-100"
+              className="h-10 w-full rounded-xl border border-al-border bg-al-surface pl-9 pr-4 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-2 focus:ring-al-info/20"
             />
           </div>
           {activeTab === 'users' && (
@@ -532,7 +532,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
                           <td className="px-4 py-3">
                             <button
                               onClick={() => handleCancelInvite(invite.email)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-black text-red-700 hover:bg-red-100"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-al-danger/10 px-3 py-1.5 text-xs font-black text-al-danger hover:bg-al-danger/15"
                             >
                               <X className="h-3 w-3" />
                               Cancel
@@ -654,7 +654,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
                     {canManage && member.id !== currentUserId && (
                       <button
                         onClick={() => handleRemoveMember(selectedTeam.id, member.id)}
-                        className="rounded-lg p-1.5 text-al-text-muted hover:bg-red-50 hover:text-red-600"
+                        className="rounded-lg p-1.5 text-al-text-muted hover:bg-al-danger/10 hover:text-al-danger"
                         title="Remove from team"
                       >
                         <UserMinus className="h-4 w-4" />
@@ -669,7 +669,7 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
             <div className="mt-5 border-t border-al-border pt-4">
               <button
                 onClick={() => handleDeleteTeam(selectedTeam.id)}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-black text-red-700 hover:bg-red-100"
+                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-al-danger/10 px-4 py-2 text-sm font-black text-al-danger hover:bg-al-danger/15"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete Team
@@ -688,11 +688,11 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
           >
             <label className="block">
               <span className="text-sm font-black text-al-text-secondary">Full Name</span>
-              <input name="name" required placeholder="Jane Smith" className="mt-1 h-11 w-full rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-2 focus:ring-blue-100" />
+              <input name="name" required placeholder="Jane Smith" className="mt-1 h-11 w-full rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-2 focus:ring-al-info/20" />
             </label>
             <label className="block">
               <span className="text-sm font-black text-al-text-secondary">Email Address</span>
-              <input name="email" type="email" required placeholder="jane@company.com" className="mt-1 h-11 w-full rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-2 focus:ring-blue-100" />
+              <input name="email" type="email" required placeholder="jane@company.com" className="mt-1 h-11 w-full rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-2 focus:ring-al-info/20" />
             </label>
             <label className="block">
               <span className="text-sm font-black text-al-text-secondary">Role</span>
@@ -719,11 +719,11 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
           >
             <label className="block">
               <span className="text-sm font-black text-al-text-secondary">Team Name</span>
-              <input name="name" required placeholder="Engineering, Legal, Finance…" className="mt-1 h-11 w-full rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-2 focus:ring-blue-100" />
+              <input name="name" required placeholder="Engineering, Legal, Finance…" className="mt-1 h-11 w-full rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-2 focus:ring-al-info/20" />
             </label>
             <label className="block">
               <span className="text-sm font-black text-al-text-secondary">Department <span className="font-semibold text-al-text-muted">(optional)</span></span>
-              <input name="department" placeholder="e.g. Finance, Legal" className="mt-1 h-11 w-full rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-2 focus:ring-blue-100" />
+              <input name="department" placeholder="e.g. Finance, Legal" className="mt-1 h-11 w-full rounded-xl border border-al-border px-3 text-sm font-semibold outline-none focus:border-al-accent focus:ring-2 focus:ring-al-info/20" />
             </label>
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowCreateTeamModal(false)} className="rounded-xl border border-al-border px-4 py-2.5 text-sm font-black text-al-text-secondary hover:bg-al-surface-sunken">Cancel</button>
@@ -740,12 +740,12 @@ export function UsersTeamsShell({ data, currentUserId, currentUserRole }: Props)
 
 function SummaryCard({ label, value, icon, urgent }: { label: string; value: number; icon: React.ReactNode; urgent?: boolean }) {
   return (
-    <div className={`rounded-2xl border bg-al-surface p-4 shadow-sm ${urgent ? 'border-amber-200' : 'border-al-border'}`}>
+    <div className={`rounded-2xl border bg-al-surface p-4 shadow-sm ${urgent ? 'border-al-warning/30' : 'border-al-border'}`}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-black uppercase tracking-wide text-al-text-muted">{label}</span>
         {icon}
       </div>
-      <p className={`mt-2 text-2xl font-black ${urgent ? 'text-amber-700' : 'text-al-text'}`}>{value}</p>
+      <p className={`mt-2 text-2xl font-black ${urgent ? 'text-al-warning' : 'text-al-text'}`}>{value}</p>
     </div>
   );
 }

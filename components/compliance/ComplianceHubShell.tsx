@@ -50,28 +50,28 @@ function scoreColor(score: number) {
 
 function severityBadge(s: string) {
   const map: Record<string, string> = {
-    CRITICAL: 'bg-red-100 text-red-700 border-red-200',
+    CRITICAL: 'bg-al-danger/15 text-al-danger border-red-200',
     HIGH: 'bg-orange-100 text-orange-700 border-orange-200',
     MEDIUM: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    LOW: 'bg-blue-100 text-blue-700 border-blue-200',
+    LOW: 'bg-blue-100 text-al-info border-al-info/30',
   };
   return map[s] ?? 'bg-al-surface-elevated text-al-text-secondary border-al-border';
 }
 
 function statusBadge(s: string) {
   const map: Record<string, string> = {
-    OPEN: 'bg-red-100 text-red-700',
-    IN_PROGRESS: 'bg-blue-100 text-blue-700',
+    OPEN: 'bg-al-danger/15 text-al-danger',
+    IN_PROGRESS: 'bg-blue-100 text-al-info',
     RESOLVED: 'bg-green-100 text-green-700',
     ACCEPTED: 'bg-al-surface-elevated text-al-text-secondary',
     DEFERRED: 'bg-yellow-100 text-yellow-700',
     PENDING: 'bg-yellow-100 text-yellow-700',
     COMPLETED: 'bg-green-100 text-green-700',
-    OVERDUE: 'bg-red-100 text-red-700',
+    OVERDUE: 'bg-al-danger/15 text-al-danger',
     REJECTED: 'bg-al-surface-elevated text-al-text-secondary',
     EFFECTIVE: 'bg-green-100 text-green-700',
     PARTIALLY_EFFECTIVE: 'bg-yellow-100 text-yellow-700',
-    INEFFECTIVE: 'bg-red-100 text-red-700',
+    INEFFECTIVE: 'bg-al-danger/15 text-al-danger',
     NOT_ASSESSED: 'bg-al-surface-elevated text-al-text-muted',
   };
   return map[s] ?? 'bg-al-surface-elevated text-al-text-muted';
@@ -89,13 +89,13 @@ function statusLabel(s: string) {
 function categoryBadge(cat: string) {
   const map: Record<string, string> = {
     Policy: 'bg-indigo-100 text-indigo-700',
-    Assessment: 'bg-violet-100 text-violet-700',
-    Issue: 'bg-red-100 text-red-700',
+    Assessment: 'bg-violet-100 text-al-accent',
+    Issue: 'bg-al-danger/15 text-al-danger',
     Attestation: 'bg-green-100 text-green-700',
     Control: 'bg-sky-100 text-sky-700',
     Integration: 'bg-al-surface-elevated text-al-text-secondary',
     Investigation: 'bg-orange-100 text-orange-700',
-    Security: 'bg-red-100 text-red-700',
+    Security: 'bg-al-danger/15 text-al-danger',
     General: 'bg-al-surface-elevated text-al-text-muted',
   };
   return map[cat] ?? 'bg-al-surface-elevated text-al-text-muted';
@@ -103,7 +103,7 @@ function categoryBadge(cat: string) {
 
 function deadlineDaysBadge(days: number) {
   if (days < 0) return 'bg-red-600 text-white';
-  if (days <= 14) return 'bg-red-100 text-red-700';
+  if (days <= 14) return 'bg-al-danger/15 text-al-danger';
   if (days <= 30) return 'bg-orange-100 text-orange-700';
   if (days <= 60) return 'bg-yellow-100 text-yellow-700';
   return 'bg-al-surface-elevated text-al-text-secondary';
@@ -145,10 +145,10 @@ type TabId = (typeof TABS)[number];
 
 function actionSeverityStyles(severity: ActionItem['severity']) {
   switch (severity) {
-    case 'critical': return { border: 'border-red-300', bg: 'bg-red-50', badge: 'bg-red-600 text-white', icon: 'text-red-600', count: 'text-red-700' };
+    case 'critical': return { border: 'border-red-300', bg: 'bg-al-danger/10', badge: 'bg-red-600 text-white', icon: 'text-al-danger', count: 'text-al-danger' };
     case 'high': return { border: 'border-orange-300', bg: 'bg-orange-50', badge: 'bg-orange-500 text-white', icon: 'text-orange-600', count: 'text-orange-700' };
     case 'medium': return { border: 'border-yellow-300', bg: 'bg-yellow-50', badge: 'bg-yellow-500 text-white', icon: 'text-yellow-700', count: 'text-yellow-700' };
-    default: return { border: 'border-blue-200', bg: 'bg-blue-50', badge: 'bg-blue-500 text-white', icon: 'text-blue-600', count: 'text-blue-700' };
+    default: return { border: 'border-al-info/30', bg: 'bg-al-info/10', badge: 'bg-al-info/100 text-white', icon: 'text-blue-600', count: 'text-al-info' };
   }
 }
 
@@ -167,7 +167,7 @@ function actionItemIcon(type: ActionItem['type']) {
 
 function priorityBadge(p: WorkQueueItem['priority']) {
   switch (p) {
-    case 'High': return 'bg-red-100 text-red-700';
+    case 'High': return 'bg-al-danger/15 text-al-danger';
     case 'Medium': return 'bg-yellow-100 text-yellow-700';
     default: return 'bg-al-surface-elevated text-al-text-secondary';
   }
@@ -175,9 +175,9 @@ function priorityBadge(p: WorkQueueItem['priority']) {
 
 function policyStateStyles(state: PolicyDocStatus['state']) {
   switch (state) {
-    case 'compliant': return { dot: 'bg-al-success', text: 'text-emerald-700' };
+    case 'compliant': return { dot: 'bg-al-success', text: 'text-al-success' };
     case 'review_required': return { dot: 'bg-orange-500', text: 'text-orange-700' };
-    case 'violations': return { dot: 'bg-al-danger', text: 'text-red-700' };
+    case 'violations': return { dot: 'bg-al-danger', text: 'text-al-danger' };
     case 'indexing': return { dot: 'bg-blue-400 animate-pulse', text: 'text-blue-600' };
     case 'archived': return { dot: 'bg-slate-300', text: 'text-al-text-muted' };
   }
@@ -208,7 +208,7 @@ function OverviewTab({ data, workspace, onTabChange }: {
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-sm font-black" style={{ color: scoreCol }}>{data.scoreLabel}</span>
                 {data.scoreTrend !== null && (
-                  <span className={`text-xs font-black ${data.scoreTrend >= 0 ? 'text-emerald-600' : 'text-al-danger'}`}>
+                  <span className={`text-xs font-black ${data.scoreTrend >= 0 ? 'text-al-success' : 'text-al-danger'}`}>
                     {data.scoreTrend >= 0 ? `↑${data.scoreTrend}pts` : `↓${Math.abs(data.scoreTrend)}pts`}
                   </span>
                 )}
@@ -216,7 +216,7 @@ function OverviewTab({ data, workspace, onTabChange }: {
             </div>
           </div>
 
-          <div className="h-10 w-px bg-slate-200 shrink-0 hidden sm:block" />
+          <div className="h-10 w-px bg-al-border-strong shrink-0 hidden sm:block" />
 
           {/* 4 key stats */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 flex-1">
@@ -228,7 +228,7 @@ function OverviewTab({ data, workspace, onTabChange }: {
             ].map(({ label, value, alert }) => (
               <div key={label} className="flex flex-col">
                 <span className="text-[10px] font-black uppercase tracking-wider text-al-text-muted">{label}</span>
-                <span className={`text-xl font-black tabular-nums leading-none mt-0.5 ${alert ? 'text-red-600' : 'text-al-text'}`}>{value}</span>
+                <span className={`text-xl font-black tabular-nums leading-none mt-0.5 ${alert ? 'text-al-danger' : 'text-al-text'}`}>{value}</span>
               </div>
             ))}
           </div>
@@ -269,8 +269,8 @@ function OverviewTab({ data, workspace, onTabChange }: {
 
         {workspace.actionItems.length === 0 ? (
           <div className="px-5 py-8 flex flex-col items-center text-center gap-2">
-            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-              <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div className="h-10 w-10 rounded-full bg-al-success/15 flex items-center justify-center">
+              <svg className="h-5 w-5 text-al-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
             <p className="text-sm font-black text-al-text-secondary">All clear</p>
             <p className="text-xs font-semibold text-al-text-muted">No compliance actions require attention right now.</p>
@@ -352,7 +352,7 @@ function OverviewTab({ data, workspace, onTabChange }: {
                     </td>
                     <td className="py-3 px-3">
                       {item.dueLabel ? (
-                        <span className={`text-xs font-black ${item.dueUrgent ? 'text-red-600' : 'text-al-text-muted'}`}>
+                        <span className={`text-xs font-black ${item.dueUrgent ? 'text-al-danger' : 'text-al-text-muted'}`}>
                           {item.dueLabel}
                         </span>
                       ) : <span className="text-xs text-al-text-muted">—</span>}
@@ -394,8 +394,8 @@ function OverviewTab({ data, workspace, onTabChange }: {
 
         {workspace.topControls.length === 0 ? (
           <div className="px-5 py-6 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-              <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div className="h-8 w-8 rounded-full bg-al-success/15 flex items-center justify-center shrink-0">
+              <svg className="h-4 w-4 text-al-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
             <div>
               <p className="text-sm font-black text-al-text-secondary">All controls are effective</p>
@@ -623,7 +623,7 @@ function OverviewTab({ data, workspace, onTabChange }: {
             </div>
           ) : (
             <div className="px-4 py-4 space-y-3">
-              <div className="rounded-xl bg-violet-50 border border-violet-200 p-3">
+              <div className="rounded-xl bg-al-accent/10 border border-al-accent/30 p-3">
                 <p className="text-xs font-black text-violet-900 leading-snug">{workspace.aiAdvisor.headline}</p>
               </div>
               <div>
@@ -742,7 +742,7 @@ function FrameworksTab({ initial }: { initial: FrameworkSummary[] }) {
                     </div>
                     <div>
                       <h3 className="text-sm font-black text-al-text">{fw.name}</h3>
-                      <span className={`text-[10px] font-black ${fw.isEnabled ? 'text-emerald-600' : 'text-al-text-muted'}`}>
+                      <span className={`text-[10px] font-black ${fw.isEnabled ? 'text-al-success' : 'text-al-text-muted'}`}>
                         {fw.isEnabled ? '● Active' : '○ Inactive'}
                       </span>
                     </div>
@@ -757,7 +757,7 @@ function FrameworksTab({ initial }: { initial: FrameworkSummary[] }) {
                     <div className="text-[10px] font-semibold text-al-text-muted">Controls</div>
                   </div>
                   <div>
-                    <div className="text-lg font-black text-red-600 tabular-nums">{fw.openIssues}</div>
+                    <div className="text-lg font-black text-al-danger tabular-nums">{fw.openIssues}</div>
                     <div className="text-[10px] font-semibold text-al-text-muted">Open Issues</div>
                   </div>
                   <div>
@@ -920,7 +920,7 @@ function PolicyCenterTab() {
 
         <div className="rounded-2xl border border-al-border bg-al-surface p-5 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
-            <div className="h-10 w-10 rounded-xl bg-violet-50 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-al-accent/10 flex items-center justify-center">
               <svg className="h-5 w-5 text-al-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
               </svg>
@@ -1082,7 +1082,7 @@ function RiskIssuesTab() {
                         <button
                           disabled={updating === issue.id}
                           onClick={() => updateStatus(issue.id, 'RESOLVED')}
-                          className="text-[10px] font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-lg transition disabled:opacity-50"
+                          className="text-[10px] font-black text-al-success bg-al-success/10 hover:bg-al-success/15 px-2 py-1 rounded-lg transition disabled:opacity-50"
                         >
                           Resolve
                         </button>

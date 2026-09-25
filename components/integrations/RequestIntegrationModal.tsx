@@ -152,12 +152,12 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
       {/* Body */}
       <div className="px-6 py-5">
         {state === 'success' ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-emerald-100 text-3xl">
+          <div className="rounded-2xl border border-al-success/30 bg-al-success/10 p-6 text-center">
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-al-success/15 text-3xl">
               ✓
             </div>
-            <h3 className="text-lg font-black text-emerald-900">Request submitted!</h3>
-            <p className="mt-2 text-sm font-semibold text-emerald-700">
+            <h3 className="text-lg font-black text-al-success">Request submitted!</h3>
+            <p className="mt-2 text-sm font-semibold text-al-success">
               {totalRequests > 1
                 ? `${totalRequests} customer${totalRequests === 1 ? '' : 's'} have requested this integration. We'll notify you when it launches.`
                 : "We've logged your request. You'll be notified when this integration becomes available."}
@@ -170,12 +170,12 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
             </button>
           </div>
         ) : state === 'already_requested' ? (
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 text-center">
+          <div className="rounded-2xl border border-al-info/30 bg-al-info/10 p-6 text-center">
             <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-blue-100 text-2xl">
               📋
             </div>
             <h3 className="text-lg font-black text-blue-900">Already requested</h3>
-            <p className="mt-2 text-sm font-semibold text-blue-700">
+            <p className="mt-2 text-sm font-semibold text-al-info">
               You&apos;ve already requested this integration.
               {totalRequests > 1 ? ` ${totalRequests} customers in total have requested it.` : ''}
               {' '}We&apos;ll notify you when it becomes available.
@@ -200,7 +200,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 required
                 maxLength={200}
                 placeholder="e.g. Salesforce, Coupa, Ironclad…"
-                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20"
               />
             </div>
 
@@ -212,7 +212,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 onChange={(e) => setProviderWebsite(e.target.value)}
                 maxLength={500}
                 placeholder="https://example.com"
-                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20"
               />
             </div>
 
@@ -222,7 +222,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+                  className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20"
                 >
                   <option value="">Select…</option>
                   {CATEGORIES.map((c) => (
@@ -235,7 +235,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as 'LOW' | 'MEDIUM' | 'HIGH')}
-                  className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+                  className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20"
                 >
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Medium</option>
@@ -249,7 +249,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
               <select
                 value={evidenceType}
                 onChange={(e) => setEvidenceType(e.target.value)}
-                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent focus:ring-4 focus:ring-al-info/20"
               >
                 <option value="">Select…</option>
                 {EVIDENCE_TYPES.map((t) => (
@@ -270,7 +270,7 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 maxLength={2000}
                 rows={3}
                 placeholder="Describe your use case and what approval workflows you need to capture…"
-                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100 resize-none"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20 resize-none"
               />
             </div>
 
@@ -283,12 +283,12 @@ export function RequestIntegrationModal({ open, onClose, defaultProviderName = '
                 min={1}
                 max={1_000_000}
                 placeholder="e.g. 50"
-                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-blue-100"
+                className="rounded-xl border border-al-border px-4 py-3 text-sm font-semibold text-al-text outline-none placeholder:text-al-text-muted focus:border-al-accent focus:ring-4 focus:ring-al-info/20"
               />
             </div>
 
             {error ? (
-              <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              <p className="rounded-xl border border-al-danger/30 bg-al-danger/10 px-4 py-3 text-sm font-semibold text-al-danger">
                 {error}
               </p>
             ) : null}

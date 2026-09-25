@@ -106,7 +106,7 @@ function riskBadge(risk?: string | null) {
 
 function statusBadge(status: InvestigationStatus) {
   switch (status) {
-    case 'IN_PROGRESS': return 'bg-blue-500/15 text-al-info border border-blue-500/25';
+    case 'IN_PROGRESS': return 'bg-al-info/100/15 text-al-info border border-blue-500/25';
     case 'ESCALATED': return 'bg-orange-500/15 text-orange-400 border border-orange-500/25';
     case 'RESOLVED': return 'bg-al-success/15 text-al-success border border-al-success/25';
     case 'CLOSED': return 'bg-al-text-muted/15 text-al-text-muted border border-al-text-muted/25';
@@ -303,7 +303,7 @@ function OverviewTab({ data, users, onStatusChanged }: { data: DetailData; users
             type="button"
             onClick={() => changeStatus('IN_PROGRESS')}
             disabled={isPending || localStatus === 'IN_PROGRESS'}
-            className="h-8 px-3 rounded-lg text-xs font-semibold bg-blue-500/15 text-al-info border border-blue-500/25 hover:bg-blue-500/25 transition disabled:opacity-40"
+            className="h-8 px-3 rounded-lg text-xs font-semibold bg-al-info/100/15 text-al-info border border-blue-500/25 hover:bg-al-info/100/25 transition disabled:opacity-40"
           >
             Mark In Progress
           </button>

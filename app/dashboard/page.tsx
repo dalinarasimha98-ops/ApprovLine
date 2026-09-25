@@ -108,7 +108,7 @@ function KpiCard({
       </div>
       <div className={`mt-2 flex items-center justify-between gap-1 text-[10px] font-semibold ${toneClass}`}>
         <span className="flex items-center gap-1"><Activity className="h-3 w-3" />{context}</span>
-        {href ? <Link href={href} className="font-bold text-al-info hover:text-blue-300">{linkLabel ?? 'View →'}</Link> : null}
+        {href ? <Link href={href} className="font-bold text-al-info hover:text-al-info">{linkLabel ?? 'View →'}</Link> : null}
       </div>
       <div className="absolute inset-x-3 bottom-0"><Sparkline color={color} points={points} /></div>
     </article>
@@ -155,7 +155,7 @@ function ProviderIcon({ provider }: { provider: string }) {
     normalized.includes('gmail') ? 'bg-al-danger/15 text-al-danger' :
     normalized.includes('slack') ? 'bg-fuchsia-500/15 text-fuchsia-300' :
     normalized.includes('teams') ? 'bg-indigo-500/15 text-indigo-300' :
-    normalized.includes('jira') ? 'bg-blue-500/15 text-blue-300' :
+    normalized.includes('jira') ? 'bg-al-info/100/15 text-al-info' :
     normalized.includes('outlook') ? 'bg-cyan-500/15 text-cyan-300' :
     'bg-al-success/15 text-al-success';
   return (
@@ -172,7 +172,7 @@ function SectionHeader({ title, subtitle, href, linkLabel = 'View all' }: { titl
         <h2 className="text-sm font-bold text-al-text">{title}</h2>
         <p className="mt-0.5 text-[10px] text-al-text-muted">{subtitle}</p>
       </div>
-      {href ? <Link href={href} className="text-[10px] font-semibold text-al-info hover:text-blue-300">{linkLabel} →</Link> : null}
+      {href ? <Link href={href} className="text-[10px] font-semibold text-al-info hover:text-al-info">{linkLabel} →</Link> : null}
     </div>
   );
 }
@@ -396,7 +396,7 @@ export default async function DashboardPage() {
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {recentAudit.map((event, index) => (
               <div key={event.id} className="min-w-0 border-l border-white/[0.08] pl-3 first:border-l-0">
-                <span className={`grid h-7 w-7 place-items-center rounded-full ${index % 2 ? 'bg-al-success/15 text-al-success' : 'bg-blue-500/15 text-blue-300'}`}><Activity className="h-3.5 w-3.5" /></span>
+                <span className={`grid h-7 w-7 place-items-center rounded-full ${index % 2 ? 'bg-al-success/15 text-al-success' : 'bg-al-info/100/15 text-al-info'}`}><Activity className="h-3.5 w-3.5" /></span>
                 <p className="mt-2 truncate text-[10px] font-semibold text-al-text-secondary">{statusLabel(event.action)}</p>
                 <p className="mt-0.5 text-[9px] text-al-text-secondary">{event.createdAt.toLocaleString()}</p>
               </div>

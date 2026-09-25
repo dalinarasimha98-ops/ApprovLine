@@ -37,7 +37,7 @@ export function GenericConnectorInfo({ organizationSlug, appUrl = 'https://appro
       {/* Webhook */}
       <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
         <div className="flex items-start gap-4">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-violet-50 text-xl font-black text-al-accent">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-al-accent/10 text-xl font-black text-al-accent">
             W
           </span>
           <div className="min-w-0 flex-1">
@@ -120,7 +120,7 @@ export function GenericConnectorInfo({ organizationSlug, appUrl = 'https://appro
       {/* Email forwarding */}
       <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
         <div className="flex items-start gap-4">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50 text-xl font-black text-al-danger">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-al-danger/10 text-xl font-black text-al-danger">
             @
           </span>
           <div className="min-w-0 flex-1">
@@ -139,7 +139,7 @@ export function GenericConnectorInfo({ organizationSlug, appUrl = 'https://appro
       {/* CSV Import */}
       <div className="rounded-2xl border border-al-border bg-al-surface p-6 shadow-sm">
         <div className="flex items-start gap-4">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-xl font-black text-emerald-600">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-al-success/10 text-xl font-black text-al-success">
             C
           </span>
           <div className="min-w-0 flex-1">

@@ -89,14 +89,14 @@ export function DashboardFilterLinks() {
       <Link
         href={`/dashboard/approvals?from=${from}`}
         title="View approvals captured during the last seven days"
-        className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 bg-al-surface/[0.035] px-3 text-[11px] font-medium text-al-text-secondary transition hover:border-blue-500/40 hover:bg-al-surface/[0.07] hover:text-white"
+        className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 bg-al-surface/[0.035] px-3 text-[11px] font-medium text-al-text-secondary transition hover:border-al-info/40 hover:bg-al-surface/[0.07] hover:text-white"
       >
         <CalendarDays className="h-3.5 w-3.5" /> Last 7 days
       </Link>
       <Link
         href="/dashboard/approvals#filters"
         title="Open approval filters"
-        className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 bg-al-surface/[0.035] px-3 text-[11px] font-medium text-al-text-secondary transition hover:border-blue-500/40 hover:bg-al-surface/[0.07] hover:text-white"
+        className="inline-flex h-8 items-center gap-2 rounded-md border border-white/10 bg-al-surface/[0.035] px-3 text-[11px] font-medium text-al-text-secondary transition hover:border-al-info/40 hover:bg-al-surface/[0.07] hover:text-white"
       >
         <Filter className="h-3.5 w-3.5" /> Filters
       </Link>

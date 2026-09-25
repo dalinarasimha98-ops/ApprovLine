@@ -6,9 +6,9 @@ import type { ReportDefinition } from '@/services/reports';
 
 const FORMAT_LABELS: Record<string, string> = { csv: 'CSV', json: 'JSON', pdf: 'PDF' };
 const FORMAT_COLORS: Record<string, string> = {
-  csv: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
-  json: 'border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100',
-  pdf: 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100',
+  csv: 'border-al-success/30 bg-al-success/10 text-al-success hover:bg-al-success/15',
+  json: 'border-al-accent/30 bg-al-accent/10 text-al-accent hover:bg-violet-100',
+  pdf: 'border-al-danger/30 bg-al-danger/10 text-al-danger hover:bg-rose-100',
 };
 
 type Props = {
@@ -73,8 +73,8 @@ export function ReportDetailPanel({ report, onClose }: Props) {
             </div>
           </div>
         ) : report.requiresSelection ? (
-          <div className="mb-5 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <div className="mb-5 flex items-start gap-3 rounded-lg border border-al-warning/30 bg-al-warning/10 p-3 text-al-warning">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-al-warning" />
             <p className="text-sm leading-5">{report.selectionHint}</p>
           </div>
         ) : null}

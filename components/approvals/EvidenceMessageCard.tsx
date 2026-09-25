@@ -9,13 +9,13 @@ type ProviderStyle = {
 
 const PROVIDER_STYLES: Record<string, ProviderStyle> = {
   slack: { label: 'Slack', badge: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200', avatar: 'bg-fuchsia-500', Icon: MessageSquare },
-  gmail: { label: 'Gmail', badge: 'bg-rose-50 text-rose-700 border-rose-200', avatar: 'bg-al-danger', Icon: Mail },
+  gmail: { label: 'Gmail', badge: 'bg-al-danger/10 text-al-danger border-al-danger/30', avatar: 'bg-al-danger', Icon: Mail },
   outlook: { label: 'Outlook', badge: 'bg-cyan-50 text-cyan-700 border-cyan-200', avatar: 'bg-cyan-500', Icon: Mail },
   microsoft_teams: { label: 'Microsoft Teams', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', avatar: 'bg-indigo-500', Icon: MessageSquare },
-  jira: { label: 'Jira', badge: 'bg-blue-50 text-blue-700 border-blue-200', avatar: 'bg-blue-500', Icon: Ticket },
-  servicenow: { label: 'ServiceNow', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', avatar: 'bg-al-success', Icon: Wrench },
+  jira: { label: 'Jira', badge: 'bg-al-info/10 text-al-info border-al-info/30', avatar: 'bg-al-info/100', Icon: Ticket },
+  servicenow: { label: 'ServiceNow', badge: 'bg-al-success/10 text-al-success border-al-success/30', avatar: 'bg-al-success', Icon: Wrench },
   zoom: { label: 'Zoom', badge: 'bg-sky-50 text-sky-700 border-sky-200', avatar: 'bg-sky-500', Icon: Video },
-  sap: { label: 'SAP', badge: 'bg-amber-50 text-amber-700 border-amber-200', avatar: 'bg-al-warning', Icon: Wrench },
+  sap: { label: 'SAP', badge: 'bg-al-warning/10 text-al-warning border-al-warning/30', avatar: 'bg-al-warning', Icon: Wrench },
 };
 
 function providerStyle(platform?: string | null): ProviderStyle {
@@ -56,7 +56,7 @@ export function EvidenceMessageCard({
   const Icon = style.Icon;
 
   return (
-    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+    <div className="rounded-2xl border border-al-success/30 bg-al-success/10/60 p-5">
       <div className="flex items-start gap-3">
         <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-black text-white ${style.avatar}`}>
           {initials(senderName)}
@@ -65,7 +65,7 @@ export function EvidenceMessageCard({
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-black text-al-text">{senderName}</p>
             <span className="text-xs font-semibold text-al-text-muted">{timestamp}</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-al-success/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-al-success">
               <CheckCircle2 className="h-3 w-3" /> Approval captured
             </span>
           </div>

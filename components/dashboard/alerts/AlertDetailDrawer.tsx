@@ -113,7 +113,7 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
               </h3>
               <ul className="grid gap-1.5">
                 {alert.reasons.map((r) => (
-                  <li key={r} className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-900">
+                  <li key={r} className="flex items-start gap-2 rounded-lg border border-amber-100 bg-al-warning/10 px-3 py-2 text-[12px] font-semibold text-al-warning">
                     <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-al-warning" />
                     {r}
                   </li>
@@ -141,7 +141,7 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
             {alert.evidenceSnippet ? (
               <section>
                 <h3 className="mb-2 text-[11px] font-black uppercase tracking-widest text-al-text-muted">Evidence snippet</h3>
-                <p className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-[12px] leading-5 text-blue-900">
+                <p className="rounded-xl border border-al-info/20 bg-al-info/10 p-3 text-[12px] leading-5 text-blue-900">
                   {alert.evidenceSnippet}
                 </p>
                 {alert.sourceLink ? (
@@ -197,7 +197,7 @@ export function AlertDetailDrawer({ alert, onClose, investigateAction, escalateA
               {!alert.escalated ? (
                 <form action={escalateAction} className={!alert.acknowledged && !alert.escalated ? '' : 'col-span-1'}>
                   <input type="hidden" name="approvalId" value={alert.id} />
-                  <FormSubmitButton pendingText="…" className="min-h-0 h-9 w-full rounded-lg border border-violet-200 bg-violet-50 text-xs font-black text-violet-700">
+                  <FormSubmitButton pendingText="…" className="min-h-0 h-9 w-full rounded-lg border border-al-accent/30 bg-al-accent/10 text-xs font-black text-al-accent">
                     Escalate
                   </FormSubmitButton>
                 </form>

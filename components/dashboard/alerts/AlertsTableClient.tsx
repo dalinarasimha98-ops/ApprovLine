@@ -94,7 +94,7 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
                 return (
                   <tr
                     key={alert.id}
-                    className={`group cursor-pointer transition ${isSelected ? 'bg-blue-50/60' : 'hover:bg-al-surface-sunken/60'}`}
+                    className={`group cursor-pointer transition ${isSelected ? 'bg-al-info/10/60' : 'hover:bg-al-surface-sunken/60'}`}
                     onClick={() => selectAlert(alert)}
                   >
                     <td className="px-4 py-3">
@@ -128,7 +128,7 @@ export function AlertsTableClient({ alerts, investigateAction, escalateAction, d
                         {!alert.escalated ? (
                           <form action={escalateAction}>
                             <input type="hidden" name="approvalId" value={alert.id} />
-                            <FormSubmitButton pendingText="…" className="min-h-0 h-7 rounded-md border border-violet-200 bg-violet-50 px-2.5 text-[11px] font-black text-violet-700">
+                            <FormSubmitButton pendingText="…" className="min-h-0 h-7 rounded-md border border-al-accent/30 bg-al-accent/10 px-2.5 text-[11px] font-black text-al-accent">
                               Escalate
                             </FormSubmitButton>
                           </form>

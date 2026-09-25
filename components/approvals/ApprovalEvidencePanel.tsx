@@ -48,7 +48,7 @@ export function parseThreadPayload(rawPayload: unknown): ApprovalEvidencePanelPa
   return { channelName: typeof value.channelName === 'string' ? value.channelName : undefined, threadMessages: parsed };
 }
 
-const AVATAR_COLORS = ['bg-blue-500', 'bg-al-success', 'bg-al-danger', 'bg-al-warning', 'bg-al-accent-hover', 'bg-cyan-500'];
+const AVATAR_COLORS = ['bg-al-info/100', 'bg-al-success', 'bg-al-danger', 'bg-al-warning', 'bg-al-accent-hover', 'bg-cyan-500'];
 
 function avatarColor(name: string) {
   let hash = 0;
@@ -111,7 +111,7 @@ export function ApprovalEvidencePanel({
         <p className="text-xs font-bold text-al-text-muted">{threadMessages.length} messages · {participantCount} participants</p>
       </div>
 
-      <div className="border-b border-blue-100 bg-blue-50 px-5 py-3">
+      <div className="border-b border-al-info/20 bg-al-info/10 px-5 py-3">
         <p className="flex items-start gap-2 text-sm font-semibold text-blue-900">
           <Info className="mt-0.5 h-4 w-4 shrink-0" />
           ApprovLine captured the full thread for context. The approval moment is highlighted below.
@@ -127,12 +127,12 @@ export function ApprovalEvidencePanel({
             <div key={`${message.senderName}-${message.timestamp}-${index}`}>
               {showDivider ? (
                 <div className="my-2 flex items-center gap-3 text-xs font-bold uppercase tracking-wide text-al-text-muted">
-                  <span className="h-px flex-1 bg-slate-200" />
+                  <span className="h-px flex-1 bg-al-border-strong" />
                   {label}
-                  <span className="h-px flex-1 bg-slate-200" />
+                  <span className="h-px flex-1 bg-al-border-strong" />
                 </div>
               ) : null}
-              <div className={`flex items-start gap-3 rounded-2xl p-4 ${message.isApprovalMoment ? 'border border-emerald-200 bg-emerald-50' : ''}`}>
+              <div className={`flex items-start gap-3 rounded-2xl p-4 ${message.isApprovalMoment ? 'border border-al-success/30 bg-al-success/10' : ''}`}>
                 <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-black text-white ${avatarColor(message.senderName)}`}>
                   {initials(message.senderName)}
                 </span>
@@ -141,7 +141,7 @@ export function ApprovalEvidencePanel({
                     <p className="font-black text-al-text">{message.senderName}</p>
                     <span className="text-xs font-semibold text-al-text-muted">{timeLabel(message.timestamp)}</span>
                     {message.isApprovalMoment ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-al-success/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-al-success">
                         <CheckCircle2 className="h-3 w-3" /> Approval captured
                       </span>
                     ) : null}

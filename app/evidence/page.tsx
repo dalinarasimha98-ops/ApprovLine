@@ -69,7 +69,7 @@ function providerDot(provider: string) {
   const map: Record<string, string> = {
     slack: 'bg-al-danger',
     gmail: 'bg-orange-500',
-    outlook: 'bg-blue-500',
+    outlook: 'bg-al-info/100',
     microsoft_teams: 'bg-indigo-500',
     teams: 'bg-indigo-500',
     jira: 'bg-blue-600',
@@ -505,8 +505,8 @@ async function EvidenceResultsSection({
                 {/* Legend */}
                 <div className="flex flex-col gap-2">
                   {[
-                    { label: 'Verified', count: verifiedCount, color: 'bg-emerald-400' },
-                    { label: 'Pending',  count: pendingCount,  color: 'bg-amber-400'   },
+                    { label: 'Verified', count: verifiedCount, color: 'bg-al-success' },
+                    { label: 'Pending',  count: pendingCount,  color: 'bg-al-warning'   },
                     { label: 'Disputed', count: disputedCount, color: 'bg-rose-400'    },
                   ].map(({ label, count, color }) => (
                     <div key={label} className="flex items-center gap-2">
