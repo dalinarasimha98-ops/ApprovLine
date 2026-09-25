@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
+import { ThemeProvider } from '@/components/system/ThemeProvider';
+import { readThemeCookie } from '@/lib/theme-cookie';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -8,11 +10,21 @@ export const metadata: Metadata = {
     'AI-powered approval intelligence for compliance, audit trails, and business decision records.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  // Read BEFORE any markup renders, so the very first byte of HTML already
+  // carries the correct theme - this (not a client-side correction after
+  // hydration) is what actually prevents a flash of the wrong theme.
+  // 'system' intentionally omits the attribute entirely: the CSS media
+  // query in app/globals.css then resolves it purely from
+  // prefers-color-scheme, before any JavaScript runs.
+  const theme = await readThemeCookie();
+  const htmlDataTheme = theme === 'system' ? undefined : theme;
   const content = (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" data-theme={htmlDataTheme}>
+      <body>
+        <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>
+      </body>
     </html>
   );
 

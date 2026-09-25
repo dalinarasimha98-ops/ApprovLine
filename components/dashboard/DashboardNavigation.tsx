@@ -193,13 +193,13 @@ export function DashboardNavigation({ mobile = false, role = null }: { mobile?: 
             onClick={() => beginNavigation(href)}
             className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-md border px-3 text-xs font-semibold ${
               activeHref === href
-                ? 'border-blue-500/50 bg-blue-500/15 text-blue-200'
-                : 'border-white/10 bg-white/[0.04] text-slate-300'
+                ? 'border-al-accent/50 bg-al-accent/15 text-al-accent'
+                : 'border-al-border bg-al-surface-elevated text-al-text-secondary'
             }`}
           >
             <Icon className="h-3.5 w-3.5" />
             {label}
-            {pendingHref === href ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-200" /> : null}
+            {pendingHref === href ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-al-accent" /> : null}
           </Link>
         ))}
       </nav>
@@ -207,16 +207,16 @@ export function DashboardNavigation({ mobile = false, role = null }: { mobile?: 
   }
 
   return (
-    <nav className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-color:rgba(71,85,105,.65)_transparent] [scrollbar-width:thin]">
+    <nav className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-color:rgb(var(--al-text-muted-rgb)/.65)_transparent] [scrollbar-width:thin]">
       {pendingHref ? (
-        <div className="fixed inset-x-0 top-0 z-[80] h-0.5 overflow-hidden bg-blue-950/40">
-          <span className="block h-full w-1/3 animate-[route-progress_1s_ease-in-out_infinite] rounded-r-full bg-blue-400 shadow-[0_0_18px_rgba(96,165,250,.75)]" />
+        <div className="fixed inset-x-0 top-0 z-[80] h-0.5 overflow-hidden bg-al-accent/20">
+          <span className="block h-full w-1/3 animate-[route-progress_1s_ease-in-out_infinite] rounded-r-full bg-al-accent shadow-[0_0_18px_rgb(var(--al-accent-rgb)/.75)]" />
         </div>
       ) : null}
       <div className="grid gap-0">
         {visibleSections.map((section, sectionIndex) => (
           <div key={section.title} className={sectionIndex > 0 ? 'mt-4' : ''}>
-            <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-al-text-muted">
               {section.title}
             </p>
             <div className="grid gap-0.5">
@@ -233,18 +233,18 @@ export function DashboardNavigation({ mobile = false, role = null }: { mobile?: 
                     onClick={() => beginNavigation(href)}
                     className={`group flex min-h-9 items-center gap-3 rounded-md px-3 text-[13px] font-medium transition ${
                       active
-                        ? 'bg-blue-600 text-white shadow-[0_8px_24px_rgba(37,99,235,.22)]'
-                        : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-100'
+                        ? 'bg-al-accent text-al-accent-text shadow-[0_8px_24px_rgb(var(--al-accent-rgb)/.22)]'
+                        : 'text-al-text-muted hover:bg-al-surface-elevated hover:text-al-text'
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-blue-100' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-al-accent-text' : 'text-al-text-muted group-hover:text-al-text-secondary'}`} />
                     <span className="min-w-0 flex-1 truncate">{label}</span>
                     {badge ? (
-                      <span className="rounded bg-violet-500/25 px-1.5 py-0.5 text-[9px] font-bold uppercase text-violet-200">
+                      <span className="rounded bg-al-accent/25 px-1.5 py-0.5 text-[9px] font-bold uppercase text-al-accent">
                         {badge}
                       </span>
                     ) : null}
-                    {pending ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-100" aria-label="Opening" /> : null}
+                    {pending ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-al-accent-text" aria-label="Opening" /> : null}
                   </Link>
                 );
               })}
@@ -267,12 +267,12 @@ export function DashboardNavigation({ mobile = false, role = null }: { mobile?: 
 export function LiveCaptureBadge({ status }: { status: { state: 'live' | 'connected-stale' | 'connected-none' | 'none'; label: string } }) {
   const tone =
     status.state === 'live'
-      ? 'border-emerald-500/20 bg-emerald-500/[0.07] text-emerald-200'
+      ? 'border-al-success/20 bg-al-success/[0.07] text-al-success'
       : status.state === 'connected-stale' || status.state === 'connected-none'
-        ? 'border-amber-500/20 bg-amber-500/[0.07] text-amber-200'
-        : 'border-white/10 bg-white/[0.04] text-slate-400';
+        ? 'border-al-warning/20 bg-al-warning/[0.07] text-al-warning'
+        : 'border-al-border bg-al-surface-elevated text-al-text-muted';
   const dotColor =
-    status.state === 'live' ? 'bg-emerald-400' : status.state === 'none' ? 'bg-slate-500' : 'bg-amber-400';
+    status.state === 'live' ? 'bg-al-success' : status.state === 'none' ? 'bg-al-text-muted' : 'bg-al-warning';
 
   return (
     <div className={`inline-flex h-8 items-center gap-2 rounded-full border px-3 text-[11px] font-semibold ${tone}`}>
@@ -288,5 +288,5 @@ export function LiveCaptureBadge({ status }: { status: { state: 'live' | 'connec
 }
 
 export function SystemPulse() {
-  return <Activity className="h-4 w-4 text-emerald-400" aria-hidden="true" />;
+  return <Activity className="h-4 w-4 text-al-success" aria-hidden="true" />;
 }

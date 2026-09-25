@@ -9,8 +9,11 @@ import {
   updateProfile as updateProfileService,
   parseProfileFormFields,
   updateNotificationPreference,
+  updateThemePreference,
   revokeUserSession,
+  type UpdateThemePreferenceResult,
 } from '@/services/userSettings';
+import type { ThemePreference } from '@/lib/theme';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +59,28 @@ async function updateNotifications(formData: FormData) {
     redirect(`/settings/profile?section=${returnSection}&notifications=error&notificationsError=${encodeURIComponent(result.error)}`);
   }
   redirect(`/settings/profile?section=${returnSection}&notifications=success`);
+}
+
+/**
+ * Deliberately does NOT redirect, unlike this page's other mutations - the
+ * spec requires the theme to change instantly with no Save/refresh step,
+ * so the client shell calls this directly and awaits its result rather
+ * than submitting a <form>. Identity is still always server-resolved
+ * (getDashboardTenant()), never trusted from the client argument.
+ */
+async function updateTheme(theme: ThemePreference): Promise<UpdateThemePreferenceResult> {
+  'use server';
+  const tenant = await getDashboardTenant(8000);
+  if (tenant.status === 'unauthenticated' || !tenant.organization || !tenant.user) {
+    return { ok: false, error: 'Your session could not be verified. Please sign in again.' };
+  }
+  enforcePageRole('/settings/profile', tenant.user.role);
+
+  return updateThemePreference({
+    organizationId: tenant.organization.id,
+    userId: tenant.user.id,
+    theme,
+  });
 }
 
 async function revokeSession(formData: FormData) {
@@ -108,9 +133,9 @@ export default async function UserSettingsPage() {
       <DashboardShell>
         <div className="grid gap-4">
           <PageHeader />
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6">
-            <p className="font-black text-amber-200">Your settings couldn&apos;t be loaded.</p>
-            <p className="mt-1 text-sm font-semibold text-amber-200/80">Try again in a moment.</p>
+          <div className="rounded-2xl border border-al-warning/30 bg-al-warning/10 p-6">
+            <p className="font-black text-al-warning">Your settings couldn&apos;t be loaded.</p>
+            <p className="mt-1 text-sm font-semibold text-al-warning/80">Try again in a moment.</p>
           </div>
         </div>
       </DashboardShell>
@@ -125,6 +150,7 @@ export default async function UserSettingsPage() {
           data={data}
           updateProfileAction={updateProfile}
           updateNotificationsAction={updateNotifications}
+          updateThemeAction={updateTheme}
           revokeSessionAction={revokeSession}
         />
       </div>
@@ -134,11 +160,11 @@ export default async function UserSettingsPage() {
 
 function PageHeader() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#1E2D4A] bg-[#0E1830]">
+    <div className="overflow-hidden rounded-2xl border border-al-border bg-al-surface">
       <div className="px-6 py-7">
-        <p className="text-xs font-black uppercase tracking-[0.25em] text-violet-400">Account</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-[#E8EEFF]">User Settings</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6B7FA8]">
+        <p className="text-xs font-black uppercase tracking-[0.25em] text-al-accent">Account</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-al-text">User Settings</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-al-text-muted">
           Manage your account, security, and personal preferences.
         </p>
       </div>

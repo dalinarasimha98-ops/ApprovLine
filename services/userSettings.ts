@@ -6,6 +6,8 @@ import { sourceMeta } from '@/lib/source-badges';
 import type { Role } from '@/lib/rbac';
 import { DASHBOARD_TENANT_CACHE_TAG } from '@/lib/auth';
 import { revalidateTag } from 'next/cache';
+import { isThemePreference, type ThemePreference } from '@/lib/theme';
+import { writeThemeCookie } from '@/lib/theme-cookie';
 
 /**
  * Data + mutations for the personal "User Settings" page
@@ -82,6 +84,10 @@ export type UserSettingsProfile = {
    *  the same list Users & Teams already treats as authoritative - so the
    *  Edit Profile department picker only ever offers real options. */
   organizationDepartments: string[];
+  /** Personal appearance preference - 'dark' unless the user has explicitly
+   *  chosen otherwise (see lib/theme.ts for why the default is never
+   *  'system'). */
+  theme: ThemePreference;
 };
 
 export type UserNotificationSettings = {
@@ -153,20 +159,21 @@ export async function getUserSettingsData(input: {
     clerkUserError = 'Your account details could not be loaded from your identity provider right now.';
   }
 
-  let profileFields: { jobTitle: string | null; department: string | null; phone: string | null; location: string | null; timezone: string | null; managerName: string | null } = {
+  let profileFields: { jobTitle: string | null; department: string | null; phone: string | null; location: string | null; timezone: string | null; managerName: string | null; theme: ThemePreference } = {
     jobTitle: null,
     department: null,
     phone: null,
     location: null,
     timezone: null,
     managerName: null,
+    theme: 'dark',
   };
   let notifications: UserSettingsData['notifications'];
   try {
     const [dbUser, notificationPreference] = await Promise.all([
       prisma.user.findUnique({
         where: { id: input.userId, organizationId: input.organizationId },
-        select: { jobTitle: true, department: true, phone: true, location: true, timezone: true, manager: { select: { name: true, email: true } } },
+        select: { jobTitle: true, department: true, phone: true, location: true, timezone: true, theme: true, manager: { select: { name: true, email: true } } },
       }),
       prisma.userNotificationPreference.findUnique({ where: { userId: input.userId }, select: { emailEnabled: true } }),
     ]);
@@ -178,6 +185,7 @@ export async function getUserSettingsData(input: {
         location: dbUser.location,
         timezone: dbUser.timezone,
         managerName: dbUser.manager?.name ?? dbUser.manager?.email ?? null,
+        theme: isThemePreference(dbUser.theme) ? dbUser.theme : 'dark',
       };
     }
     // No row means the user has never changed the default - true unless
@@ -414,6 +422,61 @@ export async function updateNotificationPreference(input: {
   });
 
   return { ok: true };
+}
+
+export type UpdateThemePreferenceResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Persists the viewer's appearance preference - always scoped to the
+ * server-resolved organizationId/userId (getDashboardTenant() in the
+ * caller), never a client-supplied id. Writes the durable DB value AND the
+ * fast per-browser cookie used for zero-flash SSR (lib/theme.ts) in the
+ * same call, so this browser's very next request already renders
+ * correctly - no separate "refresh to apply" step.
+ */
+export async function updateThemePreference(input: {
+  organizationId: string;
+  userId: string;
+  theme: ThemePreference;
+}): Promise<UpdateThemePreferenceResult> {
+  if (!isThemePreference(input.theme)) {
+    return { ok: false, error: 'Choose a valid appearance option.' };
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: input.userId, organizationId: input.organizationId },
+      data: { theme: input.theme },
+    });
+    await writeThemeCookie(input.theme);
+  } catch (error) {
+    console.error('[user-settings] theme preference update failed', error);
+    return { ok: false, error: 'Your appearance preference could not be saved right now.' };
+  }
+
+  await writeAuditLog({
+    organizationId: input.organizationId,
+    actorUserId: input.userId,
+    action: 'THEME_PREFERENCE_UPDATED',
+    metadata: { theme: input.theme },
+  });
+
+  return { ok: true };
+}
+
+/**
+ * Passive, non-mutating cookie sync used only by ThemeReconciler when a
+ * viewer's stored DB preference differs from what an unfamiliar
+ * browser's cookie-less first request defaulted to (see
+ * components/system/ThemeReconciler.tsx) - deliberately does NOT write an
+ * audit log entry, since the viewer didn't change anything here; it just
+ * brings this browser's cookie in line with a choice they already made
+ * elsewhere.
+ */
+export async function syncThemeCookie(theme: ThemePreference): Promise<void> {
+  'use server';
+  if (!isThemePreference(theme)) return;
+  await writeThemeCookie(theme);
 }
 
 /**

@@ -1,6 +1,98 @@
 @tailwind base;
 @tailwind components;
 
+/* =========================================================================
+ * ApprovLine application design tokens
+ * -------------------------------------------------------------------------
+ * These drive the customer-facing app shell (Dashboard, Approvals, Action
+ * Center, Copilot, Playbook AI, Memory Graph, Executive Analytics,
+ * Compliance, Investigation Center, Settings, and every drawer/table/form
+ * within them) - NOT the public marketing site below, which keeps its own
+ * fixed brand styling (--blue/--ink/--soft/etc.) untouched and unaffected.
+ *
+ * Each token is stored as an "R G B" channel triplet so Tailwind's
+ * rgb(var(...) / <alpha-value>) pattern (wired up in tailwind.config.ts's
+ * `al` color namespace) can apply opacity modifiers (bg-al-warning/10 etc.)
+ * while still being fully theme-reactive.
+ *
+ * Resolution order (three real states, not two):
+ *   1. :root                                  -> dark (the base/default - preserves
+ *                                                 today's look for every existing user)
+ *   2. @media (prefers-color-scheme: light)    -> light, when the OS says so AND the
+ *      guarded by :not([data-theme="dark"])       viewer hasn't explicitly forced dark
+ *   3. :root[data-theme="light"]               -> light, forced regardless of OS
+ * An explicit "dark" choice needs no extra rule: :root is already dark, and
+ * the media query above is guarded off whenever data-theme="dark" is set.
+ * "System" is represented by omitting data-theme entirely (see app/layout.tsx),
+ * so the browser's own CSS engine resolves it during first paint - no JS, no
+ * flash, no blocking script required.
+ * ========================================================================= */
+:root {
+  /* dark (default) */
+  --al-bg-rgb: 3 11 24;
+  --al-bg-sidebar-rgb: 2 9 22;
+  --al-surface-rgb: 14 24 48;
+  --al-surface-elevated-rgb: 21 32 64;
+  --al-surface-sunken-rgb: 10 21 36;
+  --al-border-rgb: 30 45 74;
+  --al-border-strong-rgb: 42 63 102;
+  --al-text-primary-rgb: 232 238 255;
+  --al-text-secondary-rgb: 168 186 216;
+  --al-text-muted-rgb: 107 127 168;
+  --al-accent-rgb: 124 58 237;
+  --al-accent-hover-rgb: 139 92 246;
+  --al-accent-text-rgb: 255 255 255;
+  --al-success-rgb: 16 185 129;
+  --al-warning-rgb: 245 158 11;
+  --al-danger-rgb: 239 68 68;
+  --al-info-rgb: 59 130 246;
+  --al-focus-rgb: 139 92 246;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --al-bg-rgb: 244 246 251;
+    --al-bg-sidebar-rgb: 236 239 247;
+    --al-surface-rgb: 255 255 255;
+    --al-surface-elevated-rgb: 248 249 254;
+    --al-surface-sunken-rgb: 238 241 248;
+    --al-border-rgb: 221 227 240;
+    --al-border-strong-rgb: 195 204 227;
+    --al-text-primary-rgb: 18 23 43;
+    --al-text-secondary-rgb: 62 72 104;
+    --al-text-muted-rgb: 91 102 132;
+    --al-accent-rgb: 124 58 237;
+    --al-accent-hover-rgb: 109 40 217;
+    --al-accent-text-rgb: 255 255 255;
+    --al-success-rgb: 5 150 105;
+    --al-warning-rgb: 180 83 9;
+    --al-danger-rgb: 220 38 38;
+    --al-info-rgb: 37 99 235;
+    --al-focus-rgb: 139 92 246;
+  }
+}
+
+:root[data-theme='light'] {
+  --al-bg-rgb: 244 246 251;
+  --al-bg-sidebar-rgb: 236 239 247;
+  --al-surface-rgb: 255 255 255;
+  --al-surface-elevated-rgb: 248 249 254;
+  --al-surface-sunken-rgb: 238 241 248;
+  --al-border-rgb: 221 227 240;
+  --al-border-strong-rgb: 195 204 227;
+  --al-text-primary-rgb: 18 23 43;
+  --al-text-secondary-rgb: 62 72 104;
+  --al-text-muted-rgb: 91 102 132;
+  --al-accent-rgb: 124 58 237;
+  --al-accent-hover-rgb: 109 40 217;
+  --al-accent-text-rgb: 255 255 255;
+  --al-success-rgb: 5 150 105;
+  --al-warning-rgb: 180 83 9;
+  --al-danger-rgb: 220 38 38;
+  --al-info-rgb: 37 99 235;
+  --al-focus-rgb: 139 92 246;
+}
+
     :root {
       --blue: #2155d9;
       --blue-2: #2f6bff;

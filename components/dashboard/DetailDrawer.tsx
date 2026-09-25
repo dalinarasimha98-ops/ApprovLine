@@ -100,7 +100,7 @@ export function DetailDrawer({ open = true, onClose, titleId, descriptionId, siz
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         tabIndex={-1}
-        className={`absolute inset-y-0 right-0 flex w-full ${SIZE_CLASSES[size]} flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-2xl outline-none ${className}`}
+        className={`absolute inset-y-0 right-0 flex w-full ${SIZE_CLASSES[size]} flex-col overflow-y-auto border-l border-al-border bg-al-surface shadow-2xl outline-none ${className}`}
       >
         {children}
       </div>

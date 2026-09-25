@@ -380,6 +380,15 @@ model User {
   // Intl.supportedValuesOf('timeZone') at write time - never a fabricated
   // fixed list.
   timezone                       String?
+  // Personal appearance preference (User Settings -> Preferences -> Theme):
+  // 'dark' | 'light' | 'system'. Null means "never explicitly chosen" and is
+  // treated as 'dark' - ApprovLine was dark-only before this feature, so an
+  // unset preference must keep every existing user's current look rather
+  // than silently switching them to their OS preference. This is the
+  // durable, cross-device source of truth; the fast SSR read that avoids a
+  // flash of the wrong theme on page load uses a cookie mirror of this same
+  // value (see app/layout.tsx and services/userSettings.ts).
+  theme                          String?
   // An organizational fact, not self-reported: no admin UI sets this yet
   // (out of scope for this change), so it is always null today and User
   // Settings renders it as a plain, honest "Not set" - a real, correctly
