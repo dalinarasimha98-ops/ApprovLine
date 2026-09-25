@@ -20,6 +20,7 @@ import {
   Settings,
   ShieldAlert,
   ShieldCheck,
+  UserCog,
   Users,
 } from 'lucide-react';
 import { findRoutePermission, hasAnyRole, type Role } from '@/lib/rbac';
@@ -89,6 +90,7 @@ const sections: NavSection[] = [
     items: [
       { href: '/settings/users', label: 'Users & Teams', icon: Users },
       { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+      { href: '/settings/profile', label: 'User Settings', icon: UserCog },
     ],
   },
 ];

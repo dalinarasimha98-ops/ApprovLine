@@ -21,7 +21,7 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import type { UsersTeamsData, UserRow, TeamRow } from '@/services/users';
-import type { Role } from '@/lib/rbac';
+import { ROLE_LABELS, type Role } from '@/lib/rbac';
 
 type Tab = 'users' | 'teams' | 'roles' | 'invitations' | 'activity';
 
@@ -30,15 +30,6 @@ type Props = {
   orgName: string;
   currentUserId: string;
   currentUserRole: Role;
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  OWNER: 'Owner',
-  ADMIN: 'Admin',
-  MANAGER: 'Manager',
-  MEMBER: 'Member',
-  AUDITOR: 'Auditor',
-  VIEWER: 'Viewer',
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -53,7 +44,7 @@ const ROLE_COLORS: Record<string, string> = {
 function RoleBadge({ role }: { role: string }) {
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-black ${ROLE_COLORS[role] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-      {ROLE_LABELS[role] ?? role}
+      {ROLE_LABELS[role as Role] ?? role}
     </span>
   );
 }

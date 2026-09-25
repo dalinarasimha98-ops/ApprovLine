@@ -25,6 +25,23 @@ export function hasAnyRole(userRole: Role, allowedRoles: Role[]): boolean {
   return allowedRoles.includes(userRole);
 }
 
+/** Every role, in ROLE_HIERARCHY order. Used where a route or control must
+ *  be reachable by any authenticated member regardless of role - e.g. a
+ *  personal settings page, which is USER-SELF access, not an ADMIN grant. */
+export const ALL_ROLES: Role[] = ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'AUDITOR', 'VIEWER'];
+
+/** Human-readable label per role - shared by Users & Teams and User Settings
+ *  so a role never renders under two different names in two different
+ *  places. */
+export const ROLE_LABELS: Record<Role, string> = {
+  OWNER: 'Owner',
+  ADMIN: 'Admin',
+  MANAGER: 'Manager',
+  MEMBER: 'Member',
+  AUDITOR: 'Auditor',
+  VIEWER: 'Viewer',
+};
+
 /**
  * Route prefix -> roles allowed to view it. Not expressible as a single
  * minimum role: AUDITOR sits below MANAGER in ROLE_HIERARCHY but must reach
@@ -76,6 +93,14 @@ export const ROUTE_PERMISSIONS: Record<string, Role[]> = {
   // immediately 403s for MEMBER/MANAGER/VIEWER callers.
   '/playbooks': ['ADMIN', 'AUDITOR', 'OWNER'],
   '/dashboard/gateway': ['ADMIN', 'OWNER'],
+  // Personal account settings (name, security status, own sessions) -
+  // USER-SELF access, not an admin grant. Without this entry, the broader
+  // '/settings': ['ADMIN', 'OWNER'] rule above would apply via prefix match
+  // and lock every non-admin out of managing their own account. Listed
+  // explicitly (rather than left unmapped, which also renders for
+  // everyone) so this is a deliberate, visible policy choice, not an
+  // accidental gap.
+  '/settings/profile': ALL_ROLES,
 };
 
 /**

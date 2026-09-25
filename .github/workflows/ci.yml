@@ -93,6 +93,10 @@ jobs:
         run: npm run test:tenant-isolation
       - name: Test — RBAC
         run: npm run test:rbac
+      - name: Test — access control matrix
+        run: npm run test:access-control
+      - name: Test — User Settings (tenant/user scoping, no fake settings, no secrets exposed)
+        run: npm run test:user-settings
       - name: Test — certification
         run: npm run test:certification
       - name: Test — approval detail (View Full Approval)

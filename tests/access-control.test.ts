@@ -22,6 +22,7 @@
  *   Integrations         MANAGE MANAGE NO        NO       NO      NO
  *   Users & Teams        MANAGE MANAGE LIMITED   VIEW     NO      NO
  *   Settings             FULL   MANAGE NO        NO       NO      NO
+ *   User Settings        FULL   FULL   FULL      FULL     FULL    FULL
  *
  * Pure-function tests only — no DB, Redis, or Clerk required.
  *
@@ -291,6 +292,31 @@ test('/settings/users has correct allowed set', () => {
   assert.ok(roles!.includes('MANAGER'), 'MANAGER must be in /settings/users');
 });
 
+// ── User Settings (/settings/profile) ────────────────────────────────────────
+// Personal account settings (name, security status, own sessions) - every
+// authenticated role must reach it, unlike every other /settings/* route.
+
+console.log('\n── /settings/profile ────────────────────────────────────────────────────');
+
+test('VIEWER is allowed /settings/profile', () => assertAllowed('/settings/profile', 'VIEWER'));
+test('MEMBER is allowed /settings/profile', () => assertAllowed('/settings/profile', 'MEMBER'));
+test('AUDITOR is allowed /settings/profile', () => assertAllowed('/settings/profile', 'AUDITOR'));
+test('MANAGER is allowed /settings/profile', () => assertAllowed('/settings/profile', 'MANAGER'));
+test('ADMIN is allowed /settings/profile', () => assertAllowed('/settings/profile', 'ADMIN'));
+test('OWNER is allowed /settings/profile', () => assertAllowed('/settings/profile', 'OWNER'));
+
+test('/settings/profile wins over /settings on longest prefix', () => {
+  // /settings maps to ['ADMIN','OWNER'] but /settings/profile has its own
+  // entry covering every role - without the longest-prefix override, a
+  // VIEWER or MEMBER would be locked out of their own account settings.
+  const roles = findRoutePermission('/settings/profile');
+  assert.ok(roles !== null);
+  assert.ok(roles!.includes('VIEWER'), 'VIEWER must be reachable on /settings/profile');
+  assert.ok(roles!.includes('MEMBER'), 'MEMBER must be reachable on /settings/profile');
+  assert.ok(roles!.includes('AUDITOR'), 'AUDITOR must be reachable on /settings/profile');
+  assert.ok(roles!.includes('MANAGER'), 'MANAGER must be reachable on /settings/profile');
+});
+
 // ── Playbook AI (/playbooks) ──────────────────────────────────────────────────
 
 console.log('\n── /playbooks ───────────────────────────────────────────────────────────');
@@ -424,6 +450,19 @@ test('ROUTE_PERMISSIONS contains /dashboard/settings/integrations', async () => 
   const { readFileSync } = await import('node:fs');
   const src = readFileSync(new URL('../lib/rbac.ts', import.meta.url), 'utf8');
   assert.ok(src.includes("'/dashboard/settings/integrations'"), 'integrations route must be in ROUTE_PERMISSIONS');
+});
+
+test('ROUTE_PERMISSIONS contains /settings/profile', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../lib/rbac.ts', import.meta.url), 'utf8');
+  assert.ok(src.includes("'/settings/profile'"), '/settings/profile must be in ROUTE_PERMISSIONS');
+});
+
+test('settings/profile page calls enforcePageRole for every load path (initial render + both server actions)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../app/settings/profile/page.tsx', import.meta.url), 'utf8');
+  const occurrences = src.match(/enforcePageRole\('\/settings\/profile'/g) ?? [];
+  assert.ok(occurrences.length >= 3, `Expected enforcePageRole('/settings/profile', ...) in the page load and both 'use server' actions (updateProfile, revokeSession), found ${occurrences.length}`);
 });
 
 test('settings/users page calls enforcePageRole (not bypassed by hasAnyRole including MEMBER)', async () => {
