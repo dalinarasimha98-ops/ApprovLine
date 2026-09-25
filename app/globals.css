@@ -38,9 +38,21 @@
   --al-border-strong-rgb: 42 63 102;
   --al-text-primary-rgb: 232 238 255;
   --al-text-secondary-rgb: 168 186 216;
-  --al-text-muted-rgb: 107 127 168;
-  --al-accent-rgb: 124 58 237;
-  --al-accent-hover-rgb: 139 92 246;
+  /* 118 138 178 (not the original 107 127 168) - measured against
+     al-surface via the WCAG contrast formula: the original was 4.38:1,
+     just under the 4.5:1 AA threshold for normal-size text, which this
+     token is used at pervasively (field labels, captions). 5.07:1 here. */
+  --al-text-muted-rgb: 118 138 178;
+  /* violet-400 (not violet-600) - the same brand purple, but measured at
+     only 3.09:1 against al-surface at violet-600, well under the 4.5:1
+     AA threshold for the normal-size bold text this token is also used
+     for (nav labels, links) - not just the 3:1 needed for buttons/icons/
+     borders. Dark UIs conventionally lighten an accent for exactly this
+     reason (perceived contrast against a dark ground differs from a
+     light one); violet-400 measures 6.47:1 here. accent-hover moves to
+     violet-300 to keep "lighter on hover" in dark mode. */
+  --al-accent-rgb: 167 139 250;
+  --al-accent-hover-rgb: 196 181 253;
   --al-accent-text-rgb: 255 255 255;
   --al-success-rgb: 16 185 129;
   --al-warning-rgb: 245 158 11;
@@ -64,7 +76,7 @@
     --al-accent-rgb: 124 58 237;
     --al-accent-hover-rgb: 109 40 217;
     --al-accent-text-rgb: 255 255 255;
-    --al-success-rgb: 5 150 105;
+    --al-success-rgb: 4 120 87;
     --al-warning-rgb: 180 83 9;
     --al-danger-rgb: 220 38 38;
     --al-info-rgb: 37 99 235;
@@ -86,7 +98,10 @@
   --al-accent-rgb: 124 58 237;
   --al-accent-hover-rgb: 109 40 217;
   --al-accent-text-rgb: 255 255 255;
-  --al-success-rgb: 5 150 105;
+  /* emerald-700 (not emerald-600) - measured at 3.77:1 against al-surface
+     at emerald-600, under the 4.5:1 AA threshold for the normal-size text
+     this token is used at (status pills, inline confirmations). 5.48:1 here. */
+  --al-success-rgb: 4 120 87;
   --al-warning-rgb: 180 83 9;
   --al-danger-rgb: 220 38 38;
   --al-info-rgb: 37 99 235;

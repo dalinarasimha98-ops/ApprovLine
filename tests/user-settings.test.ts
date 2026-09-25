@@ -125,7 +125,7 @@ for (const forbiddenFuzzy of ['findManagerByName', 'guessManager', 'fuzzyMatch',
 // The Edit Profile drawer's Department/Time Zone controls are real, backed selects, not free text and not fabricated options.
 assert.match(shell, /profile\.organizationDepartments\.map\(/, 'the Department picker must be populated from the organization\'s real department list');
 assert.match(shell, /Intl\.supportedValuesOf\('timeZone'\)/, 'the Time Zone picker must be populated from the real, current IANA list');
-assert.match(shell, /<Field label="Manager" value={profile\.managerName \?\? 'Not set'} \/>/, 'Manager must render the real relation or an honest "Not set" - never an invented name');
+assert.match(shell, /label: 'Manager', value: profile\.managerName \?\? 'Not set'/, 'Manager must render the real relation or an honest "Not set" - never an invented name');
 
 // --- Notifications: real, working, and compliance-safe -----------------------
 

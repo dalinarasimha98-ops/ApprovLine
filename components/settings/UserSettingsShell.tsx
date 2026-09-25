@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
 import { useClerk } from '@clerk/nextjs';
@@ -60,12 +60,28 @@ function Card({ title, description, action, children }: { title: string; descrip
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+/** A compact label/value row rather than an individually bordered card -
+ *  ten of those (the full Profile Information field set) made the section
+ *  read as very tall. Two FieldColumns side by side, each a single bordered
+ *  list with a hairline between rows, reproduce the same information at a
+ *  fraction of the vertical footprint without going spreadsheet-dense
+ *  (rows keep generous line-height and a clear label/value split). */
+function FieldRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-al-border bg-al-surface-sunken px-3 py-2.5">
-      <dt className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">{label}</dt>
-      <dd className="mt-0.5 break-words text-sm font-semibold text-al-text">{value}</dd>
+    <div className="flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+      <dt className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-al-text-muted">{label}</dt>
+      <dd className="min-w-0 truncate text-right text-sm font-semibold text-al-text">{value}</dd>
     </div>
+  );
+}
+
+function FieldColumn({ fields }: { fields: { label: string; value: string }[] }) {
+  return (
+    <dl className="divide-y divide-al-border rounded-lg border border-al-border bg-al-surface-sunken px-3.5">
+      {fields.map((field) => (
+        <FieldRow key={field.label} label={field.label} value={field.value} />
+      ))}
+    </dl>
   );
 }
 
@@ -87,10 +103,25 @@ function ErrorNote({ message }: { message: string }) {
   );
 }
 
+/** A compact, self-dismissing confirmation rather than a full-width block
+ *  that stays on screen indefinitely (these render from a URL query param
+ *  set by a redirect-based server action, which otherwise persists until
+ *  the viewer navigates away). Fades out on its own after a few seconds -
+ *  errors (ErrorNote) intentionally stay put until addressed; only success
+ *  needs to get out of the way. */
 function SuccessNote({ message }: { message: string }) {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setVisible(false), 4000);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  if (!visible) return null;
+
   return (
-    <div className="rounded-lg border border-al-success/30 bg-al-success/10 p-3 text-sm font-semibold text-al-success">
-      {message}
+    <div className="inline-flex items-center gap-1.5 rounded-full border border-al-success/30 bg-al-success/10 px-3 py-1 text-xs font-bold text-al-success" role="status">
+      <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> {message}
     </div>
   );
 }
@@ -193,21 +224,21 @@ function NotificationsCard({
           </div>
           <AutoSubmitToggle name="emailEnabled" defaultChecked={settings.emailEnabled} label="Email notifications" />
         </form>
-        <div className="flex items-center gap-3 rounded-lg border border-al-border bg-al-surface-sunken p-3.5 opacity-60">
+        <div className="flex items-center gap-3 rounded-lg border border-dashed border-al-border bg-al-surface-sunken p-3.5">
           <MessageSquare className="h-4 w-4 shrink-0 text-al-text-muted" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-al-text">In-App Notifications</p>
+            <p className="text-sm font-bold text-al-text-muted">In-App Notifications</p>
             <p className="text-xs font-semibold text-al-text-muted">Not available yet</p>
           </div>
-          <span className="h-6 w-11 shrink-0 rounded-full bg-al-border-strong" aria-hidden="true" />
+          <StatusPill tone="slate">Unavailable</StatusPill>
         </div>
-        <div className="flex items-center gap-3 rounded-lg border border-al-border bg-al-surface-sunken p-3.5 opacity-60">
+        <div className="flex items-center gap-3 rounded-lg border border-dashed border-al-border bg-al-surface-sunken p-3.5">
           <Smartphone className="h-4 w-4 shrink-0 text-al-text-muted" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-al-text">Mobile Notifications</p>
-            <p className="text-xs font-semibold text-al-text-muted">Not configured for this workspace</p>
+            <p className="text-sm font-bold text-al-text-muted">Mobile Notifications</p>
+            <p className="text-xs font-semibold text-al-text-muted">Not configured</p>
           </div>
-          <span className="h-6 w-11 shrink-0 rounded-full bg-al-border-strong" aria-hidden="true" />
+          <StatusPill tone="slate">Unavailable</StatusPill>
         </div>
       </div>
       {showComplianceNote ? (
@@ -315,6 +346,12 @@ function ThemeSwitcher({ updateThemeAction }: { updateThemeAction: (theme: Theme
     }
   }
 
+  useEffect(() => {
+    if (status?.kind !== 'saved') return;
+    const timeout = setTimeout(() => setStatus(null), 3000);
+    return () => clearTimeout(timeout);
+  }, [status]);
+
   return (
     <div>
       <p className="text-[10px] font-bold uppercase tracking-wide text-al-text-muted">Theme</p>
@@ -348,7 +385,11 @@ function ThemeSwitcher({ updateThemeAction }: { updateThemeAction: (theme: Theme
       </div>
       <p className="mt-2 text-xs font-semibold" aria-live="polite">
         {pending ? <span className="text-al-text-muted">Saving…</span> : null}
-        {!pending && status?.kind === 'saved' ? <span className="text-al-success">Saved.</span> : null}
+        {!pending && status?.kind === 'saved' ? (
+          <span className="inline-flex items-center gap-1 text-al-success">
+            <Check className="h-3 w-3" aria-hidden="true" /> Saved
+          </span>
+        ) : null}
         {!pending && status?.kind === 'error' ? <span className="text-al-danger">{status.message ?? 'Your appearance preference could not be saved right now.'}</span> : null}
       </p>
     </div>
@@ -512,18 +553,26 @@ export function UserSettingsShell({
                   </div>
                 </div>
               </div>
-              <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Full Name" value={profile.name ?? 'Not set'} />
-                <Field label="Job Title" value={profile.jobTitle ?? 'Not set'} />
-                <Field label="Email Address" value={profile.email || 'Not available'} />
-                <Field label="Phone" value={profile.phone ?? 'Not set'} />
-                <Field label="Role" value={ROLE_LABELS[profile.role]} />
-                <Field label="Location" value={profile.location ?? 'Not set'} />
-                <Field label="Department" value={profile.department ?? 'Not set'} />
-                <Field label="Manager" value={profile.managerName ?? 'Not set'} />
-                <Field label="Time Zone" value={profile.timezone ?? 'Not set'} />
-                <Field label="Workspace" value={profile.organizationName} />
-              </dl>
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <FieldColumn
+                  fields={[
+                    { label: 'Full Name', value: profile.name ?? 'Not set' },
+                    { label: 'Email Address', value: profile.email || 'Not available' },
+                    { label: 'Role', value: ROLE_LABELS[profile.role] },
+                    { label: 'Department', value: profile.department ?? 'Not set' },
+                    { label: 'Time Zone', value: profile.timezone ?? 'Not set' },
+                  ]}
+                />
+                <FieldColumn
+                  fields={[
+                    { label: 'Job Title', value: profile.jobTitle ?? 'Not set' },
+                    { label: 'Phone', value: profile.phone ?? 'Not set' },
+                    { label: 'Location', value: profile.location ?? 'Not set' },
+                    { label: 'Manager', value: profile.managerName ?? 'Not set' },
+                    { label: 'Workspace', value: profile.organizationName },
+                  ]}
+                />
+              </div>
               <p className="mt-3 text-xs font-semibold text-al-text-muted">Member since {formatDate(profile.memberSince)}.</p>
             </Card>
 
