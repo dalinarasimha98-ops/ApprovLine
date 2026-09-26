@@ -56,6 +56,32 @@ function compact(value: number) {
   return new Intl.NumberFormat('en-US', { notation: value >= 1000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value);
 }
 
+/** Icon + color per real audit-action category (matches
+ *  services/dashboard.ts's MEANINGFUL_AUDIT_ACTIONS allowlist) so Recent
+ *  Activity is scannable by kind at a glance - purely a presentation choice
+ *  over the same real event.action string, never a new data source. */
+function activityMeta(action: string): { icon: React.ReactNode; className: string } {
+  if (action.startsWith('approval_record.') || action.startsWith('MANUAL_APPROVAL_')) {
+    return { icon: <CheckCircle2 className="h-3.5 w-3.5" />, className: 'bg-al-success/15 text-al-success' };
+  }
+  if (action.startsWith('user.') || action.startsWith('team.')) {
+    return { icon: <Users className="h-3.5 w-3.5" />, className: 'bg-al-accent/15 text-al-accent' };
+  }
+  if (action.startsWith('integration.')) {
+    return { icon: <Cable className="h-3.5 w-3.5" />, className: 'bg-al-info/15 text-al-info' };
+  }
+  if (action.startsWith('playbook.')) {
+    return { icon: <BrainCircuit className="h-3.5 w-3.5" />, className: 'bg-al-accent/15 text-al-accent' };
+  }
+  if (action.startsWith('investigation.')) {
+    return { icon: <AlertTriangle className="h-3.5 w-3.5" />, className: 'bg-al-warning/15 text-al-warning' };
+  }
+  if (action.startsWith('COMPLIANCE_')) {
+    return { icon: <ShieldCheck className="h-3.5 w-3.5" />, className: 'bg-al-success/15 text-al-success' };
+  }
+  return { icon: <ScrollText className="h-3.5 w-3.5" />, className: 'bg-al-text-muted/15 text-al-text-muted' };
+}
+
 // --- KPI card ----------------------------------------------------------------
 
 /** Whether an increase in this metric is good or bad news - controls trend
@@ -102,11 +128,11 @@ function KpiCard({
             {unit ? <span className="ml-1 text-xs font-semibold text-al-text-muted">{unit}</span> : null}
           </p>
         </div>
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border" style={{ borderColor: `${color}66`, color }}>{icon}</span>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ backgroundColor: `${color}1f`, color }}>{icon}</span>
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
         {trend ? (
-          <span className={trend.positive === null ? 'text-al-text-muted' : trend.positive ? 'text-al-success' : 'text-al-danger'}>{trend.text}</span>
+          <span className={`rounded px-1.5 py-0.5 ${trend.positive === null ? 'bg-al-text-muted/10 text-al-text-muted' : trend.positive ? 'bg-al-success/10 text-al-success' : 'bg-al-danger/10 text-al-danger'}`}>{trend.text}</span>
         ) : null}
         <span className="text-al-text-muted">{context}</span>
         {href ? <Link href={href} className="ml-auto font-bold text-al-info hover:text-al-info">{linkLabel ?? 'View →'}</Link> : null}
@@ -122,12 +148,18 @@ function Donut({
   total,
   centerLabel,
   emptyText,
+  colorFor,
 }: {
   slices: { name: string; count: number; percentage: number }[];
   total: number;
   centerLabel: string;
   emptyText: string;
+  /** Optional semantic color override (e.g. Risk Distribution always maps
+   *  Low/Medium/High to success/warning/danger, regardless of slice order) -
+   *  falls back to the generic categorical palette when omitted. */
+  colorFor?: (name: string, index: number) => string;
 }) {
+  const sliceColor = (name: string, index: number) => colorFor?.(name, index) ?? palette[index % palette.length];
   // Compact placeholder when there's genuinely nothing to chart - a
   // full-size ring with an empty legend next to it is exactly the "huge
   // donut chart with empty space" the visual density review called out.
@@ -161,7 +193,7 @@ function Donut({
                 cy="21"
                 r="15.9155"
                 fill="transparent"
-                stroke={palette[index % palette.length]}
+                stroke={sliceColor(slice.name, index)}
                 strokeWidth="6"
                 strokeDasharray={dash}
                 strokeDashoffset={100 - offset}
@@ -179,7 +211,7 @@ function Donut({
       <div className="min-w-0 flex-1 space-y-1.5">
         {slices.map((slice, index) => (
           <div key={slice.name} className="flex items-center gap-2 text-[10px]">
-            <span className="h-2 w-3 shrink-0 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }} />
+            <span className="h-2 w-3 shrink-0 rounded-sm" style={{ backgroundColor: sliceColor(slice.name, index) }} />
             <span className="min-w-0 flex-1 truncate text-al-text-muted">{slice.name}</span>
             <span className="font-semibold text-al-text-secondary">{slice.percentage}%</span>
           </div>
@@ -245,7 +277,16 @@ function ActivityChart({
         <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-al-warning" />Pending</span>
       </div>
       <div className="mt-2 h-48 w-full overflow-x-auto">
-        <svg viewBox={`0 0 ${chartWidth} 100`} preserveAspectRatio="none" className="h-full" style={{ width: `${Math.max(chartWidth * 8, 100)}%`, minWidth: '100%' }} role="img" aria-label="Approval activity by period">
+        {/* chartWidth (bucket count * per-bar step) is already normalized to
+            ~100-135 viewBox units regardless of range/granularity (barWidth
+            is derived as 100/bucket-count), so rendering at 100% width
+            already fits every bar on screen. An earlier `chartWidth * 8`
+            multiplier here always overstretched the SVG to ~1000% of its
+            container - invisible without a 10x horizontal scroll, a bug
+            that only ever surfaced with real, populated activity data
+            (an empty period short-circuits to the empty-state message
+            above and never reaches this render path). */}
+        <svg viewBox={`0 0 ${chartWidth} 100`} preserveAspectRatio="none" className="h-full w-full" role="img" aria-label="Approval activity by period">
           {[25, 50, 75].map((y) => <line key={y} x1="0" x2={chartWidth} y1={y} y2={y} stroke="rgba(148,163,184,.12)" strokeDasharray="1 2" />)}
           {buckets.map((bucket, index) => {
             const x = index * step;
@@ -559,15 +600,18 @@ export function OrganizationDashboardView({
           <SectionHeader title="Recent Activity" subtitle="Latest audited events" href="/dashboard/audit-log" />
           <div className="mt-3 divide-y divide-white/[0.06]">
             {overview.recentAudit.length ? (
-              overview.recentAudit.map((event) => (
-                <div key={event.id} className="flex items-center gap-2.5 py-2.5">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-al-info/15 text-al-info"><Activity className="h-3.5 w-3.5" /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-semibold text-al-text-secondary">{describeAuditAction(event.action)}</p>
-                    <p className="text-[9px] text-al-text-muted">{new Date(event.createdAt).toLocaleString()}</p>
+              overview.recentAudit.map((event) => {
+                const meta = activityMeta(event.action);
+                return (
+                  <div key={event.id} className="flex items-center gap-2.5 py-2.5">
+                    <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${meta.className}`}>{meta.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] font-semibold text-al-text-secondary">{describeAuditAction(event.action)}</p>
+                      <p className="text-[9px] text-al-text-muted">{new Date(event.createdAt).toLocaleString()}</p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="py-4 text-center text-xs text-al-text-muted">Activity will appear here as your team works in ApprovLine.</p>
             )}
@@ -604,6 +648,15 @@ export function OrganizationDashboardView({
               total={overview.riskDistribution.reduce((sum, s) => sum + s.count, 0)}
               centerLabel="Approvals"
               emptyText="No risk records in this period."
+              colorFor={(name) =>
+                name === 'Low'
+                  ? 'rgb(var(--al-success-rgb))'
+                  : name === 'Medium'
+                    ? 'rgb(var(--al-warning-rgb))'
+                    : name === 'High'
+                      ? 'rgb(var(--al-danger-rgb))'
+                      : '#8a97a8'
+              }
             />
           </div>
         </article>
@@ -637,7 +690,7 @@ export function OrganizationDashboardView({
             )}
             {overview.integrations.connectedList.length > 4 ? (
               <Link href={canManageIntegrations ? '/dashboard/settings/integrations' : '/dashboard'} className="block pt-2 text-center text-[10px] font-semibold text-al-info hover:text-al-info">
-                View all {overview.integrations.connectedCount} →
+                View all {overview.integrations.connectedList.length} →
               </Link>
             ) : null}
             {overview.integrations.issueCount > 0 ? (
@@ -730,14 +783,15 @@ export function OrganizationDashboardView({
             <SectionHeader title="Workspace Membership" subtitle="Users & teams" href={canManageUsers ? '/settings/users' : undefined} linkLabel="Manage" />
             <div className="mt-3 grid grid-cols-2 gap-2.5">
               {[
-                ['Total Users', overview.usersAndTeams.totalUsers],
-                ['Administrators', overview.usersAndTeams.adminUsers],
-                ['Teams', overview.usersAndTeams.totalTeams],
-                ['Pending Invites', overview.usersAndTeams.pendingInvites],
-              ].map(([label, value]) => (
-                <div key={String(label)} className="rounded-md border border-white/[0.06] bg-al-surface/[0.02] p-2.5">
-                  <p className="text-lg font-bold text-al-text">{value}</p>
-                  <p className="text-[9px] text-al-text-muted">{label}</p>
+                { label: 'Total Users', value: overview.usersAndTeams.totalUsers, icon: <Users className="h-3.5 w-3.5" />, className: 'bg-al-info/15 text-al-info' },
+                { label: 'Administrators', value: overview.usersAndTeams.adminUsers, icon: <ShieldCheck className="h-3.5 w-3.5" />, className: 'bg-al-accent/15 text-al-accent' },
+                { label: 'Teams', value: overview.usersAndTeams.totalTeams, icon: <Users className="h-3.5 w-3.5" />, className: 'bg-al-success/15 text-al-success' },
+                { label: 'Pending Invites', value: overview.usersAndTeams.pendingInvites, icon: <Clock3 className="h-3.5 w-3.5" />, className: 'bg-al-warning/15 text-al-warning' },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-md border border-white/[0.06] bg-al-surface/[0.02] p-2.5">
+                  <span className={`mb-1.5 grid h-6 w-6 place-items-center rounded-md ${stat.className}`}>{stat.icon}</span>
+                  <p className="text-lg font-bold text-al-text">{stat.value}</p>
+                  <p className="text-[9px] text-al-text-muted">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -747,18 +801,21 @@ export function OrganizationDashboardView({
         {canSeeCompliance ? (
           <article className={`${panelClass} p-4 ${threeColSpan([canSeeUsers, canSeeCompliance, canSeeBilling].filter(Boolean).length)}`}>
             <SectionHeader title="Compliance Frameworks" subtitle="Configured in Compliance Hub" href="/trust/compliance" linkLabel="View all" />
-            <div className="mt-3 grid gap-2">
+            <div className="mt-3 grid grid-cols-2 gap-2">
               {overview.complianceFrameworks.length ? (
-                overview.complianceFrameworks.slice(0, 5).map((framework) => (
-                  <div key={framework.slug} className="flex items-center justify-between gap-2 rounded-md border border-white/[0.05] bg-al-surface/[0.02] px-2.5 py-2 text-[11px]">
-                    <span className="flex items-center gap-2 text-al-text-secondary"><ShieldCheck className="h-3.5 w-3.5 text-al-accent" />{framework.name}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${framework.isEnabled ? 'bg-al-success/10 text-al-success' : 'bg-al-text-muted/10 text-al-text-muted'}`}>
+                overview.complianceFrameworks.slice(0, 6).map((framework) => (
+                  <div key={framework.slug} className="rounded-md border border-white/[0.05] bg-al-surface/[0.02] px-2.5 py-2">
+                    <span className={`grid h-6 w-6 place-items-center rounded-md ${framework.isEnabled ? 'bg-al-success/15 text-al-success' : 'bg-al-text-muted/15 text-al-text-muted'}`}>
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    </span>
+                    <p className="mt-1.5 truncate text-[11px] font-semibold text-al-text-secondary">{framework.name}</p>
+                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold ${framework.isEnabled ? 'bg-al-success/10 text-al-success' : 'bg-al-text-muted/10 text-al-text-muted'}`}>
                       {framework.isEnabled ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                 ))
               ) : (
-                <p className="py-4 text-center text-xs text-al-text-muted">No compliance frameworks configured yet.</p>
+                <p className="col-span-2 py-4 text-center text-xs text-al-text-muted">No compliance frameworks configured yet.</p>
               )}
             </div>
           </article>

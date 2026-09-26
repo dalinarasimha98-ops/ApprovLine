@@ -367,4 +367,29 @@ assert.match(dashboardView, /Your workspace is connected, but ApprovLine has not
 // and is never a half-screen blank block.
 assert.match(dashboardView, /Once approvals are captured, they will appear here with subject, approver, risk, status, timestamp and source\./);
 
-console.log('Validated Organization Dashboard read-model reuse, tenant isolation, shared date range, RBAC gating, honest empty states, real integration/playbook/compliance semantics, filtered activity feed, a real Plan & Usage card, bounded connection-pool concurrency, unambiguous period-vs-live KPI labeling, a real database-backed Workspace Readiness section, an activity-independent connected-integrations list, real playbook evaluation timestamps, and compact empty states.');
+// ─── Part 7: visual restyle (real data only) - two real bugs found by ──────
+// rendering with a POPULATED dataset for the first time (every prior
+// verification pass had zero approvals in the selected period, which
+// short-circuits straight to an empty-state message and never exercises
+// these code paths at all):
+
+// 1. The Approval Activity chart's SVG was stretched to `chartWidth * 8`
+// percent width inside its horizontal-scroll container - since chartWidth is
+// already normalized to ~100-135 viewBox units regardless of range/bucket
+// count (barWidth is derived as 100/bucket-count), this always overstretched
+// the chart to ~1000% of its visible container, pushing every bar off-screen
+// and requiring a 10x horizontal scroll to see any of them. Fixed to render
+// at a plain 100% width, which already fits every bar without scrolling.
+assert.doesNotMatch(dashboardView, /style=\{\{ width: `\$\{Math\.max\(chartWidth \* 8/);
+assert.match(dashboardView, /viewBox=\{`0 0 \$\{chartWidth\} 100`\} preserveAspectRatio="none" className="h-full w-full"/);
+
+// 2. Top Integrations' "View all N" link read N from
+// overview.integrations.connectedCount (the settings-derived aggregate,
+// which can legitimately differ from - or degrade independently of - the
+// real connectedList this link is paginating), instead of
+// connectedList.length, the actual count of what's being listed. Fixed to
+// use the same list length gating the link's visibility.
+assert.match(dashboardView, /View all \{overview\.integrations\.connectedList\.length\} →/);
+assert.doesNotMatch(dashboardView, /View all \{overview\.integrations\.connectedCount\} →/);
+
+console.log('Validated Organization Dashboard read-model reuse, tenant isolation, shared date range, RBAC gating, honest empty states, real integration/playbook/compliance semantics, filtered activity feed, a real Plan & Usage card, bounded connection-pool concurrency, unambiguous period-vs-live KPI labeling, a real database-backed Workspace Readiness section, an activity-independent connected-integrations list, real playbook evaluation timestamps, compact empty states, a colorful visual restyle toward the design reference using only real data, and two real chart/count bugs found and fixed by rendering with a populated dataset.');
