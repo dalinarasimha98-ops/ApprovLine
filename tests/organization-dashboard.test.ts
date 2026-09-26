@@ -191,7 +191,9 @@ assert.doesNotMatch(dashboardService, /'pilot\./);
 // gated to the same roles that can reach the real Billing & Plan tab.
 assert.match(dashboardView, /Plan & Usage/);
 assert.match(dashboardView, /canSeeBilling = hasAnyRole\(role, \['ADMIN', 'OWNER'\]\)/);
-assert.match(dashboardView, /Plan not provisioned/);
+assert.match(dashboardView, /Not provisioned/);
+assert.match(dashboardView, /Awaiting provisioning/);
+assert.match(dashboardView, /Provision a workspace plan/);
 assert.doesNotMatch(dashboardView, /overview\.billing\.mrr|overview\.billing\.arr|estimatedArrUsd|renewalDate|invoiceAmount/);
 assert.match(dashboardService, /commercialPlans\[settings\.billing\.planTier\]/);
 
@@ -258,4 +260,111 @@ assert.doesNotMatch(dashboardService, /import \{[^}]*getIntegrationSummary/);
 assert.doesNotMatch(dashboardService, /import \{[^}]*getApprovalStatusCounts/);
 assert.match(dashboardService, /connectedCount: settings\?\.kpis\.connectedIntegrations \?\? 0/);
 
-console.log('Validated Organization Dashboard read-model reuse, tenant isolation, shared date range, RBAC gating, honest empty states, real integration/playbook/compliance semantics, filtered activity feed, a real Plan & Usage card, and bounded connection-pool concurrency.');
+// ─── Part 6: data-density + empty-state + consistency fix ──────────────────
+//
+// A real customer reported Total Approvals=0, Pending Approvals=9, High Risk
+// Approvals=0, and Open Action Items' High Risk row=7 on the same load, and
+// asked whether this was a bug or a labeling gap. Reproduced against real
+// seeded Postgres data: it's Scenario D from the report's own diagnostic
+// checklist - the KPI strip's "Total/High Risk Approvals" are period-scoped
+// (getCoreAnalytics, filtered to the selected date range) while "Pending
+// Approvals"/Open Action Items are live/unscoped (loadActionCenter,
+// deliberately ignoring creation date so old-but-still-open items stay
+// visible) - both individually correct, just under labels that didn't say
+// so. Fixed by relabeling rather than changing either semantic.
+
+// KPI strip: "Pending Approval Actions" (not the old bare "Pending
+// Approvals") with a context string that says it is NOT date-range scoped -
+// distinct from the period-scoped "High Risk Approvals" KPI's context.
+assert.match(dashboardView, /label="Pending Approval Actions"/);
+assert.match(dashboardView, /context="Open now · any age"/);
+assert.match(dashboardView, /New detections · \$\{range\.label\.toLowerCase\(\)\}/);
+
+// Open Action Items' rows use labels that can never be confused with the KPI
+// strip's identically-scoped-sounding-but-differently-scoped labels above -
+// "High-Risk Approvals (Open)" (live), never the bare "High Risk Approvals"
+// the period-scoped KPI already owns.
+assert.match(dashboardView, /'Pending Approval Actions', overview\.openItems\.needsAttention/);
+assert.match(dashboardView, /'High-Risk Approvals \(Open\)', overview\.openItems\.highPriority/);
+assert.doesNotMatch(dashboardView, /\['High Risk Approvals', overview\.openItems/);
+
+// An explicit, always-visible note ties the two scopes together instead of
+// silently leaving them to look contradictory - "never hide this
+// inconsistency."
+assert.match(dashboardView, /Pending Approval Actions and Open Action Items reflect everything currently open, regardless of when it was created/);
+
+// ─── Part 6b: Workspace Readiness - real database-backed checks only ───────
+
+// hasEverCapturedApproval is a genuinely separate, ALL-TIME (unscoped) count
+// from the period-scoped periodRows/kpis - the only way to tell "this org
+// has never captured an approval" apart from "nothing fell in this window."
+assert.match(dashboardService, /dashboard:allTimeApprovalCount/);
+assert.match(dashboardService, /prisma\.approvalRecord\.count\(\{ where: \{ organizationId \} \}\)/);
+assert.match(dashboardService, /hasEverCapturedApproval: boolean/);
+
+// Every readiness item's `complete` flag is derived from a value already
+// computed elsewhere in this function (settings/playbooks/complianceFrameworks/
+// allTimeApprovalCount/periodRows) - never a hardcoded true/false and never a
+// second, independent notion of "configured."
+assert.match(dashboardService, /workspaceReadiness: WorkspaceReadinessItem\[\]/);
+assert.match(dashboardService, /organizationConfigured = settings\?\.organization\.onboardedAt/);
+assert.match(dashboardService, /usersAndTeamsConfigured = \(settings\?\.stats\.totalTeams \?\? 0\) > 0/);
+assert.match(dashboardService, /complete: hasEverCapturedApproval/);
+assert.match(dashboardService, /complete: hasApprovalActivityInPeriod/);
+assert.doesNotMatch(dashboardService, /complete: true,\n/); // no item is unconditionally marked complete
+
+// The view only ever renders a Workspace Readiness row for a role that can
+// already see the corresponding real card (Users & Teams / Playbook /
+// Compliance) - never a second, independent permission system.
+assert.match(dashboardView, /if \(item\.id === 'usersAndTeams'\) return canSeeUsers/);
+assert.match(dashboardView, /if \(item\.id === 'playbook'\) return canSeeWorkflows/);
+assert.match(dashboardView, /if \(item\.id === 'compliance'\) return canSeeCompliance/);
+
+// Promoted directly under the KPI strip only when this workspace has never
+// captured a single approval (the exact scenario the visual-density review
+// is about); otherwise it renders at the bottom of the page (Row 6).
+assert.match(dashboardView, /const promoteReadiness = !overview\.hasEverCapturedApproval/);
+assert.match(dashboardView, /promoteReadiness \? \(\s*<WorkspaceReadinessSection/);
+assert.match(dashboardView, /!promoteReadiness \? \(\s*<WorkspaceReadinessSection/);
+
+// ─── Part 6c: Top Integrations - real, activity-independent connection list ─
+
+// A real CONNECTED Integration row with zero approval messages in the
+// selected period is still a real connection - the card's per-integration
+// list must never be sourced from connectorActivity (which only lists a
+// provider with in-period approval volume) alone.
+assert.match(dashboardService, /dashboard:connectedIntegrations/);
+assert.match(dashboardService, /prisma\.integration\.findMany\(\{\s*where: \{ organizationId, status: 'CONNECTED' \}/);
+assert.match(dashboardService, /connectedList: ConnectedIntegration\[\]/);
+assert.match(dashboardView, /overview\.integrations\.connectedList/);
+assert.doesNotMatch(dashboardView, /overview\.connectors\.slice/); // no longer the primary render source
+
+// ─── Part 6d: Playbook Status - real evaluation count + last-evaluated ─────
+
+// "If evaluation metrics do not exist, do not invent them" - the timestamp
+// comes from the same real ApprovalComplianceEvaluation rows already queried
+// for the compliance rate, never a fabricated/derived date.
+assert.match(dashboardService, /select: \{ score: true, createdAt: true, rule: \{ select: \{ documentId: true \} \} \}/);
+assert.match(dashboardService, /lastEvaluatedAt: evaluations \? evaluations\.lastEvaluatedAt\.toISOString\(\) : null/);
+assert.match(dashboardView, /workflow\.evaluatedCount > 0 && workflow\.lastEvaluatedAt/);
+assert.match(dashboardView, /No compliance evaluations yet/);
+
+// ─── Part 6e: compact empty states - no giant blank cards ──────────────────
+
+// Donut renders a small "0 / label / empty text" placeholder instead of a
+// full-size ring + empty legend when there's genuinely nothing to chart.
+assert.match(dashboardView, /if \(total === 0\)/);
+assert.match(dashboardView, /emptyText/);
+
+// Approval Activity's empty state offers only real, conditionally-shown
+// destinations - never an invented action with nowhere to go.
+assert.match(dashboardView, /Connect an integration', href: '\/dashboard\/settings\/integrations'/);
+assert.match(dashboardView, /Capture your first approval', href: '\/approvals\/manual'/);
+assert.match(dashboardView, /View Action Center', href: '\/dashboard\/pending-actions'/);
+assert.match(dashboardView, /Your workspace is connected, but ApprovLine has not captured qualifying approval activity for this date range\./);
+
+// Recent Approvals' empty state matches the requested compact copy exactly
+// and is never a half-screen blank block.
+assert.match(dashboardView, /Once approvals are captured, they will appear here with subject, approver, risk, status, timestamp and source\./);
+
+console.log('Validated Organization Dashboard read-model reuse, tenant isolation, shared date range, RBAC gating, honest empty states, real integration/playbook/compliance semantics, filtered activity feed, a real Plan & Usage card, bounded connection-pool concurrency, unambiguous period-vs-live KPI labeling, a real database-backed Workspace Readiness section, an activity-independent connected-integrations list, real playbook evaluation timestamps, and compact empty states.');

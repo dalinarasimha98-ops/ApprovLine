@@ -6,6 +6,7 @@ import {
   BrainCircuit,
   Cable,
   CheckCircle2,
+  Circle,
   Clock3,
   CreditCard,
   ScrollText,
@@ -23,6 +24,7 @@ import {
   type ActivityGranularity,
   type DashboardOverview,
   type DashboardRangeKey,
+  type WorkspaceReadinessItem,
 } from '@/services/dashboard';
 
 /**
@@ -115,7 +117,34 @@ function KpiCard({
 
 // --- Donut ---------------------------------------------------------------------
 
-function Donut({ slices, total, centerLabel }: { slices: { name: string; count: number; percentage: number }[]; total: number; centerLabel: string }) {
+function Donut({
+  slices,
+  total,
+  centerLabel,
+  emptyText,
+}: {
+  slices: { name: string; count: number; percentage: number }[];
+  total: number;
+  centerLabel: string;
+  emptyText: string;
+}) {
+  // Compact placeholder when there's genuinely nothing to chart - a
+  // full-size ring with an empty legend next to it is exactly the "huge
+  // donut chart with empty space" the visual density review called out.
+  if (total === 0) {
+    return (
+      <div className="flex items-center gap-3 py-2">
+        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-al-border">
+          <span className="text-sm font-bold text-al-text-muted">0</span>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold text-al-text-secondary">{centerLabel}</p>
+          <p className="text-[10px] text-al-text-muted">{emptyText}</p>
+        </div>
+      </div>
+    );
+  }
+
   let offset = 25;
   return (
     <div className="flex items-center justify-center gap-5">
@@ -148,17 +177,13 @@ function Donut({ slices, total, centerLabel }: { slices: { name: string; count: 
         </div>
       </div>
       <div className="min-w-0 flex-1 space-y-1.5">
-        {slices.length ? (
-          slices.map((slice, index) => (
-            <div key={slice.name} className="flex items-center gap-2 text-[10px]">
-              <span className="h-2 w-3 shrink-0 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }} />
-              <span className="min-w-0 flex-1 truncate text-al-text-muted">{slice.name}</span>
-              <span className="font-semibold text-al-text-secondary">{slice.percentage}%</span>
-            </div>
-          ))
-        ) : (
-          <p className="text-[10px] text-al-text-muted">No records in this period.</p>
-        )}
+        {slices.map((slice, index) => (
+          <div key={slice.name} className="flex items-center gap-2 text-[10px]">
+            <span className="h-2 w-3 shrink-0 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }} />
+            <span className="min-w-0 flex-1 truncate text-al-text-muted">{slice.name}</span>
+            <span className="font-semibold text-al-text-secondary">{slice.percentage}%</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -178,7 +203,13 @@ function SectionHeader({ title, subtitle, href, linkLabel = 'View all' }: { titl
 
 // --- Activity chart (real, stacked bars) ---------------------------------------
 
-function ActivityChart({ buckets }: { buckets: { label: string; approved: number; rejected: number; pending: number; highRisk: number }[] }) {
+function ActivityChart({
+  buckets,
+  emptyActions,
+}: {
+  buckets: { label: string; approved: number; rejected: number; pending: number; highRisk: number }[];
+  emptyActions: { label: string; href: string }[];
+}) {
   const totals = buckets.map((b) => b.approved + b.rejected + b.pending);
   const max = Math.max(...totals, 1);
   const barWidth = buckets.length > 0 ? Math.min(100 / buckets.length, 14) : 14;
@@ -187,7 +218,23 @@ function ActivityChart({ buckets }: { buckets: { label: string; approved: number
   const chartWidth = Math.max(buckets.length * step, 10);
 
   if (buckets.every((b) => b.approved + b.rejected + b.pending === 0)) {
-    return <p className="grid h-52 place-items-center text-xs text-al-text-muted">No approval activity in this period.</p>;
+    return (
+      <div className="py-6 text-center">
+        <p className="text-xs font-semibold text-al-text-secondary">No approval activity captured in this period</p>
+        <p className="mx-auto mt-1 max-w-sm text-[11px] text-al-text-muted">
+          Your workspace is connected, but ApprovLine has not captured qualifying approval activity for this date range.
+        </p>
+        {emptyActions.length ? (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
+            {emptyActions.map((action) => (
+              <Link key={action.label} href={action.href} className="text-[11px] font-semibold text-al-info hover:text-al-info">
+                {action.label} →
+              </Link>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -242,6 +289,55 @@ function rangeLink(base: RawSearchParams, overrides: Record<string, string>) {
   return `/dashboard?${params.toString()}`;
 }
 
+/** Even 12-column split for however many of a row's role-gated cards are
+ *  actually visible to this viewer - so a role that can't see, say,
+ *  Compliance Frameworks gets Workspace Membership and Plan & Usage each at
+ *  half width, never a lopsided leftover gap. */
+function threeColSpan(visibleCount: number): string {
+  if (visibleCount <= 1) return 'xl:col-span-12';
+  if (visibleCount === 2) return 'xl:col-span-6';
+  return 'xl:col-span-4';
+}
+
+// --- Workspace Readiness ---------------------------------------------------
+
+function WorkspaceReadinessSection({
+  items,
+  readinessActionFor,
+}: {
+  items: WorkspaceReadinessItem[];
+  readinessActionFor: (id: WorkspaceReadinessItem['id']) => { href: string; label: string } | null;
+}) {
+  return (
+    <article className={`${panelClass} p-4`}>
+      <SectionHeader title="Workspace Readiness" subtitle="Real setup status for this workspace, derived from your own data" />
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => {
+          const action = readinessActionFor(item.id);
+          return (
+            <div key={item.id} className="flex items-start gap-2 rounded-md border border-white/[0.05] bg-al-surface/[0.02] px-2.5 py-2">
+              {item.complete ? (
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-al-success" />
+              ) : (
+                <Circle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-al-text-muted" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-al-text-secondary">{item.label}</p>
+                <p className="text-[10px] text-al-text-muted">{item.detail}</p>
+                {action ? (
+                  <Link href={action.href} className="mt-0.5 inline-block text-[10px] font-semibold text-al-info hover:text-al-info">
+                    {action.label} →
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
+}
+
 // --- View ------------------------------------------------------------------
 
 export function OrganizationDashboardView({
@@ -265,11 +361,59 @@ export function OrganizationDashboardView({
   // real Billing & Plan tab this card's "Manage Plan" link opens - so a
   // role that can't reach that tab never sees a summary of it here either.
   const canSeeBilling = hasAnyRole(role, ['ADMIN', 'OWNER']);
+  // Matches services/manual-approvals.ts's canManageManualApprovals() exactly
+  // - the real gate on /approvals/manual, which the Approval Activity empty
+  // state and Workspace Readiness's "Approval capture" action both link to.
+  const canCaptureApproval = hasAnyRole(role, ['OWNER', 'ADMIN', 'MANAGER']);
 
   const avgTimeDays = overview.kpis.avgApprovalTimeHours.value !== null ? Math.round((overview.kpis.avgApprovalTimeHours.value / 24) * 10) / 10 : null;
   const prevAvgTimeDays = overview.kpis.avgApprovalTimeHours.prevValue !== null ? overview.kpis.avgApprovalTimeHours.prevValue / 24 : null;
 
   const recentApprovalTableRecords: ApprovalTableRecord[] = overview.recentApprovals.records;
+
+  const activityEmptyActions: { label: string; href: string }[] = [];
+  if (canManageIntegrations && overview.integrations.connectedCount === 0) {
+    activityEmptyActions.push({ label: 'Connect an integration', href: '/dashboard/settings/integrations' });
+  }
+  if (canCaptureApproval && !overview.hasEverCapturedApproval) {
+    activityEmptyActions.push({ label: 'Capture your first approval', href: '/approvals/manual' });
+  }
+  activityEmptyActions.push({ label: 'View Action Center', href: '/dashboard/pending-actions' });
+
+  // Visible to every role (a low-sensitivity operational summary, not
+  // privileged data) - individual rows below are still filtered by the same
+  // canSeeX flags their corresponding cards already use, so a role that
+  // can't see the Compliance Frameworks card, for example, doesn't see a
+  // Workspace Readiness row about it either.
+  const workspaceReadinessItems = overview.workspaceReadiness.filter((item) => {
+    if (item.id === 'usersAndTeams') return canSeeUsers;
+    if (item.id === 'playbook') return canSeeWorkflows;
+    if (item.id === 'compliance') return canSeeCompliance;
+    return true;
+  });
+  const readinessActionFor = (id: WorkspaceReadinessItem['id']): { href: string; label: string } | null => {
+    switch (id) {
+      case 'organization':
+        return canManageIntegrations ? { href: '/dashboard/settings', label: 'Open Settings' } : null;
+      case 'usersAndTeams':
+        return canManageUsers ? { href: '/settings/users', label: 'Manage Users & Teams' } : null;
+      case 'integrations':
+        return canManageIntegrations ? { href: '/dashboard/settings/integrations', label: 'Manage integrations' } : null;
+      case 'playbook':
+        return canSeeWorkflows ? { href: '/playbooks', label: 'Open Playbook AI' } : null;
+      case 'compliance':
+        return canSeeCompliance ? { href: '/trust/compliance', label: 'Open Compliance Hub' } : null;
+      case 'approvalCaptureActive':
+        return canCaptureApproval ? { href: '/approvals/manual', label: 'Capture an approval' } : null;
+      default:
+        return null;
+    }
+  };
+  // Promoted right under the KPI strip (ahead of every activity/chart card)
+  // when this workspace has never captured a single approval - exactly the
+  // scenario the visual-density review is about, where those cards would
+  // otherwise be the very first thing a new admin sees, all empty.
+  const promoteReadiness = !overview.hasEverCapturedApproval;
 
   const rangeOptions: { key: DashboardRangeKey; label: string }[] = [
     { key: '7d', label: '7 days' },
@@ -327,9 +471,9 @@ export function OrganizationDashboardView({
           linkLabel="View →"
         />
         <KpiCard
-          label="Pending Approvals"
+          label="Pending Approval Actions"
           value={compact(overview.kpis.pendingApprovals.value)}
-          context="Requires action"
+          context="Open now · any age"
           color="#f4b529"
           icon={<Clock3 className="h-4 w-4" />}
           href="/dashboard/pending-actions"
@@ -338,7 +482,7 @@ export function OrganizationDashboardView({
         <KpiCard
           label="High Risk Approvals"
           value={compact(overview.kpis.highRiskApprovals.value)}
-          context="Detected this period"
+          context={`New detections · ${range.label.toLowerCase()}`}
           trend={trendBadge(overview.kpis.highRiskApprovals.value, overview.kpis.highRiskApprovals.prevValue, 'down')}
           color="#ff624a"
           icon={<AlertTriangle className="h-4 w-4" />}
@@ -365,10 +509,17 @@ export function OrganizationDashboardView({
           linkLabel="Compliance hub →"
         />
       </div>
+      <p className="px-1 text-[10px] text-al-text-muted">
+        KPIs above are scoped to {range.label.toLowerCase()}. Pending Approval Actions and Open Action Items reflect everything currently open, regardless of when it was created.
+      </p>
 
-      {/* Activity + category */}
+      {workspaceReadinessItems.length && promoteReadiness ? (
+        <WorkspaceReadinessSection items={workspaceReadinessItems} readinessActionFor={readinessActionFor} />
+      ) : null}
+
+      {/* Row 2: Approval Activity | Approvals by Category | Recent Activity */}
       <div className="grid gap-3 xl:grid-cols-12">
-        <article className={`${panelClass} p-4 xl:col-span-7`}>
+        <article className={`${panelClass} p-4 xl:col-span-5`}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <SectionHeader title="Approval Activity" subtitle={`Approved, rejected and pending · ${range.label.toLowerCase()}`} />
             <div className="flex items-center rounded-md border border-al-border bg-al-surface-elevated p-0.5 text-[10px] font-semibold">
@@ -383,10 +534,10 @@ export function OrganizationDashboardView({
               ))}
             </div>
           </div>
-          <ActivityChart buckets={overview.activity} />
+          <ActivityChart buckets={overview.activity} emptyActions={activityEmptyActions} />
         </article>
 
-        <article className={`${panelClass} p-4 xl:col-span-5`}>
+        <article className={`${panelClass} p-4 xl:col-span-4`}>
           <SectionHeader title="Approvals by Category" subtitle={range.label} href="/dashboard/approvals" linkLabel="All approvals" />
           <div className="mt-3">
             {/* Total is the sum of the slices themselves, never the separate
@@ -395,25 +546,16 @@ export function OrganizationDashboardView({
                 the KPI from getCoreAnalytics) and must never be allowed to
                 silently disagree, including when one of the two degrades
                 independently of the other. */}
-            <Donut slices={overview.categories} total={overview.categories.reduce((sum, c) => sum + c.count, 0)} centerLabel="Total" />
-          </div>
-        </article>
-      </div>
-
-      {/* Recent approvals + recent activity */}
-      <div className="grid gap-3 xl:grid-cols-12">
-        <article className={`${panelClass} p-4 xl:col-span-8`}>
-          <SectionHeader title="Recent Approvals" subtitle={range.label} href="/dashboard/approvals" linkLabel="View all" />
-          <div className="mt-3">
-            {recentApprovalTableRecords.length > 0 ? (
-              <ApprovalTable approvals={recentApprovalTableRecords} />
-            ) : (
-              <p className="py-10 text-center text-xs text-al-text-muted">No approvals captured in this period yet.</p>
-            )}
+            <Donut
+              slices={overview.categories}
+              total={overview.categories.reduce((sum, c) => sum + c.count, 0)}
+              centerLabel="Total"
+              emptyText="No records in this period."
+            />
           </div>
         </article>
 
-        <article className={`${panelClass} p-4 xl:col-span-4`}>
+        <article className={`${panelClass} p-4 xl:col-span-3`}>
           <SectionHeader title="Recent Activity" subtitle="Latest audited events" href="/dashboard/audit-log" />
           <div className="mt-3 divide-y divide-white/[0.06]">
             {overview.recentAudit.length ? (
@@ -427,15 +569,49 @@ export function OrganizationDashboardView({
                 </div>
               ))
             ) : (
-              <p className="py-10 text-center text-xs text-al-text-muted">Activity will appear here as your team works in ApprovLine.</p>
+              <p className="py-4 text-center text-xs text-al-text-muted">Activity will appear here as your team works in ApprovLine.</p>
             )}
           </div>
         </article>
       </div>
 
-      {/* Integrations + workflows + risk */}
+      {/* Row 3: Recent Approvals | Risk Distribution */}
       <div className="grid gap-3 xl:grid-cols-12">
+        <article className={`${panelClass} p-4 xl:col-span-8`}>
+          <SectionHeader title="Recent Approvals" subtitle={range.label} href="/dashboard/approvals" linkLabel="View all" />
+          <div className="mt-3">
+            {recentApprovalTableRecords.length > 0 ? (
+              <ApprovalTable approvals={recentApprovalTableRecords} />
+            ) : (
+              <div className="py-4 text-center">
+                <p className="text-xs font-semibold text-al-text-secondary">No approvals captured in this period.</p>
+                <p className="mt-1 text-[10px] text-al-text-muted">
+                  Once approvals are captured, they will appear here with subject, approver, risk, status, timestamp and source.
+                </p>
+                <Link href="/dashboard/approvals" className="mt-2 inline-block text-[11px] font-semibold text-al-info hover:text-al-info">
+                  Open Approvals →
+                </Link>
+              </div>
+            )}
+          </div>
+        </article>
+
         <article className={`${panelClass} p-4 xl:col-span-4`}>
+          <SectionHeader title="Risk Distribution" subtitle={range.label} href="/dashboard/approvals" />
+          <div className="mt-3">
+            <Donut
+              slices={overview.riskDistribution.map((s) => ({ name: s.label, count: s.count, percentage: s.percentage }))}
+              total={overview.riskDistribution.reduce((sum, s) => sum + s.count, 0)}
+              centerLabel="Approvals"
+              emptyText="No risk records in this period."
+            />
+          </div>
+        </article>
+      </div>
+
+      {/* Row 4: Top Integrations | Playbook Status | Open Action Items */}
+      <div className="grid gap-3 xl:grid-cols-12">
+        <article className={`${panelClass} p-4 ${canSeeWorkflows ? 'xl:col-span-4' : 'xl:col-span-6'}`}>
           <SectionHeader
             title="Top Integrations"
             subtitle={`${overview.integrations.connectedCount} connected · ${overview.integrations.nativeCatalogSize} in catalog`}
@@ -443,25 +619,27 @@ export function OrganizationDashboardView({
             linkLabel="Manage"
           />
           <div className="mt-3 divide-y divide-white/[0.06]">
-            {overview.connectors.length ? (
-              overview.connectors.slice(0, 6).map((connector) => {
-                const meta = sourceMeta(connector.provider);
+            {overview.integrations.connectedList.length ? (
+              overview.integrations.connectedList.slice(0, 4).map((connector) => {
+                const meta = sourceMeta(connector.provider.toLowerCase());
                 return (
-                  <div key={connector.name} className="flex items-center gap-2.5 py-2">
+                  <div key={connector.provider} className="flex items-center gap-2.5 py-2">
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-[9px] font-black text-white" style={{ backgroundColor: meta.color }}>
                       {meta.initials}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[11px] font-semibold text-al-text-secondary">{connector.name}</p>
-                      <p className="text-[9px] text-al-text-muted">{connector.count} messages · {statusLabel(connector.status)}</p>
-                    </div>
-                    <span className="text-[10px] font-bold text-al-text-muted">{connector.percentage}%</span>
+                    <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-al-text-secondary">{meta.label}</span>
+                    <span className="rounded-full bg-al-success/10 px-2 py-0.5 text-[9px] font-bold text-al-success">Connected</span>
                   </div>
                 );
               })
             ) : (
-              <p className="py-6 text-center text-xs text-al-text-muted">No integration activity in this period.</p>
+              <p className="py-6 text-center text-xs text-al-text-muted">No integrations connected yet.</p>
             )}
+            {overview.integrations.connectedList.length > 4 ? (
+              <Link href={canManageIntegrations ? '/dashboard/settings/integrations' : '/dashboard'} className="block pt-2 text-center text-[10px] font-semibold text-al-info hover:text-al-info">
+                View all {overview.integrations.connectedCount} →
+              </Link>
+            ) : null}
             {overview.integrations.issueCount > 0 ? (
               <p className="flex items-center gap-1.5 pt-2 text-[10px] font-semibold text-al-warning">
                 <ShieldAlert className="h-3.5 w-3.5" /> {overview.integrations.issueCount} integration{overview.integrations.issueCount === 1 ? '' : 's'} need attention
@@ -476,32 +654,39 @@ export function OrganizationDashboardView({
             <div className="mt-3 divide-y divide-white/[0.06]">
               {overview.workflows.items.length ? (
                 overview.workflows.items.slice(0, 6).map((workflow) => (
-                  <div key={workflow.id} className="flex items-center gap-2.5 py-2">
-                    <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-al-accent" />
-                    <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-al-text-secondary">{workflow.name}</span>
-                    {workflow.complianceRate !== null ? (
-                      <span className="flex items-center gap-1.5">
-                        <span className="h-1.5 w-10 overflow-hidden rounded-full bg-al-border">
-                          <span
-                            className={`block h-full rounded-full ${workflow.complianceRate >= 85 ? 'bg-al-success' : workflow.complianceRate >= 60 ? 'bg-al-warning' : 'bg-al-danger'}`}
-                            style={{ width: `${workflow.complianceRate}%` }}
-                          />
+                  <div key={workflow.id} className="py-2">
+                    <div className="flex items-center gap-2.5">
+                      <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-al-accent" />
+                      <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-al-text-secondary">{workflow.name}</span>
+                      {workflow.complianceRate !== null ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-1.5 w-10 overflow-hidden rounded-full bg-al-border">
+                            <span
+                              className={`block h-full rounded-full ${workflow.complianceRate >= 85 ? 'bg-al-success' : workflow.complianceRate >= 60 ? 'bg-al-warning' : 'bg-al-danger'}`}
+                              style={{ width: `${workflow.complianceRate}%` }}
+                            />
+                          </span>
+                          <span className="text-[10px] font-bold text-al-text-secondary">{workflow.complianceRate}%</span>
                         </span>
-                        <span className="text-[10px] font-bold text-al-text-secondary">{workflow.complianceRate}%</span>
-                      </span>
-                    ) : (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                          workflow.status === 'READY'
-                            ? 'bg-al-success/10 text-al-success'
-                            : workflow.status === 'ERROR'
-                              ? 'bg-al-danger/10 text-al-danger'
-                              : 'bg-al-warning/10 text-al-warning'
-                        }`}
-                      >
-                        {workflow.status === 'READY' ? 'Active' : workflow.status === 'ERROR' ? 'Needs attention' : statusLabel(workflow.status)}
-                      </span>
-                    )}
+                      ) : (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                            workflow.status === 'READY'
+                              ? 'bg-al-success/10 text-al-success'
+                              : workflow.status === 'ERROR'
+                                ? 'bg-al-danger/10 text-al-danger'
+                                : 'bg-al-warning/10 text-al-warning'
+                          }`}
+                        >
+                          {workflow.status === 'READY' ? 'Active' : workflow.status === 'ERROR' ? 'Needs attention' : statusLabel(workflow.status)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 pl-6 text-[9px] text-al-text-muted">
+                      {workflow.evaluatedCount > 0 && workflow.lastEvaluatedAt
+                        ? `${workflow.evaluatedCount} compliance evaluation${workflow.evaluatedCount === 1 ? '' : 's'} · Last evaluated ${new Date(workflow.lastEvaluatedAt).toLocaleDateString()}`
+                        : 'No compliance evaluations yet'}
+                    </p>
                   </div>
                 ))
               ) : (
@@ -511,65 +696,12 @@ export function OrganizationDashboardView({
           </article>
         ) : null}
 
-        <article className={`${panelClass} p-4 ${canSeeWorkflows ? 'xl:col-span-4' : 'xl:col-span-8'}`}>
-          <SectionHeader title="Risk Distribution" subtitle={range.label} href="/dashboard/approvals" />
-          <div className="mt-3">
-            <Donut
-              slices={overview.riskDistribution.map((s) => ({ name: s.label, count: s.count, percentage: s.percentage }))}
-              total={overview.riskDistribution.reduce((sum, s) => sum + s.count, 0)}
-              centerLabel="Approvals"
-            />
-          </div>
-        </article>
-      </div>
-
-      {/* Users & teams + compliance + open items */}
-      <div className="grid gap-3 xl:grid-cols-12">
-        {canSeeUsers ? (
-          <article className={`${panelClass} p-4 xl:col-span-4`}>
-            <SectionHeader title="Users & Teams" subtitle="Workspace membership" href={canManageUsers ? '/settings/users' : undefined} linkLabel="Manage" />
-            <div className="mt-3 grid grid-cols-2 gap-2.5">
-              {[
-                ['Total Users', overview.usersAndTeams.totalUsers],
-                ['Administrators', overview.usersAndTeams.adminUsers],
-                ['Teams', overview.usersAndTeams.totalTeams],
-                ['Pending Invites', overview.usersAndTeams.pendingInvites],
-              ].map(([label, value]) => (
-                <div key={String(label)} className="rounded-md border border-white/[0.06] bg-al-surface/[0.02] p-2.5">
-                  <p className="text-lg font-bold text-al-text">{value}</p>
-                  <p className="text-[9px] text-al-text-muted">{label}</p>
-                </div>
-              ))}
-            </div>
-          </article>
-        ) : null}
-
-        {canSeeCompliance ? (
-          <article className={`${panelClass} p-4 xl:col-span-4`}>
-            <SectionHeader title="Compliance Frameworks" subtitle="Configured in Compliance Hub" href="/trust/compliance" linkLabel="View all" />
-            <div className="mt-3 grid gap-2">
-              {overview.complianceFrameworks.length ? (
-                overview.complianceFrameworks.slice(0, 5).map((framework) => (
-                  <div key={framework.slug} className="flex items-center justify-between gap-2 rounded-md border border-white/[0.05] bg-al-surface/[0.02] px-2.5 py-2 text-[11px]">
-                    <span className="flex items-center gap-2 text-al-text-secondary"><ShieldCheck className="h-3.5 w-3.5 text-al-accent" />{framework.name}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${framework.isEnabled ? 'bg-al-success/10 text-al-success' : 'bg-al-text-muted/10 text-al-text-muted'}`}>
-                      {framework.isEnabled ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="py-4 text-center text-xs text-al-text-muted">No compliance frameworks configured yet.</p>
-              )}
-            </div>
-          </article>
-        ) : null}
-
-        <article className={`${panelClass} p-4 ${canSeeUsers && canSeeCompliance ? 'xl:col-span-4' : 'xl:col-span-8'}`}>
+        <article className={`${panelClass} p-4 ${canSeeWorkflows ? 'xl:col-span-4' : 'xl:col-span-6'}`}>
           <SectionHeader title="Open Action Items" subtitle="Needs attention now" href="/dashboard/pending-actions" linkLabel="Open Action Center" />
           <div className="mt-3 grid gap-2">
             {[
-              ['Pending Approvals', overview.openItems.needsAttention, '/dashboard/pending-actions'],
-              ['High Risk Approvals', overview.openItems.highPriority, '/dashboard/pending-actions?priority=high'],
+              ['Pending Approval Actions', overview.openItems.needsAttention, '/dashboard/pending-actions'],
+              ['High-Risk Approvals (Open)', overview.openItems.highPriority, '/dashboard/pending-actions?priority=high'],
               ['Overdue Approvals', overview.openItems.overdue, '/dashboard/pending-actions?status=OPEN'],
               ['Integration Issues', overview.integrations.issueCount, canManageIntegrations ? '/dashboard/settings/integrations' : '/dashboard/pending-actions'],
             ]
@@ -591,55 +723,99 @@ export function OrganizationDashboardView({
         </article>
       </div>
 
-      {/* Plan & Usage */}
-      {canSeeBilling ? (
-        <div className="grid gap-3 xl:grid-cols-12">
-          <article className={`${panelClass} p-4 xl:col-span-12`}>
+      {/* Row 5: Users & Teams | Compliance Frameworks | Plan & Usage */}
+      <div className="grid gap-3 xl:grid-cols-12">
+        {canSeeUsers ? (
+          <article className={`${panelClass} p-4 ${threeColSpan([canSeeUsers, canSeeCompliance, canSeeBilling].filter(Boolean).length)}`}>
+            <SectionHeader title="Workspace Membership" subtitle="Users & teams" href={canManageUsers ? '/settings/users' : undefined} linkLabel="Manage" />
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              {[
+                ['Total Users', overview.usersAndTeams.totalUsers],
+                ['Administrators', overview.usersAndTeams.adminUsers],
+                ['Teams', overview.usersAndTeams.totalTeams],
+                ['Pending Invites', overview.usersAndTeams.pendingInvites],
+              ].map(([label, value]) => (
+                <div key={String(label)} className="rounded-md border border-white/[0.06] bg-al-surface/[0.02] p-2.5">
+                  <p className="text-lg font-bold text-al-text">{value}</p>
+                  <p className="text-[9px] text-al-text-muted">{label}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+        ) : null}
+
+        {canSeeCompliance ? (
+          <article className={`${panelClass} p-4 ${threeColSpan([canSeeUsers, canSeeCompliance, canSeeBilling].filter(Boolean).length)}`}>
+            <SectionHeader title="Compliance Frameworks" subtitle="Configured in Compliance Hub" href="/trust/compliance" linkLabel="View all" />
+            <div className="mt-3 grid gap-2">
+              {overview.complianceFrameworks.length ? (
+                overview.complianceFrameworks.slice(0, 5).map((framework) => (
+                  <div key={framework.slug} className="flex items-center justify-between gap-2 rounded-md border border-white/[0.05] bg-al-surface/[0.02] px-2.5 py-2 text-[11px]">
+                    <span className="flex items-center gap-2 text-al-text-secondary"><ShieldCheck className="h-3.5 w-3.5 text-al-accent" />{framework.name}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${framework.isEnabled ? 'bg-al-success/10 text-al-success' : 'bg-al-text-muted/10 text-al-text-muted'}`}>
+                      {framework.isEnabled ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="py-4 text-center text-xs text-al-text-muted">No compliance frameworks configured yet.</p>
+              )}
+            </div>
+          </article>
+        ) : null}
+
+        {canSeeBilling ? (
+          <article className={`${panelClass} p-4 ${threeColSpan([canSeeUsers, canSeeCompliance, canSeeBilling].filter(Boolean).length)}`}>
             <SectionHeader title="Plan & Usage" subtitle="Billing & Plan" href="/dashboard/settings?tab=billing" linkLabel="Manage Plan" />
             {overview.billing ? (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-md border border-white/[0.06] bg-al-surface/[0.02] p-3">
-                  <p className="text-[9px] uppercase tracking-wide text-al-text-muted">Plan</p>
-                  <p className="mt-1 text-sm font-bold text-al-text">{overview.billing.planLabel}</p>
-                  <span
-                    className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                      overview.billing.accountStatus === 'ACTIVE' ? 'bg-al-success/10 text-al-success' : 'bg-al-warning/10 text-al-warning'
-                    }`}
-                  >
-                    {statusLabel(overview.billing.accountStatus)}
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-al-text-muted">Plan</span>
+                  <span className="flex items-center gap-1.5 font-semibold text-al-text">
+                    {overview.billing.planLabel}
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                        overview.billing.accountStatus === 'ACTIVE' ? 'bg-al-success/10 text-al-success' : 'bg-al-warning/10 text-al-warning'
+                      }`}
+                    >
+                      {statusLabel(overview.billing.accountStatus)}
+                    </span>
                   </span>
                 </div>
-                <div className="rounded-md border border-white/[0.06] bg-al-surface/[0.02] p-3">
-                  <p className="text-[9px] uppercase tracking-wide text-al-text-muted">Seats</p>
-                  <p className="mt-1 text-sm font-bold text-al-text">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-al-text-muted">Approvals this month</span>
+                  <span className="font-semibold text-al-text">{compact(overview.planLimits?.approvalsThisMonth ?? 0)}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-al-text-muted">Seats</span>
+                  <span className="font-semibold text-al-text">
                     {overview.billing.usedSeats} / {overview.billing.purchasedSeats > 0 ? overview.billing.purchasedSeats : (overview.planLimits?.seatLimit ?? '∞')}
-                  </p>
-                  <p className="mt-1 text-[9px] text-al-text-muted">{overview.billing.allocatedSeats} allocated</p>
+                  </span>
                 </div>
-                <div className="rounded-md border border-white/[0.06] bg-al-surface/[0.02] p-3">
-                  <p className="text-[9px] uppercase tracking-wide text-al-text-muted">Connected Integrations</p>
-                  <p className="mt-1 text-sm font-bold text-al-text">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-al-text-muted">Integrations</span>
+                  <span className="font-semibold text-al-text">
                     {overview.integrations.connectedCount} / {overview.planLimits?.connectedSystemLimit ?? '∞'}
-                  </p>
-                  <p className="mt-1 text-[9px] text-al-text-muted">{overview.planLimits?.connectedSystemLimit === null ? 'No limit configured' : 'Included with plan'}</p>
-                </div>
-                <div className="rounded-md border border-white/[0.06] bg-al-surface/[0.02] p-3">
-                  <p className="text-[9px] uppercase tracking-wide text-al-text-muted">Approvals This Month</p>
-                  <p className="mt-1 text-sm font-bold text-al-text">{compact(overview.planLimits?.approvalsThisMonth ?? 0)}</p>
-                  <p className="mt-1 text-[9px] text-al-text-muted">No plan limit configured</p>
+                  </span>
                 </div>
               </div>
             ) : (
-              <div className="mt-3 flex items-center gap-3 rounded-md border border-dashed border-al-border p-4">
-                <CreditCard className="h-5 w-5 shrink-0 text-al-text-muted" />
-                <div>
-                  <p className="text-xs font-semibold text-al-text">Plan not provisioned</p>
-                  <p className="mt-0.5 text-[10px] text-al-text-muted">Contact your administrator to provision a plan for this workspace.</p>
-                </div>
+              <div className="mt-3 space-y-1.5 text-[11px]">
+                <div className="flex items-center justify-between"><span className="text-al-text-muted">Plan</span><span className="font-semibold text-al-text">Not provisioned</span></div>
+                <div className="flex items-center justify-between"><span className="text-al-text-muted">Status</span><span className="font-semibold text-al-warning">Awaiting provisioning</span></div>
+                <div className="flex items-center justify-between"><span className="text-al-text-muted">Next step</span><span className="font-semibold text-al-text">Provision a workspace plan</span></div>
+                <Link href="/dashboard/settings?tab=billing" className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-al-info hover:text-al-info">
+                  <CreditCard className="h-3.5 w-3.5" /> Open Billing & Plan →
+                </Link>
               </div>
             )}
           </article>
-        </div>
+        ) : null}
+      </div>
+
+      {/* Row 6: Workspace Readiness (bottom placement when approval data isn't fully empty) */}
+      {workspaceReadinessItems.length && !promoteReadiness ? (
+        <WorkspaceReadinessSection items={workspaceReadinessItems} readinessActionFor={readinessActionFor} />
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-1 pt-3 text-[9px] text-al-text-secondary">

@@ -323,6 +323,27 @@ export type DashboardWorkflow = {
    *  an honest "not enough data" state, never a fabricated percentage). */
   complianceRate: number | null;
   evaluatedCount: number;
+  /** Most recent ApprovalComplianceEvaluation.createdAt against one of this
+   *  playbook's rules - null when evaluatedCount is 0. Never invented when
+   *  evaluation metrics don't exist (Section 7's explicit instruction). */
+  lastEvaluatedAt: string | null;
+};
+
+export type ConnectedIntegration = { provider: string; connectedAt: string };
+
+/** One real, database-backed Workspace Readiness check (Section 4). Every
+ *  item's `complete` flag is derived directly from data already computed
+ *  elsewhere in this file - never a second, independent notion of
+ *  "configured." `href` is only set when the viewer's role can actually
+ *  reach that destination (checked by the caller in
+ *  OrganizationDashboardView, which already knows the real per-card RBAC
+ *  gates - this file doesn't duplicate a permission system, per the
+ *  project's "never create a second permission system" rule). */
+export type WorkspaceReadinessItem = {
+  id: 'organization' | 'usersAndTeams' | 'integrations' | 'playbook' | 'compliance' | 'approvalCaptureActive' | 'approvalActivityInPeriod';
+  label: string;
+  complete: boolean;
+  detail: string;
 };
 
 export type DashboardOverview = {
@@ -331,6 +352,10 @@ export type DashboardOverview = {
   degraded: string[];
   kpis: {
     totalApprovals: { value: number; prevValue: number | null };
+    /** Live/unscoped - see openItems.needsAttention below, which is the
+     *  exact same number under a distinct label ("Pending Approval
+     *  Actions"), so the two never contradict each other while still each
+     *  being independently correct (Section 2). */
     pendingApprovals: { value: number };
     highRiskApprovals: { value: number; prevValue: number | null };
     avgApprovalTimeHours: { value: number | null; prevValue: number | null };
@@ -344,11 +369,19 @@ export type DashboardOverview = {
   riskDistribution: DashboardRiskSlice[];
   recentApprovals: { records: (ApprovalListRecord & { sources: ApprovalSourceSummary | null })[]; total: number; degraded: boolean };
   connectors: CoreAnalytics['connectorActivity'];
-  integrations: { connectedCount: number; nativeCatalogSize: number; issueCount: number };
+  integrations: { connectedCount: number; nativeCatalogSize: number; issueCount: number; connectedList: ConnectedIntegration[] };
   workflows: { items: DashboardWorkflow[]; total: number; active: number };
   usersAndTeams: { totalUsers: number; adminUsers: number; totalTeams: number; pendingInvites: number };
   complianceFrameworks: SettingsOverview['complianceFrameworks'];
   openItems: ActionCenterKpis;
+  /** True only when this organization has NEVER captured a single
+   *  ApprovalRecord, all time (not date-range scoped) - distinct from
+   *  "zero approvals in the selected period," which periodRows/kpis
+   *  already represent on their own. Drives Workspace Readiness's
+   *  "Approval capture not yet active" vs "No approval activity in
+   *  selected period" distinction (Section 4). */
+  hasEverCapturedApproval: boolean;
+  workspaceReadiness: WorkspaceReadinessItem[];
   billing: SettingsOverview['billing'];
   /**
    * Real plan-limit context for the dashboard's Plan & Usage card, derived
@@ -403,6 +436,8 @@ export async function getDashboardOverview(
   const [
     periodRows,
     integrationIssueCount,
+    connectedIntegrationRows,
+    allTimeApprovalCount,
     playbooks,
     playbookEvaluations,
     recentApprovalsPage,
@@ -419,6 +454,30 @@ export async function getDashboardOverview(
       degraded,
     ),
     safe('dashboard:integrationIssues', prisma.integration.count({ where: { organizationId, status: { in: ['ERROR', 'NEEDS_REAUTH'] } } }), 0, degraded),
+    // Directly against Integration - deliberately NOT derived from
+    // analytics.connectorActivity, which only lists a provider that has
+    // approval messages WITHIN the selected period. A real CONNECTED
+    // integration with zero approval volume this period is still a real,
+    // connected integration, and Section 6's "show a compact list of the
+    // most relevant connected integrations if real connection records
+    // exist" requires that to render regardless of period activity.
+    safe(
+      'dashboard:connectedIntegrations',
+      prisma.integration.findMany({
+        where: { organizationId, status: 'CONNECTED' },
+        select: { provider: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 8,
+      }),
+      [],
+      degraded,
+    ),
+    // Unscoped by date range on purpose - distinguishes "this org has never
+    // captured a single approval" (Workspace Readiness: "Approval capture
+    // not yet active") from "this org has real history but nothing fell in
+    // the selected window" (Workspace Readiness: "No approval activity in
+    // selected period") - periodRows/analytics can't tell those apart.
+    safe('dashboard:allTimeApprovalCount', prisma.approvalRecord.count({ where: { organizationId } }), 0, degraded),
     safe(
       'dashboard:playbooks',
       prisma.playbookDocument.findMany({
@@ -434,7 +493,7 @@ export async function getDashboardOverview(
       'dashboard:playbookEvaluations',
       prisma.approvalComplianceEvaluation.findMany({
         where: { organizationId, rule: { isNot: null } },
-        select: { score: true, rule: { select: { documentId: true } } },
+        select: { score: true, createdAt: true, rule: { select: { documentId: true } } },
         take: 3000,
       }),
       [],
@@ -500,17 +559,18 @@ export async function getDashboardOverview(
 
   const activity = buildActivityBuckets(periodRows, range, granularity);
 
-  // Real per-playbook average ApprovalComplianceEvaluation.score, when this
-  // playbook has actually been evaluated against a real approval at least
-  // once - never a fabricated percentage for a document with zero
-  // evaluations.
-  const evaluationsByDocument = new Map<string, { sum: number; count: number }>();
+  // Real per-playbook average ApprovalComplianceEvaluation.score plus its
+  // most recent evaluation timestamp, when this playbook has actually been
+  // evaluated against a real approval at least once - never a fabricated
+  // percentage or timestamp for a document with zero evaluations.
+  const evaluationsByDocument = new Map<string, { sum: number; count: number; lastEvaluatedAt: Date }>();
   for (const evaluation of playbookEvaluations) {
     const documentId = evaluation.rule?.documentId;
     if (!documentId) continue;
-    const bucket = evaluationsByDocument.get(documentId) ?? { sum: 0, count: 0 };
+    const bucket = evaluationsByDocument.get(documentId) ?? { sum: 0, count: 0, lastEvaluatedAt: evaluation.createdAt };
     bucket.sum += evaluation.score;
     bucket.count += 1;
+    if (evaluation.createdAt > bucket.lastEvaluatedAt) bucket.lastEvaluatedAt = evaluation.createdAt;
     evaluationsByDocument.set(documentId, bucket);
   }
 
@@ -518,6 +578,70 @@ export async function getDashboardOverview(
     ...record,
     sources: sourceSummaries.get(record.id) ?? null,
   }));
+
+  const connectedList: ConnectedIntegration[] = connectedIntegrationRows.map((row) => ({
+    provider: row.provider,
+    connectedAt: row.updatedAt.toISOString(),
+  }));
+
+  const organizationConfigured = settings?.organization.onboardedAt !== null && settings?.organization.onboardedAt !== undefined;
+  const usersAndTeamsConfigured = (settings?.stats.totalTeams ?? 0) > 0;
+  const integrationsConnected = (settings?.kpis.connectedIntegrations ?? 0) > 0;
+  const playbookConfigured = (settings?.stats.totalPlaybooks ?? playbooks.length) > 0;
+  const complianceConfigured = (settings?.complianceFrameworks.length ?? 0) > 0;
+  const hasEverCapturedApproval = allTimeApprovalCount > 0;
+  const hasApprovalActivityInPeriod = periodRows.length > 0;
+
+  // Every check below is derived from a value already computed above in
+  // this same function - Workspace Readiness is a read-only summary view
+  // over that data, never a second, independent source of truth for any of
+  // these facts (Section 4).
+  const workspaceReadiness: WorkspaceReadinessItem[] = [
+    {
+      id: 'organization',
+      label: 'Organization configured',
+      complete: organizationConfigured,
+      detail: organizationConfigured ? 'Workspace onboarding completed' : 'Workspace profile setup is incomplete',
+    },
+    {
+      id: 'usersAndTeams',
+      label: 'Users & teams configured',
+      complete: usersAndTeamsConfigured,
+      detail: usersAndTeamsConfigured
+        ? `${settings?.stats.totalTeams ?? 0} team${(settings?.stats.totalTeams ?? 0) === 1 ? '' : 's'} configured`
+        : 'No teams created yet',
+    },
+    {
+      id: 'integrations',
+      label: 'Integrations connected',
+      complete: integrationsConnected,
+      detail: integrationsConnected ? `${settings?.kpis.connectedIntegrations ?? 0} connected` : 'No integrations connected yet',
+    },
+    {
+      id: 'playbook',
+      label: 'Playbook configured',
+      complete: playbookConfigured,
+      detail: playbookConfigured ? `${settings?.stats.totalPlaybooks ?? playbooks.length} playbook${(settings?.stats.totalPlaybooks ?? playbooks.length) === 1 ? '' : 's'} configured` : 'No playbook uploaded yet',
+    },
+    {
+      id: 'compliance',
+      label: 'Compliance frameworks configured',
+      complete: complianceConfigured,
+      detail: complianceConfigured ? `${settings?.complianceFrameworks.length ?? 0} framework${(settings?.complianceFrameworks.length ?? 0) === 1 ? '' : 's'} configured` : 'No compliance frameworks configured yet',
+    },
+    {
+      id: 'approvalCaptureActive',
+      label: 'Approval capture active',
+      complete: hasEverCapturedApproval,
+      detail: hasEverCapturedApproval ? 'Approvals have been captured in this workspace' : 'Approval capture not yet active',
+    },
+    {
+      id: 'approvalActivityInPeriod',
+      label: 'Approval activity in selected period',
+      complete: hasApprovalActivityInPeriod,
+      detail: hasApprovalActivityInPeriod ? `Approvals captured ${range.label.toLowerCase()}` : `No approval activity in ${range.label.toLowerCase()}`,
+    },
+  ];
 
   return {
     range,
@@ -554,7 +678,12 @@ export async function getDashboardOverview(
     // use - rather than re-issuing that query a second time per dashboard
     // load (see the sequencing comment above `analytics`/`settings` for why
     // that duplication mattered).
-    integrations: { connectedCount: settings?.kpis.connectedIntegrations ?? 0, nativeCatalogSize: settings?.kpis.integrationsInCatalog ?? 0, issueCount: integrationIssueCount },
+    integrations: {
+      connectedCount: settings?.kpis.connectedIntegrations ?? 0,
+      nativeCatalogSize: settings?.kpis.integrationsInCatalog ?? 0,
+      issueCount: integrationIssueCount,
+      connectedList,
+    },
     workflows: {
       items: playbooks.map((p) => {
         const evaluations = evaluationsByDocument.get(p.id);
@@ -565,6 +694,7 @@ export async function getDashboardOverview(
           updatedAt: p.updatedAt.toISOString(),
           complianceRate: evaluations ? Math.round(evaluations.sum / evaluations.count) : null,
           evaluatedCount: evaluations?.count ?? 0,
+          lastEvaluatedAt: evaluations ? evaluations.lastEvaluatedAt.toISOString() : null,
         };
       }),
       total: settings?.stats.totalPlaybooks ?? playbooks.length,
@@ -578,6 +708,8 @@ export async function getDashboardOverview(
     },
     complianceFrameworks: settings?.complianceFrameworks ?? [],
     openItems: actionCenter?.kpis ?? { needsAttention: 0, dueToday: 0, overdue: 0, highPriority: 0, recentlyResolved: 0 },
+    hasEverCapturedApproval,
+    workspaceReadiness,
     billing: settings?.billing ?? null,
     planLimits: settings?.billing
       ? {
