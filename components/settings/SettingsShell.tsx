@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, useTransition } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
   BarChart3,
@@ -54,6 +54,11 @@ const TABS: { id: Tab; label: string; icon: typeof Settings2 }[] = [
   { id: 'audit', label: 'Audit & Logs', icon: ScrollText },
   { id: 'system', label: 'System', icon: Settings2 },
 ];
+
+const TAB_IDS = new Set<string>(TABS.map((tab) => tab.id));
+function isTab(value: string | null): value is Tab {
+  return value !== null && TAB_IDS.has(value);
+}
 
 // ─── Shared UI primitives ─────────────────────────────────────────────────────
 
@@ -1639,7 +1644,18 @@ function SystemTab({ data }: { data: SettingsOverview }) {
 // ─── Shell ────────────────────────────────────────────────────────────────────
 
 export function SettingsShell({ data }: { data: SettingsOverview }) {
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  // Deep-link support (e.g. /dashboard/settings?tab=billing from the
+  // Organization Dashboard's "Manage Plan" card) - read once on mount, an
+  // invalid/missing value falls back to the existing default. Never
+  // re-reads on a later param change, matching this shell's existing
+  // client-only tab-switching model (setActiveTab, not the router) once
+  // the page has loaded.
+  const searchParams = useSearchParams();
+  const initialTab = useMemo<Tab>(() => {
+    const requested = searchParams.get('tab');
+    return isTab(requested) ? requested : 'overview';
+  }, [searchParams]);
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const router = useRouter();
 
   // The PATCH route already revalidates the server cache tag (settingsCacheTag);

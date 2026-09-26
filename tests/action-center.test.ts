@@ -267,4 +267,23 @@ assert.match(client, /<button type="button" onClick=\{\(\) => openAction\(row\.i
 assert.match(nav, /\{ href: '\/dashboard\/pending-actions', label: 'Action Center'/);
 assert.doesNotMatch(nav, /founder/i); // customer nav stays fully independent of the Founder Console nav
 
+// ─── Regression guard: computeKpis() viewer-scoping bug ───────────────────
+//
+// Found by running loadActionCenter() directly against real seeded
+// Postgres data during the Organization Dashboard hardening pass: a VIEWER
+// whose email/userId matched none of an org's ApprovalRecord rows still
+// got kpis.needsAttention === the full org count, while the row-level
+// query (buildWhere(), below) correctly returned zero rows for the same
+// viewer. Root cause: `{ organizationId, ...scope, ...openActionWhere() }`
+// spreads two objects that each contribute a top-level `OR` key - the
+// second spread silently discards the first, so the viewer-identity
+// restriction in `scope` was never actually applied to any KPI count for
+// a non-org-wide role (MEMBER/AUDITOR/VIEWER). buildWhere() never had this
+// bug because it nests openActionWhere()'s OR inside an `AND` array
+// instead of spreading it at the top level - computeKpis() now does the
+// same. This must never regress back to the two-spread form.
+assert.doesNotMatch(service, /\.\.\.scope,\s*\.\.\.openActionWhere\(\)/);
+assert.match(service, /\.\.\.scope,\s*AND:\s*\[openActionWhere\(\)\]/);
+assert.match(service, /organizationId: viewer\.organizationId,\s*\n\s*\.\.\.scope,\s*\n\s*AND: \[statusClause, searchClause, sourceClause, actionTypeClause, priorityClause\]/);
+
 console.log('Validated Action Center (/dashboard/pending-actions): built entirely on the existing ApprovalRecord/ManualApprovalDetail/ApprovalConfirmationRequest models with zero new Prisma model, one base query (ApprovalRecord) that already covers both the classifier\'s PENDING_REVIEW status and the manual-approval PENDING_CONFIRMATION verification status (no independent second list to union/dedupe), and reuses getSafeEvidenceUrl/getUnifiedEvidenceIdsForApprovals verbatim rather than a second link/correlation engine. Every query is organizationId-scoped from the server-resolved tenant, getActionById re-checks organizationId per lookup so a cross-tenant ID returns null, and RBAC extends the same MANAGER+ organization-wide visibility tier /dashboard/alerts already grants (base roles see only actions matched to their own real User.id or email, never a name guess). No fabricated Approve/Reject/Confirm button exists — every drawer action is a real link to an already-shipped page. No N+1 (exactly one approvalRecord.findMany, one batched user.findMany, one batched evidence-ID lookup). The customer-side DetailDrawer is a new, independent component (never importing the Founder-only drawer) but implements the identical proven accessibility contract (focus trap, Escape, focus restoration, body scroll lock, aria-modal/aria-labelledby). Real pagination, search, and filters. Action Center is now a real Core Operations nav item.');

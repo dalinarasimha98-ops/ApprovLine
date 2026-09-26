@@ -51,8 +51,64 @@ import { getCoreAnalytics, type CoreAnalytics, type DateRange } from '@/services
 import { getSettingsOverview, type SettingsOverview } from '@/services/settings';
 import { loadActionCenter, type ActionCenterViewer, type ActionCenterKpis, type ActionCenterResult } from '@/services/action-center';
 import { getIntegrationSummary } from '@/services/integrations/summary';
+import { commercialPlans } from '@/lib/plans';
 
 const QUERY_TIMEOUT_MS = 4500;
+
+/**
+ * Recent Activity is meant to answer "what happened in my organization
+ * recently" for an Owner/Admin - not a raw AuditLog tail. Unfiltered, that
+ * tail is dominated by low-signal personal-preference writes
+ * (THEME_PREFERENCE_UPDATED, NOTIFICATION_PREFERENCES_UPDATED), internal
+ * read/diagnostic tracking rows (approval_status_counts_query,
+ * evidence_retrieval, view_approval_drawer), and - critically - Founder
+ * Console actions performed on this org's CustomerAccount (customer.*,
+ * founder_demo.*, gateway.demo.*, pilot.*), which must never surface on the
+ * customer-facing Organization Dashboard at all. This allowlist is the
+ * real, already-emitted action strings (grepped from every
+ * `auditLog.create`/`writeAuditLog` call site) that describe something an
+ * organization admin would recognize as an actual operational event -
+ * never a new audit-logging engine, just a filter over the one that
+ * already exists.
+ */
+const MEANINGFUL_AUDIT_ACTIONS = [
+  'approval_record.created',
+  'approval_record.created_from_ingestion',
+  'MANUAL_APPROVAL_CREATED',
+  'MANUAL_APPROVAL_UPDATED',
+  'user.invited',
+  'user.reactivated',
+  'user.invite_cancelled',
+  'team.created',
+  'team.deleted',
+  'team.member.added',
+  'team.member.removed',
+  'team.member.role_changed',
+  'integration.slack.connected',
+  'integration.slack.disconnected',
+  'integration.gmail.connected',
+  'integration.outlook.connected',
+  'integration.teams.connected',
+  'integration.jira.connected',
+  'integration.servicenow.connected',
+  'integration.zoom.connected',
+  'integration.provider.status_changed',
+  'playbook.document.replaced',
+  'playbook.document.archived',
+  'playbook.document.deleted',
+  'playbook.compliance.evaluated',
+  'investigation.created',
+  'investigation.note_added',
+  'APPROVAL_POLICY_UPDATED',
+  'BRANDING_UPDATED',
+  'DEFAULT_SETTINGS_UPDATED',
+  'DOMAIN_UPDATED',
+  'settings.organization_updated',
+  'COMPLIANCE_ISSUE_CREATED',
+  'COMPLIANCE_ISSUE_RESOLVED',
+  'COMPLIANCE_CONTROL_UPDATED',
+  'COMPLIANCE_ATTESTATION_COMPLETED',
+];
 
 // --- Date range -------------------------------------------------------------
 
@@ -186,11 +242,73 @@ function defaultGranularity(range: DashboardRange): ActivityGranularity {
 
 // --- Read model ----------------------------------------------------------------
 
+/** Human-readable labels for the MEANINGFUL_AUDIT_ACTIONS allowlist above -
+ *  a plain capitalize-the-machine-name fallback reads poorly for dotted/
+ *  underscored action strings (e.g. "User.Invited"), so the Recent Activity
+ *  card gets an explicit, readable label for every action it can actually
+ *  render, and only falls back to the naive transform for anything new. */
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  'approval_record.created': 'Approval captured',
+  'approval_record.created_from_ingestion': 'Approval captured',
+  MANUAL_APPROVAL_CREATED: 'Manual approval recorded',
+  MANUAL_APPROVAL_UPDATED: 'Manual approval updated',
+  'user.invited': 'User invited',
+  'user.reactivated': 'User reactivated',
+  'user.invite_cancelled': 'Invite cancelled',
+  'team.created': 'Team created',
+  'team.deleted': 'Team deleted',
+  'team.member.added': 'Team member added',
+  'team.member.removed': 'Team member removed',
+  'team.member.role_changed': 'Team member role changed',
+  'integration.slack.connected': 'Slack connected',
+  'integration.slack.disconnected': 'Slack disconnected',
+  'integration.gmail.connected': 'Gmail connected',
+  'integration.outlook.connected': 'Outlook connected',
+  'integration.teams.connected': 'Microsoft Teams connected',
+  'integration.jira.connected': 'Jira connected',
+  'integration.servicenow.connected': 'ServiceNow connected',
+  'integration.zoom.connected': 'Zoom connected',
+  'integration.provider.status_changed': 'Integration status changed',
+  'playbook.document.replaced': 'Playbook updated',
+  'playbook.document.archived': 'Playbook archived',
+  'playbook.document.deleted': 'Playbook deleted',
+  'playbook.compliance.evaluated': 'Playbook compliance evaluated',
+  'investigation.created': 'Investigation opened',
+  'investigation.note_added': 'Investigation note added',
+  APPROVAL_POLICY_UPDATED: 'Approval policy changed',
+  BRANDING_UPDATED: 'Branding updated',
+  DEFAULT_SETTINGS_UPDATED: 'Default settings changed',
+  DOMAIN_UPDATED: 'Custom domain updated',
+  'settings.organization_updated': 'Organization settings updated',
+  COMPLIANCE_ISSUE_CREATED: 'Compliance issue opened',
+  COMPLIANCE_ISSUE_RESOLVED: 'Compliance issue resolved',
+  COMPLIANCE_CONTROL_UPDATED: 'Compliance control updated',
+  COMPLIANCE_ATTESTATION_COMPLETED: 'Compliance attestation completed',
+};
+
+export function describeAuditAction(action: string): string {
+  return AUDIT_ACTION_LABELS[action] ?? action.replaceAll('_', ' ').replaceAll('.', ' - ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export type DashboardViewer = ActionCenterViewer;
 
 export type DashboardRiskSlice = { level: 'low' | 'medium' | 'high' | 'unclassified'; label: string; count: number; percentage: number };
 
-export type DashboardWorkflow = { id: string; name: string; status: 'READY' | 'UPLOADED' | 'INDEXING' | 'ERROR' | 'ARCHIVED' | 'SUPERSEDED'; updatedAt: string };
+export type DashboardWorkflow = {
+  id: string;
+  name: string;
+  status: 'READY' | 'UPLOADED' | 'INDEXING' | 'ERROR' | 'ARCHIVED' | 'SUPERSEDED';
+  updatedAt: string;
+  /** Real average ApprovalComplianceEvaluation.score (services/playbooks.ts's
+   *  evaluateApprovalCompliance()) across every evaluation run against one
+   *  of this playbook's rules - null when this playbook has never been
+   *  evaluated against a real approval yet (evaluation is triggered
+   *  on-demand via /api/playbooks/evaluate, not automatically for every
+   *  approval, so this is commonly null for a freshly-uploaded playbook -
+   *  an honest "not enough data" state, never a fabricated percentage). */
+  complianceRate: number | null;
+  evaluatedCount: number;
+};
 
 export type DashboardOverview = {
   range: DashboardRange;
@@ -201,7 +319,10 @@ export type DashboardOverview = {
     pendingApprovals: { value: number };
     highRiskApprovals: { value: number; prevValue: number | null };
     avgApprovalTimeHours: { value: number | null; prevValue: number | null };
-    complianceScore: { value: number; prevValue: number | null };
+    /** null when there are no qualifying approvals in the selected period -
+     *  the underlying formula would otherwise report a perfect 100% for an
+     *  org with zero data, which is a misleading value, not a real score. */
+    complianceScore: { value: number | null; prevValue: number | null };
   };
   activity: ActivityBucket[];
   categories: NamedCount[];
@@ -214,6 +335,16 @@ export type DashboardOverview = {
   complianceFrameworks: SettingsOverview['complianceFrameworks'];
   openItems: ActionCenterKpis;
   billing: SettingsOverview['billing'];
+  /**
+   * Real plan-limit context for the dashboard's Plan & Usage card, derived
+   * from lib/plans.ts's commercialPlans[planTier] - the same catalog
+   * Organization Settings' Billing & Plan tab and the public pricing page
+   * already read. connectedSystemLimit/seatLimit are null when the plan is
+   * contract-defined with no fixed cap (a real state, not missing data).
+   * approvalsThisMonth has no plan-level cap anywhere in this catalog, so
+   * it is never rendered as a fraction of an invented limit.
+   */
+  planLimits: { seatLimit: number | null; connectedSystemLimit: number | null; approvalsThisMonth: number } | null;
   recentAudit: { id: string; action: string; createdAt: string }[];
 };
 
@@ -235,6 +366,7 @@ export async function getDashboardOverview(
     periodRows,
     integrationIssueCount,
     playbooks,
+    playbookEvaluations,
     recentApprovalsPage,
     liveStatusCounts,
     recentAudit,
@@ -266,6 +398,16 @@ export async function getDashboardOverview(
       degraded,
     ),
     safe(
+      'dashboard:playbookEvaluations',
+      prisma.approvalComplianceEvaluation.findMany({
+        where: { organizationId, rule: { isNot: null } },
+        select: { score: true, rule: { select: { documentId: true } } },
+        take: 3000,
+      }),
+      [],
+      degraded,
+    ),
+    safe(
       'dashboard:recentApprovals',
       loadDashboardApprovalRecords({ organizationId, from: range.dateRange.from.toISOString(), to: range.dateRange.to.toISOString(), pageSize: 6 }),
       { records: [] as ApprovalListRecord[], total: 0, page: 1, pageSize: 6, source: 'empty' as const, degraded: true, alert: false },
@@ -274,7 +416,12 @@ export async function getDashboardOverview(
     safe('dashboard:liveStatusCounts', getApprovalStatusCounts(organizationId), { total: 0, approved: 0, pending: 0, rejected: 0, highRisk: 0, critical: 0, high: 0, multiSource: 0 }, degraded),
     safe(
       'dashboard:recentAudit',
-      prisma.auditLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 6, select: { id: true, action: true, createdAt: true } }),
+      prisma.auditLog.findMany({
+        where: { organizationId, action: { in: MEANINGFUL_AUDIT_ACTIONS } },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+        select: { id: true, action: true, createdAt: true },
+      }),
       [],
       degraded,
     ),
@@ -321,6 +468,20 @@ export async function getDashboardOverview(
 
   const activity = buildActivityBuckets(periodRows, range, granularity);
 
+  // Real per-playbook average ApprovalComplianceEvaluation.score, when this
+  // playbook has actually been evaluated against a real approval at least
+  // once - never a fabricated percentage for a document with zero
+  // evaluations.
+  const evaluationsByDocument = new Map<string, { sum: number; count: number }>();
+  for (const evaluation of playbookEvaluations) {
+    const documentId = evaluation.rule?.documentId;
+    if (!documentId) continue;
+    const bucket = evaluationsByDocument.get(documentId) ?? { sum: 0, count: 0 };
+    bucket.sum += evaluation.score;
+    bucket.count += 1;
+    evaluationsByDocument.set(documentId, bucket);
+  }
+
   const recentApprovalsRecords = recentApprovalsPage.records.map((record) => ({
     ...record,
     sources: sourceSummaries.get(record.id) ?? null,
@@ -345,7 +506,10 @@ export async function getDashboardOverview(
       // with different, clearly-labeled scopes (see this file's header doc).
       highRiskApprovals: { value: analytics?.riskReduction.highRiskApprovalsDetected ?? 0, prevValue: analytics?.prevPeriod?.highRisk ?? null },
       avgApprovalTimeHours: { value: analytics?.avgApprovalTimeHours ?? null, prevValue: analytics?.prevPeriod?.avgApprovalTimeHours ?? null },
-      complianceScore: { value: analytics?.complianceScore ?? 0, prevValue: analytics?.prevPeriod?.complianceScore ?? null },
+      complianceScore: {
+        value: analytics && analytics.approvals.total > 0 ? analytics.complianceScore : null,
+        prevValue: analytics?.prevPeriod && analytics.prevPeriod.total > 0 ? analytics.prevPeriod.complianceScore : null,
+      },
     },
     activity,
     categories: categoryRows,
@@ -354,7 +518,17 @@ export async function getDashboardOverview(
     connectors: analytics?.connectorActivity ?? [],
     integrations: { connectedCount: integrationSummary.connectedCount, nativeCatalogSize: integrationSummary.nativeCatalogSize, issueCount: integrationIssueCount },
     workflows: {
-      items: playbooks.map((p) => ({ id: p.id, name: p.name, status: p.status, updatedAt: p.updatedAt.toISOString() })),
+      items: playbooks.map((p) => {
+        const evaluations = evaluationsByDocument.get(p.id);
+        return {
+          id: p.id,
+          name: p.name,
+          status: p.status,
+          updatedAt: p.updatedAt.toISOString(),
+          complianceRate: evaluations ? Math.round(evaluations.sum / evaluations.count) : null,
+          evaluatedCount: evaluations?.count ?? 0,
+        };
+      }),
       total: settings?.stats.totalPlaybooks ?? playbooks.length,
       active: settings?.kpis.workflowsActive ?? playbooks.filter((p) => p.status === 'READY').length,
     },
@@ -367,6 +541,13 @@ export async function getDashboardOverview(
     complianceFrameworks: settings?.complianceFrameworks ?? [],
     openItems: actionCenter?.kpis ?? { needsAttention: 0, dueToday: 0, overdue: 0, highPriority: 0, recentlyResolved: 0 },
     billing: settings?.billing ?? null,
+    planLimits: settings?.billing
+      ? {
+          seatLimit: commercialPlans[settings.billing.planTier].seatLimit,
+          connectedSystemLimit: commercialPlans[settings.billing.planTier].connectedSystemLimit,
+          approvalsThisMonth: settings.kpis.approvalsThisMonth,
+        }
+      : null,
     recentAudit: recentAudit.map((a) => ({ id: a.id, action: a.action, createdAt: a.createdAt.toISOString() })),
   };
 }

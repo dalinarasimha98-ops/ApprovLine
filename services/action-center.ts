@@ -316,7 +316,19 @@ async function computeKpis(viewer: ActionCenterViewer): Promise<ActionCenterKpis
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfTomorrow = new Date(startOfToday.getTime() + 86_400_000);
   const scope = hasOrgWideVisibility(viewer.role) ? {} : viewerIdentityWhere(viewer);
-  const openWhere: Prisma.ApprovalRecordWhereInput = { organizationId: viewer.organizationId, ...scope, ...openActionWhere() };
+  // Real bug fixed here: scope and openActionWhere() each return a
+  // top-level `OR` clause. Spreading both of them directly into the same
+  // object literal let the second spread silently overwrite the first
+  // one's `OR` key, so every KPI below silently ignored the viewer-identity
+  // restriction for every non-org-wide role
+  // (MEMBER/AUDITOR/VIEWER) and counted org-wide instead - discovered by
+  // running this function directly against seeded data for a VIEWER with
+  // no matching approverEmail/approverUserId and seeing needsAttention
+  // return the full org count while the row-level query (buildWhere(),
+  // which already combines the two via AND instead of spreading) correctly
+  // returned zero rows. Nesting openActionWhere() inside AND matches
+  // buildWhere()'s already-correct pattern below.
+  const openWhere: Prisma.ApprovalRecordWhereInput = { organizationId: viewer.organizationId, ...scope, AND: [openActionWhere()] };
 
   const [needsAttention, dueToday, overdue, highPriority, recentlyResolved] = await withTimeout(
     'action-center:kpis',

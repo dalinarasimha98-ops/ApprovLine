@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
+import type { CustomerPlanTier } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { tenantScopedWhere } from '@/lib/tenant-isolation';
 import { buildHealthPageReport, type ReadinessCheck } from '@/services/readiness';
@@ -75,6 +76,11 @@ export type SettingsOverview = {
    */
   billing: {
     accountStatus: string;
+    /** Raw CustomerPlanTier enum value - lets a caller look up
+     *  lib/plans.ts's commercialPlans[planTier] for real plan limits
+     *  (seatLimit, connectedSystemLimit) without a second query, rather
+     *  than re-deriving them from planLabel's display string. */
+    planTier: CustomerPlanTier;
     planLabel: string;
     planPrice: string;
     purchasedSeats: number;
@@ -257,6 +263,7 @@ export async function fetchSettingsOverview(organizationId: string): Promise<Set
     billing: customerAccount
       ? {
           accountStatus: customerAccount.status,
+          planTier: customerAccount.planTier,
           planLabel: planDisplayName(customerAccount.planTier),
           planPrice: formatPlanPrice(commercialPlans[customerAccount.planTier].pricing),
           purchasedSeats: customerAccount.seatAllocation?.purchasedSeats ?? 0,
