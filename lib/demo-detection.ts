@@ -14,6 +14,13 @@
  * - prisma/seed.ts (npm run db:seed) sets neither a sourceLink nor a
  *   'demo'/'TDEMO'-tagged field - it now stamps correlationId as
  *   'prisma-seed-v1:<subject>' for the same reason.
+ * - lib/individual-dashboard-demo.ts (the isolated "Individual Dashboard
+ *   demo" workspace, seeded via scripts/seed-individual-dashboard-demo.ts)
+ *   stamps correlationId as 'individual-dashboard-demo-v1:<subject>' - its
+ *   own dedicated, disposable Organization means detection is really only
+ *   needed if one of its records is ever viewed outside that org's own
+ *   /dashboard/me, but it's registered here anyway for consistency with
+ *   every other seed path.
  *
  * Checking sourceLink alone (the pre-existing check duplicated across
  * ApprovalTable, the full approval detail page, services/investigations.ts,
@@ -23,7 +30,7 @@
  * closes that gap without touching either seed script's URL realism.
  */
 
-const SEED_CORRELATION_PREFIXES = ['seed-demo-approvals-v', 'prisma-seed-v'];
+const SEED_CORRELATION_PREFIXES = ['seed-demo-approvals-v', 'prisma-seed-v', 'individual-dashboard-demo-v'];
 
 function isDemoSourceLink(value?: string | null): boolean {
   return Boolean(value && (value.includes('demo') || value.includes('TDEMO')));
