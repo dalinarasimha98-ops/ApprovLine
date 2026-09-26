@@ -231,4 +231,31 @@ assert.match(dashboardView, /focus-visible:ring-2 focus-visible:ring-al-accent/)
 assert.doesNotMatch(dashboardView, /@clerk|getDashboardTenant|from '@\/lib\/prisma'/);
 assert.match(dashboardPage, /import \{ OrganizationDashboardView, str, type RawSearchParams \} from '@\/components\/dashboard\/OrganizationDashboardView'/);
 
-console.log('Validated Organization Dashboard read-model reuse, tenant isolation, shared date range, RBAC gating, honest empty states, real integration/playbook/compliance semantics, filtered activity feed, and a real Plan & Usage card.');
+// ─── Part 5: production incident regression guard - connection pool ────────
+//
+// A production incident (ApprovalQueryCircuitOpenError on GET /dashboard,
+// plus an unrelated /dashboard/settings/integrations request timing out
+// fetching a pool connection) traced back to this file: getCoreAnalytics,
+// getSettingsOverview, and loadActionCenter each internally fan out into
+// 7-14 of their own parallel Prisma queries, and the original version of
+// this function fired all three of those PLUS this file's own ~7 queries
+// inside one Promise.all - 40+ simultaneous connection requests against
+// this app's connection_limit of 5 (see lib/env.ts's
+// normalizeDatabaseUrlForPrisma), starving every other concurrent request
+// on the shared pool, not just this page. Fixed by awaiting the three
+// composite calls one at a time and batching only this file's own smaller
+// queries together. This must never regress back to a single combined
+// Promise.all, and getIntegrationSummary/getApprovalStatusCounts must
+// never be re-fetched here now that getSettingsOverview/actionCenter
+// already provide the same numbers.
+assert.doesNotMatch(dashboardService, /const \[\s*analytics,\s*settings,\s*actionCenter,/);
+assert.match(dashboardService, /const analytics = await safe\('dashboard:coreAnalytics'/);
+assert.match(dashboardService, /const settings = await safe\('dashboard:settingsOverview'/);
+assert.match(dashboardService, /const actionCenter = await safe<ActionCenterResult \| null>\('dashboard:actionCenter'/);
+assert.doesNotMatch(dashboardService, /getIntegrationSummary\(organizationId\)/);
+assert.doesNotMatch(dashboardService, /getApprovalStatusCounts\(organizationId\)/);
+assert.doesNotMatch(dashboardService, /import \{[^}]*getIntegrationSummary/);
+assert.doesNotMatch(dashboardService, /import \{[^}]*getApprovalStatusCounts/);
+assert.match(dashboardService, /connectedCount: settings\?\.kpis\.connectedIntegrations \?\? 0/);
+
+console.log('Validated Organization Dashboard read-model reuse, tenant isolation, shared date range, RBAC gating, honest empty states, real integration/playbook/compliance semantics, filtered activity feed, a real Plan & Usage card, and bounded connection-pool concurrency.');

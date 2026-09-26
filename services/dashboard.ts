@@ -24,9 +24,13 @@
  *    /dashboard/approvals already uses to feed components/dashboard/
  *    ApprovalTable.tsx - so a row here opens the same real approval-detail
  *    preview panel, not a second detail experience.
- *  - Integration connected-count -> services/integrations/summary.ts's
- *    getIntegrationSummary() (the single shared computation Organization
- *    Settings and the Integrations page already use).
+ *  - Integration connected-count -> services/settings.ts's
+ *    getSettingsOverview() again (its kpis.connectedIntegrations/
+ *    integrationsInCatalog are already services/integrations/summary.ts's
+ *    getIntegrationSummary() under the hood, the single shared computation
+ *    Organization Settings and the Integrations page already use) -
+ *    deliberately NOT a second direct call to getIntegrationSummary(), see
+ *    the connection-pool note below.
  *
  * The only genuinely new queries added here are ones nothing else already
  * exposes in the shape this page needs: a date-range-scoped category/risk
@@ -38,6 +42,18 @@
  * the existing Integration.status enum), and a real playbook list (name +
  * status, no fabricated success percentage).
  *
+ * CONNECTION POOL: getCoreAnalytics/getSettingsOverview/loadActionCenter are
+ * each a composite call that internally fans out into 7-14 of its own
+ * parallel Prisma queries. getDashboardOverview() awaits them ONE AT A TIME
+ * (never inside the same Promise.all as each other or as this file's own
+ * queries) and never re-fetches a number one of them already computed
+ * (getIntegrationSummary/getApprovalStatusCounts were both removed as
+ * direct calls here for exactly this reason) - this app's shared connection
+ * pool is small (connection_limit: 5, see lib/env.ts's
+ * normalizeDatabaseUrlForPrisma) and is shared across every concurrent
+ * request app-wide, not just this page; see the incident note on
+ * getDashboardOverview() itself for the production outage this fixed.
+ *
  * TENANT ISOLATION: every query is scoped by the server-resolved
  * organizationId passed in by the caller (never a client-supplied value -
  * see app/dashboard/page.tsx, which resolves it via getDashboardTenant()).
@@ -45,12 +61,11 @@
 
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
-import { getApprovalStatusCounts, loadDashboardApprovalRecords, type ApprovalListRecord } from '@/lib/approvalRecords';
+import { loadDashboardApprovalRecords, type ApprovalListRecord } from '@/lib/approvalRecords';
 import { getUnifiedSourceSummariesForApprovals, type ApprovalSourceSummary } from '@/services/evidence/records';
 import { getCoreAnalytics, type CoreAnalytics, type DateRange } from '@/services/analytics';
 import { getSettingsOverview, type SettingsOverview } from '@/services/settings';
 import { loadActionCenter, type ActionCenterViewer, type ActionCenterKpis, type ActionCenterResult } from '@/services/action-center';
-import { getIntegrationSummary } from '@/services/integrations/summary';
 import { commercialPlans } from '@/lib/plans';
 
 const QUERY_TIMEOUT_MS = 4500;
@@ -358,23 +373,41 @@ export async function getDashboardOverview(
   const granularity = granularityOverride ?? defaultGranularity(range);
   const periodWhere = { organizationId, createdAt: { gte: range.dateRange.from, lte: range.dateRange.to } };
 
+  // Deliberately SEQUENTIAL, not one big Promise.all: getCoreAnalytics,
+  // getSettingsOverview, and loadActionCenter are each themselves a
+  // composite call that internally fans out into 7-14 of its own parallel
+  // Prisma queries. Firing all three (plus this file's own queries) inside
+  // a single Promise.all previously asked this app's shared connection
+  // pool (connection_limit: 5, see lib/env.ts's normalizeDatabaseUrlForPrisma
+  // and the identical rationale already documented on the pre-rebuild
+  // version of this page) for 40+ connections simultaneously - which in
+  // production tripped lib/approvalRecords.ts's circuit breaker on this
+  // page AND starved unrelated concurrent requests (e.g.
+  // /dashboard/settings/integrations) waiting on the same pool. Awaiting
+  // each composite call in turn bounds the peak simultaneous demand to
+  // whichever single call is heaviest, trading some latency for not taking
+  // the shared pool down for every other page.
+  const analytics = await safe('dashboard:coreAnalytics', getCoreAnalytics(organizationId, { dateRange: range.dateRange, prevDateRange: range.prevDateRange }), null as unknown as CoreAnalytics, degraded);
+  const settings = await safe('dashboard:settingsOverview', getSettingsOverview(organizationId), null as unknown as SettingsOverview, degraded);
+  const actionCenter = await safe<ActionCenterResult | null>('dashboard:actionCenter', loadActionCenter(viewer, {}), null, degraded);
+
+  // This file's own, smaller queries - batched together (not also stacked
+  // on top of the three composite calls above). getIntegrationSummary()
+  // and getApprovalStatusCounts() are deliberately NOT re-fetched here:
+  // getSettingsOverview already computed the identical integration summary
+  // internally (settings.kpis.connectedIntegrations/integrationsInCatalog),
+  // and getApprovalStatusCounts was only ever used as a fallback for
+  // actionCenter's own pending count - refetching it doubled the exact
+  // query class (approvalRecord queries in lib/approvalRecords.ts) that
+  // was tripping the circuit breaker.
   const [
-    analytics,
-    settings,
-    actionCenter,
-    integrationSummary,
     periodRows,
     integrationIssueCount,
     playbooks,
     playbookEvaluations,
     recentApprovalsPage,
-    liveStatusCounts,
     recentAudit,
   ] = await Promise.all([
-    safe('dashboard:coreAnalytics', getCoreAnalytics(organizationId, { dateRange: range.dateRange, prevDateRange: range.prevDateRange }), null as unknown as CoreAnalytics, degraded),
-    safe('dashboard:settingsOverview', getSettingsOverview(organizationId), null as unknown as SettingsOverview, degraded),
-    safe<ActionCenterResult | null>('dashboard:actionCenter', loadActionCenter(viewer, {}), null, degraded),
-    safe('dashboard:integrationSummary', getIntegrationSummary(organizationId), { connectedCount: 0, nativeCatalogSize: 0 }, degraded),
     safe(
       'dashboard:periodRows',
       prisma.approvalRecord.findMany({
@@ -413,7 +446,6 @@ export async function getDashboardOverview(
       { records: [] as ApprovalListRecord[], total: 0, page: 1, pageSize: 6, source: 'empty' as const, degraded: true, alert: false },
       degraded,
     ),
-    safe('dashboard:liveStatusCounts', getApprovalStatusCounts(organizationId), { total: 0, approved: 0, pending: 0, rejected: 0, highRisk: 0, critical: 0, high: 0, multiSource: 0 }, degraded),
     safe(
       'dashboard:recentAudit',
       prisma.auditLog.findMany({
@@ -499,7 +531,7 @@ export async function getDashboardOverview(
       // never disagree about what "pending" means. Deliberately NOT scoped
       // to the selected date range: an approval created 45 days ago that is
       // still open still needs action today.
-      pendingApprovals: { value: actionCenter?.kpis.needsAttention ?? liveStatusCounts.pending },
+      pendingApprovals: { value: actionCenter?.kpis.needsAttention ?? 0 },
       // Period-scoped ("detected this period"), distinct from the live
       // "needs attention now" framing used by openItems.highPriority below -
       // both are computed from the same authoritative riskLevel field, just
@@ -516,7 +548,13 @@ export async function getDashboardOverview(
     riskDistribution,
     recentApprovals: { records: recentApprovalsRecords, total: recentApprovalsPage.total, degraded: recentApprovalsPage.degraded },
     connectors: analytics?.connectorActivity ?? [],
-    integrations: { connectedCount: integrationSummary.connectedCount, nativeCatalogSize: integrationSummary.nativeCatalogSize, issueCount: integrationIssueCount },
+    // Reuses the exact counts getSettingsOverview() already computed via
+    // services/integrations/summary.ts's getIntegrationSummary() - the same
+    // shared computation Organization Settings and the Integrations page
+    // use - rather than re-issuing that query a second time per dashboard
+    // load (see the sequencing comment above `analytics`/`settings` for why
+    // that duplication mattered).
+    integrations: { connectedCount: settings?.kpis.connectedIntegrations ?? 0, nativeCatalogSize: settings?.kpis.integrationsInCatalog ?? 0, issueCount: integrationIssueCount },
     workflows: {
       items: playbooks.map((p) => {
         const evaluations = evaluationsByDocument.get(p.id);
