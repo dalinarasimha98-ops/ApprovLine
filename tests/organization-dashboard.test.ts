@@ -334,7 +334,7 @@ assert.match(dashboardView, /!promoteReadiness \? \(\s*<WorkspaceReadinessSectio
 // list must never be sourced from connectorActivity (which only lists a
 // provider with in-period approval volume) alone.
 assert.match(dashboardService, /dashboard:connectedIntegrations/);
-assert.match(dashboardService, /prisma\.integration\.findMany\(\{\s*where: \{ organizationId, status: 'CONNECTED' \}/);
+assert.match(dashboardService, /prisma\.integration\.findMany\(\{\s*where: \{ organizationId, status: \{ in: \['CONNECTED', 'SYNCING'\] \} \}/);
 assert.match(dashboardService, /connectedList: ConnectedIntegration\[\]/);
 assert.match(dashboardView, /overview\.integrations\.connectedList/);
 assert.doesNotMatch(dashboardView, /overview\.connectors\.slice/); // no longer the primary render source
@@ -392,4 +392,49 @@ assert.match(dashboardView, /viewBox=\{`0 0 \$\{chartWidth\} 100`\} preserveAspe
 assert.match(dashboardView, /View all \{overview\.integrations\.connectedList\.length\} →/);
 assert.doesNotMatch(dashboardView, /View all \{overview\.integrations\.connectedCount\} →/);
 
-console.log('Validated Organization Dashboard read-model reuse, tenant isolation, shared date range, RBAC gating, honest empty states, real integration/playbook/compliance semantics, filtered activity feed, a real Plan & Usage card, bounded connection-pool concurrency, unambiguous period-vs-live KPI labeling, a real database-backed Workspace Readiness section, an activity-independent connected-integrations list, real playbook evaluation timestamps, compact empty states, a colorful visual restyle toward the design reference using only real data, and two real chart/count bugs found and fixed by rendering with a populated dataset.');
+// ─── Part 8: final visual + semantic refinement pass against the reference ─
+
+// 1. Integration count consistency (Section 12): the connected-integrations
+// list query must match services/integrations/summary.ts's
+// getIntegrationSummary() EXACTLY (CONNECTED or SYNCING) - that function is
+// what computes the "N connected" the same card's own header shows, so a
+// SYNCING integration counted there but excluded here would make "N
+// connected" and "View all N" disagree on the same card.
+const integrationSummary = read('services/integrations/summary.ts');
+assert.match(integrationSummary, /i\.status === 'CONNECTED' \|\| i\.status === 'SYNCING'/);
+assert.match(dashboardService, /status: \{ in: \['CONNECTED', 'SYNCING'\] \}/);
+assert.match(dashboardView, /connector\.status === 'SYNCING' \? 'Syncing' : 'Connected'/);
+
+// 2. Header capture-status wording (Section 19): must never claim "no
+// events" in a way that reads as contradicting a dashboard that has real
+// captured data - the label is scoped to the specific capture pipeline it
+// actually measures.
+const captureStatus = read('lib/capture-status.ts');
+assert.doesNotMatch(captureStatus, /label: 'Connected · no events yet'/);
+assert.match(captureStatus, /'Connected · capture pending'/);
+
+// 3. Playbook Status (Section 13): CONFIGURED != HEALTHY - a READY playbook
+// with zero real evaluations must never be labeled "Active" (which implies
+// a health check it hasn't actually passed).
+assert.match(dashboardView, /workflow\.status === 'READY' \? 'Configured' : workflow\.status === 'ERROR' \? 'Needs attention'/);
+assert.doesNotMatch(dashboardView, /workflow\.status === 'READY' \? 'Active'/);
+
+// 4. KPI trend semantics (Section 5): an absent trend must read as "not
+// enough history yet," never a silent gap - but only for KPIs that have a
+// real prevValue/comparison concept (Pending Approval Actions has none, so
+// it must never claim a missing comparison it was never going to show).
+assert.match(dashboardView, /No comparison available/);
+assert.match(dashboardView, /label="Total Approvals"[\s\S]*?showComparisonState/);
+assert.match(dashboardView, /label="High Risk Approvals"[\s\S]*?showComparisonState/);
+{
+  const pendingCardMatch = dashboardView.match(/label="Pending Approval Actions"[\s\S]*?\/>/);
+  assert.ok(pendingCardMatch, 'Pending Approval Actions KpiCard not found');
+  assert.doesNotMatch(pendingCardMatch![0], /showComparisonState/);
+}
+
+// 5. Workspace Readiness scope (Section 18): must not imply billing/plan
+// readiness is part of "operational" readiness - Plan & Usage stays a
+// separate card and this section's own subtitle says so explicitly.
+assert.match(dashboardView, /billing and plan are tracked separately/);
+
+console.log('Validated Organization Dashboard read-model reuse, tenant isolation, shared date range, RBAC gating, honest empty states, real integration/playbook/compliance semantics, filtered activity feed, a real Plan & Usage card, bounded connection-pool concurrency, unambiguous period-vs-live KPI labeling, a real database-backed Workspace Readiness section, an activity-independent connected-integrations list, real playbook evaluation timestamps, compact empty states, a colorful visual restyle toward the design reference using only real data, two real chart/count bugs found and fixed by rendering with a populated dataset, integration-count consistency with getIntegrationSummary, honest capture-status wording, a configured-vs-healthy playbook distinction, explicit no-comparison-available trend states, and scoped Workspace Readiness wording that never implies billing is part of operational readiness.');

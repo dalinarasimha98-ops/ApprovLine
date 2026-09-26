@@ -103,6 +103,7 @@ function KpiCard({
   unit,
   context,
   trend,
+  showComparisonState = false,
   color,
   icon,
   href,
@@ -113,6 +114,14 @@ function KpiCard({
   unit?: string;
   context: string;
   trend?: { text: string; positive: boolean | null } | null;
+  /** True for KPIs that have a real prevValue concept (period-over-period
+   *  comparison) - when true and `trend` is null, renders "No comparison
+   *  available" instead of silently omitting the badge, so an absent trend
+   *  reads as "not enough history yet," never as a missed calculation.
+   *  False for KPIs with no comparison concept at all (e.g. Pending
+   *  Approval Actions, a live/unscoped count with no previous-period
+   *  baseline to compare against). */
+  showComparisonState?: boolean;
   color: string;
   icon: React.ReactNode;
   href?: string;
@@ -133,6 +142,8 @@ function KpiCard({
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
         {trend ? (
           <span className={`rounded px-1.5 py-0.5 ${trend.positive === null ? 'bg-al-text-muted/10 text-al-text-muted' : trend.positive ? 'bg-al-success/10 text-al-success' : 'bg-al-danger/10 text-al-danger'}`}>{trend.text}</span>
+        ) : showComparisonState ? (
+          <span className="rounded bg-al-text-muted/10 px-1.5 py-0.5 text-al-text-muted">No comparison available</span>
         ) : null}
         <span className="text-al-text-muted">{context}</span>
         {href ? <Link href={href} className="ml-auto font-bold text-al-info hover:text-al-info">{linkLabel ?? 'View →'}</Link> : null}
@@ -351,7 +362,7 @@ function WorkspaceReadinessSection({
 }) {
   return (
     <article className={`${panelClass} p-4`}>
-      <SectionHeader title="Workspace Readiness" subtitle="Real setup status for this workspace, derived from your own data" />
+      <SectionHeader title="Workspace Readiness" subtitle="Operational readiness, from your own data — billing and plan are tracked separately below" />
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
           const action = readinessActionFor(item.id);
@@ -506,6 +517,7 @@ export function OrganizationDashboardView({
           value={compact(overview.kpis.totalApprovals.value)}
           context={range.label}
           trend={trendBadge(overview.kpis.totalApprovals.value, overview.kpis.totalApprovals.prevValue, 'up')}
+          showComparisonState
           color="#2f7cff"
           icon={<CheckCircle2 className="h-4 w-4" />}
           href="/dashboard/approvals"
@@ -525,6 +537,7 @@ export function OrganizationDashboardView({
           value={compact(overview.kpis.highRiskApprovals.value)}
           context={`New detections · ${range.label.toLowerCase()}`}
           trend={trendBadge(overview.kpis.highRiskApprovals.value, overview.kpis.highRiskApprovals.prevValue, 'down')}
+          showComparisonState
           color="#ff624a"
           icon={<AlertTriangle className="h-4 w-4" />}
           href="/dashboard/approvals?riskLevel=high"
@@ -536,6 +549,7 @@ export function OrganizationDashboardView({
           unit={avgTimeDays !== null ? 'days' : undefined}
           context={avgTimeDays !== null ? range.label : 'No timestamped decisions yet'}
           trend={avgTimeDays !== null ? trendBadge(avgTimeDays, prevAvgTimeDays, 'down') : null}
+          showComparisonState={avgTimeDays !== null}
           color="#46b6df"
           icon={<Activity className="h-4 w-4" />}
         />
@@ -544,6 +558,7 @@ export function OrganizationDashboardView({
           value={overview.kpis.complianceScore.value !== null ? `${overview.kpis.complianceScore.value}%` : 'Not enough data'}
           context={overview.kpis.complianceScore.value !== null ? 'Based on risk & review backlog' : 'No qualifying approvals in this period'}
           trend={overview.kpis.complianceScore.value !== null ? trendBadge(overview.kpis.complianceScore.value, overview.kpis.complianceScore.prevValue, 'up') : null}
+          showComparisonState={overview.kpis.complianceScore.value !== null}
           color="#45cf78"
           icon={<ShieldCheck className="h-4 w-4" />}
           href="/trust/compliance"
@@ -681,7 +696,11 @@ export function OrganizationDashboardView({
                       {meta.initials}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-al-text-secondary">{meta.label}</span>
-                    <span className="rounded-full bg-al-success/10 px-2 py-0.5 text-[9px] font-bold text-al-success">Connected</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${connector.status === 'SYNCING' ? 'bg-al-info/10 text-al-info' : 'bg-al-success/10 text-al-success'}`}
+                    >
+                      {connector.status === 'SYNCING' ? 'Syncing' : 'Connected'}
+                    </span>
                   </div>
                 );
               })
@@ -722,16 +741,23 @@ export function OrganizationDashboardView({
                           <span className="text-[10px] font-bold text-al-text-secondary">{workflow.complianceRate}%</span>
                         </span>
                       ) : (
+                        // A playbook with zero evaluations is CONFIGURED, not
+                        // HEALTHY - "Active"/green here would claim a clean
+                        // bill of health this playbook has never actually
+                        // earned (it's only ever been checked against real
+                        // approvals, never scored). "Active" is reserved for
+                        // the compliance-rate branch above, which only
+                        // renders once a real evaluation exists.
                         <span
                           className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
                             workflow.status === 'READY'
-                              ? 'bg-al-success/10 text-al-success'
+                              ? 'bg-al-info/10 text-al-info'
                               : workflow.status === 'ERROR'
                                 ? 'bg-al-danger/10 text-al-danger'
                                 : 'bg-al-warning/10 text-al-warning'
                           }`}
                         >
-                          {workflow.status === 'READY' ? 'Active' : workflow.status === 'ERROR' ? 'Needs attention' : statusLabel(workflow.status)}
+                          {workflow.status === 'READY' ? 'Configured' : workflow.status === 'ERROR' ? 'Needs attention' : statusLabel(workflow.status)}
                         </span>
                       )}
                     </div>

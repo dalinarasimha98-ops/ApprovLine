@@ -275,7 +275,7 @@ export function LiveCaptureBadge({ status }: { status: { state: 'live' | 'connec
     status.state === 'live' ? 'bg-al-success' : status.state === 'none' ? 'bg-al-text-muted' : 'bg-al-warning';
 
   return (
-    <div className={`inline-flex h-8 items-center gap-2 rounded-full border px-3 text-[11px] font-semibold ${tone}`}>
+    <div className={`inline-flex h-8 items-center gap-2 whitespace-nowrap rounded-full border px-3 text-[11px] font-semibold ${tone}`}>
       <span className="relative flex h-2 w-2">
         {status.state === 'live' ? (
           <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${dotColor} opacity-50`} />

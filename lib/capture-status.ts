@@ -74,7 +74,18 @@ async function fetchCaptureStatusFresh(organizationId: string): Promise<CaptureS
     return { state: 'none', label: 'No sources connected' };
   }
   if (!latestHealth?.lastEventAt) {
-    return { state: 'connected-none', label: 'Connected · no events yet' };
+    // "Capture pending" (not "no events yet") - this only means the
+    // canonical capture pipeline (EvidenceProviderHealth) has never
+    // recorded an event from a connected integration. An org can
+    // genuinely have real historical approvals, audit activity, and open
+    // action items while this is true (e.g. every approval so far was
+    // captured before its integrations were connected, or entered
+    // manually) - the old "no events yet" wording read as contradicting a
+    // dashboard that visibly has real data, when it only ever described
+    // this one pipeline. Kept close in length/shape to the other three
+    // states' labels (all "Connected/Live · ...", none longer than this)
+    // since this renders in a fixed-height, non-wrapping header pill.
+    return { state: 'connected-none', label: 'Connected · capture pending' };
   }
 
   const ageMs = Date.now() - latestHealth.lastEventAt.getTime();

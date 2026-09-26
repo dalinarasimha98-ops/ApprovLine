@@ -329,7 +329,7 @@ export type DashboardWorkflow = {
   lastEvaluatedAt: string | null;
 };
 
-export type ConnectedIntegration = { provider: string; connectedAt: string };
+export type ConnectedIntegration = { provider: string; status: 'CONNECTED' | 'SYNCING'; connectedAt: string };
 
 /** One real, database-backed Workspace Readiness check (Section 4). Every
  *  item's `complete` flag is derived directly from data already computed
@@ -461,11 +461,20 @@ export async function getDashboardOverview(
     // connected integration, and Section 6's "show a compact list of the
     // most relevant connected integrations if real connection records
     // exist" requires that to render regardless of period activity.
+    //
+    // Status filter deliberately matches services/integrations/summary.ts's
+    // getIntegrationSummary() EXACTLY (CONNECTED or SYNCING) - that function
+    // is what computes settings.kpis.connectedIntegrations, the count shown
+    // in this card's own subtitle ("N connected"). Filtering to CONNECTED
+    // only here previously meant a SYNCING integration would count toward
+    // the header's "N connected" but never appear in the list or its own
+    // "View all N" count - two numbers on the same card disagreeing about
+    // how many integrations are connected.
     safe(
       'dashboard:connectedIntegrations',
       prisma.integration.findMany({
-        where: { organizationId, status: 'CONNECTED' },
-        select: { provider: true, updatedAt: true },
+        where: { organizationId, status: { in: ['CONNECTED', 'SYNCING'] } },
+        select: { provider: true, status: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
         take: 8,
       }),
@@ -579,8 +588,12 @@ export async function getDashboardOverview(
     sources: sourceSummaries.get(record.id) ?? null,
   }));
 
+  // The query above filters to status IN (CONNECTED, SYNCING) - the cast
+  // reflects that guarantee; Prisma's IntegrationStatus enum is wider than
+  // this narrowed union, but no other status can appear in these rows.
   const connectedList: ConnectedIntegration[] = connectedIntegrationRows.map((row) => ({
     provider: row.provider,
+    status: row.status as 'CONNECTED' | 'SYNCING',
     connectedAt: row.updatedAt.toISOString(),
   }));
 
