@@ -101,6 +101,11 @@ export const ROUTE_PERMISSIONS: Record<string, Role[]> = {
   // everyone) so this is a deliberate, visible policy choice, not an
   // accidental gap.
   '/settings/profile': ALL_ROLES,
+  // Individual User Dashboard - personal work (my approvals, my tasks, my
+  // activity), never organization-wide data, so every role can reach it.
+  // Listed explicitly for the same reason '/settings/profile' is: a
+  // deliberate, visible policy choice rather than an accidental gap.
+  '/dashboard/me': ALL_ROLES,
 };
 
 /**

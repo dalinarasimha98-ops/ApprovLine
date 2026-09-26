@@ -86,7 +86,7 @@ const QUERY_TIMEOUT_MS = 4500;
  * never a new audit-logging engine, just a filter over the one that
  * already exists.
  */
-const MEANINGFUL_AUDIT_ACTIONS = [
+export const MEANINGFUL_AUDIT_ACTIONS = [
   'approval_record.created',
   'approval_record.created_from_ingestion',
   'MANUAL_APPROVAL_CREATED',

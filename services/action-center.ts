@@ -67,8 +67,13 @@ function hasOrgWideVisibility(role: Role): boolean {
 
 /** The real identity-match OR-clause used both to scope the personal
  *  inbox and (for the resolved-history query) to keep base roles from
- *  ever seeing another user's history. Never matched on name alone. */
-function viewerIdentityWhere(viewer: ActionCenterViewer): Prisma.ApprovalRecordWhereInput {
+ *  ever seeing another user's history. Never matched on name alone.
+ *  Exported for services/individualDashboard.ts, which needs this exact
+ *  predicate to scope its own, smaller queries (the personal approvals
+ *  list, etc.) to the viewer - reusing the one proven identity match
+ *  rather than re-deriving a second, possibly-diverging definition of
+ *  "my approvals." */
+export function viewerIdentityWhere(viewer: ActionCenterViewer): Prisma.ApprovalRecordWhereInput {
   const email = viewer.email.toLowerCase();
   return {
     OR: [
@@ -80,7 +85,10 @@ function viewerIdentityWhere(viewer: ActionCenterViewer): Prisma.ApprovalRecordW
   };
 }
 
-function openActionWhere(): Prisma.ApprovalRecordWhereInput {
+/** Exported alongside viewerIdentityWhere for the same reason - the
+ *  individual dashboard's "My Approvals" list needs the identical
+ *  open-action definition Action Center itself uses, not a second one. */
+export function openActionWhere(): Prisma.ApprovalRecordWhereInput {
   return {
     OR: [
       { status: 'PENDING_REVIEW' },
@@ -311,11 +319,21 @@ export type ActionCenterKpis = {
   recentlyResolved: number;
 };
 
-async function computeKpis(viewer: ActionCenterViewer): Promise<ActionCenterKpis> {
+/**
+ * `forcePersonalScope` (default false, preserving this Action Center page's
+ * own existing org-wide-for-OWNER/ADMIN/MANAGER behavior exactly) lets
+ * services/individualDashboard.ts get these same, real KPI numbers always
+ * scoped to the viewer's own identity regardless of role - an Owner still
+ * has personal approvals assigned to them that their individual dashboard
+ * must show as "mine," even though Action Center itself intentionally
+ * gives that role org-wide visibility on its own page. This is the only
+ * change to this function; the numbers/queries themselves are untouched.
+ */
+export async function computeKpis(viewer: ActionCenterViewer, forcePersonalScope = false): Promise<ActionCenterKpis> {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfTomorrow = new Date(startOfToday.getTime() + 86_400_000);
-  const scope = hasOrgWideVisibility(viewer.role) ? {} : viewerIdentityWhere(viewer);
+  const scope = forcePersonalScope || !hasOrgWideVisibility(viewer.role) ? viewerIdentityWhere(viewer) : {};
   // Real bug fixed here: scope and openActionWhere() each return a
   // top-level `OR` clause. Spreading both of them directly into the same
   // object literal let the second spread silently overwrite the first
@@ -342,7 +360,7 @@ async function computeKpis(viewer: ActionCenterViewer): Promise<ActionCenterKpis
           organizationId: viewer.organizationId,
           verificationStatus: { in: ['CONFIRMED_BY_APPROVER', 'DISPUTED'] },
           updatedAt: { gte: new Date(now.getTime() - RECENTLY_RESOLVED_WINDOW_MS) },
-          ...(hasOrgWideVisibility(viewer.role) ? {} : { approvalRecord: { is: viewerIdentityWhere(viewer) } }),
+          ...(forcePersonalScope || !hasOrgWideVisibility(viewer.role) ? { approvalRecord: { is: viewerIdentityWhere(viewer) } } : {}),
         },
       }),
     ]),

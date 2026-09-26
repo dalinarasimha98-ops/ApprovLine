@@ -20,6 +20,7 @@ import {
   Settings,
   ShieldAlert,
   ShieldCheck,
+  User,
   UserCog,
   Users,
 } from 'lucide-react';
@@ -54,6 +55,7 @@ const sections: NavSection[] = [
     title: 'Core Operations',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/dashboard/me', label: 'My Dashboard', icon: User },
       { href: '/dashboard/pending-actions', label: 'Action Center', icon: CheckSquare },
       { href: '/dashboard/approvals', label: 'Approvals', icon: FileCheck2 },
       { href: '/evidence', label: 'Unified Evidence', icon: Boxes, badge: 'New' },
