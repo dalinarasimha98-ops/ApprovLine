@@ -122,11 +122,13 @@ export type PrevPeriodMetrics = {
   highRisk: number;
   evidenceCoverage: number;
   complianceScore: number;
-  avgApprovalTimeHours: number;
+  avgApprovalTimeHours: number | null;
 };
 
 export type CoreAnalytics = Omit<ExecutiveAnalytics, 'playbookAi'> & {
-  avgApprovalTimeHours: number;
+  /** null when no record in the analyzed set has a real approvalTimestamp -
+   *  render "Not enough data", never a guessed duration. */
+  avgApprovalTimeHours: number | null;
   evidenceCoverage: number;
   complianceScore: number;
   totalValue: number | null;
@@ -300,14 +302,18 @@ function buildDepartmentBreakdown(
   return [...map.values()].sort((a, b) => b.count - a.count).slice(0, 8);
 }
 
-/** Compute average approval time in hours from createdAt - approvalTimestamp. */
+/** Compute average approval time in hours from createdAt - approvalTimestamp.
+ *  Returns null (never a guessed/estimated number) when no record in the
+ *  set has a real approvalTimestamp - matches the null-when-insufficient
+ *  pattern app/analytics/drilldown/high-risk-approvals/page.tsx already
+ *  uses for the same calculation, so callers must render "Not enough
+ *  data"/"N/A" rather than a fabricated duration. */
 function computeAvgApprovalTimeHours(
   approvals: Array<{ createdAt: Date; approvalTimestamp: Date | null }>,
-): number {
+): number | null {
   const withTimestamp = approvals.filter((a) => a.approvalTimestamp != null);
   if (withTimestamp.length === 0) {
-    // Estimate: 18.6 hours is a realistic default for enterprise approval pipelines
-    return 18.6;
+    return null;
   }
   const totalHours = withTimestamp.reduce((sum, a) => {
     const diffMs = a.createdAt.getTime() - (a.approvalTimestamp?.getTime() ?? a.createdAt.getTime());
@@ -917,8 +923,10 @@ export function generateAIInsights(analytics: CoreAnalytics): ExecutiveInsight[]
     });
   }
 
-  // 6. Approval time insight (if significantly slow)
-  if (avgTime > 48) {
+  // 6. Approval time insight (if significantly slow) - skipped entirely
+  // when avgTime is null (no record has a real approvalTimestamp), rather
+  // than comparing a placeholder number against the 48h threshold.
+  if (avgTime !== null && avgTime > 48) {
     insights.push({
       id: 'approval-time',
       type: 'warning',

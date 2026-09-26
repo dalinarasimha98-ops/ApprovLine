@@ -423,13 +423,19 @@ async function ExecutiveDashboardSection({
         />
         <KPICard
           title="Avg Approval Time"
-          value={`${report.avgApprovalTimeHours}`}
-          unit="hrs"
+          value={report.avgApprovalTimeHours !== null ? String(report.avgApprovalTimeHours) : 'N/A'}
+          unit={report.avgApprovalTimeHours !== null ? 'hrs' : undefined}
           icon={icons.time}
           accentColor="#0891B2"
-          currentNumeric={report.avgApprovalTimeHours}
-          prevValue={prev?.avgApprovalTimeHours}
-          trendLabel={prev ? `${pctChange(report.avgApprovalTimeHours, prev.avgApprovalTimeHours) ?? '—'} vs previous period` : undefined}
+          currentNumeric={report.avgApprovalTimeHours ?? undefined}
+          prevValue={prev?.avgApprovalTimeHours ?? undefined}
+          trendLabel={
+            report.avgApprovalTimeHours === null
+              ? 'Insufficient timestamp data'
+              : prev
+                ? `${pctChange(report.avgApprovalTimeHours, prev.avgApprovalTimeHours ?? undefined) ?? '—'} vs previous period`
+                : undefined
+          }
         />
         <KPICard
           title="High Risk Approvals"

@@ -1,167 +1,157 @@
 import Link from 'next/link';
-import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import {
   Activity,
   AlertTriangle,
-  Bot,
-  Check,
+  ArrowRight,
+  BrainCircuit,
+  Cable,
   CheckCircle2,
   Clock3,
-  Database,
-  Mail,
-  MessageSquare,
-  Network,
+  ScrollText,
+  ShieldAlert,
   ShieldCheck,
-  Sparkles,
+  Users,
 } from 'lucide-react';
+import { auth } from '@clerk/nextjs/server';
 import { getDashboardTenant } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { withTimeout } from '@/lib/performance';
+import { hasAnyRole } from '@/lib/rbac';
+import { ApprovalTable, type ApprovalTableRecord } from '@/components/dashboard/ApprovalTable';
+import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
+import { sourceMeta } from '@/lib/source-badges';
+import {
+  getDashboardOverview,
+  resolveDashboardRange,
+  type ActivityGranularity,
+  type DashboardRangeKey,
+} from '@/services/dashboard';
 
 export const dynamic = 'force-dynamic';
 
 const panelClass = 'rounded-lg border border-white/[0.09] bg-al-surface-sunken shadow-[0_12px_36px_rgba(0,0,0,.16)]';
-const palette = ['#2f7cff', '#49c78e', '#7c6cf2', '#f58b3d', '#46b6df', '#aeb9c8'];
+const palette = ['#2f7cff', '#49c78e', '#7c6cf2', '#f58b3d', '#46b6df', '#aeb9c8', '#e05f8a', '#8a97a8'];
 
-/**
- * A failed/timed-out metric silently falling back to 0 or [] used to render
- * as if the workspace were genuinely empty (0 approvals, 100% compliance,
- * 0/0 sources) even when the org has real data - misleading, and specifically
- * what was happening under connection-pool pressure on cold starts (the same
- * class of issue documented around PgBouncer/connection_limit elsewhere in
- * this app). `degraded` collects which metrics fell back so the caller can
- * surface the existing "data delayed" banner instead of a false empty state.
- */
-async function safeMetric<T>(label: string, query: Promise<T>, fallback: T, degraded: string[]) {
-  try {
-    return await withTimeout(label, query, 4000);
-  } catch (error) {
-    console.error(`[dashboard] ${label} failed`, error);
-    degraded.push(label);
-    return fallback;
-  }
-}
-
-function compact(value: number) {
-  return new Intl.NumberFormat('en-US', { notation: value >= 1000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value);
+type RawSearchParams = Record<string, string | string[] | undefined>;
+function str(params: RawSearchParams, key: string): string | undefined {
+  const value = params[key];
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
 function statusLabel(value: string) {
   return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function Sparkline({ color, points }: { color: string; points: number[] }) {
-  const max = Math.max(...points, 1);
-  const min = Math.min(...points, 0);
-  const range = Math.max(max - min, 1);
-  const line = points.map((point, index) => `${(index / (points.length - 1)) * 100},${34 - ((point - min) / range) * 28}`).join(' ');
-  const id = `spark-${color.replace('#', '')}`;
-  return (
-    <svg viewBox="0 0 100 38" className="h-10 w-full" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={color} stopOpacity=".32" />
-          <stop offset="1" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={`0,38 ${line} 100,38`} fill={`url(#${id})`} />
-      <polyline points={line} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" />
-    </svg>
-  );
+function compact(value: number) {
+  return new Intl.NumberFormat('en-US', { notation: value >= 1000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value);
+}
+
+// --- KPI card ----------------------------------------------------------------
+
+/** Whether an increase in this metric is good or bad news - controls trend
+ *  badge color. Total Approvals up = green; High Risk Approvals up = red. */
+type GoodDirection = 'up' | 'down' | 'neutral';
+
+function trendBadge(current: number, previous: number | null, goodDirection: GoodDirection) {
+  if (previous === null || previous === 0) return null;
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) return { text: '0%', positive: null as boolean | null };
+  const isIncrease = pct > 0;
+  const positive = goodDirection === 'neutral' ? null : goodDirection === 'up' ? isIncrease : !isIncrease;
+  return { text: `${isIncrease ? '↑' : '↓'} ${Math.abs(pct)}%`, positive };
 }
 
 function KpiCard({
   label,
   value,
+  unit,
   context,
-  tone = 'positive',
+  trend,
   color,
   icon,
-  points,
   href,
   linkLabel,
 }: {
   label: string;
   value: string;
+  unit?: string;
   context: string;
-  tone?: 'positive' | 'warning' | 'neutral';
+  trend?: { text: string; positive: boolean | null } | null;
   color: string;
   icon: React.ReactNode;
-  points: number[];
-  /** Optional - when set, renders a small link inside the card (e.g. "Total
-   *  Approvals" -> /dashboard/approvals) so the dashboard's own content has
-   *  a discoverable "view the underlying records" step, not just the
-   *  persistent sidebar nav. */
   href?: string;
   linkLabel?: string;
 }) {
-  const toneClass = tone === 'positive' ? 'text-al-success' : tone === 'warning' ? 'text-al-warning' : 'text-al-text-muted';
   return (
-    <article className={`${panelClass} relative min-h-[134px] overflow-hidden p-4`}>
+    <article className={`${panelClass} relative min-h-[116px] overflow-hidden p-4`}>
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-medium text-al-text-muted">{label}</p>
-          <p className="mt-1 text-[25px] font-bold leading-none tracking-tight text-al-text">{value}</p>
+        <div className="min-w-0">
+          <p className="truncate text-[11px] font-medium text-al-text-muted">{label}</p>
+          <p className="mt-1 text-[24px] font-bold leading-none tracking-tight text-al-text">
+            {value}
+            {unit ? <span className="ml-1 text-xs font-semibold text-al-text-muted">{unit}</span> : null}
+          </p>
         </div>
-        <span className="grid h-8 w-8 place-items-center rounded-full border" style={{ borderColor: `${color}66`, color }}>{icon}</span>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border" style={{ borderColor: `${color}66`, color }}>{icon}</span>
       </div>
-      <div className={`mt-2 flex items-center justify-between gap-1 text-[10px] font-semibold ${toneClass}`}>
-        <span className="flex items-center gap-1"><Activity className="h-3 w-3" />{context}</span>
-        {href ? <Link href={href} className="font-bold text-al-info hover:text-al-info">{linkLabel ?? 'View →'}</Link> : null}
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
+        {trend ? (
+          <span className={trend.positive === null ? 'text-al-text-muted' : trend.positive ? 'text-al-success' : 'text-al-danger'}>{trend.text}</span>
+        ) : null}
+        <span className="text-al-text-muted">{context}</span>
+        {href ? <Link href={href} className="ml-auto font-bold text-al-info hover:text-al-info">{linkLabel ?? 'View →'}</Link> : null}
       </div>
-      <div className="absolute inset-x-3 bottom-0"><Sparkline color={color} points={points} /></div>
     </article>
   );
 }
 
-function Donut({ values, total, centerLabel }: { values: number[]; total: number; centerLabel: string }) {
+// --- Donut ---------------------------------------------------------------------
+
+function Donut({ slices, total, centerLabel }: { slices: { name: string; count: number; percentage: number }[]; total: number; centerLabel: string }) {
   let offset = 25;
   return (
-    <div className="relative grid h-40 w-40 shrink-0 place-items-center">
-      <svg viewBox="0 0 42 42" className="-rotate-90">
-        <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="rgb(var(--al-border-rgb))" strokeWidth="6" />
-        {values.map((value, index) => {
-          const percent = total > 0 ? (value / total) * 100 : 0;
-          const dash = `${percent} ${100 - percent}`;
-          const element = (
-            <circle
-              key={`${index}-${value}`}
-              cx="21"
-              cy="21"
-              r="15.9155"
-              fill="transparent"
-              stroke={palette[index % palette.length]}
-              strokeWidth="6"
-              strokeDasharray={dash}
-              strokeDashoffset={100 - offset}
-            />
-          );
-          offset += percent;
-          return element;
-        })}
-      </svg>
-      <div className="absolute text-center">
-        <p className="text-2xl font-bold text-white">{compact(total)}</p>
-        <p className="text-[10px] text-al-text-muted">{centerLabel}</p>
+    <div className="flex items-center justify-center gap-5">
+      <div className="relative grid h-36 w-36 shrink-0 place-items-center">
+        <svg viewBox="0 0 42 42" className="-rotate-90">
+          <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="rgb(var(--al-border-rgb))" strokeWidth="6" />
+          {slices.map((slice, index) => {
+            const percent = total > 0 ? (slice.count / total) * 100 : 0;
+            const dash = `${percent} ${100 - percent}`;
+            const el = (
+              <circle
+                key={slice.name}
+                cx="21"
+                cy="21"
+                r="15.9155"
+                fill="transparent"
+                stroke={palette[index % palette.length]}
+                strokeWidth="6"
+                strokeDasharray={dash}
+                strokeDashoffset={100 - offset}
+              />
+            );
+            offset += percent;
+            return el;
+          })}
+        </svg>
+        <div className="absolute text-center">
+          <p className="text-2xl font-bold text-al-text">{compact(total)}</p>
+          <p className="text-[10px] text-al-text-muted">{centerLabel}</p>
+        </div>
+      </div>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        {slices.length ? (
+          slices.map((slice, index) => (
+            <div key={slice.name} className="flex items-center gap-2 text-[10px]">
+              <span className="h-2 w-3 shrink-0 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }} />
+              <span className="min-w-0 flex-1 truncate text-al-text-muted">{slice.name}</span>
+              <span className="font-semibold text-al-text-secondary">{slice.percentage}%</span>
+            </div>
+          ))
+        ) : (
+          <p className="text-[10px] text-al-text-muted">No records in this period.</p>
+        )}
       </div>
     </div>
-  );
-}
-
-function ProviderIcon({ provider }: { provider: string }) {
-  const normalized = provider.toLowerCase();
-  const styles =
-    normalized.includes('gmail') ? 'bg-al-danger/15 text-al-danger' :
-    normalized.includes('slack') ? 'bg-fuchsia-500/15 text-fuchsia-300' :
-    normalized.includes('teams') ? 'bg-indigo-500/15 text-indigo-300' :
-    normalized.includes('jira') ? 'bg-al-info/100/15 text-al-info' :
-    normalized.includes('outlook') ? 'bg-cyan-500/15 text-cyan-300' :
-    'bg-al-success/15 text-al-success';
-  return (
-    <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/[0.06] ${styles}`}>
-      {normalized.includes('mail') || normalized.includes('outlook') ? <Mail className="h-3.5 w-3.5" /> : <MessageSquare className="h-3.5 w-3.5" />}
-    </span>
   );
 }
 
@@ -172,12 +162,80 @@ function SectionHeader({ title, subtitle, href, linkLabel = 'View all' }: { titl
         <h2 className="text-sm font-bold text-al-text">{title}</h2>
         <p className="mt-0.5 text-[10px] text-al-text-muted">{subtitle}</p>
       </div>
-      {href ? <Link href={href} className="text-[10px] font-semibold text-al-info hover:text-al-info">{linkLabel} →</Link> : null}
+      {href ? <Link href={href} className="whitespace-nowrap text-[10px] font-semibold text-al-info hover:text-al-info">{linkLabel} →</Link> : null}
     </div>
   );
 }
 
-export default async function DashboardPage() {
+// --- Activity chart (real, stacked bars) ---------------------------------------
+
+function ActivityChart({ buckets }: { buckets: { label: string; approved: number; rejected: number; pending: number; highRisk: number }[] }) {
+  const totals = buckets.map((b) => b.approved + b.rejected + b.pending);
+  const max = Math.max(...totals, 1);
+  const barWidth = buckets.length > 0 ? Math.min(100 / buckets.length, 14) : 14;
+  const gap = barWidth * 0.35;
+  const step = barWidth + gap;
+  const chartWidth = Math.max(buckets.length * step, 10);
+
+  if (buckets.every((b) => b.approved + b.rejected + b.pending === 0)) {
+    return <p className="grid h-52 place-items-center text-xs text-al-text-muted">No approval activity in this period.</p>;
+  }
+
+  return (
+    <div className="mt-2">
+      <div className="flex items-center gap-3 text-[9px] text-al-text-muted">
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-al-success" />Approved</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-al-danger" />Rejected</span>
+        <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-al-warning" />Pending</span>
+      </div>
+      <div className="mt-2 h-48 w-full overflow-x-auto">
+        <svg viewBox={`0 0 ${chartWidth} 100`} preserveAspectRatio="none" className="h-full" style={{ width: `${Math.max(chartWidth * 8, 100)}%`, minWidth: '100%' }} role="img" aria-label="Approval activity by period">
+          {[25, 50, 75].map((y) => <line key={y} x1="0" x2={chartWidth} y1={y} y2={y} stroke="rgba(148,163,184,.12)" strokeDasharray="1 2" />)}
+          {buckets.map((bucket, index) => {
+            const x = index * step;
+            const approvedH = (bucket.approved / max) * 82;
+            const rejectedH = (bucket.rejected / max) * 82;
+            const pendingH = (bucket.pending / max) * 82;
+            let y = 98;
+            const segments: { height: number; color: string }[] = [
+              { height: approvedH, color: 'rgb(var(--al-success-rgb))' },
+              { height: rejectedH, color: 'rgb(var(--al-danger-rgb))' },
+              { height: pendingH, color: 'rgb(var(--al-warning-rgb))' },
+            ];
+            return (
+              <g key={bucket.label}>
+                {segments.map((segment, segIndex) => {
+                  y -= segment.height;
+                  return segment.height > 0 ? (
+                    <rect key={segIndex} x={x} y={y} width={barWidth} height={segment.height} fill={segment.color} rx={0.6} />
+                  ) : null;
+                })}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      <div className="mt-1 flex justify-between text-[8px] text-al-text-muted">
+        <span>{buckets[0]?.label}</span>
+        {buckets.length > 2 ? <span>{buckets[Math.floor(buckets.length / 2)]?.label}</span> : null}
+        <span>{buckets[buckets.length - 1]?.label}</span>
+      </div>
+    </div>
+  );
+}
+
+function rangeLink(base: RawSearchParams, overrides: Record<string, string>) {
+  const params = new URLSearchParams();
+  for (const key of ['range', 'granularity']) {
+    const value = overrides[key] ?? str(base, key);
+    if (value) params.set(key, value);
+  }
+  return `/dashboard?${params.toString()}`;
+}
+
+// --- Page ------------------------------------------------------------------
+
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const session = await auth();
   if (!session.userId) redirect('/sign-in');
 
@@ -185,238 +243,351 @@ export default async function DashboardPage() {
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
 
+  const rawParams = await searchParams;
   const organizationId = tenant.organization?.id;
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const degradedMetrics: string[] = [];
-  // total/pending/high-risk used to be 3 separate count() queries. Merged into
-  // one groupBy (summed below) so this page fires fewer concurrent queries -
-  // it was firing 10 in a single Promise.all against a connection_limit of 5
-  // per Vercel function instance (see lib/env.ts's normalizeDatabaseUrlForPrisma,
-  // which documents this exact page as the reason that limit exists), so half
-  // of every request's queries were always queueing for a connection. That
-  // queueing is what was tripping safeMetric's timeout and showing the
-  // "workspace data delayed" banner even when the org has plenty of data.
-  const [
-    approvalStatusRiskGroups,
-    recentApprovals,
-    categories,
-    integrations,
-    evidenceTotal,
-    recentEvidence,
-    recentAudit,
-    trendRecords,
-  ] = organizationId
-    ? await Promise.all([
-        safeMetric('approval status/risk groups', prisma.approvalRecord.groupBy({ by: ['status', 'riskLevel'], where: { organizationId }, _count: { _all: true } }), [], degradedMetrics),
-        safeMetric('recent approvals', prisma.approvalRecord.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 6 }), [], degradedMetrics),
-        safeMetric('approval categories', prisma.approvalRecord.groupBy({ by: ['category'], where: { organizationId }, _count: { _all: true }, orderBy: { _count: { category: 'desc' } }, take: 6 }), [], degradedMetrics),
-        safeMetric('integrations', prisma.integration.findMany({ where: { organizationId }, orderBy: { updatedAt: 'desc' }, take: 12 }), [], degradedMetrics),
-        safeMetric('evidence count', prisma.unifiedEvidenceRecord.count({ where: { organizationId } }), 0, degradedMetrics),
-        safeMetric('recent evidence', prisma.unifiedEvidenceRecord.findMany({ where: { organizationId }, orderBy: { lastSeenAt: 'desc' }, take: 5 }), [], degradedMetrics),
-        safeMetric('recent audit', prisma.auditLog.findMany({ where: { organizationId }, orderBy: { createdAt: 'desc' }, take: 5 }), [], degradedMetrics),
-        safeMetric('approval trend', prisma.approvalRecord.findMany({ where: { organizationId, createdAt: { gte: since } }, select: { createdAt: true }, orderBy: { createdAt: 'asc' }, take: 500 }), [], degradedMetrics),
-      ])
-    : [[], [], [], [], 0, [], [], []] as const;
+  const role = tenant.user?.role ?? 'VIEWER';
 
-  const totalApprovals = approvalStatusRiskGroups.reduce((sum, group) => sum + group._count._all, 0);
-  const pendingReview = approvalStatusRiskGroups
-    .filter((group) => group.status === 'PENDING_REVIEW')
-    .reduce((sum, group) => sum + group._count._all, 0);
-  const highRiskApprovals = approvalStatusRiskGroups
-    .filter((group) => group.riskLevel === 'high' || group.riskLevel === 'critical')
-    .reduce((sum, group) => sum + group._count._all, 0);
+  const range = resolveDashboardRange(str(rawParams, 'range') as DashboardRangeKey | undefined);
+  const requestedGranularity = str(rawParams, 'granularity');
+  const granularityOverride: ActivityGranularity | undefined =
+    requestedGranularity === 'day' || requestedGranularity === 'week' || requestedGranularity === 'month' ? requestedGranularity : undefined;
 
-  const connected = integrations.filter((item) => item.status === 'CONNECTED' || item.status === 'SYNCING');
-  const complianceScore = totalApprovals > 0 ? Math.max(0, Math.round(100 - ((highRiskApprovals + pendingReview * 0.25) / totalApprovals) * 100)) : 100;
-  const displayName = tenant.user?.name?.split(' ')[0] ?? 'there';
-  const dayCounts = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - (6 - index));
-    const next = new Date(date);
-    next.setDate(next.getDate() + 1);
-    return trendRecords.filter((record) => record.createdAt >= date && record.createdAt < next).length;
-  });
-  const sourceCounts = new Map<string, number>();
-  recentApprovals.forEach((approval) => {
-    const source = approval.sourcePlatform ?? 'manual';
-    sourceCounts.set(source, (sourceCounts.get(source) ?? 0) + 1);
-  });
-  const sourceSummary = [...sourceCounts.entries()].slice(0, 6);
-  const chartMax = Math.max(...dayCounts, 1);
-  const chartPoints = dayCounts.map((count, index) => `${8 + index * 15.3},${88 - (count / chartMax) * 62}`).join(' ');
+  if (!organizationId || !tenant.user) {
+    return (
+      <section className="grid gap-3 text-al-text-secondary">
+        <div className={`${panelClass} p-8 text-center`}>
+          <h1 className="text-lg font-bold text-al-text">Workspace unavailable</h1>
+          <p className="mt-2 text-sm text-al-text-muted">We couldn&apos;t load your organization right now. Try refreshing in a moment.</p>
+        </div>
+      </section>
+    );
+  }
+
+  const overview = await getDashboardOverview(
+    { organizationId, userId: tenant.user.id, email: tenant.user.email, role },
+    range,
+    granularityOverride,
+  );
+
+  const canSeeUsers = hasAnyRole(role, ['AUDITOR', 'MANAGER', 'ADMIN', 'OWNER']);
+  const canManageUsers = hasAnyRole(role, ['ADMIN', 'OWNER']);
+  const canSeeCompliance = hasAnyRole(role, ['ADMIN', 'AUDITOR', 'OWNER']);
+  const canSeeWorkflows = hasAnyRole(role, ['ADMIN', 'AUDITOR', 'OWNER']);
+  const canManageIntegrations = hasAnyRole(role, ['ADMIN', 'OWNER']);
+
+  const avgTimeDays = overview.kpis.avgApprovalTimeHours.value !== null ? Math.round((overview.kpis.avgApprovalTimeHours.value / 24) * 10) / 10 : null;
+  const prevAvgTimeDays = overview.kpis.avgApprovalTimeHours.prevValue !== null ? overview.kpis.avgApprovalTimeHours.prevValue / 24 : null;
+
+  const recentApprovalTableRecords: ApprovalTableRecord[] = overview.recentApprovals.records;
+
+  const rangeOptions: { key: DashboardRangeKey; label: string }[] = [
+    { key: '7d', label: '7 days' },
+    { key: '30d', label: '30 days' },
+    { key: '90d', label: '90 days' },
+  ];
+  const granularityOptions: { key: ActivityGranularity; label: string }[] =
+    range.days <= 7 ? [{ key: 'day', label: 'Daily' }]
+    : range.days <= 30 ? [{ key: 'day', label: 'Daily' }, { key: 'week', label: 'Weekly' }]
+    : [{ key: 'week', label: 'Weekly' }, { key: 'month', label: 'Monthly' }];
 
   return (
     <section className="grid gap-3 text-al-text-secondary">
-      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+      <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Good morning, {displayName} 👋</h1>
-          <p className="mt-1 text-xs text-al-text-muted">Here&apos;s what&apos;s happening across your organization today.</p>
+          <h1 className="text-xl font-bold tracking-tight text-al-text">Organization Dashboard</h1>
+          <p className="mt-1 text-xs text-al-text-muted">
+            Live workspace overview of approvals, risk, compliance and activity across {tenant.organization?.name ?? 'your organization'}.
+          </p>
         </div>
-        {tenant.status !== 'ready' || degradedMetrics.length > 0 ? (
-          <Link href="/api/debug/dashboard" className="rounded-md border border-al-warning/30 bg-al-warning/10 px-3 py-2 text-xs font-semibold text-al-warning">
-            Workspace data delayed · Some numbers below may be incomplete · Open diagnostics
-          </Link>
-        ) : null}
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard label="Total Approvals" value={compact(totalApprovals)} context={`${dayCounts.reduce((sum, count) => sum + count, 0)} captured this week`} color="#2f7cff" icon={<CheckCircle2 className="h-4 w-4" />} points={[2, 5, 4, 8, 6, 10, 7, 12, 8, 13]} href="/dashboard/approvals" linkLabel="View Approvals →" />
-        <KpiCard label="High Risk Approvals" value={compact(highRiskApprovals)} context={highRiskApprovals ? 'Requires attention' : 'No high-risk records'} tone={highRiskApprovals ? 'warning' : 'positive'} color="#ff624a" icon={<AlertTriangle className="h-4 w-4" />} points={[2, 4, 9, 3, 6, 5, 7, 7, 9, 14]} />
-        <KpiCard label="Pending Approvals" value={compact(pendingReview)} context={pendingReview ? 'Waiting for review' : 'Review queue is clear'} tone={pendingReview ? 'warning' : 'positive'} color="#f4b529" icon={<Clock3 className="h-4 w-4" />} points={[5, 4, 7, 8, 5, 2, 5, 3, 4, 10]} />
-        <KpiCard label="Connected Sources" value={`${connected.length}/${Math.max(integrations.length, connected.length)}`} context={`${Math.max(0, integrations.length - connected.length)} need attention`} tone={integrations.length > connected.length ? 'warning' : 'positive'} color="#43ce79" icon={<Network className="h-4 w-4" />} points={[3, 2, 4, 3, 6, 4, 7, 5, 8, 7]} />
-        <KpiCard label="Evidence Captured" value={compact(evidenceTotal)} context={`${recentEvidence.length} recent records loaded`} color="#a66df1" icon={<Database className="h-4 w-4" />} points={[2, 5, 3, 7, 6, 8, 6, 9, 7, 14]} />
-        <KpiCard label="Compliance Score" value={`${complianceScore}%`} context={complianceScore >= 90 ? 'Healthy posture' : 'Review recommended'} tone={complianceScore >= 90 ? 'positive' : 'warning'} color="#45cf78" icon={<ShieldCheck className="h-4 w-4" />} points={[8, 9, 8, 7, 8, 10, 9, 12, 10, 13]} />
-      </div>
-
-      <div className="grid gap-3 xl:grid-cols-12">
-        <article className={`${panelClass} p-4 xl:col-span-4`}>
-          <SectionHeader title="Live Evidence Feed" subtitle="Real-time capture from connected tools" href="/evidence" linkLabel="All evidence" />
-          <div className="mt-3 divide-y divide-white/[0.06]">
-            {(recentApprovals.length ? recentApprovals.slice(0, 5) : []).map((approval) => (
-              <Link href={`/approvals/${approval.id}`} key={approval.id} className="grid grid-cols-[28px_50px_1fr_auto] items-center gap-2 py-2.5 hover:bg-al-surface/[0.025]">
-                <ProviderIcon provider={approval.sourcePlatform ?? 'manual'} />
-                <span className="text-[9px] text-al-text-muted">{approval.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                <span className="min-w-0">
-                  <span className="block truncate text-[10px] text-al-text-muted">{statusLabel(approval.sourcePlatform ?? 'manual')}</span>
-                  <span className="block truncate text-[11px] font-medium text-al-text-secondary">{approval.subject}</span>
-                </span>
-                <span className="max-w-20 truncate text-right text-[10px] text-al-text-muted">{approval.approverName ?? 'Unknown'}</span>
+        <div className="flex items-center gap-2">
+          {overview.degraded.length > 0 ? (
+            <>
+              <AutoRetryOnDegraded />
+              <span className="rounded-md border border-al-warning/30 bg-al-warning/10 px-3 py-2 text-[10px] font-semibold text-al-warning">
+                Some workspace data is delayed and will refresh automatically
+              </span>
+            </>
+          ) : null}
+          <div className="flex items-center rounded-md border border-al-border bg-al-surface-elevated p-0.5 text-[11px] font-semibold">
+            {rangeOptions.map((opt) => (
+              <Link
+                key={opt.key}
+                href={rangeLink(rawParams, { range: opt.key, granularity: '' })}
+                className={`rounded px-2.5 py-1.5 ${range.key === opt.key ? 'bg-al-accent text-al-accent-text' : 'text-al-text-muted hover:text-al-text'}`}
+                aria-current={range.key === opt.key ? 'true' : undefined}
+              >
+                {opt.label}
               </Link>
             ))}
-            {!recentApprovals.length ? <p className="py-10 text-center text-xs text-al-text-muted">Evidence appears here as approvals are captured.</p> : null}
           </div>
-        </article>
+        </div>
+      </div>
 
-        <article className={`${panelClass} p-4 xl:col-span-4`}>
-          <SectionHeader title="Evidence Capture Overview" subtitle="Across all connected sources" href="/dashboard/settings/integrations" linkLabel="Manage" />
-          <div className="mt-3 flex items-center justify-center gap-5">
-            <Donut values={sourceSummary.map(([, count]) => count)} total={Math.max(evidenceTotal, recentApprovals.length)} centerLabel="Total Evidence" />
-            <div className="min-w-0 flex-1 space-y-2">
-              {(sourceSummary.length ? sourceSummary : [['No sources', 0] as [string, number]]).map(([source, count], index) => (
-                <div key={source} className="flex items-center gap-2 text-[10px]">
-                  <span className="h-2 w-3 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }} />
-                  <span className="min-w-0 flex-1 truncate text-al-text-muted">{statusLabel(source)}</span>
-                  <span className="font-semibold text-al-text-secondary">{count}</span>
-                </div>
+      {/* KPI strip */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <KpiCard
+          label="Total Approvals"
+          value={compact(overview.kpis.totalApprovals.value)}
+          context={range.label}
+          trend={trendBadge(overview.kpis.totalApprovals.value, overview.kpis.totalApprovals.prevValue, 'up')}
+          color="#2f7cff"
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          href="/dashboard/approvals"
+          linkLabel="View →"
+        />
+        <KpiCard
+          label="Pending Approvals"
+          value={compact(overview.kpis.pendingApprovals.value)}
+          context="Requires action"
+          color="#f4b529"
+          icon={<Clock3 className="h-4 w-4" />}
+          href="/dashboard/pending-actions"
+          linkLabel="Review →"
+        />
+        <KpiCard
+          label="High Risk Approvals"
+          value={compact(overview.kpis.highRiskApprovals.value)}
+          context="Detected this period"
+          trend={trendBadge(overview.kpis.highRiskApprovals.value, overview.kpis.highRiskApprovals.prevValue, 'down')}
+          color="#ff624a"
+          icon={<AlertTriangle className="h-4 w-4" />}
+          href="/dashboard/approvals?riskLevel=high"
+          linkLabel="Review →"
+        />
+        <KpiCard
+          label="Avg Approval Time"
+          value={avgTimeDays !== null ? String(avgTimeDays) : 'Not enough data'}
+          unit={avgTimeDays !== null ? 'days' : undefined}
+          context={avgTimeDays !== null ? range.label : 'No timestamped decisions yet'}
+          trend={avgTimeDays !== null ? trendBadge(avgTimeDays, prevAvgTimeDays, 'down') : null}
+          color="#46b6df"
+          icon={<Activity className="h-4 w-4" />}
+        />
+        <KpiCard
+          label="Compliance Score"
+          value={`${overview.kpis.complianceScore.value}%`}
+          context="Based on risk & review backlog"
+          trend={trendBadge(overview.kpis.complianceScore.value, overview.kpis.complianceScore.prevValue, 'up')}
+          color="#45cf78"
+          icon={<ShieldCheck className="h-4 w-4" />}
+          href="/trust/compliance"
+          linkLabel="Compliance hub →"
+        />
+      </div>
+
+      {/* Activity + category */}
+      <div className="grid gap-3 xl:grid-cols-12">
+        <article className={`${panelClass} p-4 xl:col-span-7`}>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <SectionHeader title="Approval Activity" subtitle={`Approved, rejected and pending · ${range.label.toLowerCase()}`} />
+            <div className="flex items-center rounded-md border border-al-border bg-al-surface-elevated p-0.5 text-[10px] font-semibold">
+              {granularityOptions.map((opt) => (
+                <Link
+                  key={opt.key}
+                  href={rangeLink(rawParams, { granularity: opt.key })}
+                  className={`rounded px-2 py-1 ${overview.granularity === opt.key ? 'bg-al-accent text-al-accent-text' : 'text-al-text-muted hover:text-al-text'}`}
+                >
+                  {opt.label}
+                </Link>
               ))}
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 rounded-md border border-white/[0.06] bg-al-surface/[0.025] p-2.5">
-            <span className="text-[10px] font-semibold text-al-text-muted">{connected.length} connected</span>
-            <div className="ml-auto flex -space-x-1">
-              {connected.slice(0, 8).map((integration) => <ProviderIcon key={integration.id} provider={integration.provider} />)}
-            </div>
-          </div>
-        </article>
-
-        <article className={`${panelClass} p-4 xl:col-span-4`}>
-          <SectionHeader title="Unified Evidence Record (Recent)" subtitle="AI-clustered decisions from multiple sources" href="/evidence" />
-          <div className="mt-3 divide-y divide-white/[0.06]">
-            {(recentEvidence.length ? recentEvidence : recentApprovals).slice(0, 5).map((record) => {
-              const id = record.id;
-              const subject = record.subject;
-              const status = 'outcome' in record ? record.outcome : record.status;
-              const detailHref = 'outcome' in record ? `/evidence/${id}` : `/approvals/${id}`;
-              return (
-                <Link href={detailHref} key={id} className="flex items-center gap-3 py-3 hover:bg-al-surface/[0.025]">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-semibold text-al-text">{subject}</p>
-                    <p className="mt-0.5 truncate text-[9px] text-al-text-muted">{'department' in record ? record.department ?? 'General' : 'General'}</p>
-                  </div>
-                  <span className="rounded border border-al-success/20 bg-al-success/10 px-2 py-1 text-[9px] font-semibold text-al-success">{statusLabel(String(status))}</span>
-                </Link>
-              );
-            })}
-            {!recentEvidence.length && !recentApprovals.length ? <p className="py-10 text-center text-xs text-al-text-muted">No unified records yet.</p> : null}
-          </div>
-        </article>
-      </div>
-
-      <div className="grid gap-3 xl:grid-cols-12">
-        <article className={`${panelClass} p-4 xl:col-span-3`}>
-          <SectionHeader title="AI Copilot" subtitle="Ask anything about approvals" href="/copilot" linkLabel="Open" />
-          <div className="mt-3 grid gap-2">
-            {['Who approved the latest budget?', 'Show high-risk approvals this month', 'Which approvals need Finance?', 'Show approvals above $50,000'].map((question) => (
-              <Link key={question} href={`/copilot?q=${encodeURIComponent(question)}`} className="flex items-center gap-2 rounded-md border border-white/[0.06] bg-al-surface/[0.025] px-3 py-2 text-[10px] text-al-text-secondary hover:border-al-accent/30 hover:bg-al-accent-hover/[0.06]">
-                <Sparkles className="h-3 w-3 text-al-accent" /> {question}
-              </Link>
-            ))}
-          </div>
-          <Link href="/copilot" className="mt-3 flex h-9 items-center rounded-md border border-white/[0.08] px-3 text-[10px] text-al-text-muted hover:text-white">Ask a question… <Bot className="ml-auto h-3.5 w-3.5 text-al-accent" /></Link>
+          <ActivityChart buckets={overview.activity} />
         </article>
 
         <article className={`${panelClass} p-4 xl:col-span-5`}>
-          <SectionHeader title="Approvals Trend" subtitle="Daily approvals · last 7 days" href="/analytics" linkLabel="Analytics" />
-          <div className="mt-3 h-48">
-            <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="none" aria-label="Approvals trend">
-              {[25, 50, 75].map((y) => <line key={y} x1="5" x2="98" y1={y} y2={y} stroke="rgba(148,163,184,.09)" strokeDasharray="2 3" />)}
-              <polyline points={chartPoints} fill="none" stroke="#347dff" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-              {dayCounts.map((count, index) => <circle key={index} cx={8 + index * 15.3} cy={88 - (count / chartMax) * 62} r="1.6" fill="rgb(var(--al-surface-sunken-rgb))" stroke="#347dff" strokeWidth="1.2" />)}
-            </svg>
-          </div>
-          <div className="grid grid-cols-7 text-center text-[9px] text-al-text-secondary">
-            {dayCounts.map((_, index) => {
-              const date = new Date();
-              date.setDate(date.getDate() - (6 - index));
-              return <span key={index}>{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>;
-            })}
-          </div>
-        </article>
-
-        <article className={`${panelClass} p-4 xl:col-span-4`}>
-          <SectionHeader title="Risk & Compliance" subtitle="Overview of risks and compliance posture" href="/trust/compliance" linkLabel="Compliance hub" />
-          <div className="mt-4 grid grid-cols-[1fr_140px] items-center gap-3">
-            <div className="space-y-2">
-              {[
-                ['High Risk Approvals', highRiskApprovals, 'text-al-danger'],
-                ['Missing Evidence', Math.max(0, totalApprovals - evidenceTotal), 'text-al-warning'],
-                ['Policy Violations', categories.filter((item) => item.category?.toLowerCase().includes('compliance')).reduce((sum, item) => sum + item._count._all, 0), 'text-al-accent'],
-                ['Pending Review', pendingReview, 'text-al-info'],
-              ].map(([label, value, color]) => (
-                <div key={String(label)} className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-al-surface/[0.02] px-2.5 py-2 text-[10px]">
-                  <AlertTriangle className={`h-3.5 w-3.5 ${color}`} />
-                  <span className="flex-1 text-al-text-muted">{label}</span>
-                  <span className={`font-bold ${color}`}>{value}</span>
-                </div>
-              ))}
-            </div>
-            <div className="relative grid h-32 w-32 place-items-center rounded-full" style={{ background: `conic-gradient(#45cf78 ${complianceScore}%, rgb(var(--al-border-rgb)) 0)` }}>
-              <div className="grid h-24 w-24 place-items-center rounded-full bg-al-surface-sunken text-center">
-                <div><p className="text-2xl font-bold text-white">{complianceScore}%</p><p className="text-[9px] text-al-text-muted">Compliance</p></div>
-              </div>
-            </div>
+          <SectionHeader title="Approvals by Category" subtitle={range.label} href="/dashboard/approvals" linkLabel="All approvals" />
+          <div className="mt-3">
+            <Donut slices={overview.categories} total={overview.kpis.totalApprovals.value} centerLabel="Total" />
           </div>
         </article>
       </div>
 
+      {/* Recent approvals + recent activity */}
       <div className="grid gap-3 xl:grid-cols-12">
         <article className={`${panelClass} p-4 xl:col-span-8`}>
-          <SectionHeader title="Recent Activity" subtitle="System and user activities" href="/dashboard/audit-log" />
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            {recentAudit.map((event, index) => (
-              <div key={event.id} className="min-w-0 border-l border-white/[0.08] pl-3 first:border-l-0">
-                <span className={`grid h-7 w-7 place-items-center rounded-full ${index % 2 ? 'bg-al-success/15 text-al-success' : 'bg-al-info/100/15 text-al-info'}`}><Activity className="h-3.5 w-3.5" /></span>
-                <p className="mt-2 truncate text-[10px] font-semibold text-al-text-secondary">{statusLabel(event.action)}</p>
-                <p className="mt-0.5 text-[9px] text-al-text-secondary">{event.createdAt.toLocaleString()}</p>
-              </div>
-            ))}
-            {!recentAudit.length ? <p className="col-span-full py-5 text-center text-xs text-al-text-muted">Recent actions will appear here.</p> : null}
+          <SectionHeader title="Recent Approvals" subtitle={range.label} href="/dashboard/approvals" linkLabel="View all" />
+          <div className="mt-3">
+            {recentApprovalTableRecords.length > 0 ? (
+              <ApprovalTable approvals={recentApprovalTableRecords} />
+            ) : (
+              <p className="py-10 text-center text-xs text-al-text-muted">No approvals captured in this period yet.</p>
+            )}
           </div>
         </article>
 
         <article className={`${panelClass} p-4 xl:col-span-4`}>
-          <SectionHeader title="System Health" subtitle="Core workspace services" href="/health" linkLabel="Status page" />
-          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
-            {['Capture Engine', 'AI Classifier', 'Integrations', 'Data Pipeline', 'Storage', 'API Gateway'].map((service) => (
-              <div key={service} className="flex items-center gap-2 text-[10px] text-al-text-muted"><Check className="h-3.5 w-3.5 rounded-full bg-al-success/20 p-0.5 text-al-success" />{service}</div>
-            ))}
+          <SectionHeader title="Recent Activity" subtitle="Latest audited events" href="/dashboard/audit-log" />
+          <div className="mt-3 divide-y divide-white/[0.06]">
+            {overview.recentAudit.length ? (
+              overview.recentAudit.map((event) => (
+                <div key={event.id} className="flex items-center gap-2.5 py-2.5">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-al-info/15 text-al-info"><Activity className="h-3.5 w-3.5" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-semibold text-al-text-secondary">{statusLabel(event.action)}</p>
+                    <p className="text-[9px] text-al-text-muted">{new Date(event.createdAt).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="py-10 text-center text-xs text-al-text-muted">Activity will appear here as your team works in ApprovLine.</p>
+            )}
+          </div>
+        </article>
+      </div>
+
+      {/* Integrations + workflows + risk */}
+      <div className="grid gap-3 xl:grid-cols-12">
+        <article className={`${panelClass} p-4 xl:col-span-4`}>
+          <SectionHeader
+            title="Top Integrations"
+            subtitle={`${overview.integrations.connectedCount} of ${overview.integrations.nativeCatalogSize} connected`}
+            href={canManageIntegrations ? '/dashboard/settings/integrations' : undefined}
+            linkLabel="Manage"
+          />
+          <div className="mt-3 divide-y divide-white/[0.06]">
+            {overview.connectors.length ? (
+              overview.connectors.slice(0, 6).map((connector) => {
+                const meta = sourceMeta(connector.provider);
+                return (
+                  <div key={connector.name} className="flex items-center gap-2.5 py-2">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-[9px] font-black text-white" style={{ backgroundColor: meta.color }}>
+                      {meta.initials}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] font-semibold text-al-text-secondary">{connector.name}</p>
+                      <p className="text-[9px] text-al-text-muted">{connector.count} messages · {statusLabel(connector.status)}</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-al-text-muted">{connector.percentage}%</span>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="py-6 text-center text-xs text-al-text-muted">No integration activity in this period.</p>
+            )}
+            {overview.integrations.issueCount > 0 ? (
+              <p className="flex items-center gap-1.5 pt-2 text-[10px] font-semibold text-al-warning">
+                <ShieldAlert className="h-3.5 w-3.5" /> {overview.integrations.issueCount} integration{overview.integrations.issueCount === 1 ? '' : 's'} need attention
+              </p>
+            ) : null}
+          </div>
+        </article>
+
+        {canSeeWorkflows ? (
+          <article className={`${panelClass} p-4 xl:col-span-4`}>
+            <SectionHeader title="Workflow Performance" subtitle="Playbook AI documents" href="/playbooks" linkLabel="Open" />
+            <div className="mt-3 divide-y divide-white/[0.06]">
+              {overview.workflows.items.length ? (
+                overview.workflows.items.slice(0, 6).map((workflow) => (
+                  <div key={workflow.id} className="flex items-center gap-2.5 py-2">
+                    <BrainCircuit className="h-3.5 w-3.5 shrink-0 text-al-accent" />
+                    <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-al-text-secondary">{workflow.name}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                        workflow.status === 'READY'
+                          ? 'bg-al-success/10 text-al-success'
+                          : workflow.status === 'ERROR'
+                            ? 'bg-al-danger/10 text-al-danger'
+                            : 'bg-al-warning/10 text-al-warning'
+                      }`}
+                    >
+                      {workflow.status === 'READY' ? 'Active' : workflow.status === 'ERROR' ? 'Needs attention' : statusLabel(workflow.status)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="py-6 text-center text-xs text-al-text-muted">No playbooks uploaded yet.</p>
+              )}
+            </div>
+          </article>
+        ) : null}
+
+        <article className={`${panelClass} p-4 ${canSeeWorkflows ? 'xl:col-span-4' : 'xl:col-span-8'}`}>
+          <SectionHeader title="Risk Distribution" subtitle={range.label} href="/dashboard/approvals" />
+          <div className="mt-3">
+            <Donut
+              slices={overview.riskDistribution.map((s) => ({ name: s.label, count: s.count, percentage: s.percentage }))}
+              total={overview.riskDistribution.reduce((sum, s) => sum + s.count, 0)}
+              centerLabel="Approvals"
+            />
+          </div>
+        </article>
+      </div>
+
+      {/* Users & teams + compliance + open items */}
+      <div className="grid gap-3 xl:grid-cols-12">
+        {canSeeUsers ? (
+          <article className={`${panelClass} p-4 xl:col-span-4`}>
+            <SectionHeader title="Users & Teams" subtitle="Workspace membership" href={canManageUsers ? '/settings/users' : undefined} linkLabel="Manage" />
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              {[
+                ['Total Users', overview.usersAndTeams.totalUsers],
+                ['Administrators', overview.usersAndTeams.adminUsers],
+                ['Teams', overview.usersAndTeams.totalTeams],
+                ['Pending Invites', overview.usersAndTeams.pendingInvites],
+              ].map(([label, value]) => (
+                <div key={String(label)} className="rounded-md border border-white/[0.06] bg-al-surface/[0.02] p-2.5">
+                  <p className="text-lg font-bold text-al-text">{value}</p>
+                  <p className="text-[9px] text-al-text-muted">{label}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+        ) : null}
+
+        {canSeeCompliance ? (
+          <article className={`${panelClass} p-4 xl:col-span-4`}>
+            <SectionHeader title="Compliance Frameworks" subtitle="Configured in Compliance Hub" href="/trust/compliance" linkLabel="View all" />
+            <div className="mt-3 grid gap-2">
+              {overview.complianceFrameworks.length ? (
+                overview.complianceFrameworks.slice(0, 5).map((framework) => (
+                  <div key={framework.slug} className="flex items-center justify-between gap-2 rounded-md border border-white/[0.05] bg-al-surface/[0.02] px-2.5 py-2 text-[11px]">
+                    <span className="flex items-center gap-2 text-al-text-secondary"><ShieldCheck className="h-3.5 w-3.5 text-al-accent" />{framework.name}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${framework.isEnabled ? 'bg-al-success/10 text-al-success' : 'bg-al-text-muted/10 text-al-text-muted'}`}>
+                      {framework.isEnabled ? 'Enabled' : 'Not enabled'}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="py-4 text-center text-xs text-al-text-muted">No compliance frameworks configured yet.</p>
+              )}
+            </div>
+          </article>
+        ) : null}
+
+        <article className={`${panelClass} p-4 ${canSeeUsers && canSeeCompliance ? 'xl:col-span-4' : 'xl:col-span-8'}`}>
+          <SectionHeader title="Open Action Items" subtitle="Needs attention now" href="/dashboard/pending-actions" linkLabel="Open Action Center" />
+          <div className="mt-3 grid gap-2">
+            {[
+              ['Pending Approvals', overview.openItems.needsAttention, '/dashboard/pending-actions'],
+              ['High Risk Approvals', overview.openItems.highPriority, '/dashboard/pending-actions?priority=high'],
+              ['Overdue Approvals', overview.openItems.overdue, '/dashboard/pending-actions?status=OPEN'],
+              ['Integration Issues', overview.integrations.issueCount, canManageIntegrations ? '/dashboard/settings/integrations' : '/dashboard/pending-actions'],
+            ]
+              .filter(([, value]) => Number(value) > 0)
+              .map(([label, value, href]) => (
+                <Link key={String(label)} href={String(href)} className="flex items-center gap-2 rounded-md border border-white/[0.05] bg-al-surface/[0.02] px-2.5 py-2 text-[11px] hover:border-al-accent/30">
+                  <ShieldAlert className="h-3.5 w-3.5 text-al-warning" />
+                  <span className="flex-1 text-al-text-muted">{label}</span>
+                  <span className="font-bold text-al-text">{value}</span>
+                  <ArrowRight className="h-3 w-3 text-al-text-muted" />
+                </Link>
+              ))}
+            {[overview.openItems.needsAttention, overview.openItems.highPriority, overview.openItems.overdue, overview.integrations.issueCount].every((v) => v === 0) ? (
+              <p className="flex items-center gap-2 py-4 text-center text-xs text-al-success">
+                <CheckCircle2 className="h-4 w-4" /> Nothing needs attention right now.
+              </p>
+            ) : null}
           </div>
         </article>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] px-1 pt-3 text-[9px] text-al-text-secondary">
-        <div className="flex flex-wrap gap-4"><span>Enterprise-grade security</span><span>SOC 2 ready</span><span>GDPR aligned</span><span>Read-only integrations</span></div>
+        <div className="flex flex-wrap gap-4">
+          <span className="flex items-center gap-1"><Cable className="h-3 w-3" />Read-only integrations</span>
+          <span className="flex items-center gap-1"><ScrollText className="h-3 w-3" />Full audit trail</span>
+          <span className="flex items-center gap-1"><Users className="h-3 w-3" />Role-based access</span>
+        </div>
         <span>© 2026 ApprovLine</span>
       </div>
     </section>
