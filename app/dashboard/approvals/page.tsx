@@ -3,6 +3,7 @@ import { ApprovalTable } from '@/components/dashboard/ApprovalTable';
 import type { ApprovalTableRecord } from '@/components/dashboard/ApprovalTable';
 import { AutoRetryOnDegraded } from '@/components/dashboard/AutoRetryOnDegraded';
 import { LiveCaptureBadge } from '@/components/dashboard/DashboardNavigation';
+import { MyApprovalsView } from '@/components/dashboard/MyApprovalsView';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { PendingLink } from '@/components/system/PendingLink';
 import {
@@ -12,6 +13,7 @@ import {
 } from '@/lib/approvalRecords';
 import { getCaptureStatus } from '@/lib/capture-status';
 import { getUnifiedSourceSummariesForApprovals } from '@/services/evidence/records';
+import type { ActionCenterViewer } from '@/services/action-center';
 import { redirect } from 'next/navigation';
 
 function minutesAgo(ms: number) {
@@ -131,6 +133,29 @@ export default async function ApprovalsPage({
   if (tenant.status === 'unauthenticated') redirect('/sign-in');
   if (tenant.status === 'organization_missing' || tenant.status === 'onboarding_incomplete') redirect('/onboarding');
   const rawParams = await searchParams;
+
+  // "My Approvals" (view=mine) vs this page's existing org-wide "All
+  // Approvals" body — see components/dashboard/MyApprovalsView.tsx's header
+  // comment for the full rationale. Reusing this one route rather than a
+  // duplicate route, but the DEFAULT (no `view` param) must stay exactly
+  // today's org-wide behavior: every existing deep link into this page
+  // (Organization Dashboard's category/risk/recent-approvals widgets, the
+  // demo-seed and evidence-backfill redirects, the Slack demo seeder, the
+  // filter chips, etc.) omits `view` entirely and expects the org-wide list
+  // it has always gotten — and per lib/rbac.ts's ROUTE_PERMISSIONS, that is
+  // every authenticated role today, not just OWNER/ADMIN/MANAGER. "My
+  // Approvals" is therefore an explicit opt-in (`?view=mine`, reachable from
+  // its own nav entry — see components/dashboard/DashboardNavigation.tsx),
+  // never the silent default, so nothing existing ever changes behavior.
+  if (tenant.organization && tenant.user && str(rawParams, 'view') === 'mine') {
+    const viewer: ActionCenterViewer = {
+      organizationId: tenant.organization.id,
+      userId: tenant.user.id,
+      email: tenant.user.email,
+      role: tenant.user.role,
+    };
+    return <MyApprovalsView viewer={viewer} rawParams={rawParams} />;
+  }
 
   const activeChip = normalizeFilterChip(rawParams);
   const requestedPage = Math.max(1, Math.trunc(Number(str(rawParams, 'page')) || 1));

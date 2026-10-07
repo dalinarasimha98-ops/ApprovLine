@@ -352,6 +352,7 @@ const confirmationRequestSelect = {
   createdAt: true,
   respondedAt: true,
   responseNote: true,
+  expiresAt: true,
   requestedByUser: { select: { name: true, email: true } },
 } satisfies Prisma.ApprovalConfirmationRequestSelect;
 
@@ -404,6 +405,7 @@ export const getApprovalManualBundle = cache(async (organizationId: string, appr
       ...confirmation,
       createdAt: toDate(confirmation.createdAt),
       respondedAt: toDate(confirmation.respondedAt),
+      expiresAt: toDate(confirmation.expiresAt),
     })),
   };
 });

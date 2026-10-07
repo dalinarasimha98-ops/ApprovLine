@@ -6,6 +6,7 @@ import { riskBadgeClass, riskLabel } from '@/lib/risk-ramp';
 import { extractAmountFromSubject, formatAmount } from '@/lib/amount-extraction';
 import { sourceMeta } from '@/lib/source-badges';
 import { isDemoApprovalRecord } from '@/lib/demo-detection';
+import { fmtDueDate } from '@/lib/action-center';
 
 export type ApprovalTableSources = {
   unifiedEvidenceId: string | null;
@@ -38,12 +39,48 @@ export type ApprovalTableRecord = {
    *  both the row's stacked source badges and the preview panel's source
    *  list, so the two can never disagree about a source count again. */
   sources: ApprovalTableSources | null;
+  /** Optional, additive — every existing caller (org-wide Approval History,
+   *  Individual Dashboard's My Approvals/My Tasks lists) leaves these
+   *  undefined and gets byte-identical rendering to before. Only
+   *  My Approvals (services/myApprovals.ts) sets them, to show the one
+   *  real distinction between "recorded as approved/rejected" and
+   *  "still needs the named approver's confirmation" (the same priority
+   *  services/action-center.ts's deriveActionType() already uses - a
+   *  pending confirmation always wins over the raw status) and a real due
+   *  date sourced from ApprovalConfirmationRequest.expiresAt - never a
+   *  fabricated one. */
+  personalStatus?: 'PENDING_REVIEW' | 'CONFIRMATION_REQUIRED' | 'APPROVED' | 'REJECTED';
+  dueAt?: Date | null;
 };
 
 function statusClass(status: string) {
   if (status === 'REJECTED') return 'bg-al-danger/10 text-al-danger';
   if (status === 'PENDING_REVIEW') return 'bg-al-warning/10 text-al-warning';
   return 'bg-al-success/10 text-al-success';
+}
+
+const PERSONAL_STATUS_LABELS: Record<string, string> = {
+  PENDING_REVIEW: 'PENDING REVIEW',
+  CONFIRMATION_REQUIRED: 'CONFIRMATION REQUIRED',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+};
+
+function personalStatusClass(status: string) {
+  if (status === 'REJECTED') return 'bg-al-danger/10 text-al-danger';
+  if (status === 'CONFIRMATION_REQUIRED') return 'bg-al-info/10 text-al-info';
+  if (status === 'PENDING_REVIEW') return 'bg-al-warning/10 text-al-warning';
+  return 'bg-al-success/10 text-al-success';
+}
+
+function dueDateClass(dueAt: Date | null | undefined) {
+  if (!dueAt) return 'text-al-text-secondary';
+  const now = Date.now();
+  if (dueAt.getTime() < now) return 'font-bold text-al-danger';
+  const dueDay = new Date(dueAt.getFullYear(), dueAt.getMonth(), dueAt.getDate()).getTime();
+  const today = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), new Date(now).getDate()).getTime();
+  if (dueDay === today) return 'font-bold text-al-warning';
+  return 'text-al-text-secondary';
 }
 
 function approverDisplay(approval: Pick<ApprovalTableRecord, 'approverName' | 'approverEmail'>) {
@@ -65,7 +102,7 @@ function isPlainLeftClick(event: MouseEvent) {
   return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
 }
 
-export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] }) {
+export function ApprovalTable({ approvals, showDueColumn = false }: { approvals: ApprovalTableRecord[]; showDueColumn?: boolean }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = approvals.find((a) => a.id === selectedId) ?? null;
 
@@ -96,6 +133,7 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
               <col className="w-24" />
               <col className="w-32" />
               <col className="w-28" />
+              {showDueColumn ? <col className="w-28" /> : null}
               <col className="w-32" />
             </colgroup>
             <thead className="bg-al-surface-sunken text-xs uppercase tracking-wide text-al-text-muted">
@@ -104,6 +142,7 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
                 <th className="px-4 py-3 font-semibold">Risk</th>
                 <th className="px-4 py-3 font-semibold">Sources</th>
                 <th className="px-4 py-3 font-semibold text-right">Amount</th>
+                {showDueColumn ? <th className="px-4 py-3 font-semibold">Due</th> : null}
                 <th className="px-4 py-3 font-semibold">Status</th>
               </tr>
             </thead>
@@ -180,10 +219,21 @@ export function ApprovalTable({ approvals }: { approvals: ApprovalTableRecord[] 
                     <td className="px-4 py-3 text-right font-mono tabular-nums text-al-text-secondary">
                       {formatAmount(amount, currency)}
                     </td>
+                    {showDueColumn ? (
+                      <td className={`px-4 py-3 text-xs ${dueDateClass(approval.dueAt)}`}>
+                        {fmtDueDate(approval.dueAt ?? null)}
+                      </td>
+                    ) : null}
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-1 text-xs font-bold ${statusClass(approval.status)}`}>
-                        {approval.status.replaceAll('_', ' ')}
-                      </span>
+                      {approval.personalStatus ? (
+                        <span className={`rounded-full px-2 py-1 text-xs font-bold ${personalStatusClass(approval.personalStatus)}`}>
+                          {PERSONAL_STATUS_LABELS[approval.personalStatus]}
+                        </span>
+                      ) : (
+                        <span className={`rounded-full px-2 py-1 text-xs font-bold ${statusClass(approval.status)}`}>
+                          {approval.status.replaceAll('_', ' ')}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );

@@ -15,6 +15,7 @@ import {
   FileSearch,
   GitBranch,
   LayoutDashboard,
+  ListChecks,
   Network,
   ScrollText,
   Settings,
@@ -57,6 +58,7 @@ const sections: NavSection[] = [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { href: '/dashboard/me', label: 'My Dashboard', icon: User },
       { href: '/dashboard/pending-actions', label: 'Action Center', icon: CheckSquare },
+      { href: '/dashboard/approvals?view=mine', label: 'My Approvals', icon: ListChecks },
       { href: '/dashboard/approvals', label: 'Approvals', icon: FileCheck2 },
       { href: '/evidence', label: 'Unified Evidence', icon: Boxes, badge: 'New' },
     ],
@@ -116,7 +118,7 @@ export function DashboardNavigation({ mobile = false, role = null }: { mobile?: 
         items: !role
           ? section.items
           : section.items.filter(({ href }) => {
-              const allowedRoles = findRoutePermission(href);
+              const allowedRoles = findRoutePermission(href.split('?')[0]);
               return !allowedRoles || hasAnyRole(role, allowedRoles);
             }),
       }))

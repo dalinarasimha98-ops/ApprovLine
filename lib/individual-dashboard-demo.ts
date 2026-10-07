@@ -34,6 +34,7 @@ import { prisma } from '@/lib/prisma';
 import type { ApprovalStatus, Role } from '@prisma/client';
 import { createConfirmationToken } from '@/services/manual-approvals';
 import { invalidateApprovalRecordsCache } from '@/lib/approvalRecords';
+import { backfillUnifiedEvidenceForApproval, runEvidenceSidecar } from '@/services/evidence/pipeline';
 
 export const INDIVIDUAL_DASHBOARD_DEMO_ORG_SLUG = 'individual-dashboard-demo';
 export const INDIVIDUAL_DASHBOARD_DEMO_USER_EMAIL = 'demo-user@approvline.local';
@@ -97,6 +98,14 @@ const JOHN_APPROVALS: Array<{
   conditions?: string;
   status: ApprovalStatus;
   daysAgo: number;
+  /** When set, this record's sourcePlatform is the real integration named
+   *  here (not the default 'Manual') and a genuine UnifiedEvidenceRecord
+   *  is backfilled for it via services/evidence/pipeline.ts's existing
+   *  backfillUnifiedEvidenceForApproval() - the exact helper lib/demo-data.ts's
+   *  org-wide demo engine already uses - so "My Approvals"/the approval
+   *  detail page can show a genuinely populated evidence source rather
+   *  than every demo record reading "no evidence." */
+  richEvidenceSource?: string;
 }> = [
   {
     subject: 'Q3 marketing budget increase to $250,000',
@@ -107,6 +116,7 @@ const JOHN_APPROVALS: Array<{
     reasoning: 'Explicit budget-increase request awaiting your decision.',
     status: 'PENDING_REVIEW',
     daysAgo: 1,
+    richEvidenceSource: 'slack',
   },
   {
     subject: 'Northstar Analytics vendor approval',
@@ -118,6 +128,7 @@ const JOHN_APPROVALS: Array<{
     conditions: 'Updated SOC 2 report must be attached before payment release.',
     status: 'PENDING_REVIEW',
     daysAgo: 4,
+    richEvidenceSource: 'gmail',
   },
   {
     subject: 'Software license renewal - design tooling suite',
@@ -148,6 +159,7 @@ const JOHN_APPROVALS: Array<{
     reasoning: 'Rejected - the proposed indemnity language did not meet legal requirements.',
     status: 'REJECTED',
     daysAgo: 45,
+    richEvidenceSource: 'gmail',
   },
   {
     subject: 'Security review - production database access exception',
@@ -338,7 +350,7 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
     // that a non-manual decision has no due-date mechanism today.
     for (const approval of JOHN_APPROVALS) {
       const occurredAt = daysAgoAt(approval.daysAgo);
-      await tx.approvalRecord.create({
+      const record = await tx.approvalRecord.create({
         data: {
           organizationId: organization.id,
           approverUserId: john.id,
@@ -354,8 +366,8 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
           businessImpact: approval.businessImpact,
           reasoning: approval.reasoning,
           conditions: approval.conditions,
-          sourcePlatform: 'Manual',
-          sourceSystem: 'MANUAL_ENTRY',
+          sourcePlatform: approval.richEvidenceSource ?? 'Manual',
+          sourceSystem: approval.richEvidenceSource ? 'INTEGRATION' : 'MANUAL_ENTRY',
           evidenceSnippet: approval.reasoning,
           sourceLink: null,
           correlationId: `${DEMO_RUN_ID}:${occurredAt.getTime()}`,
@@ -364,6 +376,14 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
           createdAt: occurredAt,
         },
       });
+      // Real UnifiedEvidenceRecord backfill (not a fabricated "Evidence
+      // available" flag) for the handful of records the spec's demo
+      // scenario needs to show a genuinely populated evidence source -
+      // the same helper lib/demo-data.ts's org-wide demo engine already
+      // uses for every one of its seeded approvals.
+      if (approval.richEvidenceSource) {
+        await runEvidenceSidecar(() => backfillUnifiedEvidenceForApproval(tx, record), 'individual-dashboard-demo-backfill');
+      }
     }
 
     // John's 5 open task-type confirmations (Section 28) - real manual/

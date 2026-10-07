@@ -385,12 +385,14 @@ async function OverviewTab({
   canManage,
   currentUserId,
   currentUserRole,
+  currentUserEmail,
 }: {
   core: ApprovalCore;
   organizationId: string;
   canManage: boolean;
   currentUserId: string;
   currentUserRole: string;
+  currentUserEmail: string;
 }) {
   try {
     return (
@@ -402,6 +404,7 @@ async function OverviewTab({
               core={core}
               canManage={canManage}
               currentUserId={currentUserId}
+              currentUserEmail={currentUserEmail}
               currentUserRole={currentUserRole}
             />
           </Suspense>
@@ -870,12 +873,14 @@ async function ManualApprovalSection({
   canManage,
   currentUserId,
   currentUserRole,
+  currentUserEmail,
 }: {
   organizationId: string;
   core: ApprovalCore;
   canManage: boolean;
   currentUserId: string;
   currentUserRole: string;
+  currentUserEmail: string;
 }) {
   if (!core.manualDetail) return null;
 
@@ -942,11 +947,13 @@ async function ManualApprovalSection({
           createdAt: confirmation.createdAt?.toISOString() ?? new Date(0).toISOString(),
           respondedAt: confirmation.respondedAt?.toISOString() ?? null,
           responseNote: confirmation.responseNote,
+          expiresAt: confirmation.expiresAt?.toISOString() ?? new Date(0).toISOString(),
           requestedByUser: confirmation.requestedByUser,
         }))}
         canManage={canManage}
         currentUserId={currentUserId}
         currentUserRole={currentUserRole}
+        currentUserEmail={currentUserEmail}
       />
     );
   } catch (error) {
@@ -1054,6 +1061,7 @@ export default async function ApprovalDetailPage({ params, searchParams }: Appro
                     canManage={canManageManualApprovals(tenant.user.role)}
                     currentUserId={tenant.user.id}
                     currentUserRole={tenant.user.role}
+                    currentUserEmail={tenant.user.email}
                   />
                 </Suspense>
               ),

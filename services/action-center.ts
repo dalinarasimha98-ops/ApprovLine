@@ -52,7 +52,10 @@ const RECENTLY_RESOLVED_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 // Roles with the same organization-wide operational visibility already
 // granted to /dashboard/alerts (see lib/rbac.ts's ROUTE_PERMISSIONS for
 // that precedent) — everyone else sees only actions assigned to them.
-const ORG_WIDE_VISIBILITY_ROLES: Role[] = ['OWNER', 'ADMIN', 'MANAGER'];
+// Exported for app/dashboard/approvals/page.tsx's "My Approvals" vs
+// "All Approvals" view toggle, which needs the exact same visibility rule
+// rather than a second one.
+export const ORG_WIDE_VISIBILITY_ROLES: Role[] = ['OWNER', 'ADMIN', 'MANAGER'];
 
 export type ActionCenterViewer = {
   organizationId: string;
@@ -61,7 +64,7 @@ export type ActionCenterViewer = {
   role: Role;
 };
 
-function hasOrgWideVisibility(role: Role): boolean {
+export function hasOrgWideVisibility(role: Role): boolean {
   return ORG_WIDE_VISIBILITY_ROLES.includes(role);
 }
 

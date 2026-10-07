@@ -245,6 +245,116 @@ export async function updateManualApproval(args: {
   return result;
 }
 
+export class ConfirmationResponseError extends Error {
+  constructor(public readonly code: 'CONFIRMATION_NOT_FOUND' | 'CONFIRMATION_ALREADY_RESPONDED' | 'MANUAL_APPROVAL_VERSION_CONFLICT') {
+    super(code);
+    this.name = 'ConfirmationResponseError';
+  }
+}
+
+export type ConfirmationResponseInput = {
+  decision: 'CONFIRMED' | 'REJECTED' | 'CORRECTED';
+  responseNote: string;
+  correction?: Record<string, unknown>;
+};
+
+/**
+ * The one real state-machine transition for "an approver (or, via the
+ * authenticated route, the exact-email-matched viewer) responds to a
+ * requested confirmation" — shared by the public token flow
+ * (app/api/confirmations/[token]/route.ts) and the authenticated in-app
+ * flow (app/api/approvals/[id]/confirmations/respond/route.ts) so there is
+ * exactly one place that ever writes ApprovalConfirmationRequest.decision,
+ * ManualApprovalDetail.verificationStatus, a ManualApprovalVersion, and the
+ * APPROVER_CONFIRMATION_* audit log for this transition. Callers are
+ * responsible for finding the right confirmationId (by token hash, or by an
+ * exact authenticated-email match) and for translating the thrown
+ * ConfirmationResponseError into their own HTTP response shape.
+ */
+export async function respondToConfirmation(confirmationId: string, input: ConfirmationResponseInput): Promise<{ verificationStatus: ManualApprovalVerificationStatus | null }> {
+  const confirmation = await prisma.approvalConfirmationRequest.findUnique({
+    where: { id: confirmationId },
+    include: {
+      approvalRecord: {
+        include: {
+          manualDetail: true,
+          manualVersions: { orderBy: { version: 'desc' }, take: 1 },
+        },
+      },
+    },
+  });
+  if (!confirmation || confirmation.expiresAt < new Date()) {
+    throw new ConfirmationResponseError('CONFIRMATION_NOT_FOUND');
+  }
+  if (confirmation.decision !== 'PENDING') {
+    throw new ConfirmationResponseError('CONFIRMATION_ALREADY_RESPONDED');
+  }
+
+  const now = new Date();
+  const verificationStatus: ManualApprovalVerificationStatus = input.decision === 'CONFIRMED' ? 'CONFIRMED_BY_APPROVER' : 'DISPUTED';
+  const correction = input.correction
+    ? (JSON.parse(JSON.stringify(input.correction)) as Prisma.InputJsonValue)
+    : Prisma.JsonNull;
+  const immutableResponse = {
+    decision: input.decision,
+    responseNote: input.responseNote,
+    correction: input.correction ?? null,
+    respondedAt: now.toISOString(),
+    approverEmail: confirmation.approverEmail,
+  } as Prisma.InputJsonObject;
+
+  let resultVerificationStatus: ManualApprovalVerificationStatus | null = null;
+
+  await prisma.$transaction(async (tx) => {
+    const claimed = await tx.approvalConfirmationRequest.updateMany({
+      where: { id: confirmation.id, decision: 'PENDING' },
+      data: { decision: input.decision, respondedAt: now, responseNote: input.responseNote, correction, immutableResponse },
+    });
+    if (claimed.count !== 1) throw new ConfirmationResponseError('CONFIRMATION_ALREADY_RESPONDED');
+
+    const detail = confirmation.approvalRecord.manualDetail;
+    let nextVersion: number | null = null;
+    if (detail) {
+      nextVersion = detail.currentVersion + 1;
+      const previousSnapshot = (confirmation.approvalRecord.manualVersions[0]?.snapshot ?? {}) as Prisma.JsonObject;
+      const confirmationSnapshot = JSON.parse(JSON.stringify(immutableResponse)) as Prisma.JsonObject;
+      const nextSnapshot = {
+        ...previousSnapshot,
+        version: nextVersion,
+        verificationStatus,
+        approverConfirmation: confirmationSnapshot,
+      } satisfies Prisma.JsonObject;
+      const updated = await tx.manualApprovalDetail.updateMany({
+        where: { approvalRecordId: confirmation.approvalRecordId, currentVersion: detail.currentVersion },
+        data: { verificationStatus, currentVersion: nextVersion },
+      });
+      if (updated.count !== 1) throw new ConfirmationResponseError('MANUAL_APPROVAL_VERSION_CONFLICT');
+      await tx.manualApprovalVersion.create({
+        data: {
+          organizationId: confirmation.organizationId,
+          approvalRecordId: confirmation.approvalRecordId,
+          version: nextVersion,
+          snapshot: nextSnapshot,
+          previousValues: { verificationStatus: detail.verificationStatus },
+          changeReason: `Approver ${input.decision.toLowerCase()}: ${input.responseNote}`,
+          actorUserId: confirmation.requestedByUserId,
+        },
+      });
+      resultVerificationStatus = verificationStatus;
+    }
+    await tx.auditLog.create({
+      data: {
+        organizationId: confirmation.organizationId,
+        approvalRecordId: confirmation.approvalRecordId,
+        action: `APPROVER_CONFIRMATION_${input.decision}`,
+        metadata: { ...immutableResponse, version: nextVersion },
+      },
+    });
+  }, { timeout: 15_000 });
+
+  return { verificationStatus: resultVerificationStatus };
+}
+
 export function createConfirmationToken() {
   const token = randomBytes(32).toString('base64url');
   return { token, tokenHash: hashConfirmationToken(token) };

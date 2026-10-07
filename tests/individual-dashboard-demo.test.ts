@@ -90,6 +90,21 @@ assert.match(demoLib, /'Confirm Q2 expense report accuracy'/); // the "1 overdue
 assert.match(demoLib, /subject: 'Submit Q3 campaign plan'/); // the "1 completed" task - in Recent Activity, not JOHN_TASKS
 assert.doesNotMatch(demoLib, /manual: null \| \{/); // JOHN_APPROVALS no longer carries manual-approval fields
 
+// ─── My Approvals: real evidence backfill, not a fabricated flag ──────────
+//
+// A handful of JOHN_APPROVALS carry a real richEvidenceSource (a genuine
+// integration name, not the default 'Manual') and get a real
+// UnifiedEvidenceRecord backfilled via services/evidence/pipeline.ts's
+// existing backfillUnifiedEvidenceForApproval() - the same helper
+// lib/demo-data.ts's org-wide demo engine already uses for every one of
+// its seeded approvals - so "My Approvals" has at least one genuine
+// evidence-available case instead of every demo record reading "no
+// evidence."
+assert.match(demoLib, /import \{ backfillUnifiedEvidenceForApproval, runEvidenceSidecar \} from '@\/services\/evidence\/pipeline'/);
+assert.match(demoLib, /richEvidenceSource\?: string;/);
+assert.match(demoLib, /if \(approval\.richEvidenceSource\) \{/);
+assert.match(demoLib, /backfillUnifiedEvidenceForApproval\(tx, record\)/);
+
 // ─── My Tasks vs Awaiting My Response: real, non-identical overlap ─────────
 //
 // Being ASSIGNED (ManualApprovalDetail.secondVerifierUserId = John) and
