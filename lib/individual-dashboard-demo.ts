@@ -184,15 +184,26 @@ const JOHN_APPROVALS: Array<{
 /**
  * John's "My Tasks" - confirmations/acknowledgments assigned to him,
  * modeled as real manual/verbal ApprovalRecords recorded by a colleague
- * with John as ManualApprovalDetail.secondVerifierUserId and the real
- * ApprovalConfirmationRequest.approverEmail target, exactly the flow
- * app/api/approvals/[id]/confirmations exercises. This is Action Center's
- * own existing CONFIRMATION_REQUEST ActionType (lib/action-center.ts's
- * deriveActionType()) - never a second task model. One item
- * (Q3 campaign plan) is recorded and confirmed by John himself immediately
- * (verificationStatus CONFIRMED_BY_APPROVER from creation) so it shows as
- * completed in My Recent Activity rather than sitting in the open task
- * list - My Tasks, like My Approvals, only lists currently-open work.
+ * with John as ManualApprovalDetail.secondVerifierUserId, exactly the
+ * manual-approval flow services/manual-approvals.ts already writes. This
+ * is Action Center's own existing CONFIRMATION_REQUEST ActionType
+ * (lib/action-center.ts's deriveActionType()) - never a second task model.
+ *
+ * `confirmationRequested` deliberately varies: being ASSIGNED
+ * (ManualApprovalDetail.secondVerifierUserId = John) and being explicitly
+ * ASKED to respond (a real ApprovalConfirmationRequest addressed to John,
+ * via app/api/approvals/[id]/confirmations) are two different real states
+ * this schema already models - a colleague can record that John is the
+ * designated verifier without yet sending the formal confirmation
+ * request. 3 of the 5 tasks have one (My Tasks and Awaiting My Response
+ * both see them); 2 do not (My Tasks only) - so the two KPIs are related
+ * but never mechanically identical, without inventing any field.
+ *
+ * One item (Q3 campaign plan) is recorded and confirmed by John himself
+ * immediately (verificationStatus CONFIRMED_BY_APPROVER from creation) so
+ * it shows as completed in My Recent Activity rather than sitting in the
+ * open task list - My Tasks, like My Approvals, only lists currently-open
+ * work.
  */
 const JOHN_TASKS: Array<{
   subject: string;
@@ -204,6 +215,7 @@ const JOHN_TASKS: Array<{
   recorder: 'sarah' | 'priya' | 'mike';
   expiresAt: Date;
   daysAgo: number;
+  confirmationRequested: boolean;
 }> = [
   {
     subject: 'Complete security training',
@@ -215,6 +227,7 @@ const JOHN_TASKS: Array<{
     recorder: 'sarah',
     expiresAt: todayAt(23, 45),
     daysAgo: 1,
+    confirmationRequested: true,
   },
   {
     subject: 'Provide budget justification',
@@ -226,6 +239,7 @@ const JOHN_TASKS: Array<{
     recorder: 'priya',
     expiresAt: daysFromNowAt(1),
     daysAgo: 2,
+    confirmationRequested: true,
   },
   {
     subject: 'Review vendor questionnaire',
@@ -233,10 +247,11 @@ const JOHN_TASKS: Array<{
     category: 'Procurement',
     riskLevel: 'medium',
     businessImpact: 'Vendor security questionnaire requires your review before onboarding proceeds.',
-    reasoning: 'Mike recorded your verbal agreement to review the questionnaire; needs your confirmation.',
+    reasoning: 'Mike recorded that you agreed to review the questionnaire. No formal confirmation request has been sent yet, so this is assigned to you but not yet awaiting an explicit response.',
     recorder: 'mike',
     expiresAt: daysFromNowAt(3),
     daysAgo: 3,
+    confirmationRequested: false,
   },
   {
     subject: 'Acknowledge policy update',
@@ -244,10 +259,11 @@ const JOHN_TASKS: Array<{
     category: 'Compliance',
     riskLevel: 'medium',
     businessImpact: 'Acknowledges the updated Q3 data handling policy.',
-    reasoning: 'Sarah recorded your verbal acknowledgment of the policy update; needs your confirmation.',
+    reasoning: 'Sarah recorded your verbal acknowledgment of the policy update. No formal confirmation request has been sent yet, so this is assigned to you but not yet awaiting an explicit response.',
     recorder: 'sarah',
     expiresAt: daysFromNowAt(5),
     daysAgo: 10,
+    confirmationRequested: false,
   },
   {
     subject: 'Confirm Q2 expense report accuracy',
@@ -259,6 +275,7 @@ const JOHN_TASKS: Array<{
     recorder: 'mike',
     expiresAt: daysAgoAt(2),
     daysAgo: 12,
+    confirmationRequested: true,
   },
 ];
 
@@ -428,29 +445,37 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
           createdAt: occurredAt,
         },
       });
-      await tx.approvalConfirmationRequest.create({
-        data: {
-          organizationId: organization.id,
-          approvalRecordId: record.id,
-          tokenHash: confirmationToken(),
-          approverName: john.name,
-          approverEmail: john.email,
-          decision: 'PENDING',
-          requestedByUserId: recorder.id,
-          expiresAt: task.expiresAt,
-          createdAt: occurredAt,
-        },
-      });
-      await tx.auditLog.create({
-        data: {
-          organizationId: organization.id,
-          actorUserId: recorder.id,
-          approvalRecordId: record.id,
-          action: 'APPROVER_CONFIRMATION_REQUESTED',
-          metadata: { approverEmail: john.email, expiresAt: task.expiresAt.toISOString() },
-          createdAt: occurredAt,
-        },
-      });
+      // Assignment (ManualApprovalDetail.secondVerifierUserId = John,
+      // written above) and an explicit confirmation request are two
+      // different real states - only create the request (and its
+      // matching audit event) for tasks where one was genuinely sent, so
+      // My Tasks and Awaiting My Response are related but never
+      // mechanically identical (see JOHN_TASKS's own doc comment).
+      if (task.confirmationRequested) {
+        await tx.approvalConfirmationRequest.create({
+          data: {
+            organizationId: organization.id,
+            approvalRecordId: record.id,
+            tokenHash: confirmationToken(),
+            approverName: john.name,
+            approverEmail: john.email,
+            decision: 'PENDING',
+            requestedByUserId: recorder.id,
+            expiresAt: task.expiresAt,
+            createdAt: occurredAt,
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            organizationId: organization.id,
+            actorUserId: recorder.id,
+            approvalRecordId: record.id,
+            action: 'APPROVER_CONFIRMATION_REQUESTED',
+            metadata: { approverEmail: john.email, expiresAt: task.expiresAt.toISOString() },
+            createdAt: occurredAt,
+          },
+        });
+      }
     }
 
     for (const item of WAITING_ON_OTHERS) {

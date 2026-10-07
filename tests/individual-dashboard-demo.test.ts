@@ -90,6 +90,22 @@ assert.match(demoLib, /'Confirm Q2 expense report accuracy'/); // the "1 overdue
 assert.match(demoLib, /subject: 'Submit Q3 campaign plan'/); // the "1 completed" task - in Recent Activity, not JOHN_TASKS
 assert.doesNotMatch(demoLib, /manual: null \| \{/); // JOHN_APPROVALS no longer carries manual-approval fields
 
+// ─── My Tasks vs Awaiting My Response: real, non-identical overlap ─────────
+//
+// Being ASSIGNED (ManualApprovalDetail.secondVerifierUserId = John) and
+// being explicitly ASKED to respond (a real ApprovalConfirmationRequest)
+// are two different real states - confirmationRequested varies per task
+// so the confirmation-request (and its matching audit event) is only ever
+// created for the subset where one was genuinely sent, using no new
+// field beyond this plain boolean on the seed's own local task list (not
+// a schema field) to decide which real Prisma writes to make.
+assert.match(demoLib, /confirmationRequested: boolean;/);
+assert.match(demoLib, /if \(task\.confirmationRequested\) \{/);
+const taskEntries = Array.from(demoLib.matchAll(/confirmationRequested: (true|false),/g)).map((m) => m[1]);
+assert.equal(taskEntries.length, 5);
+assert.equal(taskEntries.filter((v) => v === 'true').length, 3);
+assert.equal(taskEntries.filter((v) => v === 'false').length, 2);
+
 // ─── CLI + package.json wiring ──────────────────────────────────────────────
 
 assert.match(cli, /import \{ seedIndividualDashboardDemo, resetIndividualDashboardDemo, INDIVIDUAL_DASHBOARD_DEMO_USER_EMAIL \} from '@\/lib\/individual-dashboard-demo'/);

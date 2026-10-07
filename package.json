@@ -117,7 +117,8 @@
     "browserslist": ">=4.28.9",
     "fast-uri": ">=3.1.6",
     "@xmldom/xmldom": ">=0.9.12",
-    "js-yaml": ">=4.3.2"
+    "js-yaml": ">=4.3.2",
+    "source-map-js": ">=1.2.2"
   },
   "engines": {
     "node": ">=24.0.0"

@@ -75,12 +75,33 @@ function hasOrgWideVisibility(role: Role): boolean {
  *  "my approvals." */
 export function viewerIdentityWhere(viewer: ActionCenterViewer): Prisma.ApprovalRecordWhereInput {
   const email = viewer.email.toLowerCase();
+  const assignment = viewerAssignmentWhere(viewer);
+  return {
+    OR: [
+      ...(assignment.OR as Prisma.ApprovalRecordWhereInput[]),
+      { confirmationRequests: { some: { approverEmail: { equals: email, mode: 'insensitive' } } } },
+    ],
+  };
+}
+
+/** The subset of viewerIdentityWhere's branches that mean "the viewer is
+ *  designated as the approver/verifier" - assignment - as distinct from
+ *  the fourth branch above ("a confirmation request was explicitly sent to
+ *  this email"), which is a real but different concept: an active request
+ *  thread, not necessarily an assignment. Exported for
+ *  services/individualDashboard.ts's "My Tasks" (confirmation-type work
+ *  ASSIGNED to the viewer, via manualDetail.secondVerifierUserId) vs
+ *  "Awaiting My Response" (an ApprovalConfirmationRequest currently
+ *  PENDING for the viewer) distinction - two genuinely different states
+ *  this schema already models (a record can be assigned with no request
+ *  yet sent), not a second identity system or an invented field. */
+export function viewerAssignmentWhere(viewer: ActionCenterViewer): Prisma.ApprovalRecordWhereInput {
+  const email = viewer.email.toLowerCase();
   return {
     OR: [
       { approverUserId: viewer.userId },
       { approverEmail: { equals: email, mode: 'insensitive' } },
       { manualDetail: { is: { secondVerifierUserId: viewer.userId } } },
-      { confirmationRequests: { some: { approverEmail: { equals: email, mode: 'insensitive' } } } },
     ],
   };
 }

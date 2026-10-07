@@ -11,7 +11,7 @@ const allowedHighAdvisories = new Map([
   ],
   [
     "@next/eslint-plugin-next",
-    "Dev-only Next lint plugin; transitive dep of fast-glob (GHSA-vfj7-8cjw-p6xm via braces), never shipped to the runtime bundle.",
+    "Dev-only Next lint plugin; transitive dep of fast-glob (GHSA-vfj7-8cjw-p6xm via braces), never shipped to the runtime bundle. npm's only suggested fix is eslint-config-next@14.2.35 - a major-version downgrade from the Next 15 config this app actually uses, not a safe remediation.",
   ],
   [
     "@prisma/config",
@@ -23,11 +23,11 @@ const allowedHighAdvisories = new Map([
   ],
   [
     "braces",
-    "Stack-exhaustion DoS in glob-pattern matching (GHSA-vfj7-8cjw-p6xm), only ever invoked by dev/build tooling (Tailwind's file watcher, ESLint) against this repo's own trusted source tree, never against untrusted runtime input.",
+    "Stack-exhaustion DoS in glob-pattern matching (GHSA-vfj7-8cjw-p6xm), only ever invoked by dev/build tooling (Tailwind's file watcher, ESLint) against this repo's own trusted source tree, never against untrusted runtime input. No patched version exists (the advisory covers all versions through 3.0.3, the latest release) - npm's only suggested fix is tailwindcss@4.x, a major-version migration with breaking config changes, not a same-major patch.",
   ],
   [
     "chokidar",
-    "Dev-only file-watcher; transitive dep of braces (GHSA-vfj7-8cjw-p6xm), used only by Tailwind's build-time watch mode.",
+    "Dev-only file-watcher; transitive dep of braces (GHSA-vfj7-8cjw-p6xm), used only by Tailwind's build-time watch mode. Same unpatched-upstream situation as braces - fix requires the tailwindcss@4.x major migration.",
   ],
   [
     "deepmerge-ts",
@@ -46,11 +46,11 @@ const allowedHighAdvisories = new Map([
   ["eslint-plugin-react", "Dev-only linting dependency chain."],
   [
     "fast-glob",
-    "Dev/build-time glob matching; transitive dep of micromatch (GHSA-vfj7-8cjw-p6xm via braces), used by Tailwind's content-file scanning, not the runtime bundle.",
+    "Dev/build-time glob matching; transitive dep of micromatch (GHSA-vfj7-8cjw-p6xm via braces), used by Tailwind's content-file scanning, not the runtime bundle. npm's only suggested fix is eslint-config-next@14.2.35, a downgrade from this app's Next 15 config - not a safe remediation.",
   ],
   [
     "micromatch",
-    "Transitive dep of braces (GHSA-vfj7-8cjw-p6xm), used only by Tailwind's build-time content scanning.",
+    "Transitive dep of braces (GHSA-vfj7-8cjw-p6xm), used only by Tailwind's build-time content scanning. Same unpatched-upstream situation as braces - fix requires the tailwindcss@4.x major migration.",
   ],
   [
     "minimatch",
@@ -69,12 +69,8 @@ const allowedHighAdvisories = new Map([
     "Tracked upstream Next/Image optional dependency advisory until Next exposes a compatible patched dependency chain.",
   ],
   [
-    "source-map-js",
-    "Event-loop DoS via crafted source-map offsets (GHSA-68fv-2mgg-jv7q), only ever processing this repo's own build-time generated source maps, never untrusted input.",
-  ],
-  [
     "tailwindcss",
-    "Build-time CSS tooling (devDependency, never shipped to the runtime bundle); flagged only via its chokidar/fast-glob/micromatch/postcss-nested/postcss-selector-parser dependency chain (GHSA-vfj7-8cjw-p6xm), not its own code.",
+    "Build-time CSS tooling (devDependency, never shipped to the runtime bundle); flagged only via its chokidar/fast-glob/micromatch/postcss-nested/postcss-selector-parser dependency chain (GHSA-vfj7-8cjw-p6xm), not its own code. The only fix is tailwindcss@4.x itself - a major version with a breaking config-file migration (Tailwind 4 replaces the JS config with a CSS-native config), deferred as its own upgrade rather than forced here.",
   ],
 ]);
 

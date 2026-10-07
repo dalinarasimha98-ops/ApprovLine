@@ -27,6 +27,21 @@
  *    Center already queries, and both KPIs link straight to Action
  *    Center's own already-working `?actionType=` filter
  *    (/dashboard/pending-actions) rather than a new view.
+ *  - "My Tasks" (assigned to me) vs "Awaiting My Response" (an explicit
+ *    request pending) are two real, distinct concepts this schema already
+ *    models - never mechanically identical. "My Tasks" is scoped by
+ *    services/action-center.ts's viewerAssignmentWhere() (the viewer is
+ *    the designated approver/verifier - approverUserId/approverEmail/
+ *    manualDetail.secondVerifierUserId), while "Awaiting My Response"
+ *    stays scoped to ApprovalConfirmationRequest.approverEmail with
+ *    decision still PENDING (an active request thread). A record can be
+ *    assigned with no request yet sent (counts in My Tasks only), or -
+ *    less commonly - have a request addressed to an email that isn't the
+ *    designated verifier (counts in Awaiting My Response only). Reused,
+ *    not re-derived: viewerAssignmentWhere() is the same three branches
+ *    viewerIdentityWhere() already uses, just without its fourth
+ *    ("a confirmation request was sent to me") branch - see both
+ *    functions' own doc comments in action-center.ts.
  *  - "My Approvals" / "My Tasks" lists reuse lib/approvalRecords.ts's
  *    approvalRecordListSelect (the same field shape ApprovalTable/
  *    ApprovalPreviewPanel already render) and services/evidence/
@@ -38,7 +53,13 @@
  *    MEANINGFUL_AUDIT_ACTIONS allowlist and describeAuditAction() - the
  *    same filtered, customer-meaningful event set the Organization
  *    Dashboard's Recent Activity uses - scoped here to actorUserId instead
- *    of unscoped, never a second audit-filtering allowlist.
+ *    of unscoped, never a second audit-filtering allowlist. Unlike the
+ *    Organization Dashboard's own equivalent (an unfiltered "most recent N"
+ *    feed), this one is also period-scoped to the selected date range -
+ *    a personal activity history is naturally read as "what did I do in
+ *    this period," the same historical framing as Total Approvals, not a
+ *    live feed - using the exact createdAt bounds every other period
+ *    metric on this page already filters by.
  *
  * GENUINELY NEW (nothing else already exposes these): "Total Approvals"
  * (a period-scoped, viewer-identity-scoped count - no existing service
@@ -71,7 +92,7 @@ import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
 import { approvalRecordListSelect, type ApprovalListRecord } from '@/lib/approvalRecords';
 import { getUnifiedSourceSummariesForApprovals, type ApprovalSourceSummary } from '@/services/evidence/records';
-import { computeKpis, viewerIdentityWhere, type ActionCenterViewer } from '@/services/action-center';
+import { computeKpis, viewerIdentityWhere, viewerAssignmentWhere, type ActionCenterViewer } from '@/services/action-center';
 import { MEANINGFUL_AUDIT_ACTIONS, describeAuditAction } from '@/services/dashboard';
 import type { DateRange } from '@/services/analytics';
 
@@ -195,16 +216,22 @@ export type IndividualDashboardOverview = {
     /** Period-scoped, viewer-identity-scoped - see the "GENUINELY NEW"
      *  note above. */
     totalApprovals: { value: number; prevValue: number | null };
-    /** Live/unscoped count of the viewer's own open DECISION records
-     *  (ApprovalRecord.status === 'PENDING_REVIEW') - Action Center's
-     *  APPROVAL_REQUEST/REVIEW_REQUEST action types. Deliberately excludes
-     *  the CONFIRMATION_REQUEST slice, which is "My Tasks" below, so the
-     *  two KPIs never double-count the same record. */
+    /** Live/unscoped count of the viewer's own ASSIGNED, open DECISION
+     *  records (ApprovalRecord.status === 'PENDING_REVIEW') - Action
+     *  Center's APPROVAL_REQUEST/REVIEW_REQUEST action types. Deliberately
+     *  excludes the CONFIRMATION_REQUEST slice, which is "My Tasks" below,
+     *  so the two KPIs never double-count the same record. */
     myPendingApprovals: { value: number };
-    /** Live/unscoped count of the viewer's own open CONFIRMATION_REQUEST
-     *  records (ManualApprovalDetail.verificationStatus ===
-     *  'PENDING_CONFIRMATION') - the exact same ActionType Action Center's
-     *  own deriveActionType() already uses, not a second task model. */
+    /** Live/unscoped count of the viewer's own ASSIGNED, open
+     *  CONFIRMATION_REQUEST records (manualDetail.verificationStatus ===
+     *  'PENDING_CONFIRMATION' AND the viewer is the designated approver/
+     *  verifier, per viewerAssignmentWhere()) - the exact same
+     *  CONFIRMATION_REQUEST ActionType Action Center's own
+     *  deriveActionType() already uses, not a second task model.
+     *  Deliberately scoped by ASSIGNMENT, not by whether a confirmation
+     *  request has been sent yet - see "Awaiting My Response" below and
+     *  viewerAssignmentWhere()'s own doc comment for why these are two
+     *  different, non-identical real concepts. */
     myTasks: { value: number };
     /** Both sourced from ApprovalConfirmationRequest.expiresAt via the
      *  same computeKpis() call - never a second "due" definition. In this
@@ -215,7 +242,9 @@ export type IndividualDashboardOverview = {
     dueToday: { value: number };
     overdue: { value: number };
     /** Real ApprovalConfirmationRequest rows addressed to the viewer
-     *  (approverEmail match) with decision still PENDING. */
+     *  (approverEmail match) with decision still PENDING - an explicit
+     *  request thread, which is a real subset of (not identical to) My
+     *  Tasks: a task can be assigned with no request yet sent. */
     awaitingMyResponse: { value: number };
   };
   myApprovals: { records: ApprovalListRow[]; total: number };
@@ -256,6 +285,13 @@ export async function getIndividualDashboardOverview(
   // from what Action Center itself would call each record.
   const decisionWhere = { status: 'PENDING_REVIEW' as const };
   const taskWhere = { manualDetail: { is: { verificationStatus: 'PENDING_CONFIRMATION' as const } } };
+  // Assignment-only identity (approverUserId/approverEmail/
+  // manualDetail.secondVerifierUserId) - deliberately NOT the fourth
+  // viewerIdentityWhere() branch ("a confirmation request was sent to
+  // me"), so "My Tasks" means "assigned to me" and never mechanically
+  // equals "Awaiting My Response" (an active request thread). See
+  // viewerAssignmentWhere()'s own doc comment in action-center.ts.
+  const assignment = viewerAssignmentWhere(viewer);
 
   const [
     totalApprovalsCurrent,
@@ -289,20 +325,20 @@ export async function getIndividualDashboardOverview(
     ),
     safe(
       'individual:myPendingApprovalsCount',
-      prisma.approvalRecord.count({ where: { organizationId, AND: [identity, decisionWhere] } }),
+      prisma.approvalRecord.count({ where: { organizationId, AND: [assignment, decisionWhere] } }),
       0,
       degraded,
     ),
     safe(
       'individual:myTasksCount',
-      prisma.approvalRecord.count({ where: { organizationId, AND: [identity, taskWhere] } }),
+      prisma.approvalRecord.count({ where: { organizationId, AND: [assignment, taskWhere] } }),
       0,
       degraded,
     ),
     safe(
       'individual:myApprovals',
       prisma.approvalRecord.findMany({
-        where: { organizationId, AND: [identity, decisionWhere] },
+        where: { organizationId, AND: [assignment, decisionWhere] },
         select: approvalRecordListSelect,
         orderBy: [{ createdAt: 'desc' }],
         take: 8,
@@ -313,7 +349,7 @@ export async function getIndividualDashboardOverview(
     safe(
       'individual:myTasks',
       prisma.approvalRecord.findMany({
-        where: { organizationId, AND: [identity, taskWhere] },
+        where: { organizationId, AND: [assignment, taskWhere] },
         select: approvalRecordListSelect,
         orderBy: [{ createdAt: 'desc' }],
         take: 8,
@@ -341,7 +377,12 @@ export async function getIndividualDashboardOverview(
     safe(
       'individual:recentActivity',
       prisma.auditLog.findMany({
-        where: { organizationId, actorUserId: viewer.userId, action: { in: MEANINGFUL_AUDIT_ACTIONS } },
+        where: {
+          organizationId,
+          actorUserId: viewer.userId,
+          action: { in: MEANINGFUL_AUDIT_ACTIONS },
+          createdAt: { gte: range.dateRange.from, lte: range.dateRange.to },
+        },
         orderBy: { createdAt: 'desc' },
         take: 8,
         select: { id: true, action: true, createdAt: true },

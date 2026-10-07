@@ -97,9 +97,10 @@ const actionCenter = read('services/action-center.ts');
 // Reuses Action Center's real, proven engine - never a second definition
 // of "pending"/"due"/"overdue," and never a second identity-match
 // predicate.
-assert.match(individualService, /import \{ computeKpis, viewerIdentityWhere, type ActionCenterViewer \} from '@\/services\/action-center'/);
+assert.match(individualService, /import \{ computeKpis, viewerIdentityWhere, viewerAssignmentWhere, type ActionCenterViewer \} from '@\/services\/action-center'/);
 assert.match(individualService, /computeKpis\(viewer, true\)/);
 assert.doesNotMatch(individualService, /function viewerIdentityWhere/);
+assert.doesNotMatch(individualService, /function viewerAssignmentWhere/);
 
 // "My Pending Approvals" vs "My Tasks" reuses Action Center's own
 // ActionType split (lib/action-center.ts's deriveActionType(): a
@@ -112,12 +113,38 @@ assert.match(individualService, /const decisionWhere = \{ status: 'PENDING_REVIE
 assert.match(individualService, /const taskWhere = \{ manualDetail: \{ is: \{ verificationStatus: 'PENDING_CONFIRMATION' as const \} \} \};/);
 assert.doesNotMatch(individualService, /model\s+Task|model\s+MyTask|prisma\.task\./i);
 
+// "My Tasks" (assigned to me) is deliberately scoped by
+// viewerAssignmentWhere(), NOT the full viewerIdentityWhere() - so it can
+// never mechanically equal "Awaiting My Response" (an explicit
+// ApprovalConfirmationRequest addressed to me, still PENDING). A record
+// can be assigned with no request yet sent.
+assert.match(individualService, /const assignment = viewerAssignmentWhere\(viewer\);/);
+assert.match(individualService, /AND: \[assignment, decisionWhere\]/);
+assert.match(individualService, /AND: \[assignment, taskWhere\]/);
+assert.match(individualService, /individual:awaitingMyResponse',\s*\n\s*prisma\.approvalConfirmationRequest\.count/);
+
+// viewerAssignmentWhere() is a real decomposition of viewerIdentityWhere()
+// in action-center.ts - the same three "I am the designated approver/
+// verifier" branches, minus the fourth "a confirmation request was sent
+// to me" branch - not a second identity system, and viewerIdentityWhere()
+// itself is unchanged in meaning (composed from the same branches).
+assert.match(actionCenter, /export function viewerAssignmentWhere\(viewer: ActionCenterViewer\): Prisma\.ApprovalRecordWhereInput \{/);
+assert.match(actionCenter, /const assignment = viewerAssignmentWhere\(viewer\);/);
+assert.match(actionCenter, /confirmationRequests: \{ some: \{ approverEmail: \{ equals: email, mode: 'insensitive' \} \} \}/);
+
 // forcePersonalScope defaults to false, so the real Action Center page
 // (/dashboard/pending-actions) keeps its exact existing org-wide-for-
 // privileged-roles behavior - this is an additive override, not a behavior
 // change to the one existing call site.
 assert.match(actionCenter, /export async function computeKpis\(viewer: ActionCenterViewer, forcePersonalScope = false\)/);
 assert.match(actionCenter, /computeKpis\(viewer\),/); // the one existing call site, unchanged
+
+// Recent Activity is period-sensitive (createdAt bounded to the selected
+// range), like Total Approvals - a real-Postgres check confirmed the
+// count genuinely varies by range (2 at 7d vs 3 at 30d/90d in the demo
+// data) while the current-state KPIs below stay constant across every
+// range, matching the required historical-vs-current-state split.
+assert.match(individualService, /actorUserId: viewer\.userId,\s*\n\s*action: \{ in: MEANINGFUL_AUDIT_ACTIONS \},\s*\n\s*createdAt: \{ gte: range\.dateRange\.from, lte: range\.dateRange\.to \},/);
 
 // "Due Today"/"Overdue"/"Due Soon" all derive from the SAME
 // ApprovalConfirmationRequest.expiresAt concept computeKpis already uses -
