@@ -31,7 +31,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
-import type { ApprovalStatus, ManualApprovalVerificationStatus, Role } from '@prisma/client';
+import type { ApprovalStatus, Role } from '@prisma/client';
 import { createConfirmationToken } from '@/services/manual-approvals';
 import { invalidateApprovalRecordsCache } from '@/lib/approvalRecords';
 
@@ -74,19 +74,18 @@ const DEMO_USERS: DemoUserSeed[] = [
 ];
 
 /**
- * The 9 ApprovalRecords that make up John's own "My Approvals" / Total
- * Approvals - a realistic mix of plain (already-resolved) approvals and
- * manual/verbal approvals still awaiting John's confirmation, spanning the
- * last 7/30/90 days so date-range filtering has something real to filter.
- *
- * "confirmation" is set for the 6 items that are genuinely still open
- * (manual/verbal approval recorded by a colleague, awaiting John's
- * confirmation - the exact real flow app/api/approvals/[id]/confirmations
- * exercises) - its expiresAt/decision drives Due Today/Overdue/Due Soon/
- * Awaiting My Response identically to how a real confirmation request
- * would. The 3 plain items have no confirmation and are already resolved
- * (APPROVED/REJECTED), so they correctly do NOT count toward My Pending
- * Approvals.
+ * The 8 ApprovalRecords that make up John's own "My Approvals" (decisions)
+ * - plain, non-manual records with John as the real approver
+ * (approverUserId/approverEmail), spanning the last 7/30/90 days so
+ * date-range filtering has something real to filter. None of these carry a
+ * ManualApprovalDetail or ApprovalConfirmationRequest: in this app's real
+ * current architecture a confirmation request is only ever created for a
+ * recorded manual/verbal approval (the one real call site is
+ * app/api/approvals/[id]/confirmations), so a plain decision genuinely has
+ * no due-date mechanism today - these correctly show no due date, matching
+ * "Do not invent due dates" (Section 12). Due-date-bearing work lives in
+ * JOHN_TASKS below instead, which is what this app's real architecture
+ * actually supports carrying a deadline.
  */
 const JOHN_APPROVALS: Array<{
   subject: string;
@@ -98,34 +97,27 @@ const JOHN_APPROVALS: Array<{
   conditions?: string;
   status: ApprovalStatus;
   daysAgo: number;
-  manual: null | {
-    recorder: 'sarah' | 'priya' | 'mike';
-    verificationStatus: ManualApprovalVerificationStatus;
-    confirmation: null | { expiresAt: Date };
-  };
 }> = [
   {
     subject: 'Q3 marketing budget increase to $250,000',
     department: 'Finance',
     category: 'Finance',
     riskLevel: 'high',
-    businessImpact: 'Increases the Q3 marketing budget by $250,000 to fund enterprise pipeline campaigns.',
-    reasoning: 'Sarah verbally approved the budget increase in the Monday finance sync; recorded pending your confirmation.',
-    status: 'APPROVED',
+    businessImpact: 'Increases the Q3 marketing budget by $250,000 to fund enterprise pipeline campaigns. Requested by Sarah Miller.',
+    reasoning: 'Explicit budget-increase request awaiting your decision.',
+    status: 'PENDING_REVIEW',
     daysAgo: 1,
-    manual: { recorder: 'sarah', verificationStatus: 'PENDING_CONFIRMATION', confirmation: { expiresAt: todayAt(23, 45) } },
   },
   {
     subject: 'Northstar Analytics vendor approval',
     department: 'Procurement',
     category: 'Procurement',
     riskLevel: 'high',
-    businessImpact: 'Unblocks the Northstar Analytics vendor payment pending your confirmation of the verbal approval.',
-    reasoning: 'Priya recorded your verbal approval from the procurement call; needs your confirmation before payment releases.',
+    businessImpact: 'Unblocks the Northstar Analytics vendor payment once approved. Requested by Priya Sharma.',
+    reasoning: 'Vendor payment approval awaiting your decision.',
     conditions: 'Updated SOC 2 report must be attached before payment release.',
-    status: 'APPROVED',
+    status: 'PENDING_REVIEW',
     daysAgo: 4,
-    manual: { recorder: 'priya', verificationStatus: 'PENDING_CONFIRMATION', confirmation: { expiresAt: daysFromNowAt(1) } },
   },
   {
     subject: 'Software license renewal - design tooling suite',
@@ -133,10 +125,9 @@ const JOHN_APPROVALS: Array<{
     category: 'Procurement',
     riskLevel: 'medium',
     businessImpact: 'Renews the annual design tooling license before expiration.',
-    reasoning: 'Explicit approval already confirmed; no further action needed.',
+    reasoning: 'Approved - standard renewal, no changes to terms.',
     status: 'APPROVED',
     daysAgo: 12,
-    manual: null,
   },
   {
     subject: 'Travel policy exception - client site visit',
@@ -144,11 +135,9 @@ const JOHN_APPROVALS: Array<{
     category: 'Legal',
     riskLevel: 'medium',
     businessImpact: 'Allows an above-policy travel booking for an upcoming client site visit.',
-    reasoning: 'Mike recorded your verbal approval for the travel exception; needs your confirmation.',
-    conditions: 'Manager confirmation required before the exception is finalized.',
-    status: 'APPROVED',
+    reasoning: 'Policy exception request awaiting your decision.',
+    status: 'PENDING_REVIEW',
     daysAgo: 20,
-    manual: { recorder: 'mike', verificationStatus: 'PENDING_CONFIRMATION', confirmation: { expiresAt: daysFromNowAt(3) } },
   },
   {
     subject: 'Contract amendment - regional distributor',
@@ -159,19 +148,16 @@ const JOHN_APPROVALS: Array<{
     reasoning: 'Rejected - the proposed indemnity language did not meet legal requirements.',
     status: 'REJECTED',
     daysAgo: 45,
-    manual: null,
   },
   {
     subject: 'Security review - production database access exception',
     department: 'Security',
     category: 'Security',
     riskLevel: 'high',
-    businessImpact: 'Grants temporary privileged production database access pending your confirmation.',
-    reasoning: 'Sarah recorded your verbal approval from the incident bridge; needs your confirmation today.',
-    conditions: 'Access must be revoked automatically after 48 hours.',
-    status: 'APPROVED',
+    businessImpact: 'Grants temporary privileged production database access pending approval.',
+    reasoning: 'Security exception request awaiting your decision.',
+    status: 'PENDING_REVIEW',
     daysAgo: 2,
-    manual: { recorder: 'sarah', verificationStatus: 'PENDING_CONFIRMATION', confirmation: { expiresAt: todayAt(22, 30) } },
   },
   {
     subject: 'Marketing campaign approval - Q3 launch creative',
@@ -179,32 +165,100 @@ const JOHN_APPROVALS: Array<{
     category: 'Marketing',
     riskLevel: 'low',
     businessImpact: 'Approves the Q3 launch creative for release across paid channels.',
-    reasoning: 'Explicit approval already confirmed; no further action needed.',
+    reasoning: 'Approved - creative meets brand and compliance guidelines.',
     status: 'APPROVED',
     daysAgo: 60,
-    manual: null,
   },
   {
     subject: 'Vendor onboarding - regional logistics partner',
     department: 'Procurement',
     category: 'Procurement',
     riskLevel: 'medium',
-    businessImpact: 'Onboards a new regional logistics vendor pending your confirmation.',
-    reasoning: 'Priya recorded your verbal approval for the vendor onboarding; needs your confirmation.',
-    status: 'APPROVED',
+    businessImpact: 'Onboards a new regional logistics vendor.',
+    reasoning: 'Vendor onboarding request awaiting your decision.',
+    status: 'PENDING_REVIEW',
     daysAgo: 6,
-    manual: { recorder: 'priya', verificationStatus: 'PENDING_CONFIRMATION', confirmation: { expiresAt: daysFromNowAt(5) } },
+  },
+];
+
+/**
+ * John's "My Tasks" - confirmations/acknowledgments assigned to him,
+ * modeled as real manual/verbal ApprovalRecords recorded by a colleague
+ * with John as ManualApprovalDetail.secondVerifierUserId and the real
+ * ApprovalConfirmationRequest.approverEmail target, exactly the flow
+ * app/api/approvals/[id]/confirmations exercises. This is Action Center's
+ * own existing CONFIRMATION_REQUEST ActionType (lib/action-center.ts's
+ * deriveActionType()) - never a second task model. One item
+ * (Q3 campaign plan) is recorded and confirmed by John himself immediately
+ * (verificationStatus CONFIRMED_BY_APPROVER from creation) so it shows as
+ * completed in My Recent Activity rather than sitting in the open task
+ * list - My Tasks, like My Approvals, only lists currently-open work.
+ */
+const JOHN_TASKS: Array<{
+  subject: string;
+  department: string;
+  category: string;
+  riskLevel: string;
+  businessImpact: string;
+  reasoning: string;
+  recorder: 'sarah' | 'priya' | 'mike';
+  expiresAt: Date;
+  daysAgo: number;
+}> = [
+  {
+    subject: 'Complete security training',
+    department: 'Security',
+    category: 'Compliance',
+    riskLevel: 'medium',
+    businessImpact: 'Annual security awareness training requirement.',
+    reasoning: 'Sarah recorded that you completed security training verbally during the team sync; needs your confirmation today.',
+    recorder: 'sarah',
+    expiresAt: todayAt(23, 45),
+    daysAgo: 1,
   },
   {
-    subject: 'Compliance policy acknowledgment - Q3 data handling update',
+    subject: 'Provide budget justification',
+    department: 'Finance',
+    category: 'Finance',
+    riskLevel: 'medium',
+    businessImpact: 'Budget justification needed to support the Q3 marketing increase.',
+    reasoning: 'Priya recorded your verbal commitment to provide budget justification; needs your confirmation.',
+    recorder: 'priya',
+    expiresAt: daysFromNowAt(1),
+    daysAgo: 2,
+  },
+  {
+    subject: 'Review vendor questionnaire',
+    department: 'Procurement',
+    category: 'Procurement',
+    riskLevel: 'medium',
+    businessImpact: 'Vendor security questionnaire requires your review before onboarding proceeds.',
+    reasoning: 'Mike recorded your verbal agreement to review the questionnaire; needs your confirmation.',
+    recorder: 'mike',
+    expiresAt: daysFromNowAt(3),
+    daysAgo: 3,
+  },
+  {
+    subject: 'Acknowledge policy update',
     department: 'Compliance',
     category: 'Compliance',
     riskLevel: 'medium',
-    businessImpact: 'Acknowledges the updated Q3 data handling policy pending your confirmation - now overdue.',
-    reasoning: 'Mike recorded your verbal acknowledgment of the policy update; still awaiting your confirmation.',
-    status: 'APPROVED',
+    businessImpact: 'Acknowledges the updated Q3 data handling policy.',
+    reasoning: 'Sarah recorded your verbal acknowledgment of the policy update; needs your confirmation.',
+    recorder: 'sarah',
+    expiresAt: daysFromNowAt(5),
     daysAgo: 10,
-    manual: { recorder: 'mike', verificationStatus: 'PENDING_CONFIRMATION', confirmation: { expiresAt: daysAgoAt(2) } },
+  },
+  {
+    subject: 'Confirm Q2 expense report accuracy',
+    department: 'Finance',
+    category: 'Finance',
+    riskLevel: 'low',
+    businessImpact: 'Confirms the accuracy of the submitted Q2 expense report - now overdue.',
+    reasoning: 'Mike recorded your verbal confirmation of the expense report; still awaiting your confirmation.',
+    recorder: 'mike',
+    expiresAt: daysAgoAt(2),
+    daysAgo: 12,
   },
 ];
 
@@ -262,9 +316,12 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
     }
     const john = users.john;
 
+    // John's 8 decision-type approvals (Section 27) - plain records, no
+    // manual/confirmation machinery, matching this app's real constraint
+    // that a non-manual decision has no due-date mechanism today.
     for (const approval of JOHN_APPROVALS) {
       const occurredAt = daysAgoAt(approval.daysAgo);
-      const record = await tx.approvalRecord.create({
+      await tx.approvalRecord.create({
         data: {
           organizationId: organization.id,
           approverUserId: john.id,
@@ -280,7 +337,7 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
           businessImpact: approval.businessImpact,
           reasoning: approval.reasoning,
           conditions: approval.conditions,
-          sourcePlatform: approval.manual ? 'Verbal' : 'Manual',
+          sourcePlatform: 'Manual',
           sourceSystem: 'MANUAL_ENTRY',
           evidenceSnippet: approval.reasoning,
           sourceLink: null,
@@ -290,83 +347,110 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
           createdAt: occurredAt,
         },
       });
+    }
 
-      if (approval.manual) {
-        const recorder = users[approval.manual.recorder];
-        await tx.manualApprovalDetail.create({
-          data: {
-            organizationId: organization.id,
-            approvalRecordId: record.id,
+    // John's 5 open task-type confirmations (Section 28) - real manual/
+    // verbal ApprovalRecords recorded by a colleague, with John as the
+    // designated second verifier and real confirmation target - the exact
+    // flow app/api/approvals/[id]/confirmations exercises, reused here
+    // rather than a second task model (see JOHN_TASKS's own doc comment).
+    for (const task of JOHN_TASKS) {
+      const occurredAt = daysAgoAt(task.daysAgo);
+      const recorder = users[task.recorder];
+      const record = await tx.approvalRecord.create({
+        data: {
+          organizationId: organization.id,
+          approverName: john.name,
+          approverEmail: john.email,
+          subject: task.subject,
+          department: task.department,
+          category: task.category,
+          approvalType: 'EXPLICIT',
+          status: 'APPROVED',
+          confidence: 90,
+          riskLevel: task.riskLevel,
+          businessImpact: task.businessImpact,
+          reasoning: task.reasoning,
+          sourcePlatform: 'Verbal',
+          sourceSystem: 'MANUAL_ENTRY',
+          evidenceSnippet: task.reasoning,
+          correlationId: `${DEMO_RUN_ID}:${occurredAt.getTime()}`,
+          approvalTimestamp: occurredAt,
+          occurredAt,
+          createdAt: occurredAt,
+        },
+      });
+
+      await tx.manualApprovalDetail.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          kind: 'VERBAL',
+          approverRole: 'Manager',
+          communicationChannel: 'In-person / phone',
+          recorderUserId: recorder.id,
+          businessContext: task.businessImpact,
+          supportingNotes: task.reasoning,
+          verificationStatus: 'PENDING_CONFIRMATION',
+          confidenceLevel: 85,
+          secondPersonRequired: true,
+          secondVerifierUserId: john.id,
+        },
+      });
+      await tx.manualApprovalVersion.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          version: 1,
+          snapshot: {
             kind: 'VERBAL',
             approverRole: 'Manager',
             communicationChannel: 'In-person / phone',
             recorderUserId: recorder.id,
-            businessContext: approval.businessImpact,
-            supportingNotes: approval.reasoning,
-            verificationStatus: approval.manual.verificationStatus,
+            businessContext: task.businessImpact,
+            verificationStatus: 'PENDING_CONFIRMATION',
             confidenceLevel: 85,
             secondPersonRequired: true,
             secondVerifierUserId: john.id,
           },
-        });
-        await tx.manualApprovalVersion.create({
-          data: {
-            organizationId: organization.id,
-            approvalRecordId: record.id,
-            version: 1,
-            snapshot: {
-              kind: 'VERBAL',
-              approverRole: 'Manager',
-              communicationChannel: 'In-person / phone',
-              recorderUserId: recorder.id,
-              businessContext: approval.businessImpact,
-              verificationStatus: approval.manual.verificationStatus,
-              confidenceLevel: 85,
-              secondPersonRequired: true,
-              secondVerifierUserId: john.id,
-            },
-            changeReason: 'Recorded from a verbal approval.',
-            actorUserId: recorder.id,
-            createdAt: occurredAt,
-          },
-        });
-        await tx.auditLog.create({
-          data: {
-            organizationId: organization.id,
-            actorUserId: recorder.id,
-            approvalRecordId: record.id,
-            action: 'MANUAL_APPROVAL_CREATED',
-            metadata: { provenance: 'VERBAL', verificationStatus: approval.manual.verificationStatus, version: 1 },
-            createdAt: occurredAt,
-          },
-        });
-
-        if (approval.manual.confirmation) {
-          await tx.approvalConfirmationRequest.create({
-            data: {
-              organizationId: organization.id,
-              approvalRecordId: record.id,
-              tokenHash: confirmationToken(),
-              approverName: john.name,
-              approverEmail: john.email,
-              decision: 'PENDING',
-              requestedByUserId: recorder.id,
-              expiresAt: approval.manual.confirmation.expiresAt,
-              createdAt: occurredAt,
-            },
-          });
-          await tx.auditLog.create({
-            data: {
-              organizationId: organization.id,
-              actorUserId: recorder.id,
-              approvalRecordId: record.id,
-              action: 'APPROVER_CONFIRMATION_REQUESTED',
-              metadata: { approverEmail: john.email, expiresAt: approval.manual.confirmation.expiresAt.toISOString() },
-              createdAt: occurredAt,
-            },
-          });
-        }
-      }
+          changeReason: 'Recorded from a verbal confirmation.',
+          actorUserId: recorder.id,
+          createdAt: occurredAt,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId: organization.id,
+          actorUserId: recorder.id,
+          approvalRecordId: record.id,
+          action: 'MANUAL_APPROVAL_CREATED',
+          metadata: { provenance: 'VERBAL', verificationStatus: 'PENDING_CONFIRMATION', version: 1 },
+          createdAt: occurredAt,
+        },
+      });
+      await tx.approvalConfirmationRequest.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          tokenHash: confirmationToken(),
+          approverName: john.name,
+          approverEmail: john.email,
+          decision: 'PENDING',
+          requestedByUserId: recorder.id,
+          expiresAt: task.expiresAt,
+          createdAt: occurredAt,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId: organization.id,
+          actorUserId: recorder.id,
+          approvalRecordId: record.id,
+          action: 'APPROVER_CONFIRMATION_REQUESTED',
+          metadata: { approverEmail: john.email, expiresAt: task.expiresAt.toISOString() },
+          createdAt: occurredAt,
+        },
+      });
     }
 
     for (const item of WAITING_ON_OTHERS) {
@@ -408,13 +492,17 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
       });
     }
 
-    // John's own recent activity: two manual approvals he personally
-    // recorded and confirmed himself - the only real, non-fabricated
+    // John's own recent activity: manual approvals he personally recorded
+    // and confirmed himself immediately - the only real, non-fabricated
     // audit-action strings this schema currently attributes to a specific
     // acting user for approval-adjacent work (see MEANINGFUL_AUDIT_ACTIONS
     // in services/dashboard.ts - there is no generic "user approved/
-    // rejected/commented" audit action anywhere in this codebase).
+    // rejected/commented" audit action anywhere in this codebase). "Submit
+    // Q3 campaign plan" is the "1 completed" item from Section 28's task
+    // list - completed the moment it's recorded, so it correctly never
+    // appears in the open My Tasks list, only here.
     const selfRecorded: Array<{ subject: string; category: string; daysAgo: number }> = [
+      { subject: 'Submit Q3 campaign plan', category: 'Marketing', daysAgo: 1 },
       { subject: 'Facilities access request - new hire desk setup', category: 'Operations', daysAgo: 3 },
       { subject: 'Client dinner expense approval', category: 'Finance', daysAgo: 8 },
     ];

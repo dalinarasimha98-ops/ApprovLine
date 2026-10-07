@@ -9,15 +9,25 @@
  * approvals assigned to them.
  *
  * REUSE, NOT A SECOND ENGINE:
- *  - "My Pending Approvals" / "Due Today" / "Overdue" -> services/
- *    action-center.ts's computeKpis(viewer, forcePersonalScope=true) - the
- *    exact same real query Action Center itself uses, just forced to
- *    personal scope even for roles Action Center normally shows org-wide
- *    data to. Never a second definition of "pending"/"overdue."
+ *  - "Due Today" / "Overdue" -> services/action-center.ts's
+ *    computeKpis(viewer, forcePersonalScope=true) - the exact same real
+ *    query Action Center itself uses, just forced to personal scope even
+ *    for roles Action Center normally shows org-wide data to. Never a
+ *    second definition of "due"/"overdue."
  *  - The viewer-identity match (real User.id / email, never a name guess)
  *    is services/action-center.ts's own viewerIdentityWhere(), exported
  *    for reuse here rather than re-derived.
- *  - "My Approvals" list reuses lib/approvalRecords.ts's
+ *  - "My Pending Approvals" vs "My Tasks" reuses Action Center's own
+ *    existing ActionType distinction (lib/action-center.ts's
+ *    deriveActionType(): a record is a CONFIRMATION_REQUEST when its
+ *    ManualApprovalDetail.verificationStatus is PENDING_CONFIRMATION,
+ *    otherwise an APPROVAL_REQUEST/REVIEW_REQUEST) rather than inventing a
+ *    second task/todo model - "My Tasks" is literally the
+ *    CONFIRMATION_REQUEST slice of the same ApprovalRecord table Action
+ *    Center already queries, and both KPIs link straight to Action
+ *    Center's own already-working `?actionType=` filter
+ *    (/dashboard/pending-actions) rather than a new view.
+ *  - "My Approvals" / "My Tasks" lists reuse lib/approvalRecords.ts's
  *    approvalRecordListSelect (the same field shape ApprovalTable/
  *    ApprovalPreviewPanel already render) and services/evidence/
  *    records.ts's getUnifiedSourceSummariesForApprovals - the identical
@@ -42,13 +52,14 @@
  * this page never mixes two different definitions of "due").
  *
  * DELIBERATELY OMITTED (no backing data model exists anywhere in this
- * schema, and inventing one was explicitly out of scope for this pass):
- * My Tasks (no task/todo model), Mentions & Requests (no comments/mentions
- * model), Recently Viewed (no view-history is ever recorded - the one
- * candidate audit action, 'view_approval_drawer', only fires on a FAILED
- * load, never a successful one), Saved/Followed Items (no save/follow
- * model), Demo Mode (no customer-facing demo toggle exists, only internal
- * founder/sales seed tooling).
+ * schema, and inventing one was explicitly out of scope): Mentions &
+ * Requests (no comments/mentions model), Recently Viewed (no view-history
+ * is ever recorded - the one candidate audit action,
+ * 'view_approval_drawer', only fires on a FAILED load, never a successful
+ * one), Saved/Followed Items (no save/follow model), Demo Mode (no
+ * customer-facing demo toggle exists, only internal founder/sales seed
+ * tooling - see lib/individual-dashboard-demo.ts for the dev-facing
+ * isolated demo workspace used to populate/screenshot this page).
  *
  * TENANT ISOLATION: every query is scoped by the server-resolved
  * organizationId passed in by the caller (see app/dashboard/me/page.tsx,
@@ -60,7 +71,7 @@ import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
 import { approvalRecordListSelect, type ApprovalListRecord } from '@/lib/approvalRecords';
 import { getUnifiedSourceSummariesForApprovals, type ApprovalSourceSummary } from '@/services/evidence/records';
-import { computeKpis, viewerIdentityWhere, openActionWhere, type ActionCenterViewer } from '@/services/action-center';
+import { computeKpis, viewerIdentityWhere, type ActionCenterViewer } from '@/services/action-center';
 import { MEANINGFUL_AUDIT_ACTIONS, describeAuditAction } from '@/services/dashboard';
 import type { DateRange } from '@/services/analytics';
 
@@ -175,6 +186,8 @@ export type DueSoonItem = {
 
 export type RecentActivityItem = { id: string; action: string; createdAt: string };
 
+type ApprovalListRow = ApprovalListRecord & { sources: ApprovalSourceSummary | null };
+
 export type IndividualDashboardOverview = {
   range: IndividualDashboardRange;
   degraded: string[];
@@ -182,19 +195,31 @@ export type IndividualDashboardOverview = {
     /** Period-scoped, viewer-identity-scoped - see the "GENUINELY NEW"
      *  note above. */
     totalApprovals: { value: number; prevValue: number | null };
-    /** Live/unscoped (identical semantics to the Organization Dashboard's
-     *  "Pending Approval Actions") - forced to personal scope via
-     *  computeKpis(viewer, true) regardless of the viewer's role. */
+    /** Live/unscoped count of the viewer's own open DECISION records
+     *  (ApprovalRecord.status === 'PENDING_REVIEW') - Action Center's
+     *  APPROVAL_REQUEST/REVIEW_REQUEST action types. Deliberately excludes
+     *  the CONFIRMATION_REQUEST slice, which is "My Tasks" below, so the
+     *  two KPIs never double-count the same record. */
     myPendingApprovals: { value: number };
+    /** Live/unscoped count of the viewer's own open CONFIRMATION_REQUEST
+     *  records (ManualApprovalDetail.verificationStatus ===
+     *  'PENDING_CONFIRMATION') - the exact same ActionType Action Center's
+     *  own deriveActionType() already uses, not a second task model. */
+    myTasks: { value: number };
     /** Both sourced from ApprovalConfirmationRequest.expiresAt via the
-     *  same computeKpis() call - never a second "due" definition. */
+     *  same computeKpis() call - never a second "due" definition. In this
+     *  app's real current architecture, ApprovalConfirmationRequest rows
+     *  only ever exist for CONFIRMATION_REQUEST (task-type) records, so
+     *  these figures are already effectively scoped to My Tasks, not My
+     *  Pending Approvals - see computeKpis's own doc comment. */
     dueToday: { value: number };
     overdue: { value: number };
     /** Real ApprovalConfirmationRequest rows addressed to the viewer
      *  (approverEmail match) with decision still PENDING. */
     awaitingMyResponse: { value: number };
   };
-  myApprovals: { records: (ApprovalListRecord & { sources: ApprovalSourceSummary | null })[]; total: number };
+  myApprovals: { records: ApprovalListRow[]; total: number };
+  myTasks: { records: ApprovalListRow[]; total: number };
   dueSoon: DueSoonItem[];
   waitingOnOthers: WaitingOnOthersItem[];
   recentActivity: RecentActivityItem[];
@@ -224,11 +249,22 @@ export async function getIndividualDashboardOverview(
     degraded,
   );
 
+  // The same two predicates Action Center's deriveActionType() already
+  // uses to tell APPROVAL_REQUEST/REVIEW_REQUEST apart from
+  // CONFIRMATION_REQUEST (lib/action-center.ts) - reused here, not
+  // re-derived, so "My Pending Approvals" and "My Tasks" can never drift
+  // from what Action Center itself would call each record.
+  const decisionWhere = { status: 'PENDING_REVIEW' as const };
+  const taskWhere = { manualDetail: { is: { verificationStatus: 'PENDING_CONFIRMATION' as const } } };
+
   const [
     totalApprovalsCurrent,
     totalApprovalsPrev,
     awaitingMyResponse,
+    myPendingApprovalsCount,
+    myTasksCount,
     myApprovalRows,
+    myTaskRows,
     waitingOnOthersRows,
     recentActivityRows,
     dueSoonRows,
@@ -252,9 +288,32 @@ export async function getIndividualDashboardOverview(
       degraded,
     ),
     safe(
+      'individual:myPendingApprovalsCount',
+      prisma.approvalRecord.count({ where: { organizationId, AND: [identity, decisionWhere] } }),
+      0,
+      degraded,
+    ),
+    safe(
+      'individual:myTasksCount',
+      prisma.approvalRecord.count({ where: { organizationId, AND: [identity, taskWhere] } }),
+      0,
+      degraded,
+    ),
+    safe(
       'individual:myApprovals',
       prisma.approvalRecord.findMany({
-        where: { organizationId, AND: [identity, openActionWhere()] },
+        where: { organizationId, AND: [identity, decisionWhere] },
+        select: approvalRecordListSelect,
+        orderBy: [{ createdAt: 'desc' }],
+        take: 8,
+      }),
+      [],
+      degraded,
+    ),
+    safe(
+      'individual:myTasks',
+      prisma.approvalRecord.findMany({
+        where: { organizationId, AND: [identity, taskWhere] },
         select: approvalRecordListSelect,
         orderBy: [{ createdAt: 'desc' }],
         take: 8,
@@ -315,7 +374,7 @@ export async function getIndividualDashboardOverview(
 
   const sourceSummaries = await safe(
     'individual:sourceSummaries',
-    getUnifiedSourceSummariesForApprovals(organizationId, myApprovalRows.map((r) => r.id)),
+    getUnifiedSourceSummariesForApprovals(organizationId, [...myApprovalRows, ...myTaskRows].map((r) => r.id)),
     new Map<string, ApprovalSourceSummary>(),
     degraded,
   );
@@ -325,7 +384,8 @@ export async function getIndividualDashboardOverview(
     degraded,
     kpis: {
       totalApprovals: { value: totalApprovalsCurrent, prevValue: totalApprovalsPrev > 0 ? totalApprovalsPrev : null },
-      myPendingApprovals: { value: actionCenterKpis.needsAttention },
+      myPendingApprovals: { value: myPendingApprovalsCount },
+      myTasks: { value: myTasksCount },
       dueToday: { value: actionCenterKpis.dueToday },
       overdue: { value: actionCenterKpis.overdue },
       awaitingMyResponse: { value: awaitingMyResponse },
@@ -333,6 +393,10 @@ export async function getIndividualDashboardOverview(
     myApprovals: {
       records: myApprovalRows.map((record) => ({ ...record, sources: sourceSummaries.get(record.id) ?? null })),
       total: myApprovalRows.length,
+    },
+    myTasks: {
+      records: myTaskRows.map((record) => ({ ...record, sources: sourceSummaries.get(record.id) ?? null })),
+      total: myTaskRows.length,
     },
     dueSoon: dueSoonRows.map((r) => ({
       id: r.approvalRecord.id,

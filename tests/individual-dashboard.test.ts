@@ -8,10 +8,11 @@ import { resolveIndividualDashboardRange } from '../services/individualDashboard
 // resolveIndividualDashboardRange() logic, and (Part 2) static-analysis of
 // the already-written service/view/page source to lock in the
 // architectural invariants this build depends on: reuse of Action Center's
-// real engine (no duplicate business logic), tenant isolation, RBAC
-// gating, one consistent "due" definition, and no fabricated sections for
-// capabilities (tasks/mentions/saved items/recently-viewed/demo mode) that
-// have no real backing data model in this schema.
+// real engine (no duplicate business logic - My Tasks is Action Center's
+// own existing CONFIRMATION_REQUEST ActionType, not a second task model),
+// tenant isolation, RBAC gating, one consistent "due" definition, and no
+// fabricated sections for capabilities (mentions/saved items/recently-
+// viewed/demo mode) that have no real backing data model in this schema.
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(`${root}/${path}`, 'utf8');
@@ -94,12 +95,22 @@ const individualService = read('services/individualDashboard.ts');
 const actionCenter = read('services/action-center.ts');
 
 // Reuses Action Center's real, proven engine - never a second definition
-// of "pending"/"due"/"overdue," and never a second identity-match/open-
-// action predicate.
-assert.match(individualService, /import \{ computeKpis, viewerIdentityWhere, openActionWhere, type ActionCenterViewer \} from '@\/services\/action-center'/);
+// of "pending"/"due"/"overdue," and never a second identity-match
+// predicate.
+assert.match(individualService, /import \{ computeKpis, viewerIdentityWhere, type ActionCenterViewer \} from '@\/services\/action-center'/);
 assert.match(individualService, /computeKpis\(viewer, true\)/);
 assert.doesNotMatch(individualService, /function viewerIdentityWhere/);
-assert.doesNotMatch(individualService, /function openActionWhere/);
+
+// "My Pending Approvals" vs "My Tasks" reuses Action Center's own
+// ActionType split (lib/action-center.ts's deriveActionType(): a
+// ManualApprovalDetail.verificationStatus of PENDING_CONFIRMATION is a
+// CONFIRMATION_REQUEST, i.e. a task; otherwise it's an APPROVAL_REQUEST/
+// REVIEW_REQUEST, i.e. a decision) rather than a second task/todo model -
+// both counts and both lists are scoped by the same two predicates, never
+// a third, independently-invented definition of "task."
+assert.match(individualService, /const decisionWhere = \{ status: 'PENDING_REVIEW' as const \};/);
+assert.match(individualService, /const taskWhere = \{ manualDetail: \{ is: \{ verificationStatus: 'PENDING_CONFIRMATION' as const \} \} \};/);
+assert.doesNotMatch(individualService, /model\s+Task|model\s+MyTask|prisma\.task\./i);
 
 // forcePersonalScope defaults to false, so the real Action Center page
 // (/dashboard/pending-actions) keeps its exact existing org-wide-for-
@@ -149,15 +160,18 @@ const view = read('components/dashboard/IndividualDashboardView.tsx');
 assert.doesNotMatch(view, /@clerk|getDashboardTenant|from '@\/lib\/prisma'/);
 assert.match(page, /import \{ IndividualDashboardView, str, type RawSearchParams \} from '@\/components\/dashboard\/IndividualDashboardView'/);
 
-// ─── Part 6: no fabricated sections for capabilities with no real data ─────
+// ─── Part 6: My Tasks is real; still no fabricated sections ────────────────
 //
-// My Tasks (no task/todo model), Mentions & Requests (no comments/mentions
-// model), Recently Viewed (no view-history is ever recorded), Saved/
-// Followed Items (no save/follow model), and Demo Mode (no customer-facing
-// toggle exists) were all deliberately left out rather than faked - this
-// locks that decision in so a future edit can't silently add a fake
-// version of any of them back.
-assert.doesNotMatch(view, /My Tasks/);
+// My Tasks IS implemented (Action Center's existing CONFIRMATION_REQUEST
+// ActionType, not a new model - see Part 2). Mentions & Requests (no
+// comments/mentions model), Recently Viewed (no view-history is ever
+// recorded), Saved/Followed Items (no save/follow model), and Demo Mode
+// (no customer-facing toggle exists) remain deliberately left out rather
+// than faked - this locks that decision in so a future edit can't
+// silently add a fake version of any of them back.
+assert.match(view, /My Tasks/);
+assert.match(view, /actionType=CONFIRMATION_REQUEST/);
+assert.match(view, /actionType=APPROVAL_REQUEST/);
 assert.doesNotMatch(view, /Mentions/i);
 assert.doesNotMatch(view, /Recently Viewed/i);
 assert.doesNotMatch(view, /Saved Items|Followed Items/i);
@@ -167,7 +181,7 @@ assert.doesNotMatch(view, /Demo Mode/i);
 
 assert.match(view, /No approvals require your attention right now\./);
 assert.match(view, /You&apos;re all caught up\./);
-assert.match(view, /Nothing is waiting on another person\./);
+assert.match(view, /Nothing is currently waiting on another person\./);
 assert.match(view, /Your actions will appear here as you work in ApprovLine\./);
 assert.match(view, /No comparison available/);
 
@@ -192,7 +206,10 @@ assert.doesNotMatch(view, /donut|pie chart|<svg viewBox="0 0 42 42"|Chart\(/i);
 // explicit `grid-cols-1` base, which uses `minmax(0, 1fr)` and is
 // genuinely width-constrained.
 assert.match(view, /className="grid grid-cols-1 gap-3 text-al-text-secondary"/);
-assert.match(view, /className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5"/);
+// 6 KPI cards now (Total Approvals, My Pending Approvals, My Tasks, Due
+// Today, Overdue, Awaiting My Response) - still an explicit base
+// grid-cols-1, never a bare `grid` with only responsive variants.
+assert.match(view, /className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6"/);
 assert.doesNotMatch(view, /className="grid gap-3 xl:grid-cols-12"/);
 
 // The date-range picker's 6-item pill row (5 presets + Custom - twice the
@@ -202,4 +219,4 @@ assert.doesNotMatch(view, /className="grid gap-3 xl:grid-cols-12"/);
 const rangePicker = read('components/dashboard/IndividualRangePicker.tsx');
 assert.match(rangePicker, /flex min-w-0 flex-wrap items-center/);
 
-console.log('Validated the Individual User Dashboard: real Action Center reuse (forced personal scope, no duplicate engine), one consistent confirmation-expiry "due" definition across Due Today/Overdue/Due Soon, tenant isolation, RBAC (every role reachable), a pure renderable view layer, honest empty states, no fabricated metrics, no fake sections for My Tasks/Mentions/Recently Viewed/Saved Items/Demo Mode, and a real horizontal-overflow bug found and fixed by rendering with real data at mobile width.');
+console.log('Validated the Individual User Dashboard: real Action Center reuse (forced personal scope, no duplicate engine), My Tasks built on Action Center\'s own existing CONFIRMATION_REQUEST ActionType rather than a new task model, one consistent confirmation-expiry "due" definition across Due Today/Overdue/Due Soon, tenant isolation, RBAC (every role reachable), a pure renderable view layer, honest empty states, no fabricated metrics, no fake sections for Mentions/Recently Viewed/Saved Items/Demo Mode, and a real horizontal-overflow bug found and fixed by rendering with real data at mobile width.');

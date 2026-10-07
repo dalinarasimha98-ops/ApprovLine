@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock3,
   FileCheck2,
+  ListChecks,
   MessageSquareWarning,
 } from 'lucide-react';
 import type { Role } from '@prisma/client';
@@ -158,6 +159,7 @@ export function IndividualDashboardView({
   const range = overview.range;
   const name = firstName(userName, userEmail);
   const myApprovalTableRecords: ApprovalTableRecord[] = overview.myApprovals.records;
+  const myTaskTableRecords: ApprovalTableRecord[] = overview.myTasks.records;
 
   const rangeOptions: { key: IndividualDashboardRangeKey; label: string }[] = [
     { key: '7d', label: '7 days' },
@@ -192,7 +194,7 @@ export function IndividualDashboardView({
       </p>
 
       {/* KPI strip */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
         <KpiCard
           label="Total Approvals"
           value={String(overview.kpis.totalApprovals.value)}
@@ -210,7 +212,16 @@ export function IndividualDashboardView({
           context="Requires your decision"
           color="#f4b529"
           icon={<Clock3 className="h-4 w-4" />}
-          href="/dashboard/pending-actions"
+          href="/dashboard/pending-actions?actionType=APPROVAL_REQUEST"
+          linkLabel="Review →"
+        />
+        <KpiCard
+          label="My Tasks"
+          value={String(overview.kpis.myTasks.value)}
+          context="Assigned to you"
+          color="#2fd1a8"
+          icon={<ListChecks className="h-4 w-4" />}
+          href="/dashboard/pending-actions?actionType=CONFIRMATION_REQUEST"
           linkLabel="Review →"
         />
         <KpiCard
@@ -242,10 +253,10 @@ export function IndividualDashboardView({
         />
       </div>
 
-      {/* My Approvals */}
+      {/* My Approvals + My Tasks */}
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
-        <article className={`${panelClass} p-4 xl:col-span-8`}>
-          <SectionHeader title="My Approvals" subtitle="Approvals waiting for your decision" href="/dashboard/pending-actions" linkLabel="View all" />
+        <article className={`${panelClass} p-4 xl:col-span-7`}>
+          <SectionHeader title="My Approvals" subtitle="Decisions waiting for you" href="/dashboard/pending-actions?actionType=APPROVAL_REQUEST" linkLabel="View all" />
           <div className="mt-3">
             {myApprovalTableRecords.length > 0 ? (
               <ApprovalTable approvals={myApprovalTableRecords} />
@@ -255,7 +266,21 @@ export function IndividualDashboardView({
           </div>
         </article>
 
-        <article className={`${panelClass} p-4 xl:col-span-4`}>
+        <article className={`${panelClass} p-4 xl:col-span-5`}>
+          <SectionHeader title="My Tasks" subtitle="Confirmations and acknowledgments assigned to you" href="/dashboard/pending-actions?actionType=CONFIRMATION_REQUEST" linkLabel="View all" />
+          <div className="mt-3">
+            {myTaskTableRecords.length > 0 ? (
+              <ApprovalTable approvals={myTaskTableRecords} />
+            ) : (
+              <p className="py-10 text-center text-xs text-al-text-muted">You&apos;re all caught up.</p>
+            )}
+          </div>
+        </article>
+      </div>
+
+      {/* Due Soon + Waiting on Others */}
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+        <article className={`${panelClass} p-4 xl:col-span-5`}>
           <SectionHeader title="Due Soon" subtitle="Items approaching their deadline" />
           <div className="mt-3 divide-y divide-white/[0.06]">
             {overview.dueSoon.length ? (
@@ -275,10 +300,7 @@ export function IndividualDashboardView({
             )}
           </div>
         </article>
-      </div>
 
-      {/* Waiting on Others + My Recent Activity */}
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
         <article className={`${panelClass} p-4 xl:col-span-7`}>
           <SectionHeader title="Waiting on Others" subtitle="Requests you sent that are still pending a response" />
           <div className="mt-3">
@@ -297,17 +319,20 @@ export function IndividualDashboardView({
                 ))}
               </div>
             ) : (
-              <p className="py-6 text-center text-xs text-al-text-muted">Nothing is waiting on another person.</p>
+              <p className="py-6 text-center text-xs text-al-text-muted">Nothing is currently waiting on another person.</p>
             )}
           </div>
         </article>
+      </div>
 
-        <article className={`${panelClass} p-4 xl:col-span-5`}>
+      {/* My Recent Activity */}
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+        <article className={`${panelClass} p-4 xl:col-span-12`}>
           <SectionHeader title="My Recent Activity" subtitle="Your actions across approvals" href="/dashboard/audit-log" />
-          <div className="mt-3 divide-y divide-white/[0.06]">
+          <div className="mt-3 grid grid-cols-1 gap-x-6 divide-y divide-white/[0.06] sm:grid-cols-2 sm:gap-y-0 sm:divide-y-0">
             {overview.recentActivity.length ? (
               overview.recentActivity.map((event) => (
-                <div key={event.id} className="flex items-center gap-2.5 py-2.5">
+                <div key={event.id} className="flex items-center gap-2.5 border-white/[0.06] py-2.5 sm:border-b">
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-al-accent/15 text-al-accent"><FileCheck2 className="h-3.5 w-3.5" /></span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[11px] font-semibold text-al-text-secondary">{describeAuditAction(event.action)}</p>
@@ -316,7 +341,7 @@ export function IndividualDashboardView({
                 </div>
               ))
             ) : (
-              <p className="py-6 text-center text-xs text-al-text-muted">Your actions will appear here as you work in ApprovLine.</p>
+              <p className="py-6 text-center text-xs text-al-text-muted sm:col-span-2">Your actions will appear here as you work in ApprovLine.</p>
             )}
           </div>
         </article>

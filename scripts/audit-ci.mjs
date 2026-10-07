@@ -10,12 +10,24 @@ const allowedHighAdvisories = new Map([
     "Dev-only ESLint dependency chain; npm fix currently requires an incompatible ESLint release.",
   ],
   [
+    "@next/eslint-plugin-next",
+    "Dev-only Next lint plugin; transitive dep of fast-glob (GHSA-vfj7-8cjw-p6xm via braces), never shipped to the runtime bundle.",
+  ],
+  [
     "@prisma/config",
     "Depends on deepmerge-ts (GHSA-ggr8-5vv4-36mx); the patched version only exists on the Prisma 7.x major line, deferred as its own upgrade rather than forced here.",
   ],
   [
     "brace-expansion",
     "Dev-only ESLint/minimatch dependency chain; production runtime is not affected.",
+  ],
+  [
+    "braces",
+    "Stack-exhaustion DoS in glob-pattern matching (GHSA-vfj7-8cjw-p6xm), only ever invoked by dev/build tooling (Tailwind's file watcher, ESLint) against this repo's own trusted source tree, never against untrusted runtime input.",
+  ],
+  [
+    "chokidar",
+    "Dev-only file-watcher; transitive dep of braces (GHSA-vfj7-8cjw-p6xm), used only by Tailwind's build-time watch mode.",
   ],
   [
     "deepmerge-ts",
@@ -33,6 +45,14 @@ const allowedHighAdvisories = new Map([
   ["eslint-plugin-jsx-a11y", "Dev-only linting dependency chain."],
   ["eslint-plugin-react", "Dev-only linting dependency chain."],
   [
+    "fast-glob",
+    "Dev/build-time glob matching; transitive dep of micromatch (GHSA-vfj7-8cjw-p6xm via braces), used by Tailwind's content-file scanning, not the runtime bundle.",
+  ],
+  [
+    "micromatch",
+    "Transitive dep of braces (GHSA-vfj7-8cjw-p6xm), used only by Tailwind's build-time content scanning.",
+  ],
+  [
     "minimatch",
     "Dev-only ESLint dependency chain; production runtime is not affected.",
   ],
@@ -47,6 +67,14 @@ const allowedHighAdvisories = new Map([
   [
     "sharp",
     "Tracked upstream Next/Image optional dependency advisory until Next exposes a compatible patched dependency chain.",
+  ],
+  [
+    "source-map-js",
+    "Event-loop DoS via crafted source-map offsets (GHSA-68fv-2mgg-jv7q), only ever processing this repo's own build-time generated source maps, never untrusted input.",
+  ],
+  [
+    "tailwindcss",
+    "Build-time CSS tooling (devDependency, never shipped to the runtime bundle); flagged only via its chokidar/fast-glob/micromatch/postcss-nested/postcss-selector-parser dependency chain (GHSA-vfj7-8cjw-p6xm), not its own code.",
   ],
 ]);
 

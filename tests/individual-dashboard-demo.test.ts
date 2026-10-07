@@ -72,6 +72,24 @@ assert.doesNotMatch(demoLib, /totalApprovals:\s*\d|myPendingApprovals:\s*\d|dueT
 // can never match John on these rows, keeping them out of My Pending Approvals.
 assert.match(demoLib, /requestedByUserId: john\.id,\s*\n\s*expiresAt: daysFromNowAt\(item\.expiresInDays\)/);
 
+// ─── My Tasks vs My Approvals: real data for the new split ─────────────────
+//
+// JOHN_APPROVALS (8 decisions) are plain records - no manual/confirmation
+// machinery - so they can never leak into My Tasks. JOHN_TASKS (5 open
+// confirmations) carry the real manual/verbal + confirmation-request
+// machinery, matching Section 28's named task list, with one item
+// ("Submit Q3 campaign plan") recorded and confirmed by John immediately
+// so it shows as completed in Recent Activity rather than sitting in the
+// open task list.
+assert.match(demoLib, /const JOHN_TASKS: Array<\{/);
+assert.match(demoLib, /'Complete security training'/);
+assert.match(demoLib, /'Provide budget justification'/);
+assert.match(demoLib, /'Review vendor questionnaire'/);
+assert.match(demoLib, /'Acknowledge policy update'/);
+assert.match(demoLib, /'Confirm Q2 expense report accuracy'/); // the "1 overdue" task
+assert.match(demoLib, /subject: 'Submit Q3 campaign plan'/); // the "1 completed" task - in Recent Activity, not JOHN_TASKS
+assert.doesNotMatch(demoLib, /manual: null \| \{/); // JOHN_APPROVALS no longer carries manual-approval fields
+
 // ─── CLI + package.json wiring ──────────────────────────────────────────────
 
 assert.match(cli, /import \{ seedIndividualDashboardDemo, resetIndividualDashboardDemo, INDIVIDUAL_DASHBOARD_DEMO_USER_EMAIL \} from '@\/lib\/individual-dashboard-demo'/);
