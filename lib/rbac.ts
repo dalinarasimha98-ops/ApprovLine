@@ -120,6 +120,14 @@ export const ROUTE_PERMISSIONS: Record<string, Role[]> = {
   // exact email match in services/awaitingMyResponse.ts, not by this
   // route-level entry.
   '/dashboard/responses': ALL_ROLES,
+  // Waiting on Others - a personal projection over work the viewer
+  // initiated (ApprovalConfirmationRequest.requestedByUserId /
+  // ManualApprovalDetail.recorderUserId / InvestigationCase.createdByUserId
+  // exact match), never organization-wide data, so every role can reach
+  // it. Investigation-type rows are further gated inside services/
+  // waitingOnOthers.ts by the same role list '/investigations' uses,
+  // exactly mirroring '/dashboard/tasks' above.
+  '/dashboard/waiting-on-others': ALL_ROLES,
 };
 
 /**

@@ -70,7 +70,8 @@ assert.doesNotMatch(demoLib, /totalApprovals:\s*\d|myPendingApprovals:\s*\d|dueT
 // approver is always the OTHER party, so viewerIdentityWhere() (approverUserId/
 // approverEmail/manualDetail.secondVerifierUserId/confirmationRequests.approverEmail)
 // can never match John on these rows, keeping them out of My Pending Approvals.
-assert.match(demoLib, /requestedByUserId: john\.id,\s*\n\s*expiresAt: daysFromNowAt\(item\.expiresInDays\)/);
+assert.match(demoLib, /requestedByUserId: john\.id,\s*\n\s*expiresAt,/);
+assert.match(demoLib, /const expiresAt = item\.expiresAtOverride \? item\.expiresAtOverride\(item\.daysAgo\) : daysFromNowAt\(item\.expiresInDays \?\? 7\);/);
 
 // ─── My Tasks vs My Approvals: real data for the new split ─────────────────
 //

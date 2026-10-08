@@ -372,13 +372,19 @@ const JOHN_RESPONDED: Array<{
 ];
 
 /**
- * 4 items John submitted and is waiting on someone else for - real
+ * Items John submitted and is waiting on someone else for - real
  * ApprovalRecords with a real ApprovalConfirmationRequest whose
  * requestedByUserId is John, but whose approverEmail is the OTHER party.
  * viewerIdentityWhere() never matches John's identity on any of these
  * (approverUserId/approverEmail belong to the other party), so they
  * correctly never appear in My Pending Approvals/Due Today/Overdue -
  * only in Waiting on Others, exactly as the spec requires.
+ *
+ * Covers (per Waiting on Others' own demo requirements): 3+ genuinely
+ * waiting, 1 due today, 1 overdue, 1 waiting several days, and 1
+ * completed/disappeared transition (decision: 'CONFIRMED' - proves by
+ * construction that a resolved request drops out of Waiting on Others the
+ * moment the other party responds, never lingering as a stale row).
  */
 const WAITING_ON_OTHERS: Array<{
   subject: string;
@@ -387,12 +393,17 @@ const WAITING_ON_OTHERS: Array<{
   approverEmail: string;
   approverUserKey?: 'mike';
   daysAgo: number;
-  expiresInDays: number;
+  expiresInDays?: number;
+  expiresAtOverride?: (daysAgo: number) => Date;
+  decision?: 'PENDING' | 'CONFIRMED';
 }> = [
   { subject: 'Website redesign contract', category: 'Legal', approverName: 'Mike Johnson', approverEmail: 'mike.johnson@colleague.approvline.local', approverUserKey: 'mike', daysAgo: 3, expiresInDays: 11 },
   { subject: 'Team hiring request - Senior Analyst', category: 'HR', approverName: 'HR Team', approverEmail: 'hr-team@approvline-demo.local', daysAgo: 6, expiresInDays: 8 },
   { subject: 'Office equipment purchase - standing desks', category: 'Finance', approverName: 'Finance Team', approverEmail: 'finance-team@approvline-demo.local', daysAgo: 9, expiresInDays: 5 },
   { subject: 'Legal team contract review - NDA template update', category: 'Legal', approverName: 'Legal Team', approverEmail: 'legal-team@approvline-demo.local', daysAgo: 1, expiresInDays: 14 },
+  { subject: 'Vendor security questionnaire response', category: 'Security', approverName: 'Sarah Miller', approverEmail: 'sarah.miller@colleague.approvline.local', daysAgo: 2, expiresAtOverride: () => todayAt(23, 45) },
+  { subject: 'Expense policy exception request', category: 'Finance', approverName: 'Priya Sharma', approverEmail: 'priya.sharma@colleague.approvline.local', daysAgo: 5, expiresAtOverride: (daysAgo) => daysAgoAt(daysAgo - 3) },
+  { subject: 'Marketing budget reallocation - Q4', category: 'Marketing', approverName: 'Finance Team', approverEmail: 'finance-team@approvline-demo.local', daysAgo: 4, expiresInDays: 10, decision: 'CONFIRMED' },
 ];
 
 /**
@@ -788,6 +799,8 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
         },
       });
 
+      const decision = item.decision ?? 'PENDING';
+      const expiresAt = item.expiresAtOverride ? item.expiresAtOverride(item.daysAgo) : daysFromNowAt(item.expiresInDays ?? 7);
       await tx.approvalConfirmationRequest.create({
         data: {
           organizationId: organization.id,
@@ -795,10 +808,119 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
           tokenHash: confirmationToken(),
           approverName: item.approverName,
           approverEmail: item.approverEmail,
-          decision: 'PENDING',
+          decision,
           requestedByUserId: john.id,
-          expiresAt: daysFromNowAt(item.expiresInDays),
+          expiresAt,
+          respondedAt: decision === 'PENDING' ? null : daysAgoAt(Math.max(0, item.daysAgo - 2)),
           createdAt,
+        },
+      });
+      if (decision !== 'PENDING') {
+        await tx.auditLog.create({
+          data: {
+            organizationId: organization.id,
+            actorUserId: item.approverUserKey ? users[item.approverUserKey].id : john.id,
+            approvalRecordId: record.id,
+            action: `APPROVER_CONFIRMATION_${decision}`,
+            metadata: { approverEmail: item.approverEmail, provenance: 'waiting-on-others-demo' },
+            createdAt: daysAgoAt(Math.max(0, item.daysAgo - 2)),
+          },
+        });
+      }
+    }
+
+    // Waiting on Others - VERIFICATION coverage: a manual approval John
+    // himself recorded (recorderUserId = John, the real initiator field),
+    // requiring second-person verification from someone else - the exact
+    // mirror of JOHN_TASKS' VERIFICATION rows above (there, a colleague
+    // records and John verifies; here, John records and a colleague
+    // verifies), proving the same ManualApprovalDetail fields read from
+    // the opposite direction produce the opposite module's row.
+    {
+      const occurredAt = daysAgoAt(2);
+      const record = await tx.approvalRecord.create({
+        data: {
+          organizationId: organization.id,
+          approverName: john.name,
+          approverEmail: john.email,
+          subject: 'Facilities vendor change - verbal sign-off',
+          department: 'Operations',
+          category: 'Operations',
+          approvalType: 'EXPLICIT',
+          status: 'APPROVED',
+          confidence: 85,
+          riskLevel: 'medium',
+          businessImpact: 'Switching the office cleaning vendor, recorded verbally by John.',
+          reasoning: 'John recorded this verbal approval and designated Mike Johnson as the required second-person verifier.',
+          sourcePlatform: 'Verbal',
+          sourceSystem: 'MANUAL_ENTRY',
+          evidenceSnippet: 'John recorded this verbal approval and is waiting on second-person verification.',
+          correlationId: `${DEMO_RUN_ID}:${occurredAt.getTime()}`,
+          approvalTimestamp: occurredAt,
+          occurredAt,
+          createdAt: occurredAt,
+        },
+      });
+      await tx.manualApprovalDetail.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          kind: 'VERBAL',
+          approverRole: 'Manager',
+          communicationChannel: 'In-person / phone',
+          recorderUserId: john.id,
+          businessContext: 'Switching the office cleaning vendor, recorded verbally by John.',
+          supportingNotes: 'Requires second-person verification before it is considered confirmed.',
+          verificationStatus: 'PENDING_CONFIRMATION',
+          confidenceLevel: 85,
+          secondPersonRequired: true,
+          secondVerifierUserId: users.mike.id,
+        },
+      });
+      await tx.manualApprovalVersion.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          version: 1,
+          snapshot: { kind: 'VERBAL', recorderUserId: john.id, businessContext: 'Switching the office cleaning vendor, recorded verbally by John.', verificationStatus: 'PENDING_CONFIRMATION', confidenceLevel: 85, secondPersonRequired: true, secondVerifierUserId: users.mike.id },
+          changeReason: 'Recorded from a verbal confirmation.',
+          actorUserId: john.id,
+          createdAt: occurredAt,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId: organization.id,
+          actorUserId: john.id,
+          approvalRecordId: record.id,
+          action: 'MANUAL_APPROVAL_CREATED',
+          metadata: { provenance: 'VERBAL', verificationStatus: 'PENDING_CONFIRMATION', version: 1 },
+          createdAt: occurredAt,
+        },
+      });
+    }
+
+    // Waiting on Others - INVESTIGATION coverage: a real InvestigationCase
+    // John created (createdByUserId = John) but assigned to someone else
+    // (assignedToUserId = Priya) - the exact mirror of JOHN_INVESTIGATIONS
+    // above, where John is always the assignee; here he is always the
+    // creator, proving createdByUserId never leaks into My Tasks and
+    // assignedToUserId never leaks into Waiting on Others for the same row.
+    {
+      const createdAt = daysAgoAt(4);
+      await tx.investigationCase.create({
+        data: {
+          organizationId: organization.id,
+          title: 'Duplicate invoice flag - vendor onboarding batch',
+          status: 'IN_PROGRESS',
+          type: 'Payment Review',
+          department: 'Finance',
+          riskLevel: 'high',
+          summary: 'John opened this investigation and assigned it to Priya Sharma for review.',
+          assignedToUserId: users.priya.id,
+          createdByUserId: john.id,
+          createdAt,
+          updatedAt: createdAt,
         },
       });
     }
