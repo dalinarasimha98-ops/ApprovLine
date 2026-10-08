@@ -51,6 +51,10 @@ export type ApprovalTableRecord = {
    *  fabricated one. */
   personalStatus?: 'PENDING_REVIEW' | 'CONFIRMATION_REQUIRED' | 'APPROVED' | 'REJECTED';
   dueAt?: Date | null;
+  /** Optional, additive — the real ManualApprovalDetail.recorder name for a
+   *  manual/verbal record, undefined/null everywhere else. Never a fabricated
+   *  "requester"; absent when no such real recorder exists. */
+  requestedByName?: string | null;
 };
 
 function statusClass(status: string) {
@@ -59,21 +63,21 @@ function statusClass(status: string) {
   return 'bg-al-success/10 text-al-success';
 }
 
-const PERSONAL_STATUS_LABELS: Record<string, string> = {
+export const PERSONAL_STATUS_LABELS: Record<string, string> = {
   PENDING_REVIEW: 'PENDING REVIEW',
   CONFIRMATION_REQUIRED: 'CONFIRMATION REQUIRED',
   APPROVED: 'APPROVED',
   REJECTED: 'REJECTED',
 };
 
-function personalStatusClass(status: string) {
+export function personalStatusClass(status: string) {
   if (status === 'REJECTED') return 'bg-al-danger/10 text-al-danger';
   if (status === 'CONFIRMATION_REQUIRED') return 'bg-al-info/10 text-al-info';
   if (status === 'PENDING_REVIEW') return 'bg-al-warning/10 text-al-warning';
   return 'bg-al-success/10 text-al-success';
 }
 
-function dueDateClass(dueAt: Date | null | undefined) {
+export function dueDateClass(dueAt: Date | null | undefined) {
   if (!dueAt) return 'text-al-text-secondary';
   const now = Date.now();
   if (dueAt.getTime() < now) return 'font-bold text-al-danger';
@@ -83,13 +87,13 @@ function dueDateClass(dueAt: Date | null | undefined) {
   return 'text-al-text-secondary';
 }
 
-function approverDisplay(approval: Pick<ApprovalTableRecord, 'approverName' | 'approverEmail'>) {
+export function approverDisplay(approval: Pick<ApprovalTableRecord, 'approverName' | 'approverEmail'>) {
   return approval.approverName ?? approval.approverEmail ?? 'Unknown approver';
 }
 
-const MAX_VISIBLE_SOURCE_BADGES = 4;
+export const MAX_VISIBLE_SOURCE_BADGES = 4;
 
-function resolvedProviders(approval: ApprovalTableRecord): string[] {
+export function resolvedProviders(approval: ApprovalTableRecord): string[] {
   if (approval.sources && approval.sources.providers.length > 0) {
     return approval.sources.providers.map((p) => p.key);
   }

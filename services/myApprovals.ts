@@ -42,29 +42,40 @@
  * state the real engine can't produce; "personalStatus" below is always one
  * of the four real ApprovalRecord/ManualApprovalDetail states.
  *
- * SORTING: "priority" order is a real, deterministic bucket (overdue → due
- * today → due soon → open high/critical risk → other open → closed) built
- * from actual fields (confirmationRequest.expiresAt, riskLevel, status) —
- * never a fabricated score. Because a few of these buckets depend on a
- * related row (the pending confirmation's expiresAt) that Prisma can't
- * cheaply order by across a mixed open/closed table, sorting happens in JS
- * over a bounded fetch (MAX_SORTABLE_ROWS) rather than at the DB level. The
- * displayed `total` count is always exact (a separate COUNT query); only the
- * relative ORDER of items beyond that bound is not guaranteed — an honest,
- * documented limit for a personal queue, not silently wrong data. The
- * derivation/sort logic itself lives in lib/my-approvals.ts, which imports
- * nothing from Prisma — mirroring this codebase's existing lib/action-center.ts
- * (pure) + services/action-center.ts (DB-wiring) split, so that logic runs
- * as real executed unit tests (tests/my-approvals.test.ts) rather than only
- * static source-regex assertions.
+ * SORTING/PAGINATION: real database ORDER BY + LIMIT/OFFSET across the
+ * viewer's ENTIRE matching set, not a bounded in-memory sort. "priority"
+ * order is a real, deterministic bucket (overdue → due today → due soon →
+ * open high/critical risk → other open → closed) built from actual fields
+ * (confirmationRequest.expiresAt, riskLevel, status) — never a fabricated
+ * score. Because that bucket (and the "due" sort) depends on a related row
+ * (the one PENDING ApprovalConfirmationRequest addressed to this viewer)
+ * that Prisma's `orderBy` cannot express across a mixed open/closed table,
+ * fetchSortedPageIds() below runs one raw SQL query computing it, built in
+ * two phases so the tenant/viewer/filter WHERE clause is NEVER duplicated
+ * in SQL:
+ *   1. The normal, fully type-checked Prisma `where` (identical to the one
+ *      used for the COUNT and every other query on this page) selects just
+ *      the matching row IDs — cheap even for a large matching set, since
+ *      only bare primary keys are fetched.
+ *   2. A single parameterized raw SQL query (Prisma.sql/Prisma.join only —
+ *      never string-concatenated SQL) is constrained to `WHERE id IN
+ *      (<those already-vetted IDs>)`, so it can never see a row outside
+ *      what phase 1 already proved belongs to this organization and viewer.
+ *      It computes the due-date/priority expression, ORDERs BY it with a
+ *      deterministic id tiebreaker, and applies the real LIMIT/OFFSET for
+ *      the requested page — returning just the page's IDs in final order.
+ * The full typed row data for that one page is then fetched normally via
+ * Prisma (myApprovalRecordSelect) and re-keyed to match the ID order phase
+ * 2 already computed — a cheap re-ordering of ≤100 rows, not sort logic.
  *
  * TENANT ISOLATION: every query starts from `organizationId: viewer.
  * organizationId`, taken from the server-resolved tenant, never from a
  * client-supplied value. The viewer's identity is likewise always the
- * server-resolved session identity.
+ * server-resolved session identity. The raw SQL phase inherits this
+ * scoping transitively (see above) rather than re-deriving it.
  */
 
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { withTimeout } from '@/lib/performance';
 import { approvalRecordListSelect, buildApprovalRecordsWhere, type ApprovalListFilters, type ApprovalListRecord } from '@/lib/approvalRecords';
@@ -73,7 +84,6 @@ import { computeKpis, viewerIdentityWhere, type ActionCenterViewer } from '@/ser
 import {
   derivePersonalStatus,
   viewerConfirmationRequest,
-  sortRows,
   type MyApprovalPersonalStatus,
   type MyApprovalsSort,
   type MyApprovalsStatusFilter,
@@ -84,7 +94,6 @@ export type { MyApprovalPersonalStatus, MyApprovalsSort, MyApprovalsStatusFilter
 const QUERY_TIMEOUT_MS = 5000;
 export const MY_APPROVALS_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 10;
-const MAX_SORTABLE_ROWS = 300;
 const DUE_SOON_HORIZON_DAYS = 14;
 
 export type MyApprovalsFilters = {
@@ -110,6 +119,7 @@ const myApprovalRecordSelect = {
       secondPersonRequired: true,
       secondVerifierUserId: true,
       secondVerifiedAt: true,
+      recorder: { select: { name: true, email: true } },
     },
   },
   confirmationRequests: {
@@ -139,7 +149,86 @@ export type MyApprovalRow = ApprovalListRecord & {
   dueAt: Date | null;
   canCompleteConfirmation: boolean;
   canCompleteVerification: boolean;
+  /** The real ManualApprovalDetail.recorder for a manual/verbal record —
+   *  null for a plain classifier/system-originated record, which genuinely
+   *  has no distinct "who recorded this" person. Never a fabricated value. */
+  requestedByName: string | null;
 };
+
+/** Phase 2 of the two-phase sort/paginate described in this module's own
+ *  header comment. `idList` must already be the exact, fully-scoped set of
+ *  matching IDs from phase 1 (never a client-supplied list). Returns the
+ *  requested page's IDs in final sorted order; the caller fetches full row
+ *  data for just those IDs afterward. */
+async function fetchSortedPageIds(args: {
+  idList: string[];
+  email: string;
+  sort: MyApprovalsSort;
+  page: number;
+  pageSize: number;
+}): Promise<string[]> {
+  const { idList, email, sort, page, pageSize } = args;
+  if (idList.length === 0) return [];
+  const offset = (page - 1) * pageSize;
+
+  // A fixed, hardcoded SQL fragment chosen by a type-safe switch over the
+  // MyApprovalsSort union — `sort` itself is never interpolated into SQL.
+  const orderBy = (() => {
+    switch (sort) {
+      case 'newest': return Prisma.sql`s.occurred_at DESC, s.id ASC`;
+      case 'oldest': return Prisma.sql`s.occurred_at ASC, s.id ASC`;
+      case 'lastActivity': return Prisma.sql`s.updated_at DESC, s.id ASC`;
+      case 'due': return Prisma.sql`s.due_at ASC NULLS LAST, s.occurred_at DESC, s.id ASC`;
+      default: return Prisma.sql`s.priority_bucket ASC, s.due_at ASC NULLS LAST, s.occurred_at DESC, s.id ASC`;
+    }
+  })();
+
+  // The "is open" condition repeated in each CASE branch below mirrors
+  // lib/my-approvals.ts's derivePersonalStatus() exactly: a pending
+  // confirmation addressed to this viewer always wins over the raw status,
+  // so this can never disagree with the personalStatus shown on the row
+  // itself. due_at is the earliest PENDING ApprovalConfirmationRequest
+  // addressed to this exact viewer email (never the earliest for anyone),
+  // matching lib/my-approvals.ts's viewerConfirmationRequest().
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT s.id FROM (
+      SELECT
+        ar.id,
+        ar."occurredAt" AS occurred_at,
+        ar."updatedAt" AS updated_at,
+        due.due_at AS due_at,
+        CASE
+          WHEN (mad."verificationStatus" = 'PENDING_CONFIRMATION' OR ar.status = 'PENDING_REVIEW')
+               AND due.due_at IS NOT NULL AND due.due_at < NOW() THEN 0
+          WHEN (mad."verificationStatus" = 'PENDING_CONFIRMATION' OR ar.status = 'PENDING_REVIEW')
+               AND due.due_at IS NOT NULL AND due.due_at::date = CURRENT_DATE THEN 1
+          WHEN (mad."verificationStatus" = 'PENDING_CONFIRMATION' OR ar.status = 'PENDING_REVIEW')
+               AND due.due_at IS NOT NULL AND due.due_at <= NOW() + INTERVAL '14 days' THEN 2
+          WHEN (mad."verificationStatus" = 'PENDING_CONFIRMATION' OR ar.status = 'PENDING_REVIEW')
+               AND lower(COALESCE(ar."riskLevel", '')) IN ('high', 'critical') THEN 3
+          WHEN (mad."verificationStatus" = 'PENDING_CONFIRMATION' OR ar.status = 'PENDING_REVIEW') THEN 4
+          ELSE 5
+        END AS priority_bucket
+      FROM "ApprovalRecord" ar
+      LEFT JOIN "ManualApprovalDetail" mad ON mad."approvalRecordId" = ar.id
+      LEFT JOIN LATERAL (
+        SELECT acr."expiresAt" AS due_at
+        FROM "ApprovalConfirmationRequest" acr
+        WHERE acr."organizationId" = ar."organizationId"
+          AND acr."approvalRecordId" = ar.id
+          AND acr.decision = 'PENDING'
+          AND lower(acr."approverEmail") = lower(${email})
+        ORDER BY acr."expiresAt" ASC
+        LIMIT 1
+      ) due ON true
+      WHERE ar.id IN (${Prisma.join(idList)})
+    ) s
+    ORDER BY ${orderBy}
+    LIMIT ${pageSize} OFFSET ${offset}
+  `);
+
+  return rows.map((r) => r.id);
+}
 
 export type MyApprovalsKpis = {
   pendingMyDecision: number;
@@ -189,16 +278,16 @@ export async function getMyApprovalsOverview(
     AND: [identity, genericWhere, ...(statusWhere ? [statusWhere] : [])],
   };
 
-  const [totalCount, boundedRows, kpiBase, dueSoon, approved, rejected] = await withTimeout(
+  const [totalCount, matchingIdRows, kpiBase, dueSoon, approved, rejected] = await withTimeout(
     'my-approvals:load',
     Promise.all([
       prisma.approvalRecord.count({ where }),
-      prisma.approvalRecord.findMany({
-        where,
-        select: myApprovalRecordSelect,
-        orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
-        take: MAX_SORTABLE_ROWS,
-      }),
+      // Phase 1 of the two-phase sort (see this module's header comment) —
+      // the exact same typed `where` as every other query here, just
+      // selecting bare IDs. Not bounded to a page or a fixed cap: a
+      // personal queue's matching-ID set is cheap to fetch in full even at
+      // several hundred rows, unlike fetching full row payloads would be.
+      prisma.approvalRecord.findMany({ where, select: { id: true } }),
       computeKpis(viewer, true),
       prisma.approvalConfirmationRequest.count({
         where: {
@@ -237,42 +326,59 @@ export async function getMyApprovalsOverview(
   );
 
   const email = viewer.email.toLowerCase();
-  const sorted = sortRows(boundedRows, sort, now.getTime(), email);
-  const pageRows = sorted.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize);
 
-  const sourceSummaries = await getUnifiedSourceSummariesForApprovals(viewer.organizationId, pageRows.map((r) => r.id));
+  // Phase 2: a real database ORDER BY + LIMIT/OFFSET across the FULL
+  // matching set (see this module's header comment and fetchSortedPageIds's
+  // own doc comment) — never a bounded in-memory sort.
+  const idList = matchingIdRows.map((r) => r.id);
+  const sortedPageIds = await fetchSortedPageIds({ idList, email, sort, page, pageSize });
 
-  const rows: MyApprovalRow[] = pageRows.map((r) => {
-    const personalStatus = derivePersonalStatus(r);
-    const dueAt = viewerConfirmationRequest(r, email)?.expiresAt ?? null;
-    const canCompleteConfirmation = personalStatus === 'CONFIRMATION_REQUIRED' && viewerConfirmationRequest(r, email) !== null;
-    const canCompleteVerification = Boolean(
-      r.manualDetail?.secondPersonRequired &&
-      r.manualDetail.secondVerifierUserId === viewer.userId &&
-      !r.manualDetail.secondVerifiedAt,
-    );
-    return {
-      id: r.id,
-      subject: r.subject,
-      sourceLink: r.sourceLink,
-      correlationId: r.correlationId,
-      approverName: r.approverName,
-      approverEmail: r.approverEmail,
-      department: r.department,
-      category: r.category,
-      riskLevel: r.riskLevel,
-      sourcePlatform: r.sourcePlatform,
-      confidence: r.confidence,
-      status: r.status,
-      createdAt: r.createdAt,
-      occurredAt: r.occurredAt,
-      sources: sourceSummaries.get(r.id) ?? null,
-      personalStatus,
-      dueAt,
-      canCompleteConfirmation,
-      canCompleteVerification,
-    };
-  });
+  let rows: MyApprovalRow[] = [];
+  if (sortedPageIds.length > 0) {
+    const pageRowsUnordered = await prisma.approvalRecord.findMany({
+      where: { id: { in: sortedPageIds } },
+      select: myApprovalRecordSelect,
+    });
+    const byId = new Map(pageRowsUnordered.map((r) => [r.id, r]));
+    // Re-key to the order fetchSortedPageIds already computed — a cheap
+    // reordering of ≤pageSize rows, never a re-derivation of sort logic.
+    const pageRows = sortedPageIds.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => Boolean(r));
+
+    const sourceSummaries = await getUnifiedSourceSummariesForApprovals(viewer.organizationId, pageRows.map((r) => r.id));
+
+    rows = pageRows.map((r) => {
+      const personalStatus = derivePersonalStatus(r);
+      const dueAt = viewerConfirmationRequest(r, email)?.expiresAt ?? null;
+      const canCompleteConfirmation = personalStatus === 'CONFIRMATION_REQUIRED' && viewerConfirmationRequest(r, email) !== null;
+      const canCompleteVerification = Boolean(
+        r.manualDetail?.secondPersonRequired &&
+        r.manualDetail.secondVerifierUserId === viewer.userId &&
+        !r.manualDetail.secondVerifiedAt,
+      );
+      return {
+        id: r.id,
+        subject: r.subject,
+        sourceLink: r.sourceLink,
+        correlationId: r.correlationId,
+        approverName: r.approverName,
+        approverEmail: r.approverEmail,
+        department: r.department,
+        category: r.category,
+        riskLevel: r.riskLevel,
+        sourcePlatform: r.sourcePlatform,
+        confidence: r.confidence,
+        status: r.status,
+        createdAt: r.createdAt,
+        occurredAt: r.occurredAt,
+        sources: sourceSummaries.get(r.id) ?? null,
+        personalStatus,
+        dueAt,
+        canCompleteConfirmation,
+        canCompleteVerification,
+        requestedByName: r.manualDetail?.recorder?.name ?? r.manualDetail?.recorder?.email ?? null,
+      };
+    });
+  }
 
   return {
     kpis: {

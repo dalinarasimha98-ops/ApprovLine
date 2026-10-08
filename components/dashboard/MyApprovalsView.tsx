@@ -1,4 +1,5 @@
 import { ApprovalTable, type ApprovalTableRecord } from '@/components/dashboard/ApprovalTable';
+import { MyApprovalCards } from '@/components/dashboard/MyApprovalCards';
 import { PendingLink } from '@/components/system/PendingLink';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { str, type RawSearchParams } from '@/lib/search-params';
@@ -134,6 +135,7 @@ export async function MyApprovalsView({
     sources: r.sources,
     personalStatus: r.personalStatus,
     dueAt: r.dueAt,
+    requestedByName: r.requestedByName,
   }));
 
   const total = result?.total ?? 0;
@@ -373,7 +375,10 @@ export async function MyApprovalsView({
       {/* ── Table + pagination ───────────────────────────── */}
       {approvalRows.length > 0 ? (
         <div className="flex flex-col gap-3">
-          <ApprovalTable approvals={approvalRows} showDueColumn />
+          <div className="hidden lg:block">
+            <ApprovalTable approvals={approvalRows} showDueColumn />
+          </div>
+          <MyApprovalCards approvals={approvalRows} />
 
           <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-al-border bg-al-surface px-4 py-3 sm:flex-row">
             <p className="text-xs font-semibold text-al-text-muted">

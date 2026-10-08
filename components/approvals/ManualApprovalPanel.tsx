@@ -124,23 +124,38 @@ export function ManualApprovalPanel({ approval, detail, evidence, versions, conf
   // viewer in-app, via app/api/approvals/[id]/confirmations/respond/
   // route.ts — the authenticated counterpart to the public
   // /confirm-approval/[token] flow (see that route's own header comment).
-  // "Correct" is intentionally not offered here: it needs a structured
-  // correction payload this panel has no form for yet, so it stays
-  // reachable only through the original emailed confirmation link rather
-  // than a half-built in-app control.
-  async function completeConfirmation(decision: 'CONFIRMED' | 'REJECTED') {
+  // CORRECTED is a real, already-wired ApprovalConfirmationDecision (same
+  // enum, same respondToConfirmation() transition the public
+  // ApprovalConfirmationForm.tsx already drives) — reused here with the
+  // identical `{ summary: string }` correction shape that form already
+  // sends, not a new one.
+  async function completeConfirmation(decision: 'CONFIRMED' | 'REJECTED' | 'CORRECTED') {
     const promptText = decision === 'CONFIRMED'
       ? 'Add a note confirming this approval is accurate.'
-      : 'Explain why this recorded approval is not accurate.';
+      : decision === 'REJECTED'
+        ? 'Explain why this recorded approval is not accurate.'
+        : 'Add a note describing the correction you are submitting.';
     const responseNote = window.prompt(promptText);
     if (!responseNote?.trim()) return;
+    let correction: { summary: string } | undefined;
+    if (decision === 'CORRECTED') {
+      const summary = window.prompt('Describe what should be corrected in the approval record (decision, conditions, approver, or timestamp).');
+      if (!summary?.trim() || summary.trim().length < 3) return;
+      correction = { summary: summary.trim() };
+    }
     setWorking('confirmation-response'); setMessage(null);
     const response = await fetch(`/api/approvals/${approval.id}/confirmations/respond`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision, responseNote }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decision, responseNote, correction }),
     });
     const payload = await response.json().catch(() => ({})); setWorking(null);
     if (!response.ok) return setMessage(payload.error ?? 'The confirmation response could not be recorded.');
-    setMessage(decision === 'CONFIRMED' ? 'Confirmation recorded.' : 'Confirmation rejected and the approval marked disputed.');
+    setMessage(
+      decision === 'CONFIRMED'
+        ? 'Confirmation recorded.'
+        : decision === 'REJECTED'
+          ? 'Confirmation rejected and the approval marked disputed.'
+          : 'Correction submitted. The record is disputed until an authorized reviewer resolves it.',
+    );
     router.refresh();
   }
 
@@ -177,7 +192,7 @@ export function ManualApprovalPanel({ approval, detail, evidence, versions, conf
 
       {canManage ? <div className="flex flex-wrap gap-3"><button type="button" disabled={working !== null} onClick={requestSuggestions} className="h-11 rounded-xl bg-al-accent px-4 text-sm font-black text-white disabled:opacity-60">{working === 'suggestions' ? 'Searching...' : 'Find supporting evidence'}</button><button type="button" disabled={working !== null} onClick={createConfirmation} className="h-11 rounded-xl border border-al-border bg-al-surface px-4 text-sm font-black text-al-text-secondary disabled:opacity-60">{working === 'confirmation' ? 'Creating...' : 'Request approver confirmation'}</button></div> : null}
       {canSecondVerify ? <div className="rounded-xl border border-al-accent/30 bg-al-accent/10 p-4"><p className="text-xs font-black uppercase tracking-wide text-violet-800">Second-person verification required</p><p className="mt-1 text-sm leading-6 text-violet-950">Review the recorder, decision context, and linked evidence before recording an independent result.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={working !== null} onClick={() => submitSecondVerification('VERIFIED')} className="h-10 rounded-xl bg-emerald-600 px-4 text-sm font-black text-white disabled:opacity-60">{working === 'second-verification' ? 'Recording...' : 'Verify record'}</button><button type="button" disabled={working !== null} onClick={() => submitSecondVerification('REJECTED')} className="h-10 rounded-xl border border-al-danger/30 bg-al-surface px-4 text-sm font-black text-al-danger disabled:opacity-60">Reject verification</button></div></div> : null}
-      {myPendingConfirmation ? <div className="rounded-xl border border-al-info/30 bg-al-info/10 p-4"><p className="text-xs font-black uppercase tracking-wide text-al-info">Your confirmation is requested</p><p className="mt-1 text-sm leading-6 text-al-text-secondary">You were asked to confirm this recorded approval is accurate. Review the business context and linked evidence above before responding.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={working !== null} onClick={() => completeConfirmation('CONFIRMED')} className="h-10 rounded-xl bg-emerald-600 px-4 text-sm font-black text-white disabled:opacity-60">{working === 'confirmation-response' ? 'Recording...' : 'Confirm'}</button><button type="button" disabled={working !== null} onClick={() => completeConfirmation('REJECTED')} className="h-10 rounded-xl border border-al-danger/30 bg-al-surface px-4 text-sm font-black text-al-danger disabled:opacity-60">Reject</button></div></div> : null}
+      {myPendingConfirmation ? <div className="rounded-xl border border-al-info/30 bg-al-info/10 p-4"><p className="text-xs font-black uppercase tracking-wide text-al-info">Your confirmation is requested</p><p className="mt-1 text-sm leading-6 text-al-text-secondary">You were asked to confirm this recorded approval is accurate. Review the business context and linked evidence above before responding.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={working !== null} onClick={() => completeConfirmation('CONFIRMED')} className="h-10 rounded-xl bg-emerald-600 px-4 text-sm font-black text-white disabled:opacity-60">{working === 'confirmation-response' ? 'Recording...' : 'Confirm'}</button><button type="button" disabled={working !== null} onClick={() => completeConfirmation('CORRECTED')} className="h-10 rounded-xl border border-amber-300 bg-al-warning/10 px-4 text-sm font-black text-al-warning disabled:opacity-60">Correct</button><button type="button" disabled={working !== null} onClick={() => completeConfirmation('REJECTED')} className="h-10 rounded-xl border border-al-danger/30 bg-al-surface px-4 text-sm font-black text-al-danger disabled:opacity-60">Reject</button></div></div> : null}
       {detail.secondVerificationNote ? <p className="rounded-xl border border-al-border bg-al-surface-sunken p-3 text-sm text-al-text-secondary"><strong>Second verifier note:</strong> {detail.secondVerificationNote}</p> : null}
       {message ? <p role="status" className="rounded-xl border border-al-info/20 bg-al-info/10 p-3 text-sm font-bold text-blue-900">{message}</p> : null}
       {confirmationUrl ? <div className="rounded-xl border border-al-success/30 bg-al-success/10 p-4"><p className="text-xs font-black uppercase tracking-wide text-al-success">Secure confirmation link</p><p className="mt-2 break-all text-sm font-semibold text-emerald-950">{confirmationUrl}</p></div> : null}

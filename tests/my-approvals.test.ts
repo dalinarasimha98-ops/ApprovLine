@@ -3,8 +3,6 @@ import { readFileSync } from 'node:fs';
 import {
   derivePersonalStatus,
   viewerConfirmationRequest,
-  priorityBucket,
-  sortRows,
   type MinimalApprovalForMyApprovals,
 } from '../lib/my-approvals';
 
@@ -69,84 +67,17 @@ assert.equal(
 }
 assert.equal(viewerConfirmationRequest(mkRow(), EMAIL), null, 'no confirmation request at all -> null, never invented');
 
-// ─── priorityBucket: a real, deterministic bucket order — never a
-//     fabricated priority score ─────────────────────────────────────────────
+// NOTE: priorityBucket()/sortRows() no longer exist in this module — sorting
+// moved to a real database ORDER BY (services/myApprovals.ts's
+// fetchSortedPageIds(), a single parameterized raw SQL query built in two
+// phases so the WHERE clause is never duplicated in SQL) so it is correct
+// across the viewer's ENTIRE matching set rather than a bounded in-memory
+// sort. There is no pure-JS sort function left to unit-test; its SQL
+// equivalent is proven against a real Postgres instance (see the task's
+// real-Postgres verification report, which seeds 300+ rows specifically to
+// prove a row ordered after row #300 can still sort ahead of row #1).
 
-const NOW = new Date('2026-06-15T12:00:00Z').getTime();
-const TODAY_LATER = new Date('2026-06-15T18:00:00Z');
-const YESTERDAY = new Date('2026-06-14T12:00:00Z');
-const IN_5_DAYS = new Date('2026-06-20T12:00:00Z');
-const IN_30_DAYS = new Date('2026-07-15T12:00:00Z');
-
-assert.equal(
-  priorityBucket(mkRow({ confirmationRequests: [{ expiresAt: YESTERDAY, approverEmail: EMAIL }] }), NOW, EMAIL),
-  0,
-  'overdue open item sorts first',
-);
-assert.equal(
-  priorityBucket(mkRow({ confirmationRequests: [{ expiresAt: TODAY_LATER, approverEmail: EMAIL }] }), NOW, EMAIL),
-  1,
-  'due today',
-);
-assert.equal(
-  priorityBucket(mkRow({ confirmationRequests: [{ expiresAt: IN_5_DAYS, approverEmail: EMAIL }] }), NOW, EMAIL),
-  2,
-  'due within the 14-day due-soon horizon',
-);
-// A due date beyond the horizon falls back to the risk-level bucket, not "due soon".
-assert.equal(
-  priorityBucket(mkRow({ riskLevel: 'high', confirmationRequests: [{ expiresAt: IN_30_DAYS, approverEmail: EMAIL }] }), NOW, EMAIL),
-  3,
-  'far-future due date is not due-soon; falls through to open high-risk bucket',
-);
-assert.equal(priorityBucket(mkRow({ riskLevel: 'critical' }), NOW, EMAIL), 3, 'open + critical risk, no due date');
-assert.equal(priorityBucket(mkRow({ riskLevel: 'low' }), NOW, EMAIL), 4, 'open, no due date, not high/critical risk');
-assert.equal(priorityBucket(mkRow({ status: 'APPROVED', riskLevel: 'critical' }), NOW, EMAIL), 5, 'closed records always sort last, regardless of risk');
-assert.equal(priorityBucket(mkRow({ status: 'REJECTED' }), NOW, EMAIL), 5, 'closed records always sort last');
-// A confirmation addressed to someone else must not make this row look overdue.
-assert.equal(
-  priorityBucket(mkRow({ riskLevel: 'low', confirmationRequests: [{ expiresAt: YESTERDAY, approverEmail: 'someone-else@example.com' }] }), NOW, EMAIL),
-  4,
-  'another recipient\'s overdue confirmation must never leak into this viewer\'s urgency bucket',
-);
-
-// ─── sortRows: deterministic, stable, and real for every supported sort ────
-
-{
-  const overdue = mkRow({ confirmationRequests: [{ expiresAt: YESTERDAY, approverEmail: EMAIL }], occurredAt: new Date('2026-01-01') });
-  const dueSoon = mkRow({ confirmationRequests: [{ expiresAt: IN_5_DAYS, approverEmail: EMAIL }], occurredAt: new Date('2026-02-01') });
-  const closedNewer = mkRow({ status: 'APPROVED', occurredAt: new Date('2026-03-01'), updatedAt: new Date('2026-05-01') });
-  const closedOlder = mkRow({ status: 'REJECTED', occurredAt: new Date('2026-01-15'), updatedAt: new Date('2026-01-20') });
-
-  const priorityOrder = sortRows([closedOlder, dueSoon, closedNewer, overdue], 'priority', NOW, EMAIL);
-  assert.deepEqual(priorityOrder, [overdue, dueSoon, closedNewer, closedOlder], 'priority sort: overdue, then due soon, then closed (newest occurredAt first within the tie)');
-
-  const newestOrder = sortRows([overdue, closedNewer, dueSoon, closedOlder], 'newest', NOW, EMAIL);
-  assert.deepEqual(newestOrder, [closedNewer, dueSoon, closedOlder, overdue]);
-
-  const oldestOrder = sortRows([overdue, closedNewer, dueSoon, closedOlder], 'oldest', NOW, EMAIL);
-  assert.deepEqual(oldestOrder, [overdue, closedOlder, dueSoon, closedNewer]);
-
-  const lastActivityOrder = sortRows([overdue, closedNewer, dueSoon, closedOlder], 'lastActivity', NOW, EMAIL);
-  assert.equal(lastActivityOrder[0], closedNewer, 'most recently updated row sorts first');
-
-  const dueOrder = sortRows([closedNewer, dueSoon, overdue, closedOlder], 'due', NOW, EMAIL);
-  assert.deepEqual(dueOrder.slice(0, 2), [overdue, dueSoon], 'items with a real due date always sort before items with none, earliest due date first');
-}
-
-// Sorting never mutates the input array in place (the caller's own array
-// reference must stay untouched — a defensive-copy requirement any future
-// edit to sortRows must preserve).
-{
-  const a = mkRow({ occurredAt: new Date('2026-01-01') });
-  const b = mkRow({ occurredAt: new Date('2026-02-01') });
-  const input = [a, b];
-  const result = sortRows(input, 'oldest', NOW, EMAIL);
-  assert.deepEqual(input, [a, b], 'input array order must be left untouched');
-  assert.notEqual(result, input, 'sortRows must return a new array, not the same reference');
-}
-
-console.log('Part 1 passed: derivePersonalStatus/viewerConfirmationRequest/priorityBucket/sortRows all behave correctly against real inputs, including the exact-email-match and closed-always-last invariants.');
+console.log('Part 1 passed: derivePersonalStatus/viewerConfirmationRequest behave correctly against real inputs, including the exact-email-match invariant.');
 
 // Part 2: static-analysis of the already-written service/page/component source.
 
@@ -154,6 +85,7 @@ const myApprovalsService = read('services/myApprovals.ts');
 const myApprovalsLib = read('lib/my-approvals.ts');
 const approvalsPage = read('app/dashboard/approvals/page.tsx');
 const myApprovalsView = read('components/dashboard/MyApprovalsView.tsx');
+const myApprovalCards = read('components/dashboard/MyApprovalCards.tsx');
 const manualApprovals = read('services/manual-approvals.ts');
 const tokenRoute = read('app/api/confirmations/[token]/route.ts');
 const respondRoute = read('app/api/approvals/[id]/confirmations/respond/route.ts');
@@ -210,6 +142,35 @@ assert.match(tokenRoute, /respondToConfirmation\(confirmation\.id, parsed\.data\
 assert.match(respondRoute, /respondToConfirmation\(confirmation\.id, parsed\.data\)/);
 assert.doesNotMatch(tokenRoute, /await prisma\.\$transaction/, 'the token route must no longer duplicate the transaction now that it is shared');
 
+// ─── CORRECT confirmation outcome: a real, already-wired
+//     ApprovalConfirmationDecision (schema enum + respondToConfirmation +
+//     the public ApprovalConfirmationForm), reused in-app with the exact
+//     same { summary } correction shape — never a fabricated decision ─────
+
+const confirmationForm = read('components/approvals/ApprovalConfirmationForm.tsx');
+const prismaSchema = read('prisma/schema.prisma');
+assert.match(prismaSchema, /enum ApprovalConfirmationDecision \{\s*PENDING\s*CONFIRMED\s*REJECTED\s*CORRECTED\s*\}/, 'CORRECTED must already be a real decision value in the schema, not something this task invents');
+assert.match(confirmationForm, /correction: \{ summary: correction\.trim\(\) \}/, 'the existing public confirmation form\'s real correction shape');
+assert.match(manualApprovalPanel, /decision === 'CORRECTED'/);
+assert.match(manualApprovalPanel, /correction = \{ summary: summary\.trim\(\) \}/, 'My Approvals\' in-app Correct action must reuse the exact same { summary } shape, not a new one');
+assert.match(manualApprovalPanel, /onClick={\(\) => completeConfirmation\('CORRECTED'\)}/);
+
+// ─── Server-side sorting/pagination: a real database ORDER BY across the
+//     FULL matching set, never a bounded in-memory sort ───────────────────
+
+assert.doesNotMatch(myApprovalsService, /MAX_SORTABLE_ROWS/, 'the bounded-fetch-then-JS-sort approach must be fully removed');
+assert.match(myApprovalsService, /\$queryRaw/, 'sorting must be computed by a real database query');
+assert.match(myApprovalsService, /Prisma\.sql`/, 'raw SQL must be built via Prisma\'s parameterized tagged template, never string concatenation');
+assert.match(myApprovalsService, /Prisma\.join\(idList\)/, 'the id allowlist must be passed as parameterized values, never interpolated as a raw string');
+// No raw string concatenation of untrusted input into SQL anywhere in this
+// file (every ${...} interpolation must be inside a Prisma.sql tagged
+// template, which parameterizes automatically) — a plain `+` string build
+// feeding $queryRaw/$queryRawUnsafe would be a real SQL-injection surface.
+assert.doesNotMatch(myApprovalsService, /\$queryRawUnsafe/, 'must never use the unsafe/non-parameterized raw query variant');
+assert.match(myApprovalsService, /WHERE ar\.id IN \(\$\{Prisma\.join\(idList\)\}\)/, 'the raw query must be constrained to the already-tenant-scoped id allowlist from phase 1, never re-deriving its own WHERE clause');
+assert.match(myApprovalsService, /LIMIT \$\{pageSize\} OFFSET \$\{offset\}/, 'pagination must happen at the database level');
+assert.match(myApprovalsService, /prisma\.approvalRecord\.findMany\(\{ where, select: \{ id: true \} \}\)/, 'phase 1 must reuse the exact same typed `where` as every other query on this page');
+
 // ─── ApprovalTable extension is additive-only — zero behavior change for
 //     every existing caller that does not pass the new optional fields ────
 
@@ -230,6 +191,20 @@ assert.match(navigation, /label: 'Approvals', icon: FileCheck2/, 'the existing o
 assert.match(approvalDetailPage, /currentUserEmail=\{tenant\.user\.email\}/);
 assert.match(actionCenterService, /export const ORG_WIDE_VISIBILITY_ROLES/);
 assert.match(actionCenterService, /export function hasOrgWideVisibility/);
+
+// ─── Mobile card presentation: a My Approvals-specific component, the
+//     shared ApprovalTable is never modified except via its own small,
+//     additive exports; both presentations are fed the same server-loaded
+//     rows, never a second fetch ──────────────────────────────────────────
+
+assert.match(myApprovalsView, /<div className="hidden lg:block">\s*<ApprovalTable approvals=\{approvalRows\} showDueColumn \/>/, 'desktop table (>=1024px) must stay the existing, untouched ApprovalTable');
+assert.match(myApprovalsView, /<MyApprovalCards approvals=\{approvalRows\} \/>/, 'mobile/tablet cards must be fed the exact same approvalRows array, never a separate fetch');
+assert.match(myApprovalCards, /lg:hidden/, 'cards must only render below the lg breakpoint, matching the table\'s hidden lg:block');
+assert.match(myApprovalCards, /sm:grid-cols-2/, 'a 2-up grid at the sm/tablet breakpoint for a denser "compact" presentation, single-column below it');
+assert.match(myApprovalCards, /import \{\s*type ApprovalTableRecord,\s*personalStatusClass,\s*PERSONAL_STATUS_LABELS,\s*dueDateClass,\s*resolvedProviders,\s*\} from '@\/components\/dashboard\/ApprovalTable'/, 'cards must reuse ApprovalTable\'s own exported helpers, never re-derive duplicate status/risk logic');
+assert.doesNotMatch(approvalTable, /MyApprovalCards/, 'the shared ApprovalTable must never import or know about the My Approvals-specific card component');
+assert.match(myApprovalCards, /approval\.requestedByName \?/, 'requester is shown only when a real one exists, never a fabricated value');
+assert.match(myApprovalsService, /requestedByName: r\.manualDetail\?\.recorder\?\.name/, 'requester must come from the real ManualApprovalDetail.recorder, never invented');
 
 // ─── Test + script wiring ───────────────────────────────────────────────────
 
