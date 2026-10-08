@@ -381,8 +381,16 @@ export async function getMyTasksOverview(viewer: ActionCenterViewer, filters: My
       prisma.approvalRecord.count({ where: { AND: [approvalConfirmationWhere(viewer, true)] } }),
       prisma.approvalRecord.count({ where: { AND: [approvalVerificationWhere(viewer, true)] } }),
       seesInvestigations ? prisma.investigationCase.count({ where: investigationWhere(viewer, true) }) : Promise.resolve(0),
+      // "Awaiting Response" means genuinely actionable right now: a real,
+      // non-expired PENDING ApprovalConfirmationRequest — the EXACT same
+      // condition components/approvals/ManualApprovalPanel.tsx's
+      // myPendingConfirmation uses to decide whether to render the
+      // Confirm/Correct/Reject buttons at all. An expired-but-still-PENDING
+      // request is counted in the Overdue KPI instead (see below), never
+      // double-counted here — this is what keeps the KPI and the row-level
+      // "Awaiting Response" status label in exact agreement.
       prisma.approvalConfirmationRequest.count({
-        where: { organizationId: viewer.organizationId, decision: 'PENDING', approverEmail: { equals: email, mode: 'insensitive' } },
+        where: { organizationId: viewer.organizationId, decision: 'PENDING', approverEmail: { equals: email, mode: 'insensitive' }, expiresAt: { gt: now } },
       }),
     ]),
     QUERY_TIMEOUT_MS,
@@ -442,16 +450,21 @@ export async function getMyTasksOverview(viewer: ActionCenterViewer, filters: My
           sourceId: r.id,
           type: 'CONFIRMATION',
           title: r.subject,
-          statusLabel: open ? 'Awaiting Response' : 'Completed',
+          // statusLabel/actionLabel for the open case are provisional here —
+          // see the dueAt backfill block below, which replaces both with
+          // the real 3-way state (Awaiting Response / Overdue / Needs
+          // Confirmation) once it knows, per row, whether a genuine
+          // non-expired confirmation request actually exists.
+          statusLabel: open ? 'Needs Confirmation' : 'Completed',
           isOpen: open,
           riskLevel: r.riskLevel,
           department: r.department,
           category: r.category,
-          dueAt: null, // filled below from the KPI-parallel lookup is overkill; computed per-row next
+          dueAt: null,
           occurredAt: r.occurredAt,
           updatedAt: r.updatedAt,
           detailHref: `/approvals/${r.id}`,
-          actionLabel: open ? 'Complete Confirmation' : null,
+          actionLabel: open ? 'View Approval' : null,
           isDemo: isDemoApprovalRecord(r),
         };
       }
@@ -498,10 +511,25 @@ export async function getMyTasksOverview(viewer: ActionCenterViewer, filters: My
     })
     .filter((r): r is MyTaskRow => r !== null);
 
-  // Real due dates for the CONFIRMATION rows on this one page only — a
-  // single batched lookup (never per-row), reusing the exact same
-  // viewer-email-matched PENDING confirmation request every other due-date
-  // figure on this page already uses.
+  // Real due dates AND real per-row status for the CONFIRMATION rows on
+  // this one page only — a single batched lookup (never per-row), reusing
+  // the exact same viewer-email-matched PENDING confirmation request every
+  // other due-date figure on this page already uses.
+  //
+  // The status/action split below mirrors components/approvals/
+  // ManualApprovalPanel.tsx's own myPendingConfirmation condition EXACTLY
+  // (decision PENDING + expiresAt > now) — that is the real, only gate on
+  // whether the Confirm/Correct/Reject buttons render on the destination
+  // page at all. Showing "Awaiting Response" / "Complete Confirmation" for
+  // a row that condition excludes would send the viewer to a page with no
+  // working confirm button:
+  //   - a genuine, non-expired PENDING request exists -> "Awaiting
+  //     Response" / "Complete Confirmation" (the button really works)
+  //   - a PENDING request exists but has expired -> "Overdue" / "View
+  //     Approval" (the confirmation flow is closed; a new request is
+  //     needed, which is not a self-service action for the assignee)
+  //   - no request has been sent yet -> "Needs Confirmation" / "View
+  //     Approval" (assigned, but nothing to respond to yet)
   const confirmationIdsNeedingDue = rows.filter((r) => r.type === 'CONFIRMATION').map((r) => r.sourceId);
   if (confirmationIdsNeedingDue.length > 0) {
     const pending = await prisma.approvalConfirmationRequest.findMany({
@@ -514,7 +542,20 @@ export async function getMyTasksOverview(viewer: ActionCenterViewer, filters: My
       if (!dueByRecord.has(p.approvalRecordId)) dueByRecord.set(p.approvalRecordId, p.expiresAt);
     }
     for (const row of rows) {
-      if (row.type === 'CONFIRMATION') row.dueAt = dueByRecord.get(row.sourceId) ?? null;
+      if (row.type !== 'CONFIRMATION') continue;
+      const dueAt = dueByRecord.get(row.sourceId) ?? null;
+      row.dueAt = dueAt;
+      if (!open) continue; // completed rows keep their 'Completed' label untouched
+      if (!dueAt) {
+        row.statusLabel = 'Needs Confirmation';
+        row.actionLabel = 'View Approval';
+      } else if (dueAt.getTime() > now.getTime()) {
+        row.statusLabel = 'Awaiting Response';
+        row.actionLabel = 'Complete Confirmation';
+      } else {
+        row.statusLabel = 'Overdue';
+        row.actionLabel = 'View Approval';
+      }
     }
   }
 

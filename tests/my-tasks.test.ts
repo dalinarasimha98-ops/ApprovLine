@@ -90,6 +90,23 @@ assert.match(myTasksService, /WHERE ic\.id IN \(\$\{Prisma\.join\(investigationI
 assert.match(myTasksService, /LIMIT \$\{pageSize\} OFFSET \$\{offset\}/, 'pagination must happen at the database level');
 assert.doesNotMatch(myTasksService, /MAX_SORTABLE_ROWS|\.slice\(0,\s*300\)/, 'there must be no bounded-fetch-then-JS-sort shortcut anywhere in this file');
 
+// ─── Awaiting Response KPI vs row status: both must derive from the exact
+//     same real-request-exists-and-is-not-expired condition
+//     components/approvals/ManualApprovalPanel.tsx's myPendingConfirmation
+//     uses to decide whether the Confirm/Correct/Reject buttons render at
+//     all — so a row ever labeled "Awaiting Response" is always one whose
+//     destination page genuinely has a working confirm action, and the KPI
+//     count always equals the number of rows that can show that label ───
+
+assert.match(myTasksService, /decision: 'PENDING', approverEmail: \{ equals: email, mode: 'insensitive' \}, expiresAt: \{ gt: now \} \}/, 'the Awaiting Response KPI must exclude expired PENDING requests, matching ManualApprovalPanel\'s own myPendingConfirmation gate (expiresAt > now)');
+assert.match(myTasksService, /statusLabel = 'Awaiting Response'/);
+assert.match(myTasksService, /statusLabel = 'Overdue'/);
+assert.match(myTasksService, /statusLabel = 'Needs Confirmation'/);
+assert.match(myTasksService, /actionLabel = 'Complete Confirmation'/);
+assert.match(myTasksService, /actionLabel = 'View Approval'/, 'a confirmation row with no genuine working confirm button (no request sent, or expired) must offer View Approval, never a misleading Complete Confirmation');
+assert.match(myTasksTable, /case 'Overdue':/);
+assert.match(myTaskCards, /case 'Overdue':/);
+
 // ─── Audit reuse: only real, pre-existing audit action strings ────────────
 
 assert.match(dashboardService, /'investigation\.status_changed',/, 'the real pre-existing investigation.status_changed audit action must be allowlisted');
@@ -138,6 +155,29 @@ assert.match(demoSeed, /JOHN_INVESTIGATIONS/);
 assert.match(demoSeed, /assignee: null/, 'at least one investigation must be genuinely unassigned to prove it never appears in anyone\'s My Tasks');
 assert.match(demoSeed, /status: 'RESOLVED'/);
 assert.match(demoSeed, /tx\.investigationCase\.create/);
+
+// ─── Completed KPI: explicit all-time-vs-range semantics, never a vague
+//     caption ────────────────────────────────────────────────────────────
+
+assert.match(myTasksView, /'all-time'/, 'Completed must explicitly say all-time when no range is set');
+assert.doesNotMatch(myTasksView, /'in selected range'/, 'the old vague caption must be replaced by the actual formatted date bounds');
+
+// ─── 390px KPI grid: 2 columns at every width, never a single stacked
+//     column ─────────────────────────────────────────────────────────────
+
+assert.match(myTasksView, /grid-cols-2 gap-2\.5/, 'the KPI strip must use a 2-column base grid, not grid-cols-1, so the 6 tiles stay compact and readable at 390px');
+
+// ─── Filter controls: explicit, enumerated values — never a freeform text
+//     input a viewer has to guess the valid values for ──────────────────
+
+assert.match(myTasksView, /<option value="">All risk levels<\/option>/, 'risk level must be a select with an explicit default option, not a freeform text input');
+assert.doesNotMatch(myTasksView, /name="riskLevel"\s*\n\s*defaultValue=\{filters\.riskLevel \?\? ''\}\s*\n\s*placeholder="Risk level"/, 'the old freeform riskLevel text input must be gone');
+assert.match(myTasksView, /focus-visible:ring-2 focus-visible:ring-al-accent/, 'the status toggle and filters disclosure must have a visible keyboard focus state');
+
+// ─── Mobile typography: task titles never shrink below a readable minimum
+//     on the dedicated card presentation ────────────────────────────────
+
+assert.match(myTaskCards, /text-base font-black leading-snug/, 'card titles must not be smaller than text-base');
 
 // ─── Test + script wiring ───────────────────────────────────────────────────
 

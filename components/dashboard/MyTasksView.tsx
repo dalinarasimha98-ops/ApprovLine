@@ -4,6 +4,7 @@ import { PendingLink } from '@/components/system/PendingLink';
 import { FormSubmitButton } from '@/components/system/FormSubmitButton';
 import { str, type RawSearchParams } from '@/lib/search-params';
 import { MY_TASK_TYPE_LABELS, type MyTaskType } from '@/lib/my-tasks';
+import { riskLabel } from '@/lib/risk-ramp';
 import {
   getMyTasksOverview,
   getMyTasksCompletedCount,
@@ -34,6 +35,19 @@ const SORT_OPTIONS: Array<{ value: MyTaskSort; label: string }> = [
   { value: 'oldest', label: 'Oldest' },
   { value: 'lastActivity', label: 'Last activity' },
 ];
+
+// The same 4 real riskLevel values lib/risk-ramp.ts's riskBand() recognizes
+// (ApprovalRecord/InvestigationCase both store this exact lowercase
+// vocabulary) — a select with these, rather than My Approvals' freeform
+// text input, so the available values and the current selection are always
+// explicit rather than typed blind.
+const RISK_OPTIONS: Array<'critical' | 'high' | 'medium' | 'low'> = ['critical', 'high', 'medium', 'low'];
+
+function formatFilterDate(value: string): string {
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 function buildMyTasksHref(base: RawSearchParams, overrides: Record<string, string | number | undefined>) {
   const merged: Record<string, string | undefined> = {
@@ -130,7 +144,18 @@ export async function MyTasksView({
         { label: 'Awaiting Response', value: result.kpis.awaitingResponse, ink: 'text-al-info' },
       ] as const)
     : [];
-  const periodLabel = from || to ? 'in selected range' : 'all-time';
+  // Explicit, never generic once a range is set: the actual bounds, not a
+  // vague "in selected range" caption, so "Completed" always states exactly
+  // what it counts — all completions ever (no range) or completions within
+  // these specific dates (range set), matching how the row list itself is
+  // filtered when the Completed tab + this same range are active.
+  const periodLabel = from && to
+    ? `${formatFilterDate(from)} – ${formatFilterDate(to)}`
+    : from
+      ? `since ${formatFilterDate(from)}`
+      : to
+        ? `through ${formatFilterDate(to)}`
+        : 'all-time';
 
   return (
     <div className="flex flex-col gap-5">
@@ -158,13 +183,13 @@ export async function MyTasksView({
 
       {/* ── KPI strip ────────────────────────────────────── */}
       {result ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 xl:grid-cols-6">
           {tiles.map((tile) => (
-            <div key={tile.label} className="rounded-xl border border-al-border bg-al-surface p-4">
-              <p className="text-[11px] font-semibold text-al-text-muted">{tile.label}</p>
-              <p className={`mt-0.5 font-mono text-2xl font-black tracking-tight ${tile.ink}`}>{tile.value.toLocaleString()}</p>
+            <div key={tile.label} className="rounded-xl border border-al-border bg-al-surface p-3 sm:p-4">
+              <p className="text-[10.5px] font-semibold leading-tight text-al-text-muted sm:text-[11px]">{tile.label}</p>
+              <p className={`mt-1 font-mono text-xl font-black tracking-tight sm:text-2xl ${tile.ink}`}>{tile.value.toLocaleString()}</p>
               {tile.label === 'Completed' ? (
-                <p className="mt-1 text-[10px] font-semibold text-al-text-muted">{periodLabel}</p>
+                <p className="mt-1 text-[10px] font-semibold leading-tight text-al-text-muted">{periodLabel}</p>
               ) : null}
             </div>
           ))}
@@ -195,7 +220,8 @@ export async function MyTasksView({
               key={o.value}
               href={buildMyTasksHref(rawParams, { status: o.value === 'OPEN' ? undefined : o.value, page: 1 })}
               pendingText="…"
-              className={`flex-1 rounded-md px-3 py-1.5 text-center text-xs font-bold ${
+              aria-current={status === o.value ? 'true' : undefined}
+              className={`flex-1 rounded-md px-3 py-1.5 text-center text-xs font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-al-accent ${
                 status === o.value ? 'bg-al-accent text-white' : 'text-al-text-secondary hover:bg-al-surface-elevated'
               }`}
             >
@@ -205,7 +231,7 @@ export async function MyTasksView({
         </div>
 
         <details className="mt-3 group" open={hasActiveFilters || undefined}>
-          <summary className="cursor-pointer list-none text-xs font-bold text-al-accent hover:text-al-accent">Filters ▾</summary>
+          <summary className="cursor-pointer list-none rounded text-xs font-bold text-al-accent hover:text-al-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-al-accent">Filters ▾</summary>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
             <input type="hidden" name="status" value={status === 'OPEN' ? '' : status} />
             <label className="flex flex-col gap-1.5">
@@ -225,12 +251,16 @@ export async function MyTasksView({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">Risk level</span>
-              <input
+              <select
                 name="riskLevel"
                 defaultValue={filters.riskLevel ?? ''}
-                placeholder="Risk level"
-                className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text placeholder:text-al-text-secondary outline-none focus:border-al-accent/60"
-              />
+                className="h-9 rounded-lg border border-al-border bg-al-surface-elevated px-3 text-sm font-semibold text-al-text outline-none focus:border-al-accent/60"
+              >
+                <option value="">All risk levels</option>
+                {RISK_OPTIONS.map((r) => (
+                  <option key={r} value={r}>{riskLabel(r)}</option>
+                ))}
+              </select>
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-[10px] font-black uppercase tracking-widest text-al-text-muted">Sort</span>

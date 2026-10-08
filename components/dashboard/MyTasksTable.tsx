@@ -16,12 +16,34 @@ import type { MyTaskRow } from '@/services/myTasks';
  * detail system.
  */
 
+// Every real statusLabel this page ever sets (see services/myTasks.ts) maps
+// to exactly one tone here — Overdue is always danger, never softened,
+// so an overdue confirmation can never be mistaken for a routine one.
 function statusClass(row: MyTaskRow): string {
   if (!row.isOpen) return 'bg-al-success/10 text-al-success';
-  if (row.type === 'CONFIRMATION') return 'bg-al-info/10 text-al-info';
-  if (row.statusLabel === 'Escalated') return 'bg-al-danger/10 text-al-danger';
-  if (row.statusLabel === 'In Progress') return 'bg-al-warning/10 text-al-warning';
-  return 'bg-al-warning/10 text-al-warning';
+  switch (row.statusLabel) {
+    case 'Overdue':
+    case 'Escalated':
+      return 'bg-al-danger/10 text-al-danger';
+    case 'Awaiting Response':
+      return 'bg-al-info/10 text-al-info';
+    case 'Needs Confirmation':
+      return 'bg-al-text-secondary/10 text-al-text-secondary';
+    default:
+      return 'bg-al-warning/10 text-al-warning'; // Open (verification/investigation), In Progress
+  }
+}
+
+// A real action only exists for rows with a working primary action
+// (Complete Confirmation/Verification, Open Investigation) — "View
+// Approval" (no live confirm/verify button on the destination page) gets a
+// visually secondary, non-CTA treatment so it never reads as equally
+// actionable.
+function actionButtonClass(actionLabel: string | null): string {
+  if (actionLabel === 'View Approval') {
+    return 'inline-flex h-8 items-center rounded-lg border border-al-border px-3 text-xs font-bold text-al-text-secondary hover:border-al-accent/40';
+  }
+  return 'inline-flex h-8 items-center rounded-lg bg-al-accent px-3 text-xs font-bold text-white hover:bg-al-accent-hover';
 }
 
 function dueDateClass(dueAt: Date | null): string {
@@ -88,13 +110,20 @@ export function MyTasksTable({ tasks }: { tasks: MyTaskRow[] }) {
                     {riskLabel(task.riskLevel)}
                   </span>
                 </td>
-                <td className={`px-4 py-3 text-xs ${dueDateClass(task.dueAt)}`}>{fmtDueDate(task.dueAt)}</td>
+                <td className={`px-4 py-3 text-xs ${dueDateClass(task.dueAt)}`}>
+                  <span className="inline-flex items-center gap-1.5">
+                    {task.dueAt && task.dueAt.getTime() < Date.now() ? (
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-al-danger" aria-hidden="true" />
+                    ) : null}
+                    {fmtDueDate(task.dueAt)}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-xs text-al-text-secondary">{task.updatedAt.toLocaleDateString()}</td>
                 <td className="px-4 py-3 text-right">
                   <PendingLink
                     href={task.detailHref}
                     pendingText="Opening…"
-                    className="inline-flex h-8 items-center rounded-lg bg-al-accent px-3 text-xs font-bold text-white hover:bg-al-accent-hover"
+                    className={actionButtonClass(task.actionLabel)}
                   >
                     {task.actionLabel ?? 'Open'}
                   </PendingLink>

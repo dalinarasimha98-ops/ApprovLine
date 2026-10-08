@@ -13,11 +13,28 @@ import type { MyTaskRow } from '@/services/myTasks';
  * state is needed here at all.
  */
 
+// Mirrors components/dashboard/MyTasksTable.tsx's statusClass exactly —
+// every real statusLabel services/myTasks.ts ever sets maps to one tone.
 function statusClass(row: MyTaskRow): string {
   if (!row.isOpen) return 'bg-al-success/10 text-al-success';
-  if (row.type === 'CONFIRMATION') return 'bg-al-info/10 text-al-info';
-  if (row.statusLabel === 'Escalated') return 'bg-al-danger/10 text-al-danger';
-  return 'bg-al-warning/10 text-al-warning';
+  switch (row.statusLabel) {
+    case 'Overdue':
+    case 'Escalated':
+      return 'bg-al-danger/10 text-al-danger';
+    case 'Awaiting Response':
+      return 'bg-al-info/10 text-al-info';
+    case 'Needs Confirmation':
+      return 'bg-al-text-secondary/10 text-al-text-secondary';
+    default:
+      return 'bg-al-warning/10 text-al-warning';
+  }
+}
+
+function actionButtonClass(actionLabel: string | null): string {
+  if (actionLabel === 'View Approval') {
+    return 'mt-4 flex h-9 w-full shrink-0 items-center justify-center rounded-lg border border-al-border text-xs font-black text-al-text-secondary transition hover:border-al-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-al-accent';
+  }
+  return 'mt-4 flex h-9 w-full shrink-0 items-center justify-center rounded-lg bg-al-accent text-xs font-black text-white transition hover:bg-al-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-al-accent';
 }
 
 function dueDateClass(dueAt: Date | null): string {
@@ -44,7 +61,7 @@ export function MyTaskCards({ tasks }: { tasks: MyTaskRow[] }) {
             <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusClass(task)}`}>{task.statusLabel}</span>
           </div>
 
-          <h3 className="mt-3 text-sm font-black leading-snug text-al-text">
+          <h3 className="mt-3 text-base font-black leading-snug text-al-text">
             {task.title}
             {task.isDemo ? (
               <span className="ml-2 rounded-full bg-al-accent-hover/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-al-accent align-middle">Demo</span>
@@ -57,14 +74,19 @@ export function MyTaskCards({ tasks }: { tasks: MyTaskRow[] }) {
           </p>
 
           <div className="mt-3 flex flex-1 flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-            <span className={dueDateClass(task.dueAt)}>{fmtDueDate(task.dueAt)}</span>
+            <span className={`inline-flex items-center gap-1.5 ${dueDateClass(task.dueAt)}`}>
+              {task.dueAt && task.dueAt.getTime() < Date.now() ? (
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-al-danger" aria-hidden="true" />
+              ) : null}
+              {fmtDueDate(task.dueAt)}
+            </span>
             <span className="text-al-text-muted">Updated {task.updatedAt.toLocaleDateString()}</span>
           </div>
 
           <PendingLink
             href={task.detailHref}
             pendingText="Opening…"
-            className="mt-4 flex h-9 w-full shrink-0 items-center justify-center rounded-lg bg-al-accent text-xs font-black text-white transition hover:bg-al-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-al-accent"
+            className={actionButtonClass(task.actionLabel)}
           >
             {task.actionLabel ?? 'Open'}
           </PendingLink>
