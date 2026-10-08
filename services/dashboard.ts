@@ -114,6 +114,7 @@ export const MEANINGFUL_AUDIT_ACTIONS = [
   'playbook.compliance.evaluated',
   'investigation.created',
   'investigation.note_added',
+  'investigation.status_changed',
   'APPROVAL_POLICY_UPDATED',
   'BRANDING_UPDATED',
   'DEFAULT_SETTINGS_UPDATED',

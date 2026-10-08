@@ -106,6 +106,12 @@ export const ROUTE_PERMISSIONS: Record<string, Role[]> = {
   // Listed explicitly for the same reason '/settings/profile' is: a
   // deliberate, visible policy choice rather than an accidental gap.
   '/dashboard/me': ALL_ROLES,
+  // My Tasks - a personal projection over the viewer's own assigned work
+  // (confirmations/verifications/investigations), never organization-wide
+  // data, so every role can reach it. Investigation-type tasks are further
+  // gated inside services/myTasks.ts by the same role list '/investigations'
+  // uses, rather than a second permission concept.
+  '/dashboard/tasks': ALL_ROLES,
 };
 
 /**

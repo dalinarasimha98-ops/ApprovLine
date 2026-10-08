@@ -216,6 +216,17 @@ const JOHN_APPROVALS: Array<{
  * it shows as completed in My Recent Activity rather than sitting in the
  * open task list - My Tasks, like My Approvals, only lists currently-open
  * work.
+ *
+ * `dualSecondVerifier` deliberately defaults to false: ManualApprovalDetail.
+ * secondPersonRequired/secondVerifierUserId is a genuinely separate real
+ * obligation from ApprovalRecord.approverEmail (the confirmer) - see
+ * services/myTasks.ts's own header comment - and the My Tasks page (Section
+ * 138+) correctly surfaces a CONFIRMATION row and a VERIFICATION row
+ * separately when both are real. Only ONE item below (the overdue expense
+ * report) sets it true, to demonstrate that real dual-obligation case
+ * explicitly and honestly, rather than defaulting every demo record to
+ * both roles - which would read as duplicated tasks rather than two
+ * genuinely distinct ones.
  */
 const JOHN_TASKS: Array<{
   subject: string;
@@ -228,6 +239,7 @@ const JOHN_TASKS: Array<{
   expiresAt: Date;
   daysAgo: number;
   confirmationRequested: boolean;
+  dualSecondVerifier?: boolean;
 }> = [
   {
     subject: 'Complete security training',
@@ -288,6 +300,7 @@ const JOHN_TASKS: Array<{
     expiresAt: daysAgoAt(2),
     daysAgo: 12,
     confirmationRequested: true,
+    dualSecondVerifier: true,
   },
 ];
 
@@ -313,6 +326,37 @@ const WAITING_ON_OTHERS: Array<{
   { subject: 'Team hiring request - Senior Analyst', category: 'HR', approverName: 'HR Team', approverEmail: 'hr-team@approvline-demo.local', daysAgo: 6, expiresInDays: 8 },
   { subject: 'Office equipment purchase - standing desks', category: 'Finance', approverName: 'Finance Team', approverEmail: 'finance-team@approvline-demo.local', daysAgo: 9, expiresInDays: 5 },
   { subject: 'Legal team contract review - NDA template update', category: 'Legal', approverName: 'Legal Team', approverEmail: 'legal-team@approvline-demo.local', daysAgo: 1, expiresInDays: 14 },
+];
+
+/**
+ * Investigation-type task coverage for My Tasks (/dashboard/tasks) -
+ * real InvestigationCase rows, written directly in the same shape
+ * services/investigations.ts's createInvestigationCase() already produces
+ * (title/status/riskLevel/department/type/assignedToUserId/createdByUserId/
+ * resolvedAt), never a parallel schema. assignedToUserId is the ONLY field
+ * that determines My Tasks visibility (see services/myTasks.ts's
+ * investigationWhere()) - createdByUserId is deliberately set to a
+ * DIFFERENT user on every row below, so these cases prove by construction
+ * that "who created it" never leaks into "my tasks" the way it correctly
+ * does for "Waiting on Others" on the approval side. One row is left
+ * unassigned (assignedToUserId: null) specifically to prove a case nobody
+ * is assigned to never appears in anyone's My Tasks.
+ */
+const JOHN_INVESTIGATIONS: Array<{
+  title: string;
+  department: string;
+  type: string;
+  riskLevel: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'ESCALATED' | 'RESOLVED';
+  assignee: 'john' | null;
+  creator: 'sarah' | 'priya' | 'mike';
+  daysAgo: number;
+  resolvedDaysAgo?: number;
+}> = [
+  { title: 'Vendor payment duplicate charge review', department: 'Procurement', type: 'Payment Review', riskLevel: 'critical', status: 'ESCALATED', assignee: 'john', creator: 'priya', daysAgo: 5 },
+  { title: 'Expense pattern anomaly - Q3 travel claims', department: 'Finance', type: 'Expense Review', riskLevel: 'high', status: 'IN_PROGRESS', assignee: 'john', creator: 'mike', daysAgo: 2 },
+  { title: 'Access log review - Q2 security audit', department: 'Security', type: 'Security Audit', riskLevel: 'medium', status: 'RESOLVED', assignee: 'john', creator: 'sarah', daysAgo: 20, resolvedDaysAgo: 3 },
+  { title: 'Marketing spend variance - unassigned triage', department: 'Marketing', type: 'Spend Review', riskLevel: 'low', status: 'OPEN', assignee: null, creator: 'priya', daysAgo: 1 },
 ];
 
 export async function seedIndividualDashboardDemo(): Promise<{ organizationId: string; userEmail: string }> {
@@ -430,8 +474,8 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
           supportingNotes: task.reasoning,
           verificationStatus: 'PENDING_CONFIRMATION',
           confidenceLevel: 85,
-          secondPersonRequired: true,
-          secondVerifierUserId: john.id,
+          secondPersonRequired: Boolean(task.dualSecondVerifier),
+          secondVerifierUserId: task.dualSecondVerifier ? john.id : null,
         },
       });
       await tx.manualApprovalVersion.create({
@@ -493,6 +537,54 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
             action: 'APPROVER_CONFIRMATION_REQUESTED',
             metadata: { approverEmail: john.email, expiresAt: task.expiresAt.toISOString() },
             createdAt: occurredAt,
+          },
+        });
+      }
+    }
+
+    // Investigation-type My Tasks coverage (Section 138) - real
+    // InvestigationCase rows, assigned/unassigned and open/resolved, using
+    // the exact audit actions services/dashboard.ts's
+    // MEANINGFUL_AUDIT_ACTIONS allowlist already recognizes
+    // ('investigation.created', 'investigation.status_changed').
+    for (const investigation of JOHN_INVESTIGATIONS) {
+      const createdAt = daysAgoAt(investigation.daysAgo);
+      const resolvedAt = investigation.resolvedDaysAgo !== undefined ? daysAgoAt(investigation.resolvedDaysAgo) : null;
+      const creator = users[investigation.creator];
+      const assignedToUserId = investigation.assignee ? users[investigation.assignee].id : null;
+      const kase = await tx.investigationCase.create({
+        data: {
+          organizationId: organization.id,
+          title: investigation.title,
+          status: investigation.status,
+          type: investigation.type,
+          department: investigation.department,
+          riskLevel: investigation.riskLevel,
+          summary: `${investigation.title}, opened for review.`,
+          assignedToUserId,
+          createdByUserId: creator.id,
+          resolvedAt,
+          createdAt,
+          updatedAt: resolvedAt ?? createdAt,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId: organization.id,
+          actorUserId: creator.id,
+          action: 'investigation.created',
+          metadata: { investigationId: kase.id, title: investigation.title, status: investigation.status },
+          createdAt,
+        },
+      });
+      if (resolvedAt) {
+        await tx.auditLog.create({
+          data: {
+            organizationId: organization.id,
+            actorUserId: assignedToUserId ?? creator.id,
+            action: 'investigation.status_changed',
+            metadata: { investigationId: kase.id, title: investigation.title, status: 'RESOLVED' },
+            createdAt: resolvedAt,
           },
         });
       }
