@@ -106,6 +106,28 @@ export const ROUTE_PERMISSIONS: Record<string, Role[]> = {
   // Listed explicitly for the same reason '/settings/profile' is: a
   // deliberate, visible policy choice rather than an accidental gap.
   '/dashboard/me': ALL_ROLES,
+  // My Tasks - a personal projection over the viewer's own assigned work
+  // (confirmations/verifications/investigations), never organization-wide
+  // data, so every role can reach it. Investigation-type tasks are further
+  // gated inside services/myTasks.ts by the same role list '/investigations'
+  // uses, rather than a second permission concept.
+  '/dashboard/tasks': ALL_ROLES,
+  // Awaiting My Response - a focused projection over the viewer's own
+  // ApprovalConfirmationRequest rows (approverEmail exact match), never
+  // organization-wide data, so every role can reach it. A role that can
+  // see the underlying approval is NOT automatically a response
+  // recipient - access to a specific request is enforced per-row by the
+  // exact email match in services/awaitingMyResponse.ts, not by this
+  // route-level entry.
+  '/dashboard/responses': ALL_ROLES,
+  // Waiting on Others - a personal projection over work the viewer
+  // initiated (ApprovalConfirmationRequest.requestedByUserId /
+  // ManualApprovalDetail.recorderUserId / InvestigationCase.createdByUserId
+  // exact match), never organization-wide data, so every role can reach
+  // it. Investigation-type rows are further gated inside services/
+  // waitingOnOthers.ts by the same role list '/investigations' uses,
+  // exactly mirroring '/dashboard/tasks' above.
+  '/dashboard/waiting-on-others': ALL_ROLES,
 };
 
 /**

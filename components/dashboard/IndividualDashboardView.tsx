@@ -248,7 +248,7 @@ export function IndividualDashboardView({
           context="Comments or information"
           color="#8a6cf2"
           icon={<MessageSquareWarning className="h-4 w-4" />}
-          href="/dashboard/pending-actions"
+          href="/dashboard/responses"
           linkLabel="Review →"
         />
       </div>
@@ -302,7 +302,7 @@ export function IndividualDashboardView({
         </article>
 
         <article className={`${panelClass} p-4 xl:col-span-7`}>
-          <SectionHeader title="Waiting on Others" subtitle="Requests you sent that are still pending a response" />
+          <SectionHeader title="Waiting on Others" subtitle="Requests you sent that are still pending a response" href="/dashboard/waiting-on-others" linkLabel="View all" />
           <div className="mt-3">
             {overview.waitingOnOthers.length ? (
               <div className="divide-y divide-white/[0.06]">

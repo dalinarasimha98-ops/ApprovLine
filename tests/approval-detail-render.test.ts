@@ -67,7 +67,7 @@ function renderPanel(overrides: { recorder: unknown; actorUser: unknown }) {
     evidence: [],
     versions: [{ id: 'v1', version: 1, changeReason: 'Initial record', createdAt: new Date().toISOString(), previousValues: null, actorUser: overrides.actorUser }],
     confirmations: [],
-    canManage: true, currentUserId: 'diag-user', currentUserRole: 'ADMIN',
+    canManage: true, currentUserId: 'diag-user', currentUserRole: 'ADMIN', currentUserEmail: 'diag-user@example.com',
   };
   return renderToStaticMarkup(
     React.createElement(

@@ -70,7 +70,8 @@ assert.doesNotMatch(demoLib, /totalApprovals:\s*\d|myPendingApprovals:\s*\d|dueT
 // approver is always the OTHER party, so viewerIdentityWhere() (approverUserId/
 // approverEmail/manualDetail.secondVerifierUserId/confirmationRequests.approverEmail)
 // can never match John on these rows, keeping them out of My Pending Approvals.
-assert.match(demoLib, /requestedByUserId: john\.id,\s*\n\s*expiresAt: daysFromNowAt\(item\.expiresInDays\)/);
+assert.match(demoLib, /requestedByUserId: john\.id,\s*\n\s*expiresAt,/);
+assert.match(demoLib, /const expiresAt = item\.expiresAtOverride \? item\.expiresAtOverride\(item\.daysAgo\) : daysFromNowAt\(item\.expiresInDays \?\? 7\);/);
 
 // ─── My Tasks vs My Approvals: real data for the new split ─────────────────
 //
@@ -89,6 +90,21 @@ assert.match(demoLib, /'Acknowledge policy update'/);
 assert.match(demoLib, /'Confirm Q2 expense report accuracy'/); // the "1 overdue" task
 assert.match(demoLib, /subject: 'Submit Q3 campaign plan'/); // the "1 completed" task - in Recent Activity, not JOHN_TASKS
 assert.doesNotMatch(demoLib, /manual: null \| \{/); // JOHN_APPROVALS no longer carries manual-approval fields
+
+// ─── My Approvals: real evidence backfill, not a fabricated flag ──────────
+//
+// A handful of JOHN_APPROVALS carry a real richEvidenceSource (a genuine
+// integration name, not the default 'Manual') and get a real
+// UnifiedEvidenceRecord backfilled via services/evidence/pipeline.ts's
+// existing backfillUnifiedEvidenceForApproval() - the same helper
+// lib/demo-data.ts's org-wide demo engine already uses for every one of
+// its seeded approvals - so "My Approvals" has at least one genuine
+// evidence-available case instead of every demo record reading "no
+// evidence."
+assert.match(demoLib, /import \{ backfillUnifiedEvidenceForApproval, runEvidenceSidecar \} from '@\/services\/evidence\/pipeline'/);
+assert.match(demoLib, /richEvidenceSource\?: string;/);
+assert.match(demoLib, /if \(approval\.richEvidenceSource\) \{/);
+assert.match(demoLib, /backfillUnifiedEvidenceForApproval\(tx, record\)/);
 
 // ─── My Tasks vs Awaiting My Response: real, non-identical overlap ─────────
 //
