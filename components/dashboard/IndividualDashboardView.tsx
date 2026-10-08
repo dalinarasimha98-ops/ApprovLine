@@ -248,7 +248,7 @@ export function IndividualDashboardView({
           context="Comments or information"
           color="#8a6cf2"
           icon={<MessageSquareWarning className="h-4 w-4" />}
-          href="/dashboard/pending-actions"
+          href="/dashboard/responses"
           linkLabel="Review →"
         />
       </div>

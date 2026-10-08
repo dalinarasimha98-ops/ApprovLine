@@ -305,6 +305,73 @@ const JOHN_TASKS: Array<{
 ];
 
 /**
+ * Awaiting My Response (/dashboard/responses) "Responded" history coverage
+ * - real ApprovalConfirmationRequest rows whose decision has already moved
+ * past PENDING, using the exact write shape services/manual-approvals.ts's
+ * respondToConfirmation() itself produces (never a simplified facsimile):
+ * ManualApprovalDetail.verificationStatus follows the exact same mapping
+ * that function uses (CONFIRMED -> CONFIRMED_BY_APPROVER; CORRECTED and
+ * REJECTED both -> DISPUTED - yes, both; that is the function's own real
+ * ternary, not an inconsistency introduced here), a version-2
+ * ManualApprovalVersion reflecting the response, and the real
+ * APPROVER_CONFIRMATION_(CONFIRMED|CORRECTED|REJECTED) audit action.
+ * JOHN_TASKS above already covers the 2 awaiting-response + 1 overdue
+ * states (Section 39's minimum) - this array exists ONLY to add the 3
+ * missing RESPONDED outcomes, never duplicating what already exists there.
+ */
+const JOHN_RESPONDED: Array<{
+  subject: string;
+  department: string;
+  category: string;
+  riskLevel: string;
+  businessImpact: string;
+  recorder: 'sarah' | 'priya' | 'mike';
+  requestedDaysAgo: number;
+  respondedDaysAgo: number;
+  decision: 'CONFIRMED' | 'CORRECTED' | 'REJECTED';
+  responseNote: string;
+  correction?: { summary: string };
+}> = [
+  {
+    subject: 'Confirm vendor contract renewal terms',
+    department: 'Procurement',
+    category: 'Procurement',
+    riskLevel: 'medium',
+    businessImpact: 'Confirms the renewal terms recorded for the annual vendor services contract.',
+    recorder: 'mike',
+    requestedDaysAgo: 4,
+    respondedDaysAgo: 2,
+    decision: 'CONFIRMED',
+    responseNote: 'Confirmed - terms match what we agreed on the call.',
+  },
+  {
+    subject: 'Correct Q1 travel expense total',
+    department: 'Finance',
+    category: 'Finance',
+    riskLevel: 'low',
+    businessImpact: 'Corrects the total recorded for the Q1 client-visit travel expense.',
+    recorder: 'sarah',
+    requestedDaysAgo: 7,
+    respondedDaysAgo: 5,
+    decision: 'CORRECTED',
+    responseNote: 'The recorded total was wrong; submitting the correct figure.',
+    correction: { summary: 'Actual total was $1,240, not $1,450 as recorded.' },
+  },
+  {
+    subject: 'Reject unauthorized software purchase claim',
+    department: 'Procurement',
+    category: 'Procurement',
+    riskLevel: 'high',
+    businessImpact: 'Disputes a recorded approval for a software purchase John did not authorize.',
+    recorder: 'priya',
+    requestedDaysAgo: 3,
+    respondedDaysAgo: 1,
+    decision: 'REJECTED',
+    responseNote: 'This purchase was not approved by me - please escalate.',
+  },
+];
+
+/**
  * 4 items John submitted and is waiting on someone else for - real
  * ApprovalRecords with a real ApprovalConfirmationRequest whose
  * requestedByUserId is John, but whose approverEmail is the OTHER party.
@@ -540,6 +607,113 @@ export async function seedIndividualDashboardDemo(): Promise<{ organizationId: s
           },
         });
       }
+    }
+
+    // Awaiting My Response "Responded" history coverage - real
+    // ApprovalConfirmationRequest rows already past PENDING, written in
+    // the exact shape respondToConfirmation() itself produces (see
+    // JOHN_RESPONDED's own doc comment for the full mapping rationale).
+    for (const item of JOHN_RESPONDED) {
+      const requestedAt = daysAgoAt(item.requestedDaysAgo);
+      const respondedAt = daysAgoAt(item.respondedDaysAgo);
+      const recorder = users[item.recorder];
+      const verificationStatus = item.decision === 'CONFIRMED' ? 'CONFIRMED_BY_APPROVER' : 'DISPUTED';
+      const record = await tx.approvalRecord.create({
+        data: {
+          organizationId: organization.id,
+          approverName: john.name,
+          approverEmail: john.email,
+          subject: item.subject,
+          department: item.department,
+          category: item.category,
+          approvalType: 'EXPLICIT',
+          status: 'APPROVED',
+          confidence: 90,
+          riskLevel: item.riskLevel,
+          businessImpact: item.businessImpact,
+          reasoning: item.businessImpact,
+          sourcePlatform: 'Verbal',
+          sourceSystem: 'MANUAL_ENTRY',
+          evidenceSnippet: item.businessImpact,
+          correlationId: `${DEMO_RUN_ID}:responded:${item.decision}`,
+          occurredAt: requestedAt,
+          createdAt: requestedAt,
+        },
+      });
+      await tx.manualApprovalDetail.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          kind: 'VERBAL',
+          approverRole: 'Manager',
+          communicationChannel: 'In-person / phone',
+          recorderUserId: recorder.id,
+          businessContext: item.businessImpact,
+          verificationStatus,
+          confidenceLevel: 85,
+          secondPersonRequired: false,
+          currentVersion: 2,
+        },
+      });
+      await tx.manualApprovalVersion.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          version: 1,
+          snapshot: { kind: 'VERBAL', recorderUserId: recorder.id, businessContext: item.businessImpact, verificationStatus: 'PENDING_CONFIRMATION', confidenceLevel: 85, secondPersonRequired: false },
+          changeReason: 'Recorded from a verbal confirmation.',
+          actorUserId: recorder.id,
+          createdAt: requestedAt,
+        },
+      });
+      await tx.manualApprovalVersion.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          version: 2,
+          snapshot: { verificationStatus, approverConfirmation: { decision: item.decision, responseNote: item.responseNote, correction: item.correction ?? null, respondedAt: respondedAt.toISOString(), approverEmail: john.email } },
+          previousValues: { verificationStatus: 'PENDING_CONFIRMATION' },
+          changeReason: `Approver ${item.decision.toLowerCase()}: ${item.responseNote}`,
+          actorUserId: recorder.id,
+          createdAt: respondedAt,
+        },
+      });
+      await tx.approvalConfirmationRequest.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          tokenHash: confirmationToken(),
+          approverName: john.name,
+          approverEmail: john.email,
+          decision: item.decision,
+          requestedByUserId: recorder.id,
+          expiresAt: daysFromNowAt(14 - item.requestedDaysAgo),
+          respondedAt,
+          responseNote: item.responseNote,
+          correction: item.correction ?? undefined,
+          immutableResponse: { decision: item.decision, responseNote: item.responseNote, correction: item.correction ?? null, respondedAt: respondedAt.toISOString(), approverEmail: john.email },
+          createdAt: requestedAt,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId: organization.id,
+          actorUserId: recorder.id,
+          approvalRecordId: record.id,
+          action: 'APPROVER_CONFIRMATION_REQUESTED',
+          metadata: { approverEmail: john.email },
+          createdAt: requestedAt,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId: organization.id,
+          approvalRecordId: record.id,
+          action: `APPROVER_CONFIRMATION_${item.decision}`,
+          metadata: { decision: item.decision, responseNote: item.responseNote, correction: item.correction ?? null, approverEmail: john.email },
+          createdAt: respondedAt,
+        },
+      });
     }
 
     // Investigation-type My Tasks coverage (Section 138) - real

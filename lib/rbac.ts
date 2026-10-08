@@ -112,6 +112,14 @@ export const ROUTE_PERMISSIONS: Record<string, Role[]> = {
   // gated inside services/myTasks.ts by the same role list '/investigations'
   // uses, rather than a second permission concept.
   '/dashboard/tasks': ALL_ROLES,
+  // Awaiting My Response - a focused projection over the viewer's own
+  // ApprovalConfirmationRequest rows (approverEmail exact match), never
+  // organization-wide data, so every role can reach it. A role that can
+  // see the underlying approval is NOT automatically a response
+  // recipient - access to a specific request is enforced per-row by the
+  // exact email match in services/awaitingMyResponse.ts, not by this
+  // route-level entry.
+  '/dashboard/responses': ALL_ROLES,
 };
 
 /**
