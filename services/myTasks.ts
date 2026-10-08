@@ -85,7 +85,7 @@ import { withTimeout } from '@/lib/performance';
 import { hasAnyRole } from '@/lib/rbac';
 import { ROUTE_PERMISSIONS } from '@/lib/rbac';
 import { type ActionCenterViewer } from '@/services/action-center';
-import { MY_TASK_TYPE_LABELS, INVESTIGATION_STATUS_LABELS, isInvestigationOpen, type MyTaskType, type MyTaskSort, type MyTaskStatusFilter } from '@/lib/my-tasks';
+import { MY_TASK_TYPE_LABELS, INVESTIGATION_STATUS_LABELS, isInvestigationOpen, completedDateRangeFilter, type MyTaskType, type MyTaskSort, type MyTaskStatusFilter } from '@/lib/my-tasks';
 import { isDemoApprovalRecord } from '@/lib/demo-detection';
 
 export { MY_TASK_TYPE_LABELS };
@@ -214,10 +214,13 @@ function investigationWhere(viewer: ActionCenterViewer, open: boolean): Prisma.I
   };
 }
 
-function dateRangeFilter(from?: string, to?: string): { gte?: Date; lte?: Date } | undefined {
-  if (!from && !to) return undefined;
-  return { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) };
-}
+// The Completed-tab date-range filter is lib/my-tasks.ts's
+// completedDateRangeFilter() — a pure, half-open-interval implementation
+// ([from, nextDay(to)), never `lte: endOfDay`) moved there so its boundary
+// arithmetic is real-executed-tested without a database (see that
+// function's own doc comment for the full rationale and the other,
+// out-of-scope consumers that share the old, narrower pattern).
+const dateRangeFilter = completedDateRangeFilter;
 
 /** Phase 2 of the two-phase cross-source sort/paginate — see this module's
  *  header comment. Each id list must already be the exact, fully-scoped,

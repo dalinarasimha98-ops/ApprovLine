@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { MY_TASK_TYPE_LABELS, INVESTIGATION_STATUS_LABELS, isInvestigationOpen } from '../lib/my-tasks';
+import { MY_TASK_TYPE_LABELS, INVESTIGATION_STATUS_LABELS, isInvestigationOpen, completedDateRangeFilter } from '../lib/my-tasks';
 
 // NOTE: this suite deliberately never imports services/myTasks.ts at module
 // scope (it has a Prisma dependency) — matching tests/my-approvals.test.ts's
@@ -34,7 +34,63 @@ assert.deepEqual(
 );
 assert.equal(INVESTIGATION_STATUS_LABELS.IN_PROGRESS, 'In Progress');
 
-console.log('Part 1 passed: isInvestigationOpen/MY_TASK_TYPE_LABELS/INVESTIGATION_STATUS_LABELS behave correctly against real inputs.');
+// ─── completedDateRangeFilter: half-open interval, proven against the
+//     EXACT boundary timestamps the certification pass asked for ─────────
+//     (range "Sep 1, 2026" -> "Oct 8, 2026"; completions at Oct 8 00:01,
+//     Oct 8 12:00, Oct 8 23:59:59 must all match; Oct 9 00:00 must not)
+
+{
+  const range = completedDateRangeFilter('2026-09-01', '2026-10-08');
+  assert.ok(range, 'a range must be returned when both from/to are given');
+  const { gte, lt } = range!;
+  assert.ok(gte && lt, 'both bounds must be present');
+
+  const matches = (d: Date) => d.getTime() >= gte!.getTime() && d.getTime() < lt!.getTime();
+
+  assert.equal(matches(new Date('2026-10-08T00:01:00.000Z')), true, 'Oct 8 00:01 must be included');
+  assert.equal(matches(new Date('2026-10-08T12:00:00.000Z')), true, 'Oct 8 12:00 must be included');
+  assert.equal(matches(new Date('2026-10-08T23:59:59.000Z')), true, 'Oct 8 23:59:59 must be included');
+  assert.equal(matches(new Date('2026-10-09T00:00:00.000Z')), false, 'Oct 9 00:00 must be excluded — the range ends at the close of Oct 8, not the start of it');
+  assert.equal(matches(new Date('2026-08-31T23:59:59.000Z')), false, 'the instant before Sep 1 00:00 must still be excluded on the lower bound');
+  assert.equal(matches(new Date('2026-09-01T00:00:00.000Z')), true, 'Sep 1 00:00 itself must be included (inclusive lower bound, unchanged by this fix)');
+
+  assert.equal(lt!.toISOString(), '2026-10-09T00:00:00.000Z', 'the exclusive upper bound must be exactly the start of the day AFTER the selected end date');
+  console.log('OK: completedDateRangeFilter half-open interval matches all 4 certification-pass boundary cases for a custom range.');
+}
+
+// ─── "This month" / "last month" shaped ranges: the same half-open
+//     arithmetic must hold when `to` lands on an arbitrary day, including
+//     a month/year rollover (Dec 31 -> Jan 1 of the next year) ───────────
+
+{
+  // "This month" shaped: Oct 1 -> Oct 8 (today), the exact shape
+  // MyTasksView's date inputs produce for a same-month range.
+  const thisMonth = completedDateRangeFilter('2026-10-01', '2026-10-08');
+  assert.equal(thisMonth!.lt!.toISOString(), '2026-10-09T00:00:00.000Z');
+  assert.equal(new Date('2026-10-08T23:59:59.000Z').getTime() < thisMonth!.lt!.getTime(), true);
+
+  // "Last month" shaped: a full calendar month, Sep 1 -> Sep 30 — the last
+  // day's late-evening completions must still be included.
+  const lastMonth = completedDateRangeFilter('2026-09-01', '2026-09-30');
+  assert.equal(lastMonth!.lt!.toISOString(), '2026-10-01T00:00:00.000Z', 'the day after Sep 30 must be Oct 1 — proving the rollover crosses the month boundary correctly');
+  assert.equal(new Date('2026-09-30T23:59:59.000Z').getTime() < lastMonth!.lt!.getTime(), true, 'the last second of Sep 30 must still be included');
+  assert.equal(new Date('2026-10-01T00:00:00.000Z').getTime() < lastMonth!.lt!.getTime(), false, 'Oct 1 00:00 must not be included in a range ending Sep 30');
+
+  // Year rollover: a range ending Dec 31 must roll over to Jan 1 of the
+  // NEXT year, not wrap within the same year.
+  const yearEnd = completedDateRangeFilter('2026-12-01', '2026-12-31');
+  assert.equal(yearEnd!.lt!.toISOString(), '2027-01-01T00:00:00.000Z', 'a range ending Dec 31 must roll over into January of the following year');
+  console.log('OK: the half-open interval holds across this-month/last-month-shaped ranges, including month and year rollovers.');
+}
+
+// ─── Unchanged behavior: no range, from-only, to-only, invalid date ──────
+
+assert.equal(completedDateRangeFilter(undefined, undefined), undefined, 'no range must still mean no filter at all');
+assert.deepEqual(Object.keys(completedDateRangeFilter('2026-09-01', undefined)!), ['gte'], 'from-only must never fabricate an upper bound');
+assert.deepEqual(Object.keys(completedDateRangeFilter(undefined, '2026-10-08')!), ['lt'], 'to-only must produce only the exclusive upper bound, never a fabricated lower one');
+assert.equal(completedDateRangeFilter(undefined, 'not-a-date'), undefined, 'an invalid to-date must never produce a filter with NaN bounds');
+
+console.log('Part 1 passed: isInvestigationOpen/MY_TASK_TYPE_LABELS/INVESTIGATION_STATUS_LABELS/completedDateRangeFilter behave correctly against real inputs, including the exact Oct 8/Oct 9 boundary cases and month/year rollovers.');
 
 // Part 2: static-analysis of the already-written service/page/component source.
 
@@ -70,6 +126,18 @@ assert.match(tasksPage, /organizationId: tenant\.organization\.id/);
 
 assert.match(myTasksService, /NULL::timestamp AS due_at/, 'VERIFICATION/INVESTIGATION branches must hardcode a null due date rather than inventing one');
 assert.doesNotMatch(myTasksService, /ic\."dateRangeEnd"/, 'InvestigationCase.dateRangeEnd describes the investigation\'s own scope period, not a deadline, and must never be queried as a due date');
+
+// ─── Completed date-range upper bound: half-open interval, reused from the
+//     pure module (never `lte: endOfDay`, never a re-derived local copy) ──
+
+assert.match(myTasksService, /import \{[^}]*completedDateRangeFilter[^}]*\} from '@\/lib\/my-tasks'/s, 'the half-open date-range filter must be imported from the pure module, never redefined locally');
+assert.doesNotMatch(myTasksService, /lte:\s*new Date\(to\)/, 'the old inclusive-midnight upper bound must be gone from the service');
+assert.match(myTasksLib, /export function completedDateRangeFilter/);
+assert.match(myTasksLib, /toDate\.getTime\(\) \+ 24 \* 60 \* 60 \* 1000/, 'the upper bound must be computed as the start of the NEXT day, not end-of-day arithmetic');
+{
+  const fnBody = myTasksLib.slice(myTasksLib.indexOf('export function completedDateRangeFilter'));
+  assert.doesNotMatch(fnBody, /lte:/, 'the pure date-range filter\'s actual code must only ever produce an exclusive (lt) upper bound, never an inclusive (lte) one, to avoid the same-day-exclusion bug');
+}
 
 // ─── No fabricated task types: only the three real, per-user-assignable
 //     record types this schema actually supports ───────────────────────────
